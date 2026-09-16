@@ -86,15 +86,31 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
     }
     // 2. Faster / Bouncy instruction
     else if (query.includes("faster") || query.includes("speed")) {
-      if (selectedLayer && selectedLayer.animation?.in) {
-        updateLayerAnimation(selectedLayer.id, {
-          in: {
-            ...selectedLayer.animation.in,
-            duration: Math.max(selectedLayer.animation.in.duration * 0.5, 0.2),
-            easing: "bouncy",
-          },
-        });
-        appliedDescription = `Sped up entrance by 2x with bouncy easing`;
+      if (selectedLayer) {
+        if (selectedLayer.type === "group") {
+          const group = selectedLayer as GroupLayer;
+          group.children.forEach((child) => {
+            if (child.animation?.in) {
+              updateLayerAnimation(child.id, {
+                in: {
+                  ...child.animation.in,
+                  duration: Math.max(child.animation.in.duration * 0.5, 0.2),
+                  easing: "bouncy",
+                },
+              });
+            }
+          });
+          appliedDescription = `Sped up ${group.children.length} animations by 2x`;
+        } else if (selectedLayer.animation?.in) {
+          updateLayerAnimation(selectedLayer.id, {
+            in: {
+              ...selectedLayer.animation.in,
+              duration: Math.max(selectedLayer.animation.in.duration * 0.5, 0.2),
+              easing: "bouncy",
+            },
+          });
+          appliedDescription = `Sped up entrance by 2x with bouncy easing`;
+        }
       }
     }
     // 3. Neon styling / Theme change
@@ -135,7 +151,7 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
       }
     }
 
-    setToastMessage(appliedDescription || "AI applied requested changes");
+    setToastMessage(`AI Applied: ${appliedDescription || "Requested changes"}`);
     setPrompt("");
     onClose();
 

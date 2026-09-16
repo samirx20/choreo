@@ -9,6 +9,7 @@ import { TimelinePanel } from "@/components/timeline/TimelinePanel";
 import { AICommandBar } from "@/components/ai/AICommandBar";
 import { ComponentsDrawer } from "@/components/components/ComponentsDrawer";
 import { ExportModal } from "@/components/export/ExportModal";
+import { ShortcutsModal } from "@/components/modals/ShortcutsModal";
 
 export const App: React.FC = () => {
   const {
@@ -18,11 +19,15 @@ export const App: React.FC = () => {
     redo,
     isPlaying,
     setIsPlaying,
+    selectedLayerIds,
+    duplicateLayer,
+    removeLayer,
   } = useProjectStore();
 
   const [isAiBarOpen, setIsAiBarOpen] = useState(false);
   const [isComponentsDrawerOpen, setIsComponentsDrawerOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -72,11 +77,46 @@ export const App: React.FC = () => {
         setIsPlaying(!isPlaying);
         return;
       }
+
+      // 6. Duplicate Layer: Ctrl+D
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d" && !isInput) {
+        e.preventDefault();
+        if (selectedLayerIds.length > 0) {
+          duplicateLayer(selectedLayerIds[0]);
+        }
+        return;
+      }
+
+      // 7. Delete Layer: Delete or Backspace
+      if ((e.key === "Delete" || e.key === "Backspace") && !isInput) {
+        if (selectedLayerIds.length > 0) {
+          e.preventDefault();
+          removeLayer(selectedLayerIds[0]);
+        }
+        return;
+      }
+
+      // 8. Keyboard Shortcuts Modal: ? or Ctrl+/
+      if ((e.key === "?" || ((e.ctrlKey || e.metaKey) && e.key === "/")) && !isInput) {
+        e.preventDefault();
+        setIsShortcutsModalOpen((prev) => !prev);
+        return;
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [uiMode, setUiMode, undo, redo, isPlaying, setIsPlaying]);
+  }, [
+    uiMode,
+    setUiMode,
+    undo,
+    redo,
+    isPlaying,
+    setIsPlaying,
+    selectedLayerIds,
+    duplicateLayer,
+    removeLayer,
+  ]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
@@ -117,6 +157,11 @@ export const App: React.FC = () => {
       <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
+      />
+
+      <ShortcutsModal
+        isOpen={isShortcutsModalOpen}
+        onClose={() => setIsShortcutsModalOpen(false)}
       />
     </div>
   );

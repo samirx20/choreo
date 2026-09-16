@@ -5,6 +5,7 @@ import { FloatingToolbar } from "./FloatingToolbar";
 import { evaluateSceneAtTime } from "@/engine/evaluator";
 import { TransformBox } from "./TransformBox";
 import { SnapGuide } from "./snapping";
+import { CanvasContextMenu } from "./CanvasContextMenu";
 
 interface CanvasViewportProps {
   onOpenComponentsDrawer: () => void;
@@ -32,6 +33,11 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
   const [guides, setGuides] = useState<SnapGuide[]>([]);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    layerId: string | null;
+  } | null>(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
 
   const activeScreen =
@@ -176,6 +182,16 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        if (selectedLayerIds.length > 0) {
+          setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            layerId: selectedLayerIds[0],
+          });
+        }
+      }}
       className={`flex-1 relative bg-zinc-950 overflow-hidden flex items-center justify-center select-none ${
         spacePressed ? (isPanning ? "cursor-grabbing" : "cursor-grab") : "cursor-default"
       }`}
@@ -251,6 +267,17 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       {/* Floating Toolbar (Design Mode only) */}
       {uiMode === "design" && (
         <FloatingToolbar onOpenComponentsDrawer={onOpenComponentsDrawer} />
+      )}
+
+      {/* Right-Click Context Menu */}
+      {contextMenu && (
+        <CanvasContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          layerId={contextMenu.layerId}
+          onClose={() => setContextMenu(null)}
+          onOpenComponentsDrawer={onOpenComponentsDrawer}
+        />
       )}
     </main>
   );
