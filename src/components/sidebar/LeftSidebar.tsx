@@ -63,7 +63,7 @@ export const LeftSidebar: React.FC = () => {
   const getLayerIcon = (layer: Layer) => {
     switch (layer.type) {
       case "text":
-        return <Type className="h-3.5 w-3.5 text-blue-400" />;
+        return <Type className="h-3.5 w-3.5 text-highlight" />;
       case "chunk":
         return <Zap className="h-3.5 w-3.5 text-amber-400" />;
       case "group":

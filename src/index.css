@@ -32,6 +32,11 @@
     --input: 240 3.7% 17%;
     --ring: 263.4 70% 50.4%;
 
+    /* Semantic Studio Highlight Accent (Single Source of Truth) */
+    --highlight: 50 98% 64%; /* Lighter Sunshine Yellow #FDE047 */
+    --highlight-soft: 53 98% 77%; /* Soft Buttercream Yellow #FEF08A */
+    --highlight-foreground: 240 10% 3.9%;
+
     --radius: 0.5rem;
   }
 }

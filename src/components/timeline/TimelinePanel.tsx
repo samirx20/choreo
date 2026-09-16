@@ -155,7 +155,7 @@ export const TimelinePanel: React.FC = () => {
                   <Folder className="h-3 w-3 text-violet-400 shrink-0" />
                 )}
                 {layer.type === "text" && (
-                  <Type className="h-3 w-3 text-blue-400 shrink-0" />
+                  <Type className="h-3 w-3 text-highlight shrink-0" />
                 )}
                 {layer.type === "chunk" && (
                   <Zap className="h-3 w-3 text-amber-400 shrink-0" />

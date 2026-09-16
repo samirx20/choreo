@@ -122,7 +122,7 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
             className="w-full px-2 py-1.5 rounded-lg flex items-center justify-between hover:bg-zinc-800 hover:text-white transition-colors text-left"
           >
             <span className="flex items-center gap-2">
-              <Split className="h-3.5 w-3.5 text-blue-400" />
+              <Split className="h-3.5 w-3.5 text-highlight" />
               <span>Split into Words</span>
             </span>
           </button>

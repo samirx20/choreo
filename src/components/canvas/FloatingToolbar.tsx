@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useProjectStore } from "@/store/useProjectStore";
 import { Layer } from "@/types/scene";
+import { THEME_TOKENS } from "@/theme/tokens";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -92,7 +93,10 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
         height: 200,
         rotation: 0,
         opacity: 1,
-        backgroundColor: shapeType === "circle" ? "#60A5FA" : "#8B5CF6",
+        backgroundColor:
+          shapeType === "circle"
+            ? THEME_TOKENS.accent.highlight
+            : THEME_TOKENS.accent.primary,
         borderRadius: shapeType === "circle" ? 9999 : 16,
         shadows: [
           {
@@ -185,7 +189,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">
-            <Type className="h-3.5 w-3.5 text-blue-400" />
+            <Type className="h-3.5 w-3.5 text-highlight" />
             <span>Text</span>
           </button>
         </DropdownMenuTrigger>

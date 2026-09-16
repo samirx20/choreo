@@ -284,7 +284,7 @@ export const AnimateInspector: React.FC = () => {
                 onClick={() => handleApplyPreset("slideUp")}
                 className="h-16 p-2 rounded-lg border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 hover:border-violet-500/50 flex flex-col items-center justify-center gap-1 transition-all group"
               >
-                <ArrowUpRight className="h-4 w-4 text-blue-400 group-hover:scale-110 transition-transform" />
+                <ArrowUpRight className="h-4 w-4 text-highlight group-hover:scale-110 transition-transform" />
                 <span className="text-xs font-medium text-zinc-200">Slide Up</span>
               </button>
             </div>

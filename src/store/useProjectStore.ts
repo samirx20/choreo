@@ -9,6 +9,7 @@ import {
   ProjectSettings,
 } from "@/types/scene";
 import { TransactionalHistory } from "./history";
+import { THEME_TOKENS } from "@/theme/tokens";
 
 export const INITIAL_SCENE: SceneDocument = {
   version: "1.0",
@@ -106,7 +107,7 @@ export const INITIAL_SCENE: SceneDocument = {
                 fontSize: 54,
                 fontWeight: 800,
                 fontFamily: "Inter",
-                color: "#60A5FA",
+                color: THEME_TOKENS.typography.subheadingColor,
                 textAlign: "center",
                 lineHeight: 1.1,
               },
@@ -134,7 +135,7 @@ export const INITIAL_SCENE: SceneDocument = {
                 fontSize: 54,
                 fontWeight: 800,
                 fontFamily: "Inter",
-                color: "#FACC15",
+                color: THEME_TOKENS.typography.accentTextColor,
                 textAlign: "center",
                 lineHeight: 1.1,
               },

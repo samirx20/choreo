@@ -121,7 +121,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
               }`}
             >
               <div className="flex items-center gap-1.5 font-medium text-xs">
-                <Film className="h-4 w-4 text-blue-400" />
+                <Film className="h-4 w-4 text-highlight" />
                 <span>Video Render</span>
               </div>
               <span className="text-[10px] text-zinc-500">
