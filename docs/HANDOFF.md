@@ -45,32 +45,21 @@ Before writing code, review these dedicated specification documents:
 
 ---
 
-## 4. Immediate Starting Point for the Next Session
+## 4. Current Status: Phases 1 - 6 Completed & Ready for User Verification
 
-The next session will execute **Phase 1: Project Scaffolding & State Store**:
-
-### Immediate Steps:
-1. **Initialize Vite Project**:
-   * Scaffold a React 19 + TypeScript project using Vite in the workspace root:
-     ```bash
-     npm create vite@latest . -- --template react-ts
-     ```
-2. **Install Styling & UI Dependencies**:
-   * Install Tailwind CSS, `@tailwindcss/vite` (or Tailwind v3/v4 setup), `clsx`, `tailwind-merge`, `class-variance-authority`.
-   * Install `lucide-react` and `@radix-ui` primitives.
-   * Add initial **shadcn/ui** components into `src/components/ui/`.
-3. **Implement Zustand `scene.json` Store**:
-   * Create `src/store/useProjectStore.ts` defining the typed AST for `Project`, `Screen`, `Layer`, `GroupLayer`, `TextLayer`, `ShapeLayer`.
-   * Create `src/store/history.ts` for the transactional undo/redo engine with drag/slider batching.
-4. **Build Core DOM Layer Renderers**:
-   * Create `src/components/canvas/renderers/`: `<ScreenRenderer>`, `<GroupRenderer>` (with CSS Flexbox support), `<TextRenderer>`, `<ChunkRenderer>`, `<ShapeRenderer>`.
-5. **Verify**:
-   * Ensure `npm run dev` boots cleanly and renders a live interactive sample screen from `scene.json` with working `Ctrl+Z` / `Ctrl+Shift+Z`.
+All browser-runnable studio features across **Phases 1 through 6** are fully built, tested, and pushed to [`samirx20/choreo`](https://github.com/samirx20/choreo.git) on `main`:
+1. **Scaffolding & Store**: React 19 + TypeScript + Vite + Tailwind CSS + shadcn/ui primitives. Typed AST in `src/types/scene.ts`, transactional undo/redo in `src/store/history.ts`, Zustand store in `src/store/useProjectStore.ts`.
+2. **Motion Engine**: 8 atomic evaluators (`src/engine/atomics.ts`), cubic-bezier easings (`src/engine/easings.ts`), deterministic virtual clock evaluator (`src/engine/evaluator.ts`).
+3. **Canvas & Design Mode**: Interactive canvas with pan/zoom, TransformBox with 8 handles and rotation pin, magnetic snapping guides (`src/components/canvas/snapping.ts`), Left Sidebar (screens & layers tree), Floating Add Toolbar, Design Inspector matching Screenshot 4, and context-aware text splitting with 0px visual shift (`src/engine/textSplitter.ts`).
+4. **Animate Mode & Timeline**: Multi-track sequencer (`src/components/timeline/TimelinePanel.tsx`) with playhead scrubber, DraggableClip blocks with left/right trim handles, and Animate Inspector (`src/components/inspector/AnimateInspector.tsx`) matching Screenshots 1, 2, and 3.
+5. **AI Command Bar & Components**: `Ctrl+K` floating palette with deterministic AST mutation, suggestion chips, and bottom undo toast (`src/components/ai/AICommandBar.tsx`); stampable Custom Components drawer (`src/components/components/ComponentsDrawer.tsx`).
+6. **Persistence**: Self-contained `.motion` zip bundle export & import via JSZip (`src/engine/bundle.ts`) and Export modal.
 
 ---
 
-## 5. Copy-Paste Starter Prompt for the Next Session
+## 5. Immediate Next Step: User Verification & Phase 7 Packaging
 
-When opening the new thread, paste this prompt to start immediately:
-
-> *"Please read [AGENTS.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/AGENTS.md) and [docs/HANDOFF.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/HANDOFF.md). All specifications and architectural decisions for **Choreo** are fully resolved. Let's begin executing **Phase 1**: project scaffolding with React 19, Vite, Tailwind CSS, shadcn/ui, and the Zustand state store with transactional undo/redo."*
+1. **User Verification Flow**:
+   Run `npm run dev` and open `http://localhost:5173`. Test canvas dragging, text splitting, timeline scrubbing, clip dragging, preset swapping, AI command bar, and .motion bundle download.
+2. **Phase 7 (Post-Verification)**:
+   Initialize Tauri v2 (`cargo tauri init`), configure bundled native FFmpeg sidecar, and wrap the verified React frontend into the standalone desktop binary.
