@@ -66,24 +66,24 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md bg-zinc-950 border border-zinc-800 shadow-2xl rounded-2xl p-5 flex flex-col gap-4 text-zinc-100"
+        className="w-full max-w-md bg-card border border-border shadow-2xl rounded-2xl p-5 flex flex-col gap-4 text-foreground"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white">
+            <div className="h-7 w-7 rounded-lg bg-primary/15 text-primary border border-primary/30 flex items-center justify-center">
               <Download className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold">Export Project</h2>
-              <p className="text-[11px] text-zinc-500">
+              <h2 className="text-sm font-semibold text-foreground">Export Project</h2>
+              <p className="text-[11px] text-muted-foreground">
                 Generate .motion bundle or render video
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-zinc-900 text-zinc-400 hover:text-white"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
@@ -91,7 +91,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
 
         {/* Format Selection */}
         <div className="space-y-1.5">
-          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Format
           </span>
           <div className="grid grid-cols-2 gap-2">
@@ -99,15 +99,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
               onClick={() => setFormat("motion")}
               className={`p-3 rounded-xl border flex flex-col items-start gap-1 transition-all text-left ${
                 format === "motion"
-                  ? "bg-violet-950/30 border-violet-500 text-white"
-                  : "bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+                  ? "bg-primary/10 border-primary text-foreground"
+                  : "bg-secondary/40 border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
             >
               <div className="flex items-center gap-1.5 font-medium text-xs">
-                <FileArchive className="h-4 w-4 text-violet-400" />
+                <FileArchive className="h-4 w-4 text-primary" />
                 <span>.motion Bundle</span>
               </div>
-              <span className="text-[10px] text-zinc-500">
+              <span className="text-[10px] text-muted-foreground">
                 Self-contained portable zip archive with 100% editability
               </span>
             </button>
@@ -116,15 +116,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
               onClick={() => setFormat("webm")}
               className={`p-3 rounded-xl border flex flex-col items-start gap-1 transition-all text-left ${
                 format === "webm"
-                  ? "bg-violet-950/30 border-violet-500 text-white"
-                  : "bg-zinc-900/50 border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200"
+                  ? "bg-primary/10 border-primary text-foreground"
+                  : "bg-secondary/40 border-border text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
             >
               <div className="flex items-center gap-1.5 font-medium text-xs">
-                <Film className="h-4 w-4 text-highlight" />
+                <Film className="h-4 w-4 text-primary" />
                 <span>Video Render</span>
               </div>
-              <span className="text-[10px] text-zinc-500">
+              <span className="text-[10px] text-muted-foreground">
                 Virtual clock frame-accurate video output (WebM / MP4)
               </span>
             </button>
@@ -132,13 +132,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
         </div>
 
         {/* Settings */}
-        <div className="space-y-3 bg-zinc-900/50 p-3 rounded-xl border border-zinc-800/80">
+        <div className="space-y-3 bg-secondary/40 p-3 rounded-xl border border-border">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-zinc-400">Resolution</span>
+            <span className="text-muted-foreground">Resolution</span>
             <select
               value={resolution}
               onChange={(e) => setResolution(e.target.value as any)}
-              className="bg-zinc-800 text-xs text-zinc-200 rounded px-2 py-1 focus:outline-none border border-zinc-700"
+              className="bg-muted text-xs text-foreground rounded px-2 py-1 focus:outline-none border border-border"
             >
               <option value="1080p">1080p (1920 × 1080 • 16:9)</option>
               <option value="9:16">Story / Reel (1080 × 1920 • 9:16)</option>
@@ -147,20 +147,20 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
           </div>
 
           <div className="flex items-center justify-between text-xs">
-            <span className="text-zinc-400">Framerate</span>
-            <div className="flex items-center gap-1 bg-zinc-800 p-0.5 rounded border border-zinc-700">
+            <span className="text-muted-foreground">Framerate</span>
+            <div className="flex items-center gap-1 bg-muted p-0.5 rounded border border-border">
               <button
                 onClick={() => setFps(30)}
-                className={`px-2 py-0.5 rounded text-[11px] ${
-                  fps === 30 ? "bg-zinc-700 text-white" : "text-zinc-400"
+                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                  fps === 30 ? "bg-secondary text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 30 fps
               </button>
               <button
                 onClick={() => setFps(60)}
-                className={`px-2 py-0.5 rounded text-[11px] ${
-                  fps === 60 ? "bg-violet-600 text-white" : "text-zinc-400"
+                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                  fps === 60 ? "bg-primary text-primary-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 60 fps
@@ -179,7 +179,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
           <Button
             disabled={isExporting}
             onClick={handleExport}
-            className="w-full h-9 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-lg shadow-violet-950/50 gap-2 text-xs"
+            className="w-full h-9 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm gap-2 text-xs"
           >
             {isExporting ? (
               <>

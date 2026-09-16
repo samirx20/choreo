@@ -34,7 +34,7 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       onClick={onClick}
       className={cn(
         "cursor-pointer select-none transition-[outline]",
-        isSelected && "ring-2 ring-violet-500 ring-offset-2 ring-offset-transparent",
+        isSelected && "ring-1 ring-primary ring-offset-2 ring-offset-transparent",
         layer.style.tailwindClasses
       )}
     >

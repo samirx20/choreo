@@ -101,7 +101,7 @@ export const TimelinePanel: React.FC = () => {
           <button
             onClick={() => setIsPlaying(!isPlaying)}
             title="Play / Pause (Space)"
-            className="p-1.5 rounded-full bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-900/40"
+            className="p-1.5 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
           >
             {isPlaying ? (
               <Pause className="h-4 w-4" />
@@ -112,7 +112,7 @@ export const TimelinePanel: React.FC = () => {
           <button
             onClick={handleStepForward}
             title="Step Forward 1 Frame (.)"
-            className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -120,7 +120,7 @@ export const TimelinePanel: React.FC = () => {
 
         {/* Right: Snapping & Duration Label */}
         <div className="flex items-center gap-3">
-          <span className="text-[11px] text-zinc-500 font-mono">
+          <span className="text-[11px] text-muted-foreground font-mono">
             Duration: {duration.toFixed(1)}s
           </span>
         </div>
@@ -129,12 +129,12 @@ export const TimelinePanel: React.FC = () => {
       {/* 2. Sequencer Body: Tracks Column (Left) + Ruler & Clips Grid (Right) */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Left Track Headers (Width: 200px) */}
-        <div className="w-52 border-r border-zinc-800/80 bg-zinc-950 flex flex-col overflow-y-auto">
+        <div className="w-52 border-r border-border bg-background flex flex-col overflow-y-auto">
           {/* Header row aligned with ruler */}
-          <div className="h-6 px-3 border-b border-zinc-800/60 flex items-center justify-between text-[10px] text-zinc-500 uppercase tracking-wider font-semibold bg-zinc-900/20">
+          <div className="h-6 px-3 border-b border-border flex items-center justify-between text-[10px] text-muted-foreground uppercase tracking-wider font-semibold bg-muted/40">
             <span>Layers</span>
             <span title="Auto-Link Active">
-              <Link className="h-3 w-3 text-violet-400" />
+              <Link className="h-3 w-3 text-primary" />
             </span>
           </div>
 
@@ -145,20 +145,20 @@ export const TimelinePanel: React.FC = () => {
               <div
                 key={layer.id}
                 onClick={() => selectLayer(layer.id)}
-                className={`h-7 px-3 flex items-center gap-2 text-xs border-b border-zinc-800/40 cursor-pointer truncate transition-colors ${
+                className={`h-7 px-3 flex items-center gap-2 text-xs border-b border-border/40 cursor-pointer truncate transition-colors ${
                   isSelected
-                    ? "bg-violet-950/40 text-violet-200 font-medium"
-                    : "text-zinc-400 hover:bg-zinc-900/60 hover:text-zinc-200"
+                    ? "bg-secondary text-foreground font-medium"
+                    : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
                 }`}
               >
                 {layer.type === "group" && (
-                  <Folder className="h-3 w-3 text-violet-400 shrink-0" />
+                  <Folder className="h-3 w-3 text-foreground/80 shrink-0" />
                 )}
                 {layer.type === "text" && (
-                  <Type className="h-3 w-3 text-highlight shrink-0" />
+                  <Type className="h-3 w-3 text-primary shrink-0" />
                 )}
                 {layer.type === "chunk" && (
-                  <Zap className="h-3 w-3 text-amber-400 shrink-0" />
+                  <Zap className="h-3 w-3 text-primary shrink-0" />
                 )}
                 {layer.type === "shape" && (
                   <Square className="h-3 w-3 text-emerald-400 shrink-0" />
@@ -175,7 +175,7 @@ export const TimelinePanel: React.FC = () => {
           <div
             ref={rulerRef}
             onClick={handleRulerClick}
-            className="h-6 border-b border-zinc-800/60 bg-zinc-900/40 relative cursor-pointer flex items-center"
+            className="h-6 border-b border-border bg-muted/30 relative cursor-pointer flex items-center"
           >
             {/* Second marks */}
             {Array.from({ length: Math.ceil(duration) + 1 }).map((_, sec) => {
@@ -187,10 +187,10 @@ export const TimelinePanel: React.FC = () => {
                   style={{ left: `${leftPercent}%` }}
                   className="absolute top-0 bottom-0 flex flex-col justify-between pointer-events-none"
                 >
-                  <span className="text-[9px] font-mono text-zinc-500 pl-1">
+                  <span className="text-[9px] font-mono text-muted-foreground pl-1">
                     {sec}s
                   </span>
-                  <div className="w-px h-2 bg-zinc-700" />
+                  <div className="w-px h-2 bg-border" />
                 </div>
               );
             })}
@@ -207,8 +207,8 @@ export const TimelinePanel: React.FC = () => {
                 <div
                   key={layer.id}
                   onClick={() => selectLayer(layer.id)}
-                  className={`h-7 border-b border-zinc-800/30 relative flex items-center px-1 ${
-                    isSelected ? "bg-violet-950/20" : ""
+                  className={`h-7 border-b border-border/30 relative flex items-center px-1 ${
+                    isSelected ? "bg-secondary/40" : ""
                   }`}
                 >
                   {animIn && (
@@ -231,14 +231,14 @@ export const TimelinePanel: React.FC = () => {
               );
             })}
 
-            {/* Red Playhead Line across all tracks */}
+            {/* Stamp Gold Playhead Line across all tracks */}
             <div
               style={{
                 left: `${(currentTime / duration) * 100}%`,
               }}
-              className="absolute top-0 bottom-0 w-0.5 bg-red-500 pointer-events-none z-20 shadow-[0_0_8px_rgba(239,68,68,0.8)]"
+              className="absolute top-0 bottom-0 w-0.5 bg-primary pointer-events-none z-20 shadow-[0_0_6px_rgba(232,197,71,0.6)]"
             >
-              <div className="w-2.5 h-2.5 -ml-1 bg-red-500 rotate-45 -mt-1 shadow" />
+              <div className="w-2.5 h-2.5 -ml-1 bg-primary rotate-45 -mt-1 shadow" />
             </div>
           </div>
         </div>

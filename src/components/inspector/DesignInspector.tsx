@@ -123,14 +123,14 @@ export const DesignInspector: React.FC = () => {
   };
 
   return (
-    <aside className="w-80 h-full bg-zinc-950 border-l border-zinc-800/80 flex flex-col text-xs text-zinc-300 select-none overflow-y-auto">
+    <aside className="w-80 h-full bg-background border-l border-border flex flex-col text-xs text-foreground select-none overflow-y-auto">
       {/* 1. Header & Layer Identification */}
-      <div className="h-10 px-3 border-b border-zinc-800/80 flex items-center justify-between bg-zinc-900/40">
+      <div className="h-10 px-3 border-b border-border flex items-center justify-between bg-card">
         <input
           type="text"
           value={selectedLayer.name}
           onChange={(e) => updateLayer(selectedLayer.id, { name: e.target.value })}
-          className="bg-transparent text-xs font-semibold text-zinc-100 hover:bg-zinc-800/60 px-1 py-0.5 rounded focus:outline-none focus:ring-1 focus:ring-violet-500 max-w-[170px] truncate"
+          className="bg-transparent text-xs font-semibold text-foreground hover:bg-muted px-1 py-0.5 rounded focus:outline-none focus:ring-1 focus:ring-primary max-w-[170px] truncate"
         />
 
         <div className="flex items-center gap-1">
@@ -257,7 +257,7 @@ export const DesignInspector: React.FC = () => {
               title={aspectLocked ? "Unlock Aspect Ratio" : "Lock Aspect Ratio"}
             >
               {aspectLocked ? (
-                <Lock className="h-3 w-3 text-violet-400" />
+                <Lock className="h-3 w-3 text-primary" />
               ) : (
                 <Unlock className="h-3 w-3" />
               )}
@@ -370,14 +370,14 @@ export const DesignInspector: React.FC = () => {
                   <button
                     onClick={handleSplitChunks}
                     title="Split into Lines/Chunks"
-                    className="text-[10px] flex items-center gap-1 bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 px-1.5 py-0.5 rounded border border-violet-500/30"
+                    className="text-[10px] flex items-center gap-1 bg-primary/15 hover:bg-primary/25 text-primary px-1.5 py-0.5 rounded border border-primary/30 font-medium"
                   >
                     <Split className="h-2.5 w-2.5" /> Chunks
                   </button>
                   <button
                     onClick={handleSplitWords}
                     title="Split into Words"
-                    className="text-[10px] flex items-center gap-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-1.5 py-0.5 rounded"
+                    className="text-[10px] flex items-center gap-1 bg-secondary hover:bg-muted text-foreground px-1.5 py-0.5 rounded border border-border"
                   >
                     Words
                   </button>
@@ -387,9 +387,9 @@ export const DesignInspector: React.FC = () => {
 
             {/* Text Content Field */}
             <div className="space-y-1">
-              <div className="flex items-center justify-between text-[10px] text-zinc-500">
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                 <span>Text Content</span>
-                <span className="font-mono text-[9px] text-zinc-600">
+                <span className="font-mono text-[9px] text-muted-foreground/80">
                   {((selectedLayer as any).content || "").length} chars
                 </span>
               </div>
@@ -400,7 +400,7 @@ export const DesignInspector: React.FC = () => {
                   updateLayer(selectedLayer.id, { content: e.target.value })
                 }
                 placeholder="Type layer text..."
-                className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-violet-500 resize-none font-sans"
+                className="w-full bg-muted/70 border border-border rounded px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary resize-none font-sans"
               />
             </div>
 
@@ -642,9 +642,9 @@ export const DesignInspector: React.FC = () => {
           {showAdvancedCss && (
             <div className="space-y-2 mt-2">
               <div className="space-y-1">
-                <span className="text-[10px] text-zinc-500">Tailwind Classes</span>
+                <span className="text-[10px] text-muted-foreground">Tailwind Classes</span>
                 <Input
-                  placeholder="e.g. ring-1 ring-violet-500 shadow-xl"
+                  placeholder="e.g. ring-1 ring-primary shadow-xl"
                   value={style.tailwindClasses || ""}
                   onChange={(e) =>
                     updateLayerStyle(selectedLayer.id, {
@@ -656,7 +656,7 @@ export const DesignInspector: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <span className="text-[10px] text-zinc-500">Custom CSS Rules</span>
+                <span className="text-[10px] text-muted-foreground">Custom CSS Rules</span>
                 <textarea
                   rows={2}
                   placeholder="e.g. mix-blend-mode: overlay;"
@@ -666,7 +666,7 @@ export const DesignInspector: React.FC = () => {
                       customCss: e.target.value,
                     })
                   }
-                  className="w-full bg-zinc-900 border border-zinc-800 rounded p-1.5 text-[11px] font-mono text-zinc-200 focus:outline-none focus:border-violet-500 resize-none"
+                  className="w-full bg-muted/70 border border-border rounded p-1.5 text-[11px] font-mono text-foreground focus:outline-none focus:border-primary resize-none"
                 />
               </div>
             </div>

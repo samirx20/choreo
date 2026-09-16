@@ -47,13 +47,13 @@ export const ComponentsDrawer: React.FC<ComponentsDrawerProps> = ({
   }[] = [
     {
       id: "comp_neon_button",
-      name: "Neon CTA Button",
+      name: "Gold Stamp Button",
       category: "Buttons",
       icon: MousePointerClick,
-      description: "Pill button with glowing border and pop-in entrance",
+      description: "Pill button with glowing Stamp Gold and pop-in entrance",
       createLayer: () => ({
         id: `btn_${Date.now()}`,
-        name: "Neon CTA Button",
+        name: "Gold Stamp Button",
         type: "text",
         content: "Get Started Free →",
         style: {
@@ -66,12 +66,12 @@ export const ComponentsDrawer: React.FC<ComponentsDrawerProps> = ({
           fontSize: 24,
           fontWeight: 700,
           fontFamily: "Inter",
-          color: "#FFFFFF",
-          backgroundColor: "#8b5cf6",
+          color: "#0a0a0a",
+          backgroundColor: "#e8c547",
           padding: [14, 28, 14, 28],
           borderRadius: 9999,
           shadows: [
-            { x: 0, y: 10, blur: 25, spread: -5, color: "rgba(139,92,246,0.6)" },
+            { x: 0, y: 10, blur: 25, spread: -5, color: "rgba(232,197,71,0.5)" },
           ],
         },
         animation: {
@@ -111,14 +111,14 @@ export const ComponentsDrawer: React.FC<ComponentsDrawerProps> = ({
           height: "auto",
           rotation: 0,
           opacity: 1,
-          backgroundColor: "rgba(24, 24, 27, 0.75)",
+          backgroundColor: "rgba(17, 17, 17, 0.85)",
           backdropBlur: 20,
           padding: 32,
           borderRadius: 24,
           borderWidth: 1,
-          borderColor: "rgba(255, 255, 255, 0.15)",
+          borderColor: "rgba(238, 232, 213, 0.15)",
           shadows: [
-            { x: 0, y: 20, blur: 40, spread: -10, color: "rgba(0,0,0,0.5)" },
+            { x: 0, y: 20, blur: 40, spread: -10, color: "rgba(0,0,0,0.6)" },
           ],
         },
         children: [
@@ -126,7 +126,7 @@ export const ComponentsDrawer: React.FC<ComponentsDrawerProps> = ({
             id: `glass_title_${Date.now()}`,
             name: "Card Title",
             type: "text",
-            content: "Glassmorphism UI",
+            content: "Night Workshop UI",
             style: {
               x: 0,
               y: 0,
@@ -137,7 +137,7 @@ export const ComponentsDrawer: React.FC<ComponentsDrawerProps> = ({
               fontSize: 32,
               fontWeight: 800,
               fontFamily: "Inter",
-              color: "#FFFFFF",
+              color: "#eee8d5",
             },
             animation: {
               in: {
@@ -180,10 +180,10 @@ export const ComponentsDrawer: React.FC<ComponentsDrawerProps> = ({
           fontSize: 14,
           fontWeight: 700,
           fontFamily: "Inter",
-          color: "#A78BFA",
-          backgroundColor: "rgba(139, 92, 246, 0.15)",
+          color: "#e8c547",
+          backgroundColor: "rgba(232, 197, 71, 0.15)",
           borderWidth: 1,
-          borderColor: "rgba(139, 92, 246, 0.3)",
+          borderColor: "rgba(232, 197, 71, 0.3)",
           padding: [6, 14, 6, 14],
           borderRadius: 9999,
         },
@@ -212,37 +212,37 @@ export const ComponentsDrawer: React.FC<ComponentsDrawerProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg bg-zinc-950 border border-zinc-800 shadow-2xl rounded-2xl p-5 flex flex-col gap-4 text-zinc-100"
+        className="w-full max-w-lg bg-card border border-border shadow-2xl rounded-2xl p-5 flex flex-col gap-4 text-foreground"
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div className="flex items-center justify-between border-b border-border pb-3">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-violet-600/20 text-violet-400 border border-violet-500/30 flex items-center justify-center">
+            <div className="h-7 w-7 rounded-lg bg-primary/15 text-primary border border-primary/30 flex items-center justify-center">
               <Component className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold">Custom Components</h2>
-              <p className="text-[11px] text-zinc-500">
+              <h2 className="text-sm font-semibold text-foreground">Custom Components</h2>
+              <p className="text-[11px] text-muted-foreground">
                 Stamp animated templates onto your canvas with 1 click
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-zinc-900 text-zinc-400 hover:text-white"
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-1 bg-zinc-900 p-0.5 rounded-lg border border-zinc-800 text-xs">
+        <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg border border-border text-xs">
           <button
             onClick={() => setActiveTab("project")}
             className={`flex-1 py-1 rounded-md text-xs font-medium transition-colors ${
               activeTab === "project"
-                ? "bg-zinc-800 text-white shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-secondary text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Project Library
@@ -251,8 +251,8 @@ export const ComponentsDrawer: React.FC<ComponentsDrawerProps> = ({
             onClick={() => setActiveTab("global")}
             className={`flex-1 py-1 rounded-md text-xs font-medium transition-colors ${
               activeTab === "global"
-                ? "bg-zinc-800 text-white shadow-sm"
-                : "text-zinc-400 hover:text-zinc-200"
+                ? "bg-secondary text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             Global Presets
@@ -264,22 +264,22 @@ export const ComponentsDrawer: React.FC<ComponentsDrawerProps> = ({
           {sampleComponents.map((comp) => (
             <div
               key={comp.id}
-              className="p-3 rounded-xl border border-zinc-800/80 bg-zinc-900/50 hover:bg-zinc-900 hover:border-zinc-700 flex items-center justify-between transition-all group"
+              className="p-3 rounded-xl border border-border/80 bg-secondary/40 hover:bg-secondary hover:border-primary/40 flex items-center justify-between transition-all group"
             >
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-lg bg-zinc-800 flex items-center justify-center text-zinc-300 group-hover:text-violet-400 transition-colors">
+                <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
                   <comp.icon className="h-4 w-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-zinc-200">
+                    <span className="text-xs font-semibold text-foreground">
                       {comp.name}
                     </span>
                     <Badge variant="secondary" className="text-[9px] py-0 h-4">
                       {comp.category}
                     </Badge>
                   </div>
-                  <p className="text-[11px] text-zinc-500 mt-0.5">
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
                     {comp.description}
                   </p>
                 </div>
@@ -288,7 +288,7 @@ export const ComponentsDrawer: React.FC<ComponentsDrawerProps> = ({
               <Button
                 size="sm"
                 onClick={() => handleInsert(comp.createLayer)}
-                className="h-7 text-xs px-2.5 gap-1 bg-violet-600/20 hover:bg-violet-600 text-violet-300 hover:text-white border border-violet-500/30"
+                className="h-7 text-xs px-2.5 gap-1 bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
               >
                 <Plus className="h-3 w-3" /> Insert
               </Button>

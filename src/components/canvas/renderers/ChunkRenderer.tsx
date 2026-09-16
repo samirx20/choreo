@@ -56,7 +56,7 @@ export const ChunkRenderer: React.FC<ChunkRendererProps> = ({
       }}
       className={cn(
         "inline-block cursor-pointer select-none transition-[outline] relative",
-        isSelected && "ring-1 ring-violet-500 ring-offset-1 ring-offset-transparent",
+        isSelected && "ring-1 ring-primary ring-offset-1 ring-offset-transparent",
         layer.style.tailwindClasses
       )}
     >

@@ -128,10 +128,10 @@ export const DraggableClip: React.FC<DraggableClipProps> = ({
         left: `${leftPercent}%`,
         width: `${widthPercent}%`,
       }}
-      className={`absolute h-5 rounded px-1.5 flex items-center justify-between text-[10px] font-medium text-white shadow-sm border truncate select-none group ${
+      className={`absolute h-5 rounded px-1.5 flex items-center justify-between text-[10px] font-medium shadow-xs border select-none group transition-colors ${
         mode === "in"
-          ? "bg-gradient-to-r from-violet-600 to-indigo-600 border-violet-400/50"
-          : "bg-gradient-to-r from-purple-600 to-pink-600 border-purple-400/50"
+          ? "bg-secondary border-border hover:border-primary/60 text-foreground"
+          : "bg-muted border-border hover:border-primary/60 text-foreground"
       }`}
       onPointerDown={(e) => handlePointerDown("move", e)}
       onPointerMove={handlePointerMove}
@@ -139,25 +139,25 @@ export const DraggableClip: React.FC<DraggableClipProps> = ({
     >
       {/* Left Trim Handle */}
       <div
-        className="w-2 h-full -ml-1 cursor-ew-resize hover:bg-white/30 transition-colors shrink-0"
+        className="w-2 h-full -ml-1 cursor-ew-resize hover:bg-primary/40 transition-colors shrink-0"
         onPointerDown={(e) => handlePointerDown("start", e)}
         title="Drag to trim start"
       />
 
       {/* Clip Center Label */}
       <div className="flex items-center gap-1 min-w-0 flex-1 px-1 pointer-events-none truncate cursor-grab active:cursor-grabbing">
-        <Zap className="h-2.5 w-2.5 text-violet-200 shrink-0" />
+        <Zap className="h-2.5 w-2.5 text-primary shrink-0" />
         <span className="truncate capitalize font-semibold">
           {anim.preset}
         </span>
-        <span className="text-[9px] text-zinc-300 font-mono">
+        <span className="text-[9px] text-muted-foreground font-mono">
           {anim.duration.toFixed(1)}s
         </span>
       </div>
 
       {/* Right Trim Handle */}
       <div
-        className="w-2 h-full -mr-1 cursor-ew-resize hover:bg-white/30 transition-colors shrink-0"
+        className="w-2 h-full -mr-1 cursor-ew-resize hover:bg-primary/40 transition-colors shrink-0"
         onPointerDown={(e) => handlePointerDown("end", e)}
         title="Drag to trim duration"
       />

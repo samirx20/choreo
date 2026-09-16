@@ -113,18 +113,18 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
         }
       }
     }
-    // 3. Neon styling / Theme change
-    else if (query.includes("neon") || query.includes("glow") || query.includes("cyan")) {
+    // 3. Stamp Gold styling / Theme change
+    else if (query.includes("gold") || query.includes("glow") || query.includes("stamp") || query.includes("neon")) {
       if (selectedLayer) {
         updateLayerStyle(selectedLayer.id, {
-          backgroundColor: "#09090b",
-          borderColor: "#06b6d4",
+          backgroundColor: "#111111",
+          borderColor: "#e8c547",
           borderWidth: 2,
           shadows: [
-            { x: 0, y: 0, blur: 30, spread: 2, color: "rgba(6,182,212,0.4)" },
+            { x: 0, y: 0, blur: 30, spread: 2, color: "rgba(232,197,71,0.4)" },
           ],
         });
-        appliedDescription = `Applied neon cyan glow styling`;
+        appliedDescription = `Applied Stamp Gold glow styling`;
       }
     }
     // 4. Split into chunks
@@ -164,7 +164,7 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
   const suggestions = [
     "Split text into chunks and stagger pop-ins by 0.15s",
     "Make entrance 2x faster with bouncy easing",
-    "Apply glowing neon cyan border and shadow",
+    "Apply glowing Stamp Gold border and shadow",
     "Change entrance to smooth slide up",
   ];
 
@@ -173,23 +173,23 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
       {/* Centered Modal Backdrop & Dialog */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 bg-black/60 backdrop-blur-sm animate-in fade-in-0">
-          <div className="w-full max-w-xl bg-zinc-900/95 border border-zinc-700 shadow-2xl rounded-2xl p-4 text-zinc-100 flex flex-col gap-3">
+          <div className="w-full max-w-xl bg-card border border-border shadow-2xl rounded-2xl p-4 text-foreground flex flex-col gap-3">
             {/* Header */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-violet-400">
+              <div className="flex items-center gap-2 text-primary">
                 <Sparkles className="h-4 w-4" />
-                <span className="font-semibold text-xs text-zinc-200">
+                <span className="font-semibold text-xs text-foreground">
                   AI Command Bar
                 </span>
                 {selectedLayer && (
-                  <span className="text-[11px] text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded">
+                  <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border">
                     Target: {selectedLayer.name}
                   </span>
                 )}
               </div>
               <button
                 onClick={onClose}
-                className="p-1 rounded hover:bg-zinc-800 text-zinc-400 hover:text-white"
+                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -207,11 +207,11 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
                   if (e.key === "Enter") handleExecute(prompt);
                   if (e.key === "Escape") onClose();
                 }}
-                className="w-full h-11 pl-3 pr-10 bg-zinc-950/80 border border-zinc-700 rounded-xl text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-violet-500"
+                className="w-full h-11 pl-3 pr-10 bg-background border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               />
               <button
                 onClick={() => handleExecute(prompt)}
-                className="absolute right-2 p-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white"
+                className="absolute right-2 p-1.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
               >
                 <CornerDownLeft className="h-3.5 w-3.5" />
               </button>
@@ -219,7 +219,7 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
 
             {/* Suggestions Chips */}
             <div className="space-y-1.5">
-              <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                 Quick Prompts
               </span>
               <div className="flex flex-wrap gap-1.5">
@@ -227,7 +227,7 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
                   <button
                     key={sug}
                     onClick={() => handleExecute(sug)}
-                    className="text-[11px] bg-zinc-800/70 hover:bg-zinc-800 hover:text-violet-300 text-zinc-300 px-2.5 py-1 rounded-lg border border-zinc-700/60 transition-colors text-left"
+                    className="text-[11px] bg-secondary hover:bg-muted hover:text-primary text-foreground/80 px-2.5 py-1 rounded-lg border border-border transition-colors text-left"
                   >
                     {sug}
                   </button>
@@ -240,22 +240,22 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
 
       {/* Non-Intrusive Bottom Toast with Instant Undo */}
       {toastMessage && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-zinc-900/95 border border-violet-500/50 shadow-2xl px-4 py-2 rounded-full text-xs text-zinc-200 animate-in fade-in-0 slide-in-from-bottom-3 backdrop-blur-md">
-          <Sparkles className="h-3.5 w-3.5 text-violet-400" />
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-card border border-primary/40 shadow-2xl px-4 py-2 rounded-full text-xs text-foreground animate-in fade-in-0 slide-in-from-bottom-3 backdrop-blur-md">
+          <Sparkles className="h-3.5 w-3.5 text-primary" />
           <span>{toastMessage}</span>
-          <div className="h-3.5 w-px bg-zinc-700 mx-1" />
+          <div className="h-3.5 w-px bg-border mx-1" />
           <button
             onClick={() => {
               undo();
               setToastMessage(null);
             }}
-            className="flex items-center gap-1 font-semibold text-violet-400 hover:text-violet-300 transition-colors"
+            className="flex items-center gap-1 font-semibold text-primary hover:text-primary/80 transition-colors"
           >
             <Undo className="h-3 w-3" /> Undo
           </button>
           <button
             onClick={() => setToastMessage(null)}
-            className="flex items-center gap-1 text-zinc-400 hover:text-zinc-200 transition-colors"
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
           >
             <Check className="h-3 w-3" /> Keep
           </button>

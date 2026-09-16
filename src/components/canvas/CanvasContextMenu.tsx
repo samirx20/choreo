@@ -86,43 +86,43 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
     <div
       ref={menuRef}
       style={{ left: `${x}px`, top: `${y}px` }}
-      className="fixed z-50 w-52 bg-zinc-900/95 backdrop-blur-md border border-zinc-800 shadow-2xl rounded-xl p-1 text-xs text-zinc-200 select-none animate-in fade-in-0 zoom-in-95"
+      className="fixed z-50 w-52 bg-card/95 backdrop-blur-md border border-border shadow-2xl rounded-xl p-1 text-xs text-foreground select-none animate-in fade-in-0 zoom-in-95"
     >
-      <div className="px-2 py-1 text-[10px] text-zinc-500 font-semibold uppercase tracking-wider truncate">
+      <div className="px-2 py-1 text-[10px] text-muted-foreground font-semibold uppercase tracking-wider truncate">
         {layer.name}
       </div>
 
-      <div className="h-px bg-zinc-800/80 my-1" />
+      <div className="h-px bg-border my-1" />
 
       <button
         onClick={handleDuplicate}
-        className="w-full px-2 py-1.5 rounded-lg flex items-center justify-between hover:bg-zinc-800 hover:text-white transition-colors text-left"
+        className="w-full px-2 py-1.5 rounded-lg flex items-center justify-between hover:bg-muted hover:text-foreground transition-colors text-left"
       >
         <span className="flex items-center gap-2">
-          <Copy className="h-3.5 w-3.5 text-zinc-400" />
+          <Copy className="h-3.5 w-3.5 text-muted-foreground" />
           <span>Duplicate</span>
         </span>
-        <kbd className="text-[10px] text-zinc-500 font-mono">Ctrl+D</kbd>
+        <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+D</kbd>
       </button>
 
       {isText && (
         <>
           <button
             onClick={handleSplitChunks}
-            className="w-full px-2 py-1.5 rounded-lg flex items-center justify-between hover:bg-zinc-800 hover:text-white transition-colors text-left"
+            className="w-full px-2 py-1.5 rounded-lg flex items-center justify-between hover:bg-muted hover:text-foreground transition-colors text-left"
           >
             <span className="flex items-center gap-2">
-              <Split className="h-3.5 w-3.5 text-violet-400" />
+              <Split className="h-3.5 w-3.5 text-primary" />
               <span>Split into Chunks</span>
             </span>
           </button>
 
           <button
             onClick={handleSplitWords}
-            className="w-full px-2 py-1.5 rounded-lg flex items-center justify-between hover:bg-zinc-800 hover:text-white transition-colors text-left"
+            className="w-full px-2 py-1.5 rounded-lg flex items-center justify-between hover:bg-muted hover:text-foreground transition-colors text-left"
           >
             <span className="flex items-center gap-2">
-              <Split className="h-3.5 w-3.5 text-highlight" />
+              <Split className="h-3.5 w-3.5 text-primary" />
               <span>Split into Words</span>
             </span>
           </button>
@@ -134,25 +134,25 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
           onClose();
           onOpenComponentsDrawer();
         }}
-        className="w-full px-2 py-1.5 rounded-lg flex items-center justify-between hover:bg-zinc-800 hover:text-white transition-colors text-left"
+        className="w-full px-2 py-1.5 rounded-lg flex items-center justify-between hover:bg-muted hover:text-foreground transition-colors text-left"
       >
         <span className="flex items-center gap-2">
-          <Component className="h-3.5 w-3.5 text-purple-400" />
+          <Component className="h-3.5 w-3.5 text-primary" />
           <span>Save as Component</span>
         </span>
       </button>
 
-      <div className="h-px bg-zinc-800/80 my-1" />
+      <div className="h-px bg-border my-1" />
 
       <button
         onClick={handleDelete}
-        className="w-full px-2 py-1.5 rounded-lg flex items-center justify-between hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors text-left"
+        className="w-full px-2 py-1.5 rounded-lg flex items-center justify-between hover:bg-destructive/20 text-destructive hover:text-destructive transition-colors text-left"
       >
         <span className="flex items-center gap-2">
           <Trash2 className="h-3.5 w-3.5" />
           <span>Delete</span>
         </span>
-        <kbd className="text-[10px] text-zinc-500 font-mono">Del</kbd>
+        <kbd className="text-[10px] text-muted-foreground font-mono">Del</kbd>
       </button>
     </div>
   );

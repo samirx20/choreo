@@ -142,11 +142,11 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
         height: "auto",
         rotation: 0,
         opacity: 1,
-        backgroundColor: "#18181b",
+        backgroundColor: THEME_TOKENS.surfaces.panelBackground,
         padding: 32,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: "#27272a",
+        borderColor: THEME_TOKENS.surfaces.border,
       },
       children: [],
     };
@@ -169,7 +169,7 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
         opacity: 1,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: "#3f3f46",
+        borderColor: THEME_TOKENS.surfaces.border,
       },
       animation: {
         in: {
@@ -184,16 +184,16 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   };
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-zinc-900/90 backdrop-blur-md border border-zinc-700/60 shadow-2xl px-2.5 py-1.5 rounded-full flex items-center gap-1">
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-card/90 backdrop-blur-md border border-border shadow-xl px-2.5 py-1.5 rounded-full flex items-center gap-1">
       {/* Add Text Menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">
-            <Type className="h-3.5 w-3.5 text-highlight" />
+          <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-muted transition-colors">
+            <Type className="h-3.5 w-3.5 text-primary" />
             <span>Text</span>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" side="top" className="bg-zinc-900 border-zinc-800 text-xs">
+        <DropdownMenuContent align="center" side="top" className="bg-card border-border text-xs">
           <DropdownMenuItem onClick={() => handleAddText("heading")}>
             Heading (72px Bold)
           </DropdownMenuItem>
@@ -209,12 +209,12 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
       {/* Add Shape Menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors">
+          <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-muted transition-colors">
             <Square className="h-3.5 w-3.5 text-emerald-400" />
             <span>Shapes</span>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" side="top" className="bg-zinc-900 border-zinc-800 text-xs">
+        <DropdownMenuContent align="center" side="top" className="bg-card border-border text-xs">
           <DropdownMenuItem onClick={() => handleAddShape("rectangle")} className="gap-2">
             <Square className="h-3 w-3" /> Rectangle / Card
           </DropdownMenuItem>
@@ -233,29 +233,29 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
       {/* Add Flex Group */}
       <button
         onClick={handleAddGroup}
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-muted transition-colors"
       >
-        <FolderPlus className="h-3.5 w-3.5 text-violet-400" />
+        <FolderPlus className="h-3.5 w-3.5 text-foreground/80" />
         <span>Group</span>
       </button>
 
       {/* Add Media */}
       <button
         onClick={handleAddSampleImage}
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-zinc-200 hover:text-white hover:bg-zinc-800 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-muted transition-colors"
       >
         <ImageIcon className="h-3.5 w-3.5 text-pink-400" />
         <span>Media</span>
       </button>
 
-      <div className="h-4 w-px bg-zinc-800 mx-0.5" />
+      <div className="h-4 w-px bg-border mx-0.5" />
 
       {/* Custom Components */}
       <button
         onClick={onOpenComponentsDrawer}
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-violet-300 hover:text-violet-100 hover:bg-violet-600/20 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-muted transition-colors"
       >
-        <Component className="h-3.5 w-3.5 text-violet-400" />
+        <Component className="h-3.5 w-3.5 text-primary" />
         <span>Components</span>
       </button>
     </div>

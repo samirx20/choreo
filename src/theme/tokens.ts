@@ -7,35 +7,42 @@
  */
 
 export const THEME_TOKENS = {
-  // Brand accents
+  // Stashq Brand Accents (The Workshop at Night)
   accent: {
-    // Primary highlight accent: Lighter Sunshine Yellow
-    highlight: "#FDE047", // yellow-300
-    highlightSoft: "#FEF08A", // yellow-200
-    highlightAmber: "#FACC15", // yellow-400
+    // Primary action stamp: Stamp Gold
+    primary: "#e8c547",
+    primaryHover: "#dcb737",
+    primaryForeground: "#0a0a0a",
+    primaryMuted: "rgba(232, 197, 71, 0.15)",
     
-    // Core studio brand: Violet
-    primary: "#8B5CF6", // violet-500
-    primaryHover: "#A78BFA", // violet-400
-    primaryMuted: "rgba(139, 92, 246, 0.2)",
+    // Highlight accents
+    highlight: "#e8c547", // Stamp Gold
+    highlightSoft: "#f5f0e8", // Cartridge Cream
+    highlightWarm: "#dcb737",
+    
+    // Semantic
+    alertRed: "#ef4444",
+    goodGreen: "#34d399",
   },
 
-  // Typography defaults
+  // Stashq Typography defaults
   typography: {
-    headingColor: "#FFFFFF",
-    subheadingColor: "#FDE047", // Highlight accent
-    accentTextColor: "#FEF08A", // Soft highlight accent
-    bodyColor: "#D4D4D8", // zinc-300
-    mutedColor: "#71717A", // zinc-500
+    headingColor: "#eee8d5", // Cream Light (warm off-white ink)
+    subheadingColor: "#e8c547", // Stamp Gold
+    accentTextColor: "#f5f0e8", // Cartridge Cream
+    bodyColor: "#eee8d5", // Cream Light
+    mutedColor: "#8a837c", // Night Ink Soft (4.84:1 contrast)
   },
 
-  // Surfaces & Layout
+  // Stashq Surfaces & Layout (The Workshop at Night)
   surfaces: {
-    appBackground: "#09090b", // zinc-950
-    panelBackground: "#18181b", // zinc-900
-    cardBackground: "#27272a", // zinc-800
-    cardBorder: "#27272a",
-    canvasGridDot: "rgba(255, 255, 255, 0.05)",
+    appBackground: "#0a0a0a", // Shop Night
+    panelBackground: "#111111", // Night Card
+    cardBackground: "#131313", // Night Raised
+    mutedBackground: "#161616", // Night Muted
+    border: "#222222", // Night Line (hairline rules)
+    cardBorder: "#222222",
+    canvasGridDot: "rgba(238, 232, 213, 0.08)",
   },
 } as const;
 

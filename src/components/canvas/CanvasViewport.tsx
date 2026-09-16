@@ -207,7 +207,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         <span className="text-zinc-600">•</span>
         <span>16:9</span>
         <span className="text-zinc-600">•</span>
-        <span className="text-violet-400 font-semibold">{doc.settings.fps} FPS</span>
+        <span className="text-primary font-semibold">{doc.settings.fps} FPS</span>
       </div>
 
       {/* Canvas Frame */}

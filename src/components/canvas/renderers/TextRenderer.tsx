@@ -56,7 +56,7 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
       }}
       className={cn(
         "cursor-pointer select-none transition-[outline] whitespace-pre-wrap relative",
-        isSelected && "ring-1 ring-violet-500 ring-offset-2 ring-offset-transparent",
+        isSelected && "ring-1 ring-primary ring-offset-2 ring-offset-transparent",
         layer.style.tailwindClasses
       )}
     >

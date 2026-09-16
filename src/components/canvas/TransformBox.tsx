@@ -196,7 +196,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         transformOrigin: "center center",
         pointerEvents: "auto",
       }}
-      className="z-40 ring-2 ring-violet-500 select-none group"
+      className="z-40 ring-1 ring-primary select-none group"
       onPointerDown={(e) => handlePointerDown("move", e)}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -210,8 +210,8 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         className="absolute -translate-x-1/2 flex flex-col items-center cursor-grab active:cursor-grabbing"
         onPointerDown={(e) => handlePointerDown("rotate", e)}
       >
-        <div className="w-2.5 h-2.5 rounded-full bg-white border-2 border-violet-600 shadow" />
-        <div className="w-0.5 h-3.5 bg-violet-500" />
+        <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-background shadow" />
+        <div className="w-0.5 h-3.5 bg-primary" />
       </div>
 
       {/* 8 Resize Handles */}
@@ -228,13 +228,13 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         <div
           key={h.pos}
           style={h.style}
-          className="absolute w-2 h-2 bg-white border border-violet-600 rounded-sm shadow-sm hover:scale-125 transition-transform"
+          className="absolute w-2 h-2 bg-background border border-primary rounded-xs shadow-xs hover:scale-125 transition-transform"
           onPointerDown={(e) => handlePointerDown(h.pos as HandleType, e)}
         />
       ))}
 
       {/* Live Dimension Badge */}
-      <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-zinc-900/90 border border-zinc-700/80 px-1.5 py-0.5 rounded text-[10px] font-mono text-zinc-300 shadow pointer-events-none whitespace-nowrap">
+      <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-card border border-border px-1.5 py-0.5 rounded text-[10px] font-mono text-foreground shadow-xs pointer-events-none whitespace-nowrap">
         {Math.round(layerW)} × {Math.round(layerH)}
         {rotation ? ` (${rotation}°)` : ""}
       </div>

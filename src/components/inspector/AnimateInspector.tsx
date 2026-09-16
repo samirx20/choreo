@@ -106,11 +106,11 @@ export const AnimateInspector: React.FC = () => {
   const isGroup = selectedLayer.type === "group";
 
   return (
-    <aside className="w-80 h-full bg-zinc-950 border-l border-zinc-800/80 flex flex-col text-xs text-zinc-300 select-none overflow-y-auto">
+    <aside className="w-80 h-full bg-background border-l border-border flex flex-col text-xs text-foreground select-none overflow-y-auto">
       {/* 1. Top Segmented Navigation Tabs */}
-      <div className="p-2 border-b border-zinc-800/80 bg-zinc-900/40">
+      <div className="p-2 border-b border-border bg-card">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-3 w-full h-7 bg-zinc-900 border border-zinc-800">
+          <TabsList className="grid grid-cols-3 w-full h-7 bg-muted border border-border">
             <TabsTrigger value="presets" className="text-[11px] py-0.5">
               Presets
             </TabsTrigger>
@@ -126,14 +126,14 @@ export const AnimateInspector: React.FC = () => {
 
       {/* 2. Active Animation Card (Prominently pinned when layer has animation) */}
       {activeAnim && (
-        <div className="p-3 border-b border-zinc-800/80 bg-violet-950/20 space-y-3">
+        <div className="p-3 border-b border-border bg-card space-y-3">
           {/* Card Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <div className="p-1 rounded bg-violet-600/30 text-violet-300 border border-violet-500/40">
+              <div className="p-1 rounded bg-primary/15 text-primary border border-primary/30">
                 <Zap className="h-3.5 w-3.5" />
               </div>
-              <span className="font-semibold text-xs text-white capitalize">
+              <span className="font-semibold text-xs text-foreground capitalize">
                 {activeAnim.preset}
               </span>
             </div>
@@ -144,7 +144,7 @@ export const AnimateInspector: React.FC = () => {
                 size="iconSm"
                 onClick={handleDeleteAnimation}
                 title="Remove Animation"
-                className="h-6 w-6 text-zinc-400 hover:text-red-400"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
@@ -152,7 +152,7 @@ export const AnimateInspector: React.FC = () => {
           </div>
 
           {/* Mode Segmented Toggle [ In | Out ] */}
-          <div className="grid grid-cols-2 gap-1 bg-zinc-900 p-0.5 rounded border border-zinc-800">
+          <div className="grid grid-cols-2 gap-1 bg-muted p-0.5 rounded border border-border">
             <button
               onClick={() => {
                 if (currentMode !== "in") {
@@ -164,8 +164,8 @@ export const AnimateInspector: React.FC = () => {
               }}
               className={`py-1 text-[11px] font-medium rounded transition-all ${
                 currentMode === "in"
-                  ? "bg-violet-600 text-white shadow"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               In (Entrance)
@@ -181,8 +181,8 @@ export const AnimateInspector: React.FC = () => {
               }}
               className={`py-1 text-[11px] font-medium rounded transition-all ${
                 currentMode === "out"
-                  ? "bg-purple-600 text-white shadow"
-                  : "text-zinc-400 hover:text-zinc-200"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               Out (Exit)
@@ -245,7 +245,7 @@ export const AnimateInspector: React.FC = () => {
             <div className="space-y-1.5 pt-1 border-t border-zinc-800/60">
               <div className="flex items-center justify-between text-[11px]">
                 <span className="text-zinc-400">Cascade Stagger</span>
-                <span className="font-mono text-violet-300">
+                <span className="font-mono text-primary">
                   {((selectedLayer as GroupLayer).staggerDelay ?? 0.15).toFixed(2)}s
                 </span>
               </div>
@@ -268,88 +268,88 @@ export const AnimateInspector: React.FC = () => {
         <div className="p-3 space-y-4">
           {/* Fade Category */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               Fade
             </span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleApplyPreset("fadeIn")}
-                className="h-16 p-2 rounded-lg border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 hover:border-violet-500/50 flex flex-col items-center justify-center gap-1 transition-all group"
+                className="h-16 p-2 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/50 flex flex-col items-center justify-center gap-1 transition-all group"
               >
                 <Sun className="h-4 w-4 text-amber-400 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-medium text-zinc-200">Fade</span>
+                <span className="text-xs font-medium text-foreground">Fade</span>
               </button>
 
               <button
                 onClick={() => handleApplyPreset("slideUp")}
-                className="h-16 p-2 rounded-lg border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 hover:border-violet-500/50 flex flex-col items-center justify-center gap-1 transition-all group"
+                className="h-16 p-2 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/50 flex flex-col items-center justify-center gap-1 transition-all group"
               >
-                <ArrowUpRight className="h-4 w-4 text-highlight group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-medium text-zinc-200">Slide Up</span>
+                <ArrowUpRight className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-medium text-foreground">Slide Up</span>
               </button>
             </div>
           </div>
 
           {/* Scale Category */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               Scale
             </span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleApplyPreset("pop")}
-                className="h-16 p-2 rounded-lg border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 hover:border-violet-500/50 flex flex-col items-center justify-center gap-1 transition-all group"
+                className="h-16 p-2 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/50 flex flex-col items-center justify-center gap-1 transition-all group"
               >
-                <Zap className="h-4 w-4 text-violet-400 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-medium text-zinc-200">Pop In</span>
+                <Zap className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-medium text-foreground">Pop In</span>
               </button>
 
               <button
                 onClick={() => handleApplyPreset("grow")}
-                className="h-16 p-2 rounded-lg border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 hover:border-violet-500/50 flex flex-col items-center justify-center gap-1 transition-all group"
+                className="h-16 p-2 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/50 flex flex-col items-center justify-center gap-1 transition-all group"
               >
                 <Maximize2 className="h-4 w-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-medium text-zinc-200">Grow</span>
+                <span className="text-xs font-medium text-foreground">Grow</span>
               </button>
 
               <button
                 onClick={() => handleApplyPreset("shrink")}
-                className="h-16 p-2 rounded-lg border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 hover:border-violet-500/50 flex flex-col items-center justify-center gap-1 transition-all group"
+                className="h-16 p-2 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/50 flex flex-col items-center justify-center gap-1 transition-all group"
               >
                 <Minimize2 className="h-4 w-4 text-rose-400 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-medium text-zinc-200">Shrink</span>
+                <span className="text-xs font-medium text-foreground">Shrink</span>
               </button>
 
               <button
                 onClick={() => handleApplyPreset("spin")}
-                className="h-16 p-2 rounded-lg border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 hover:border-violet-500/50 flex flex-col items-center justify-center gap-1 transition-all group"
+                className="h-16 p-2 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/50 flex flex-col items-center justify-center gap-1 transition-all group"
               >
-                <RotateCw className="h-4 w-4 text-cyan-400 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-medium text-zinc-200">Spin</span>
+                <RotateCw className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-medium text-foreground">Spin</span>
               </button>
             </div>
           </div>
 
           {/* 3D Motion */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               3D & Cinematic
             </span>
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleApplyPreset("flipX")}
-                className="h-16 p-2 rounded-lg border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 hover:border-violet-500/50 flex flex-col items-center justify-center gap-1 transition-all group"
+                className="h-16 p-2 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/50 flex flex-col items-center justify-center gap-1 transition-all group"
               >
-                <Box className="h-4 w-4 text-purple-400 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-medium text-zinc-200">3D Flip X</span>
+                <Box className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-medium text-foreground">3D Flip X</span>
               </button>
 
               <button
                 onClick={() => handleApplyPreset("dropIn")}
-                className="h-16 p-2 rounded-lg border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800/80 hover:border-violet-500/50 flex flex-col items-center justify-center gap-1 transition-all group"
+                className="h-16 p-2 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/50 flex flex-col items-center justify-center gap-1 transition-all group"
               >
-                <Sparkles className="h-4 w-4 text-yellow-400 group-hover:scale-110 transition-transform" />
-                <span className="text-xs font-medium text-zinc-200">Drop In</span>
+                <Sparkles className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+                <span className="text-xs font-medium text-foreground">Drop In</span>
               </button>
             </div>
           </div>
@@ -360,7 +360,7 @@ export const AnimateInspector: React.FC = () => {
       {activeTab === "custom" && (
         <div className="p-3 space-y-3">
           <div className="space-y-1">
-            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               Transform
             </span>
             <div className="space-y-1">
@@ -368,17 +368,17 @@ export const AnimateInspector: React.FC = () => {
                 <button
                   key={prop}
                   onClick={() => handleApplyPreset("grow")}
-                  className="w-full p-2 rounded bg-zinc-900/50 hover:bg-zinc-800 flex items-center justify-between text-zinc-300 transition-colors"
+                  className="w-full p-2 rounded-lg bg-secondary/60 hover:bg-muted border border-border flex items-center justify-between text-foreground/80 transition-colors"
                 >
                   <span>{prop}</span>
-                  <Sliders className="h-3 w-3 text-zinc-500" />
+                  <Sliders className="h-3 w-3 text-muted-foreground" />
                 </button>
               ))}
             </div>
           </div>
 
           <div className="space-y-1">
-            <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               Style
             </span>
             <div className="space-y-1">
@@ -386,10 +386,10 @@ export const AnimateInspector: React.FC = () => {
                 <button
                   key={prop}
                   onClick={() => handleApplyPreset("fadeIn")}
-                  className="w-full p-2 rounded bg-zinc-900/50 hover:bg-zinc-800 flex items-center justify-between text-zinc-300 transition-colors"
+                  className="w-full p-2 rounded-lg bg-secondary/60 hover:bg-muted border border-border flex items-center justify-between text-foreground/80 transition-colors"
                 >
                   <span>{prop}</span>
-                  <Sliders className="h-3 w-3 text-zinc-500" />
+                  <Sliders className="h-3 w-3 text-muted-foreground" />
                 </button>
               ))}
             </div>
@@ -400,7 +400,7 @@ export const AnimateInspector: React.FC = () => {
       {/* Tab 3: EFFECTS */}
       {activeTab === "effects" && (
         <div className="p-3 space-y-2">
-          <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
             Procedural Effects
           </span>
           {[
@@ -411,9 +411,9 @@ export const AnimateInspector: React.FC = () => {
             <button
               key={eff.name}
               onClick={() => handleApplyPreset("pop")}
-              className="w-full p-2.5 rounded-lg border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-800 flex items-center gap-2 text-zinc-200 transition-colors"
+              className="w-full p-2.5 rounded-lg border border-border bg-card hover:bg-secondary hover:border-primary/40 flex items-center gap-2 text-foreground transition-colors"
             >
-              <eff.icon className="h-4 w-4 text-violet-400" />
+              <eff.icon className="h-4 w-4 text-primary" />
               <span>{eff.name}</span>
             </button>
           ))}
