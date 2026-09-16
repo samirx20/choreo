@@ -385,6 +385,25 @@ export const DesignInspector: React.FC = () => {
               )}
             </div>
 
+            {/* Text Content Field */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                <span>Text Content</span>
+                <span className="font-mono text-[9px] text-zinc-600">
+                  {((selectedLayer as any).content || "").length} chars
+                </span>
+              </div>
+              <textarea
+                rows={2}
+                value={(selectedLayer as any).content || ""}
+                onChange={(e) =>
+                  updateLayer(selectedLayer.id, { content: e.target.value })
+                }
+                placeholder="Type layer text..."
+                className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-violet-500 resize-none font-sans"
+              />
+            </div>
+
             {/* Font Family & Weight */}
             <div className="grid grid-cols-2 gap-2">
               <select

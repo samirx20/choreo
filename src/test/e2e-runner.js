@@ -31,13 +31,13 @@ async function runBrowserTests() {
 
     // 1. Check title and branding
     const title = await page.title();
-    console.log(`✅ [1/12] Page Title: "${title}"`);
+    console.log(`✅ [1/15] Page Title: "${title}"`);
     if (!title.includes("Choreo")) {
       throw new Error(`Expected title to contain 'Choreo', got: ${title}`);
     }
 
     // 2. Check Hero Card and Text Chunks on Canvas
-    console.log("🔍 [2/12] Checking Canvas DOM elements...");
+    console.log("🔍 [2/15] Checking Canvas DOM elements...");
     const heroCard = page.locator("#layer-group_hero");
     await heroCard.waitFor({ timeout: 5000 });
     console.log("✅ Hero Card rendered on canvas");
@@ -50,7 +50,7 @@ async function runBrowserTests() {
     }
 
     // 3. Test Layer Selection & Design Inspector
-    console.log("👆 [3/12] Selecting Hero Card and inspecting Design Inspector...");
+    console.log("👆 [3/15] Selecting Hero Card and inspecting Design Inspector...");
     await heroCard.click();
     await page.waitForTimeout(200);
 
@@ -58,8 +58,43 @@ async function runBrowserTests() {
     await layoutHeader.waitFor({ timeout: 3000 });
     console.log("✅ Design Inspector is active and displays Layout controls");
 
-    // 4. Test Right-Click Context Menu
-    console.log("🖱️ [4/12] Testing Canvas Context Menu on selected layer...");
+    // 4. Test Text Content Editing in Design Inspector
+    console.log("✍️ [4/15] Testing Text Content Editing in Design Inspector...");
+    // Select Chunk 1
+    const chunk1Sidebar = page.locator("aside").first().getByText("Hey Team,");
+    await chunk1Sidebar.click();
+    await page.waitForTimeout(200);
+
+    const contentTextarea = page.locator("textarea[placeholder='Type layer text...']");
+    await contentTextarea.waitFor({ timeout: 2000 });
+    await contentTextarea.fill("Hello World,");
+    await page.waitForTimeout(200);
+
+    const updatedText = await chunk1.textContent();
+    console.log(`✅ Chunk text reactively updated on canvas to: "${updatedText?.trim()}"`);
+    if (!updatedText?.includes("Hello World")) {
+      throw new Error(`Expected text to be 'Hello World,', got '${updatedText}'`);
+    }
+
+    // 5. Test Double-Click Inline Editing on Canvas
+    console.log("🖱️ [5/15] Testing Double-Click Inline Canvas Text Editing...");
+    await chunk1.dblclick();
+    await page.waitForTimeout(200);
+
+    const inlineInput = chunk1.locator("textarea, input");
+    await inlineInput.waitFor({ timeout: 2000 });
+    await inlineInput.fill("Hey Motion Designers,");
+    await inlineInput.press("Enter");
+    await page.waitForTimeout(200);
+
+    const inlineUpdated = await chunk1.textContent();
+    console.log(`✅ Inline canvas double-click edit committed: "${inlineUpdated?.trim()}"`);
+    if (!inlineUpdated?.includes("Hey Motion Designers")) {
+      throw new Error(`Expected text to be 'Hey Motion Designers,', got '${inlineUpdated}'`);
+    }
+
+    // 6. Test Right-Click Context Menu
+    console.log("🖱️ [6/15] Testing Canvas Context Menu on selected layer...");
     await heroCard.click({ button: "right" });
     await page.waitForTimeout(300);
 
@@ -68,12 +103,12 @@ async function runBrowserTests() {
     await duplicateMenuItem.waitFor({ timeout: 2000 });
     console.log("✅ Right-click Context Menu rendered with Duplicate, Save as Component, Delete");
 
-    // Dismiss context menu by clicking canvas background
-    await page.mouse.click(100, 200);
+    // Dismiss context menu
+    await page.mouse.click(600, 400);
     await page.waitForTimeout(200);
 
-    // 5. Test Hotkey Duplicate (Ctrl+D), Undo (Ctrl+Z), Redo (Ctrl+Shift+Z), and Delete
-    console.log("⌨️ [5/12] Testing Hotkey Operations (Ctrl+D, Ctrl+Z, Ctrl+Shift+Z, Delete)...");
+    // 7. Test Hotkey Duplicate (Ctrl+D), Undo (Ctrl+Z), Redo (Ctrl+Shift+Z), and Delete
+    console.log("⌨️ [7/15] Testing Hotkey Operations (Ctrl+D, Ctrl+Z, Ctrl+Shift+Z, Delete)...");
     await heroCard.click();
     await page.waitForTimeout(100);
 
@@ -97,8 +132,43 @@ async function runBrowserTests() {
     await page.waitForTimeout(200);
     console.log("✅ Duplicate removed via Delete key");
 
-    // 6. Test Keyboard Shortcuts Modal (?)
-    console.log("📖 [6/12] Testing Keyboard Shortcuts Cheat Sheet Modal (?)...");
+    // 8. Test Screens Management in Left Sidebar
+    console.log("📑 [8/15] Testing Screens List in Left Sidebar...");
+    const addScreenBtn = page.getByTitle("Add Screen");
+    await addScreenBtn.click();
+    await page.waitForTimeout(300);
+
+    const screen2Badge = page.getByText("#2");
+    await screen2Badge.waitFor({ timeout: 2000 });
+    console.log("✅ Added Screen #2 successfully");
+
+    // Switch back to Screen 1
+    const screen1Badge = page.getByText("#1");
+    await screen1Badge.click();
+    await page.waitForTimeout(200);
+    console.log("✅ Switched active screen back to Screen #1");
+
+    // 9. Test Floating Toolbar Shape Creation
+    console.log("🎨 [9/15] Testing Floating Toolbar Shape Creation...");
+    const shapesTrigger = page.getByRole("button", { name: /Shapes/i });
+    await shapesTrigger.click();
+    await page.waitForTimeout(200);
+
+    const circleOption = page.getByText("Circle");
+    await circleOption.click();
+    await page.waitForTimeout(300);
+
+    const circleLayerInSidebar = page.getByText("Circle", { exact: true });
+    await circleLayerInSidebar.waitFor({ timeout: 2000 });
+    console.log("✅ Added Circle shape via Floating Toolbar");
+
+    // Undo circle creation to keep scene pristine
+    await page.keyboard.press("Control+Z");
+    await page.waitForTimeout(200);
+    console.log("✅ Cleanly reverted shape addition via Ctrl+Z");
+
+    // 10. Test Keyboard Shortcuts Modal (?)
+    console.log("📖 [10/15] Testing Keyboard Shortcuts Cheat Sheet Modal (?)...");
     await page.keyboard.press("?");
     await page.waitForTimeout(300);
 
@@ -106,14 +176,13 @@ async function runBrowserTests() {
     await shortcutsModalHeader.waitFor({ timeout: 2000 });
     console.log("✅ Shortcuts Cheat Sheet Modal opened via '?' hotkey");
 
-    // Close with Escape or close button
-    const closeBtn = page.locator(".fixed.z-50 button").first();
-    await closeBtn.click();
+    // Close with Escape
+    await page.keyboard.press("Escape");
     await page.waitForTimeout(200);
-    console.log("✅ Shortcuts Modal closed cleanly");
+    console.log("✅ Shortcuts Modal closed cleanly via Escape");
 
-    // 7. Test Mode Switch to Animate Mode & Inspector Preset Catalog
-    console.log("🎬 [7/12] Switching to Animate Mode & testing Preset Catalog...");
+    // 11. Test Mode Switch to Animate Mode & Inspector Preset Catalog
+    console.log("🎬 [11/15] Switching to Animate Mode & testing Preset Catalog...");
     const animateBtn = page.getByRole("button", { name: "Animate" });
     await animateBtn.click();
     await page.waitForTimeout(300);
@@ -124,7 +193,7 @@ async function runBrowserTests() {
     console.log("✅ Timeline panel visible in Animate mode");
 
     // Select Chunk 1 from Left Sidebar layer tree
-    const chunkTreeItem = page.locator("aside").first().getByText("Hey Team,");
+    const chunkTreeItem = page.locator("aside").first().getByText("Hey Motion Designers,");
     await chunkTreeItem.click();
     await page.waitForTimeout(200);
 
@@ -139,16 +208,16 @@ async function runBrowserTests() {
     await page.waitForTimeout(200);
     console.log("✅ Applied 'Grow' motion preset to Chunk 1");
 
-    // 8. Test Transport Scrubber (Play/Pause)
-    console.log("▶ [8/12] Testing Playback Scrubber & Transport...");
+    // 12. Test Transport Scrubber (Play/Pause)
+    console.log("▶ [12/15] Testing Playback Scrubber & Transport...");
     const playBtn = page.getByTitle(/Play/i).first();
     await playBtn.click();
     await page.waitForTimeout(1000); // let playhead advance
     await playBtn.click(); // pause
     console.log("✅ Play/Pause transport loop functions smoothly");
 
-    // 9. Test AI Command Bar (Ctrl+K)
-    console.log("✨ [9/12] Testing AI Command Bar (Ctrl+K)...");
+    // 13. Test AI Command Bar (Ctrl+K)
+    console.log("✨ [13/15] Testing AI Command Bar (Ctrl+K)...");
     await page.keyboard.press("Control+K");
     await page.waitForTimeout(300);
 
@@ -171,8 +240,8 @@ async function runBrowserTests() {
     await undoBtn.click();
     console.log("✅ Toast Undo reverted AI mutation seamlessly");
 
-    // 10. Test Custom Components Drawer
-    console.log("🧩 [10/12] Testing Custom Components Drawer...");
+    // 14. Test Custom Components Drawer
+    console.log("🧩 [14/15] Testing Custom Components Drawer...");
     await page.keyboard.press("Tab"); // switch to Design Mode
     await page.waitForTimeout(300);
 
@@ -189,8 +258,8 @@ async function runBrowserTests() {
     await page.waitForTimeout(300);
     console.log("✅ Custom component stamped onto canvas");
 
-    // 11. Test Export Modal & Project Bundle Download
-    console.log("📦 [11/12] Testing Export Modal (.motion bundle & formats)...");
+    // 15. Test Export Modal & Project Bundle Download
+    console.log("📦 [15/15] Testing Export Modal (.motion bundle & formats)...");
     const exportBtn = page.getByRole("button", { name: "Export" });
     await exportBtn.click();
     await page.waitForTimeout(300);
@@ -199,13 +268,12 @@ async function runBrowserTests() {
     await exportTitle.waitFor({ timeout: 3000 });
     console.log("✅ Export Modal opened with .motion bundle and JSON AST options");
 
-    // Close export modal
-    const closeExportBtn = page.locator(".fixed.z-50 button").first();
-    await closeExportBtn.click();
+    // Close export modal via Escape
+    await page.keyboard.press("Escape");
     await page.waitForTimeout(200);
 
-    // 12. Final check for console errors
-    console.log("🛡️ [12/12] Verifying browser console health...");
+    // Final check for console errors
+    console.log("🛡️ Verifying browser console health...");
     if (consoleErrors.length > 0) {
       console.warn("⚠️ Console warnings/errors during test:", consoleErrors);
     } else {
@@ -213,7 +281,7 @@ async function runBrowserTests() {
     }
 
     console.log("\n========================================================");
-    console.log("🏁 ALL 12 AUTONOMOUS E2E BROWSER TESTS PASSED SUCCESSFULLY!");
+    console.log("🏁 ALL 15 AUTONOMOUS E2E BROWSER TESTS PASSED SUCCESSFULLY!");
     console.log("========================================================\n");
     process.exit(0);
   } finally {

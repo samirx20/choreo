@@ -492,10 +492,19 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
         if (screen.id !== activeScreenId) return screen;
         return {
           ...screen,
-          layers: mutateLayerInTree(screen.layers, layerId, (layer) => ({
-            ...layer,
-            ...updates,
-          } as Layer)),
+          layers: mutateLayerInTree(screen.layers, layerId, (layer) => {
+            const isText = layer.type === "text" || layer.type === "chunk";
+            const newContent = (updates as any).content;
+            const shouldSyncName =
+              isText &&
+              typeof newContent === "string" &&
+              (!layer.name || layer.name === (layer as any).content);
+            return {
+              ...layer,
+              ...(shouldSyncName ? { name: newContent } : {}),
+              ...updates,
+            } as Layer;
+          }),
         };
       }),
     };
