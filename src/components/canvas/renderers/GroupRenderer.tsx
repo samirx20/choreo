@@ -65,6 +65,7 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
     } else {
       layoutCss.width = "fit-content";
     }
+    layoutCss.transition = "all 0.35s cubic-bezier(0.16, 1, 0.3, 1)";
   }
 
   const combinedStyle: React.CSSProperties = {

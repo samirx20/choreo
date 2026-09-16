@@ -3,6 +3,8 @@ import { useProjectStore, findLayerInTree } from "@/store/useProjectStore";
 import { ScreenRenderer } from "./renderers/ScreenRenderer";
 import { FloatingToolbar } from "./FloatingToolbar";
 import { evaluateSceneAtTime } from "@/engine/evaluator";
+import { TransformBox } from "./TransformBox";
+import { SnapGuide } from "./snapping";
 
 interface CanvasViewportProps {
   onOpenComponentsDrawer: () => void;
@@ -29,10 +31,25 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
+  const [guides, setGuides] = useState<SnapGuide[]>([]);
   const dragStartRef = useRef({ x: 0, y: 0 });
 
   const activeScreen =
     doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
+
+  // Selected root layer for transform bounding box
+  const selectedRootLayer = activeScreen.layers.find(
+    (l) => l.id === selectedLayerIds[0]
+  );
+
+  const siblingBoxes = activeScreen.layers
+    .filter((l) => l.id !== selectedLayerIds[0])
+    .map((l) => ({
+      x: l.style.x || 0,
+      y: l.style.y || 0,
+      width: typeof l.style.width === "number" ? l.style.width : 200,
+      height: typeof l.style.height === "number" ? l.style.height : 100,
+    }));
 
   // Global spacebar listener for canvas panning
   useEffect(() => {
@@ -198,6 +215,37 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
             deselectAll();
           }}
         />
+
+        {/* Magnetic Snap Guides (Magenta Alignment Lines) */}
+        {guides.map((guide, idx) => (
+          <div
+            key={idx}
+            style={
+              guide.type === "vertical"
+                ? { left: `${guide.position}px`, top: 0, bottom: 0, width: "1px" }
+                : { top: `${guide.position}px`, left: 0, right: 0, height: "1px" }
+            }
+            className="absolute bg-fuchsia-500 z-50 pointer-events-none shadow-[0_0_8px_rgba(217,70,239,0.9)]"
+          >
+            {guide.label && (
+              <span className="absolute top-2 left-2 bg-fuchsia-600 text-white text-[9px] px-1 py-0.2 rounded font-mono">
+                {guide.label}
+              </span>
+            )}
+          </div>
+        ))}
+
+        {/* Interactive Transform Bounding Box (Design Mode Only) */}
+        {uiMode === "design" && selectedRootLayer && (
+          <TransformBox
+            layer={selectedRootLayer}
+            canvasWidth={doc.settings.width}
+            canvasHeight={doc.settings.height}
+            siblingBoxes={siblingBoxes}
+            effectiveScale={effectiveScale}
+            onGuidesChange={setGuides}
+          />
+        )}
       </div>
 
       {/* Floating Toolbar (Design Mode only) */}

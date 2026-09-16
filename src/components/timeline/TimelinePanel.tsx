@@ -17,6 +17,7 @@ import { useProjectStore, flattenLayers } from "@/store/useProjectStore";
 import { Layer, GroupLayer } from "@/types/scene";
 import { formatTime } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
+import { DraggableClip } from "./DraggableClip";
 
 export const TimelinePanel: React.FC = () => {
   const {
@@ -196,9 +197,10 @@ export const TimelinePanel: React.FC = () => {
           </div>
 
           {/* Draggable Animation Clip Blocks */}
-          <div className="flex-1 relative overflow-y-auto">
+          <div className="flex-1 relative overflow-y-auto timeline-track-area">
             {allLayers.map((layer) => {
-              const anim = layer.animation?.in || layer.animation?.out;
+              const animIn = layer.animation?.in;
+              const animOut = layer.animation?.out;
               const isSelected = selectedLayerIds.includes(layer.id);
 
               return (
@@ -209,19 +211,21 @@ export const TimelinePanel: React.FC = () => {
                     isSelected ? "bg-violet-950/20" : ""
                   }`}
                 >
-                  {anim && (
-                    <div
-                      style={{
-                        left: `${(anim.start / duration) * 100}%`,
-                        width: `${(anim.duration / duration) * 100}%`,
-                      }}
-                      className="absolute h-5 rounded px-2 flex items-center gap-1 text-[10px] font-medium text-white shadow-sm cursor-grab active:cursor-grabbing bg-gradient-to-r from-violet-600 to-indigo-600 border border-violet-400/40 truncate"
-                    >
-                      <Zap className="h-2.5 w-2.5 text-violet-200 shrink-0" />
-                      <span className="truncate capitalize">
-                        {anim.preset} ({anim.duration.toFixed(1)}s)
-                      </span>
-                    </div>
+                  {animIn && (
+                    <DraggableClip
+                      layer={layer}
+                      anim={animIn}
+                      duration={duration}
+                      mode="in"
+                    />
+                  )}
+                  {animOut && (
+                    <DraggableClip
+                      layer={layer}
+                      anim={animOut}
+                      duration={duration}
+                      mode="out"
+                    />
                   )}
                 </div>
               );
