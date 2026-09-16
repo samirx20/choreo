@@ -10,6 +10,15 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const categories = [
@@ -40,8 +49,14 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in-0 select-none">
-      <div className="w-full max-w-xl bg-zinc-950 border border-zinc-800 shadow-2xl rounded-2xl p-5 flex flex-col gap-4 text-zinc-100">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm animate-in fade-in-0 select-none"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-xl bg-zinc-950 border border-zinc-800 shadow-2xl rounded-2xl p-5 flex flex-col gap-4 text-zinc-100"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
           <div className="flex items-center gap-2">
