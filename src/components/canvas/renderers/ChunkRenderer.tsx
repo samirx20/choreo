@@ -19,8 +19,16 @@ export const ChunkRenderer: React.FC<ChunkRendererProps> = ({
   computedStyle,
   onClick,
 }) => {
-  const { updateLayer } = useProjectStore();
-  const [isEditing, setIsEditing] = useState(false);
+  const {
+    updateLayer,
+    removeLayer,
+    editingLayerId,
+    setEditingLayerId,
+    setActiveTextSelection,
+    mergeChunkWithPrevious,
+  } = useProjectStore();
+
+  const isEditing = editingLayerId === layer.id;
   const [text, setText] = useState(layer.content);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -31,18 +39,37 @@ export const ChunkRenderer: React.FC<ChunkRendererProps> = ({
   useEffect(() => {
     if (isEditing && inputRef.current) {
       inputRef.current.focus();
-      inputRef.current.select();
     }
   }, [isEditing]);
 
   const commitEdit = () => {
-    setIsEditing(false);
-    if (text !== layer.content) {
+    setEditingLayerId(null);
+    setActiveTextSelection(null);
+    const trimmed = text.trim();
+    if (trimmed.length === 0) {
+      removeLayer(layer.id);
+    } else if (text !== layer.content) {
       updateLayer(layer.id, { content: text });
     }
   };
 
-  const baseCss = layerStyleToCss(layer.style, isChildInFlex);
+  const handleSelect = (e: React.SyntheticEvent<HTMLInputElement>) => {
+    const target = e.currentTarget;
+    const start = target.selectionStart;
+    const end = target.selectionEnd;
+    if (start !== end && start !== null && end !== null) {
+      setActiveTextSelection({
+        layerId: layer.id,
+        start,
+        end,
+        text: target.value.substring(start, end),
+      });
+    } else {
+      setActiveTextSelection(null);
+    }
+  };
+
+  const baseCss = layerStyleToCss(layer.style, isChildInFlex, true);
   const combinedStyle = { ...baseCss, ...computedStyle };
 
   return (
@@ -52,11 +79,11 @@ export const ChunkRenderer: React.FC<ChunkRendererProps> = ({
       onClick={onClick}
       onDoubleClick={(e) => {
         e.stopPropagation();
-        setIsEditing(true);
+        setEditingLayerId(layer.id);
       }}
       className={cn(
         "inline-block cursor-pointer select-none transition-[outline] relative",
-        isSelected && "ring-1 ring-primary ring-offset-1 ring-offset-transparent",
+        isSelected && !isEditing && "ring-1 ring-primary ring-offset-1 ring-offset-transparent",
         layer.style.tailwindClasses
       )}
     >
@@ -66,14 +93,17 @@ export const ChunkRenderer: React.FC<ChunkRendererProps> = ({
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onSelect={handleSelect}
           onBlur={commitEdit}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
               commitEdit();
             } else if (e.key === "Escape") {
-              setText(layer.content);
-              setIsEditing(false);
+              commitEdit();
+            } else if (e.key === "Backspace" && e.currentTarget.selectionStart === 0 && e.currentTarget.selectionEnd === 0) {
+              e.preventDefault();
+              mergeChunkWithPrevious(layer.id);
             }
           }}
           className="bg-transparent border-none outline-none p-0 m-0 w-auto"

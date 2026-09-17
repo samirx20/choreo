@@ -35,6 +35,8 @@ To ensure a clean, frictionless user experience, Motion Studio enforces a strict
 
 | Context Menu Item | Shortcut | Action Description |
 | :--- | :--- | :--- |
+| **Split Selection into Chunk** | `Ctrl+Shift+S` | *(When text highlighted)* Cuts selected substring into its own independent `<Chunk>` inside parent `<Group>` with 0px visual shift. |
+| **Split at Caret** | `Ctrl+Enter` | *(When cursor placed)* Cuts paragraph into two contiguous chunks at cursor. |
 | **Split into Chunks** | `Ctrl+Shift+C` | Semantic phrase split; converts layer to flex-column `<Group>`. |
 | **Split into Words** | `Ctrl+Shift+W` | Word-by-word split; converts layer to flex-row wrap `<Group>`. |
 | **Copy** | `Ctrl+C` | Copies text element to clipboard. |

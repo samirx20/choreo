@@ -1,65 +1,133 @@
-# HANDOFF.MD: Session Transition & Next Steps Briefing
+# HANDOFF.MD: Comprehensive Canvas Interaction & Architecture Handoff
 
-Welcome to the **Choreo** (Motion Studio) implementation thread! This document provides the complete context and immediate actionable starting point so the next agent can proceed directly with Phase 1 execution without any ambiguity or redundant questioning.
-
----
-
-## 1. Project Identity & Vision
-
-* **App Name**: **Choreo** (AI-Native Motion Graphics Studio, inspired by Jitter.video and Linear).
-* **Core Philosophy**: *"AI does 0% to 80% (the grunt work), Human does 80% to 100% (the taste and polish)."*
-* **Architecture Advantage**: Built on web standards (React 19 + Tailwind CSS + shadcn/ui). All text shaping, multi-line wrapping, flex alignment, and FLIP reactive layout morphs are natively handled by the browser engine on the GPU.
-
----
-
-## 2. Key Architecture Decisions Locked in Session 1
-
-| Decision Area | Decision | Details & Documentation |
-| :--- | :--- | :--- |
-| **UI Components** | **shadcn/ui** | Built with Tailwind CSS, Radix UI primitives, and Lucide Icons in dark mode (`zinc-950`/`zinc-900`). |
-| **Canvas Paradigm** | Hybrid | Freeform root canvas ($X, Y$) + CSS Auto-Layout groups (Flexbox/Grid). |
-| **Audio Strategy** | **Zero Audio in Editor** | 100% focus on visual motion graphics. Audio is intentionally delegated to external NLEs. |
-| **Video Rendering** | **Unified FFmpeg Sidecar** | Single native FFmpeg binary sidecar across Windows, macOS, and Linux. Zero external Chromium/Puppeteer bloat. 100% offline, GPU-accelerated. |
-| **Project Persistence** | `.motion` Bundle | Single self-contained zip archive packing `scene.json`, `components.json`, and `assets/` (images, videos, embedded fonts) with continuous background auto-save. |
-| **Font Management** | Hybrid (3 tiers) | Google Fonts catalog + Host OS System Fonts (via Rust `font-kit`) + Custom font file drag-and-drop. |
-| **AI Assistant** | Command Bar (`Ctrl+K`) | Clean palette prompt with instant AST mutation, canvas diff highlighting, and `[✨ AI Applied] [Undo] [Keep]` toast. |
-| **Text Splitting** | Context-Aware | Lines $\to$ flex-column; words $\to$ flex-row wrap with **0px visual shift** and default Auto-Link 🔗 staggers. |
-| **Snapping & Guides** | Smart Magnetic | Magenta alignment lines + dynamic gap measurement badges (e.g. `24px`). |
-| **Custom Components** | Dual-Scope Library | Stampable templates with optional `Keep Linked to Master` toggle, saved in Project or Global library. |
-| **Context Menu vs Sidebar** | Strict Separation | Right Sidebar = continuous parameter tuning; Right-Click = discrete 1-click operational triggers. |
-| **Documentation Rule** | **Rule 5** | Continuous documentation sync: `AGENTS.md` and `docs/` must immediately be updated on any new feature or architectural change. |
+> [!CAUTION]
+> **CRITICAL MANDATE FOR THE NEXT AGENT / NEXT THREAD**:
+> **DO NOT JUMP INTO CODE. DO NOT RUSH TO CODE PATCHES.**
+> The user explicitly instructed: *"okay just stop coding for a second, do you not understand whta i'm saying for past few messages ? just write a handoff, for that, you will do that in the next thread"*.
+>
+> The user's frustration is that past agents have been playing reactive "whack-a-mole"—rushing to write quick code fixes and running test scripts instead of fundamentally stepping back, thinking like a world-class systems designer (Figma / Jitter), and rigorously mapping out the complete interaction matrix, states, visual affordances, and edge cases across the entire canvas first.
+>
+> **Your first task in the next thread is purely architectural, research-driven, and conceptual alignment.** Do not write code until the complete Interaction & State Matrix is designed, reviewed, and approved by the user.
 
 ---
 
-## 3. Specification Sitemap (Single Source of Truth)
+## 1. Context & Why the User Stopped Us
 
-Before writing code, review these dedicated specification documents:
-1. **[AGENTS.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/AGENTS.md)** — Primary briefing, agent rules, and `scene.json` schema.
-2. **[docs/IMPLEMENTATION_PHASES.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/IMPLEMENTATION_PHASES.md)** — 7 detailed engineering phases with checklists.
-3. **[docs/UI_PANELS_SPEC.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/UI_PANELS_SPEC.md)** — Top bar, Left sidebar, Canvas viewport, Floating toolbar, Timeline, `Ctrl+K` bar, and shortcuts modal.
-4. **[docs/RIGHT_SIDEBAR_SPEC.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/RIGHT_SIDEBAR_SPEC.md)** — Inspector schemas directly matching reference screenshots (Design Inspector & Animate Inspector tabs).
-5. **[docs/DEFAULT_BEHAVIORS_AND_INTERACTIONS.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/DEFAULT_BEHAVIORS_AND_INTERACTIONS.md)** — Text splitting, auto-grouping, auto-link cascade, FLIP auto-fit, animation copy-paste, and transactional undo/redo.
-6. **[docs/CONTEXT_MENU_MATRIX.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/CONTEXT_MENU_MATRIX.md)** — Clean right-click vs. sidebar action matrix.
-7. **[docs/PROJECT_SPEC_AND_STORAGE.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/PROJECT_SPEC_AND_STORAGE.md)** — `.motion` bundle architecture, font resolution, offline FFmpeg export, and adaptive canvas performance.
-8. **[implementation.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/implementation.md)** — High-level roadmap.
+The user is directing this project from mobile, holding high standards for a professional motion graphics tool on par with **Figma** and **Jitter.video**.
 
----
+When testing basic interactions, critical usability flaws became apparent:
+1. Multi-line text was overflowing because fixed pixel heights were accidentally written to the AST during horizontal resizing, causing the yellow selection box to only surround row 1 while rows 2 and 3 overflowed.
+2. Clicking inside text or cards failed to drag/move elements because drag handlers were absent on the inner body.
+3. The UI had redundant textareas in the right sidebar instead of relying on pure on-canvas typography editing.
+4. Canvas elements felt disconnected from a coherent hierarchy and coordinate system.
 
-## 4. Current Status: Phases 1 - 6 Completed & Ready for User Verification
-
-All browser-runnable studio features across **Phases 1 through 6** are fully built, tested, and pushed to [`samirx20/choreo`](https://github.com/samirx20/choreo.git) on `main`:
-1. **Scaffolding & Store**: React 19 + TypeScript + Vite + Tailwind CSS + shadcn/ui primitives. Typed AST in `src/types/scene.ts`, transactional undo/redo in `src/store/history.ts`, Zustand store in `src/store/useProjectStore.ts`.
-2. **Motion Engine**: 8 atomic evaluators (`src/engine/atomics.ts`), cubic-bezier easings (`src/engine/easings.ts`), deterministic virtual clock evaluator (`src/engine/evaluator.ts`).
-3. **Canvas & Design Mode**: Interactive canvas with pan/zoom, TransformBox with 8 handles and rotation pin, magnetic snapping guides (`src/components/canvas/snapping.ts`), Left Sidebar (screens & layers tree), Floating Add Toolbar, Design Inspector matching Screenshot 4, and context-aware text splitting with 0px visual shift (`src/engine/textSplitter.ts`).
-4. **Animate Mode & Timeline**: Multi-track sequencer (`src/components/timeline/TimelinePanel.tsx`) with playhead scrubber, DraggableClip blocks with left/right trim handles, and Animate Inspector (`src/components/inspector/AnimateInspector.tsx`) matching Screenshots 1, 2, and 3.
-5. **AI Command Bar & Components**: `Ctrl+K` floating palette with deterministic AST mutation, suggestion chips, and bottom undo toast (`src/components/ai/AICommandBar.tsx`); stampable Custom Components drawer (`src/components/components/ComponentsDrawer.tsx`).
-6. **Persistence**: Self-contained `.motion` zip bundle export & import via JSZip (`src/engine/bundle.ts`) and Export modal.
+The agent repeatedly rushed to patch individual symptoms in code and celebrate with automated screenshots, missing the user's fundamental demand: **stop rushing, rethink the entire UX holistically, design for every type of situation and specific case, document it thoroughly, and verify the model with the user first.**
 
 ---
 
-## 5. Immediate Next Step: User Verification & Phase 7 Packaging
+## 2. The Core Mission for Next Thread
 
-1. **User Verification Flow**:
-   Run `npm run dev` and open `http://localhost:5173`. Test canvas dragging, text splitting, timeline scrubbing, clip dragging, preset swapping, AI command bar, and .motion bundle download.
-2. **Phase 7 (Post-Verification)**:
-   Initialize Tauri v2 (`cargo tauri init`), configure bundled native FFmpeg sidecar, and wrap the verified React frontend into the standalone desktop binary.
+In the next thread, your goal is to produce and present the **Comprehensive Canvas Interaction & State Matrix**.
+
+You must think through, categorize, and specify:
+1. **Every type of canvas element**: Root Text, Chunks inside Flex, Container Cards/Frames, Vector Shapes, Media Images/Videos.
+2. **Every interaction mode**: Design Mode (resting state composition) vs. Animate Mode (temporal motion & keyframing).
+3. **Every interaction event**: Hover, Click, Double-Click, Pointer Down, Drag, Pointer Up, Right-Click, Marquee Drag, Keyboard Modifiers (`Shift`, `Alt`, `Ctrl`/`Cmd`, `Space`).
+4. **Every specific case and edge case**: How each element behaves under those events.
+
+---
+
+## 3. The Required Interaction & State Matrix Checklist
+
+The next agent must map out and present clear answers and specifications for the following domains:
+
+### Domain A: Text Lifecycle & Auto-Sizing Paradigms (Figma Model)
+* **Creation (`T`)**: 1-click on canvas vs. click-and-drag bounding box.
+* **Auto-Width vs. Auto-Height vs. Fixed Dimensions**:
+  * *Auto-Width*: Default for single-click creation. Width grows horizontally as text is typed. Hitting `Enter` adds a newline; width becomes the longest line; height expands.
+  * *Auto-Height*: Triggered when user resizes width via East/West handles or inputs a fixed `W`. Text wraps at boundary width; height expands dynamically downward. `height` is strictly `auto`.
+  * *Fixed Size*: User explicitly resizes North/South handles. Text overflows or clips.
+* **Inline Editing State**:
+  * Caret positioning, text selection, and typography mirroring.
+  * `Enter`: Inserts newline in multi-line text.
+  * `Escape` or Click Outside: Commits text, cleans up ghost/empty layers, returns to selected state.
+  * `Ctrl + Enter`: Splits at caret or commits.
+  * `Tab`: Advances to next chunk or indents.
+* **Semantic Splitting**:
+  * Highlight-to-Split: User selects a substring $\to$ HUD displays `[ ✂ Split Selection ]` $\to$ slices into 3 chunks with 0px layout displacement inside a flex group.
+  * Split into Words / Chunks: Punctuation and word-boundary tokenization.
+* **Reverse Splitting (Notion/Google Docs model)**:
+  * `Backspace` at index 0 of Chunk $N$: Merges into Chunk $N-1$.
+  * `Delete` at end of Chunk $N$: Merges Chunk $N+1$ into Chunk $N$.
+  * Dissolve container: When only 1 chunk remains, automatically unpack group back into a single text layer.
+
+### Domain B: Selection, Hover, & Drag Surfaces
+* **Visual States**:
+  * *Idle / Unselected*: Clean element rendering, no borders.
+  * *Hovered*: Subtle 1px cyan/gold hairline highlight indicating clickability.
+  * *Selected (Single)*: Yellow `TransformBox` with 8 resize handles, rotation pin, live dimension badge ($W \times H$), and Contextual HUD docked 10px above.
+  * *Selected (Multi)*: Enclosing union bounding box surrounding all selected layers.
+  * *Deep Selected*: Clicking inside a group selects the group; double-clicking or `Ctrl+Click` deep-selects the child chunk. `Shift+Enter` ascends to parent.
+* **Pointer & Grab Zones**:
+  * *Center Body*: `cursor-move`, captures drag, updates $(X, Y)$ with magnetic snapping.
+  * *Perimeter Edges*: 4 perimeter strips (5px thickness) for grabbing borders.
+  * *8 Resize Handles*:
+    * Corner handles (`nw`, `ne`, `se`, `sw`): Proportional scaling (or 1:1 with `Shift`).
+    * Side handles (`n`, `s`, `e`, `w`): Directional resizing. For text, `e`/`w` changes width with auto-height reflow.
+  * *Rotation Pin*: 24px above top center, allows 360° rotation (15° increments with `Shift`).
+* **Canvas Marquee Selection**:
+  * Dragging on empty background creates a selection rectangle that selects all intersecting layers.
+  * Holding `Shift` adds to existing selection.
+
+### Domain C: Coordinate Systems & Hierarchy
+* **Root Canvas vs. Container Group**:
+  * Root elements use absolute canvas coordinates $(X, Y)$ relative to canvas $(0, 0)$ (e.g. $1920 \times 1080$).
+  * Grouped children use relative flex/layout coordinates.
+* **Grouping (`Ctrl+G`) & Ungrouping (`Ctrl+Shift+G`)**:
+  * Grouping computes minimal enclosing bounding box $(X_{min}, Y_{min})$, places `<Group>` at $(X_{min}, Y_{min})$, and translates children coordinates:
+    $$\Delta X_i = X_i - X_{min}, \quad \Delta Y_i = Y_i - Y_{min}$$
+  * Ungrouping reverses the calculation with zero visual jump on canvas.
+* **Left Sidebar Drag-and-Drop**:
+  * Dragging layers up/down reorders DOM z-index with a visual drop hairline.
+  * Dragging onto a group nests the layer inside.
+
+### Domain D: Contextual HUD vs. Right Sidebar Separation
+* **Contextual HUD (Docked above element)**:
+  * Fast micro-interactions: Color swatch, Font Family, Font Size, Bold/Italic, Kinetic Split button, Motion preset shortcut.
+  * Never blocks canvas view; inverts canvas zoom scale to remain legible.
+* **Right Sidebar (Inspector)**:
+  * In Design Mode: Alignment tools (Left, Center, Right, Top, Middle, Bottom), Layout ($X, Y, W, H$, Aspect Lock, Angle), Typography (Weight, Line Height, Align), Appearance (Fill, Opacity, Corner Radius, Border, Shadow).
+  * **Strict Rule**: No redundant textareas in the sidebar. Text is edited directly on canvas.
+  * In Animate Mode: Timeline track parameters, In/Out animation presets, Easing curves, Stagger timing.
+
+---
+
+## 4. Current State of the Codebase
+
+* **Repository**: [`samirx20/choreo`](https://github.com/samirx20/choreo.git) on branch `main`.
+* **Build**: `npm run build` compiles cleanly with 0 TypeScript errors.
+* **Tests**: All 16 Vitest unit tests pass (`npm test`).
+* **Recent Patches**:
+  * `styleUtils.ts`: Added `isTextOrChunk` height protection (`minHeight` + `height: auto`).
+  * `TextRenderer.tsx`: Implemented CSS Grid mirror auto-sizing and `Escape` commit edit.
+  * `TransformBox.tsx`: Added interactive center body drag surface and horizontal vs vertical resize protection.
+  * `DesignInspector.tsx`: Added 1-click `Auto` height reset badge for text layers.
+* **Automated Visual Snapshots Available**:
+  * `08_multiline_selection_box.png`: Demonstrates yellow box wrapping all 3 lines of text.
+  * `09_dragged_moved_position.png`: Demonstrates element moved across canvas via center drag.
+  * `10_fixed_width_350_wrap.png`: Demonstrates fixed width 350 with auto-height reflow.
+* **Existing Documentation**:
+  * [docs/UI_PANELS_SPEC.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/UI_PANELS_SPEC.md)
+  * [docs/CANVAS_UX_SPEC.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/CANVAS_UX_SPEC.md)
+  * [docs/DEFAULT_BEHAVIORS_AND_INTERACTIONS.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/DEFAULT_BEHAVIORS_AND_INTERACTIONS.md)
+  * [docs/CONTEXT_MENU_MATRIX.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/CONTEXT_MENU_MATRIX.md)
+  * [walkthrough.md](file:///C:/Users/Sam/.gemini/antigravity/brain/b0d31a8d-1e9b-49f8-96f4-11895821e802/walkthrough.md)
+
+---
+
+## 5. First Action for the Next Thread
+
+When starting the next thread:
+1. **Acknowledge the mandate**: Explicitly state to the user that you are not touching code and will not rush.
+2. **Present the comprehensive Canvas Interaction & State Matrix**: Lay out every situation, case, and state machine transition for text, containers, selection, and drag/resize.
+3. **Align with the user**: Gather their feedback and refine the specification together before any implementation begins.

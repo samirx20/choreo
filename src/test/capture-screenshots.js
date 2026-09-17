@@ -35,55 +35,49 @@ async function captureStudioScreenshots() {
     // 1. Design Mode - Hero Card selected
     console.log("📸 Capturing: 01_design_mode.png");
     const heroCard = page.locator("#layer-group_hero");
-    await heroCard.click();
-    await page.waitForTimeout(300);
+    await heroCard.click({ force: true });
+    await page.waitForTimeout(400);
     await page.screenshot({
       path: path.join(SCREENSHOTS_DIR, "01_design_mode.png"),
     });
 
-    // 2. Context Menu
-    console.log("📸 Capturing: 02_context_menu.png");
-    await heroCard.click({ button: "right" });
-    await page.waitForTimeout(300);
+    // 2. Contextual HUD over Text Element
+    console.log("📸 Capturing: 02_contextual_hud.png");
+    const chunk2 = page.locator("#layer-chunk_2");
+    await chunk2.click({ force: true });
+    await page.waitForTimeout(400);
     await page.screenshot({
-      path: path.join(SCREENSHOTS_DIR, "02_context_menu.png"),
+      path: path.join(SCREENSHOTS_DIR, "02_contextual_hud.png"),
     });
 
-    // Dismiss context menu by clicking canvas center
-    await page.mouse.click(600, 400);
-    await page.waitForTimeout(200);
-
-    // 3. Shortcuts Modal
-    console.log("📸 Capturing: 03_shortcuts_modal.png");
-    await page.keyboard.press("?");
-    const shortcutsHeader = page.getByText("Keyboard Shortcuts", { exact: true });
-    await shortcutsHeader.waitFor({ timeout: 3000 });
-    await page.waitForTimeout(200);
+    // 3. Context Menu
+    console.log("📸 Capturing: 03_context_menu.png");
+    await heroCard.click({ button: "right", force: true });
+    await page.waitForTimeout(400);
     await page.screenshot({
-      path: path.join(SCREENSHOTS_DIR, "03_shortcuts_modal.png"),
+      path: path.join(SCREENSHOTS_DIR, "03_context_menu.png"),
     });
 
-    // Close shortcuts modal via Escape
-    await page.keyboard.press("Escape");
+    // Dismiss context menu
+    await page.mouse.click(300, 300);
     await page.waitForTimeout(200);
 
     // 4. Animate Mode with Timeline & Inspector
     console.log("📸 Capturing: 04_animate_mode.png");
     const animateBtn = page.getByRole("button", { name: "Animate" });
     await animateBtn.click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(400);
 
-    // Play scrubber forward so all kinetic entrance chunks are resting
+    // Play scrubber forward so kinetic chunks are visible
     const playBtn = page.getByTitle(/Play/i).first();
     await playBtn.click();
     await page.waitForTimeout(1400);
     await playBtn.click();
     await page.waitForTimeout(200);
 
-    // Select Chunk 1 from Left Sidebar so Animate Inspector displays Active Card & Presets Grid
     const chunkTreeItem = page.locator("aside").first().getByText("Hey Team,");
     await chunkTreeItem.click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(400);
 
     await page.screenshot({
       path: path.join(SCREENSHOTS_DIR, "04_animate_mode.png"),
@@ -94,7 +88,7 @@ async function captureStudioScreenshots() {
     await page.keyboard.press("Control+K");
     const aiTitle = page.getByText("AI Command Bar");
     await aiTitle.waitFor({ timeout: 3000 });
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(300);
     await page.screenshot({
       path: path.join(SCREENSHOTS_DIR, "05_ai_command_bar.png"),
     });
@@ -103,32 +97,42 @@ async function captureStudioScreenshots() {
     await page.keyboard.press("Escape");
     await page.waitForTimeout(200);
 
-    // 6. Custom Components Drawer
-    console.log("📸 Capturing: 06_components_drawer.png");
-    await page.keyboard.press("Tab"); // Back to design mode
+    // 6. Shortcuts Modal
+    console.log("📸 Capturing: 06_shortcuts_modal.png");
+    await page.keyboard.press("?");
+    const shortcutsHeader = page.getByText("Keyboard Shortcuts", { exact: true });
+    await shortcutsHeader.waitFor({ timeout: 3000 });
     await page.waitForTimeout(200);
-    const componentsBtn = page.getByRole("button", { name: /Components/i });
-    await componentsBtn.click();
-    const compHeader = page.getByText("Custom Components");
-    await compHeader.waitFor({ timeout: 3000 });
-    await page.waitForTimeout(300);
     await page.screenshot({
-      path: path.join(SCREENSHOTS_DIR, "06_components_drawer.png"),
+      path: path.join(SCREENSHOTS_DIR, "06_shortcuts_modal.png"),
     });
 
-    // Close components drawer
+    // Close shortcuts modal
     await page.keyboard.press("Escape");
     await page.waitForTimeout(200);
 
-    // 7. Export Modal
-    console.log("📸 Capturing: 07_export_modal.png");
-    const exportBtn = page.getByRole("button", { name: "Export" });
-    await exportBtn.click();
-    const exportHeader = page.getByText("Export Project");
-    await exportHeader.waitFor({ timeout: 3000 });
+    // 7. 1-Click Text Tool Creation & Split Highlight (Back in Design Mode)
+    console.log("📸 Capturing: 07_text_editing_and_split.png");
+    const designBtn = page.getByRole("button", { name: "Design" });
+    await designBtn.click();
     await page.waitForTimeout(300);
+
+    const textToolBtn = page.getByTitle("1-Click Instant Text (T)");
+    await textToolBtn.click();
+    await page.waitForTimeout(400);
+    // Type some text in the active textarea
+    const activeTextarea = page.locator("textarea:focus");
+    if (await activeTextarea.count() > 0) {
+      await activeTextarea.fill("Figma Style Kinetic Motion");
+      // Highlight "Kinetic"
+      await activeTextarea.evaluate((el) => {
+        el.setSelectionRange(12, 19);
+        el.dispatchEvent(new Event("select"));
+      });
+    }
+    await page.waitForTimeout(400);
     await page.screenshot({
-      path: path.join(SCREENSHOTS_DIR, "07_export_modal.png"),
+      path: path.join(SCREENSHOTS_DIR, "07_text_editing_and_split.png"),
     });
 
     console.log("✨ All 7 studio screenshots captured successfully in HD!");

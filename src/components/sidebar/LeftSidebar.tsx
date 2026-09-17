@@ -44,10 +44,18 @@ export const LeftSidebar: React.FC = () => {
     updateLayer,
     removeLayer,
     duplicateLayer,
+    reorderLayer,
+    groupSelection,
+    ungroup,
   } = useProjectStore();
 
   const [layerSearch, setLayerSearch] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null);
+  const [dragOverTarget, setDragOverTarget] = useState<{
+    id: string;
+    position: "before" | "after" | "inside";
+  } | null>(null);
 
   const activeScreen =
     doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
@@ -81,7 +89,7 @@ export const LeftSidebar: React.FC = () => {
     }
   };
 
-  // Render a single layer item in the tree recursively
+  // Render a single layer item in the tree recursively with drag-and-drop
   const renderLayerNode = (layer: Layer, depth = 0) => {
     if (
       layerSearch &&
@@ -100,19 +108,78 @@ export const LeftSidebar: React.FC = () => {
     const isSelected = selectedLayerIds.includes(layer.id);
     const isGroup = layer.type === "group";
     const isCollapsed = isGroup && collapsedGroups[layer.id];
+    const isDragging = draggingLayerId === layer.id;
+    const isDragTarget = dragOverTarget?.id === layer.id;
 
     return (
-      <div key={layer.id} className="flex flex-col select-none">
+      <div
+        key={layer.id}
+        className="flex flex-col select-none relative"
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!draggingLayerId || draggingLayerId === layer.id) return;
+
+          const rect = e.currentTarget.getBoundingClientRect();
+          const relY = (e.clientY - rect.top) / rect.height;
+
+          let pos: "before" | "after" | "inside";
+          if (isGroup) {
+            if (relY < 0.25) pos = "before";
+            else if (relY > 0.75) pos = "after";
+            else pos = "inside";
+          } else {
+            pos = relY < 0.5 ? "before" : "after";
+          }
+
+          if (!dragOverTarget || dragOverTarget.id !== layer.id || dragOverTarget.position !== pos) {
+            setDragOverTarget({ id: layer.id, position: pos });
+          }
+        }}
+        onDragLeave={(e) => {
+          if (dragOverTarget?.id === layer.id) {
+            setDragOverTarget(null);
+          }
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!draggingLayerId || draggingLayerId === layer.id || !dragOverTarget) return;
+
+          reorderLayer(draggingLayerId, layer.id, dragOverTarget.position);
+          setDraggingLayerId(null);
+          setDragOverTarget(null);
+        }}
+      >
+        {/* Drop indicator lines */}
+        {isDragTarget && dragOverTarget.position === "before" && (
+          <div className="absolute top-0 left-2 right-2 h-0.5 bg-primary rounded-full z-30 shadow-[0_0_6px_rgba(232,197,71,0.6)]" />
+        )}
+        {isDragTarget && dragOverTarget.position === "after" && (
+          <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full z-30 shadow-[0_0_6px_rgba(232,197,71,0.6)]" />
+        )}
+
         <div
+          draggable={!layer.locked}
+          onDragStart={(e) => {
+            e.dataTransfer.setData("text/plain", layer.id);
+            setDraggingLayerId(layer.id);
+          }}
+          onDragEnd={() => {
+            setDraggingLayerId(null);
+            setDragOverTarget(null);
+          }}
           onClick={(e) => {
             selectLayer(layer.id, e.shiftKey || e.ctrlKey || e.metaKey);
           }}
           style={{ paddingLeft: `${depth * 14 + 10}px` }}
           className={cn(
-            "group flex items-center justify-between h-7 pr-2 text-xs rounded transition-colors cursor-pointer",
+            "group flex items-center justify-between h-7 pr-2 text-xs rounded transition-all cursor-pointer relative",
             isSelected
               ? "bg-secondary text-foreground font-medium border border-border"
-              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+              : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            isDragging && "opacity-40",
+            isDragTarget && dragOverTarget.position === "inside" && "bg-primary/20 border-primary ring-1 ring-primary text-foreground"
           )}
         >
           <div className="flex items-center gap-1.5 min-w-0 flex-1">
@@ -175,6 +242,21 @@ export const LeftSidebar: React.FC = () => {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-800 text-xs">
+                {isGroup ? (
+                  <DropdownMenuItem
+                    onClick={() => ungroup(layer.id)}
+                    className="gap-2"
+                  >
+                    <Folder className="h-3 w-3" /> Ungroup
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => groupSelection()}
+                    className="gap-2"
+                  >
+                    <Folder className="h-3 w-3" /> Group
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem
                   onClick={() => duplicateLayer(layer.id)}
                   className="gap-2"
@@ -309,6 +391,15 @@ export const LeftSidebar: React.FC = () => {
               {activeScreen ? activeScreen.layers.length : 0}
             </Badge>
           </div>
+          {selectedLayerIds.length >= 2 && (
+            <button
+              onClick={() => groupSelection()}
+              title="Group Selection (Ctrl+G)"
+              className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 bg-primary/10 px-1.5 py-0.5 rounded border border-primary/30 font-medium"
+            >
+              <Folder className="h-3 w-3" /> Group
+            </button>
+          )}
         </div>
 
         {/* Filter / Search input */}

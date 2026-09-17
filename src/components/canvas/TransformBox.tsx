@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Layer } from "@/types/scene";
+import { Layer, LayerStyle } from "@/types/scene";
 import { useProjectStore } from "@/store/useProjectStore";
 import { calculateSnapping, SnapGuide } from "./snapping";
 
@@ -10,6 +10,7 @@ interface TransformBoxProps {
   siblingBoxes: { x: number; y: number; width: number; height: number }[];
   effectiveScale: number;
   onGuidesChange: (guides: SnapGuide[]) => void;
+  bounds?: { x: number; y: number; width: number; height: number } | null;
 }
 
 type HandleType =
@@ -31,10 +32,17 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
   siblingBoxes,
   effectiveScale,
   onGuidesChange,
+  bounds,
 }) => {
-  const { updateLayerStyle, startTransaction, commitTransaction } =
-    useProjectStore();
+  const {
+    updateLayerStyle,
+    startTransaction,
+    commitTransaction,
+    setEditingLayerId,
+    editingLayerId,
+  } = useProjectStore();
 
+  const isEditing = editingLayerId === layer.id;
   const [activeHandle, setActiveHandle] = useState<HandleType | null>(null);
   const dragStartRef = useRef<{
     clientX: number;
@@ -54,12 +62,18 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
     initialRotation: 0,
   });
 
-  const layerX = layer.style.x || 0;
-  const layerY = layer.style.y || 0;
-  const layerW =
-    typeof layer.style.width === "number" ? layer.style.width : 200;
-  const layerH =
-    typeof layer.style.height === "number" ? layer.style.height : 100;
+  const visualX = bounds ? bounds.x : layer.style.x || 0;
+  const visualY = bounds ? bounds.y : layer.style.y || 0;
+  const visualW = bounds
+    ? bounds.width
+    : typeof layer.style.width === "number"
+    ? layer.style.width
+    : 200;
+  const visualH = bounds
+    ? bounds.height
+    : typeof layer.style.height === "number"
+    ? layer.style.height
+    : 100;
   const rotation = layer.style.rotation || 0;
 
   const handlePointerDown = (handle: HandleType, e: React.PointerEvent) => {
@@ -73,10 +87,10 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
     dragStartRef.current = {
       clientX: e.clientX,
       clientY: e.clientY,
-      initialX: layerX,
-      initialY: layerY,
-      initialWidth: layerW,
-      initialHeight: layerH,
+      initialX: layer.style.x || 0,
+      initialY: layer.style.y || 0,
+      initialWidth: visualW,
+      initialHeight: visualH,
       initialRotation: rotation,
     };
   };
@@ -104,8 +118,8 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
       const snap = calculateSnapping(
         nextX,
         nextY,
-        layerW,
-        layerH,
+        visualW,
+        visualH,
         canvasWidth,
         canvasHeight,
         siblingBoxes
@@ -115,13 +129,11 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
       updateLayerStyle(layer.id, { x: snap.x, y: snap.y });
     } else if (activeHandle === "rotate") {
       // Rotation logic
-      const centerX = layerX + layerW / 2;
-      const centerY = layerY + layerH / 2;
+      const centerX = visualX + visualW / 2;
+      const centerY = visualY + visualH / 2;
       // Angle calculation relative to center
-      const currentMouseCanvasX =
-        layerX + layerW / 2 + deltaX;
-      const currentMouseCanvasY =
-        layerY - 40 + deltaY;
+      const currentMouseCanvasX = visualX + visualW / 2 + deltaX;
+      const currentMouseCanvasY = visualY - 40 + deltaY;
 
       const rad = Math.atan2(
         currentMouseCanvasY - centerY,
@@ -164,12 +176,25 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         newH = side;
       }
 
-      updateLayerStyle(layer.id, {
+      const updates: Partial<LayerStyle> = {
         x: Math.round(newX),
         y: Math.round(newY),
         width: Math.round(newW),
-        height: Math.round(newH),
-      });
+      };
+
+      // For text layers: only change height if explicitly dragging a vertical handle ('n' or 's').
+      // When dragging horizontal handles ('e' or 'w'), height MUST stay "auto" so multi-line text flows naturally!
+      if (layer.type === "text" || layer.type === "chunk") {
+        if (activeHandle.includes("n") || activeHandle.includes("s")) {
+          updates.height = Math.round(newH);
+        } else {
+          updates.height = "auto";
+        }
+      } else {
+        updates.height = Math.round(newH);
+      }
+
+      updateLayerStyle(layer.id, updates);
     }
   };
 
@@ -188,26 +213,62 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
     <div
       style={{
         position: "absolute",
-        left: `${layerX}px`,
-        top: `${layerY}px`,
-        width: `${layerW}px`,
-        height: `${layerH}px`,
+        left: `${visualX}px`,
+        top: `${visualY}px`,
+        width: `${visualW}px`,
+        height: `${visualH}px`,
         transform: rotation ? `rotate(${rotation}deg)` : undefined,
         transformOrigin: "center center",
-        pointerEvents: "auto",
+        pointerEvents: "none",
       }}
-      className="z-40 ring-1 ring-primary select-none group"
-      onPointerDown={(e) => handlePointerDown("move", e)}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
+      className="z-40 ring-1 ring-primary select-none group pointer-events-none"
     >
-      {/* Move Cursor Overlay */}
-      <div className="w-full h-full cursor-move" />
+      {/* Center Drag Body: Clicking and dragging anywhere inside the selection box moves the layer */}
+      {!isEditing && (
+        <div
+          className="absolute inset-0 cursor-move pointer-events-auto"
+          onPointerDown={(e) => handlePointerDown("move", e)}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            if (layer.type === "text" || layer.type === "chunk") {
+              setEditingLayerId(layer.id);
+            }
+          }}
+        />
+      )}
+
+      {/* 4 Border Grab Edges (5px thickness with pointer-events: auto so moving is easy by grabbing edge) */}
+      <div
+        className="absolute top-0 left-0 right-0 h-2 -translate-y-1 cursor-move pointer-events-auto"
+        onPointerDown={(e) => handlePointerDown("move", e)}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+      />
+      <div
+        className="absolute bottom-0 left-0 right-0 h-2 translate-y-1 cursor-move pointer-events-auto"
+        onPointerDown={(e) => handlePointerDown("move", e)}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+      />
+      <div
+        className="absolute top-0 bottom-0 left-0 w-2 -translate-x-1 cursor-move pointer-events-auto"
+        onPointerDown={(e) => handlePointerDown("move", e)}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+      />
+      <div
+        className="absolute top-0 bottom-0 right-0 w-2 translate-x-1 cursor-move pointer-events-auto"
+        onPointerDown={(e) => handlePointerDown("move", e)}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+      />
 
       {/* Rotation Pin & Handle */}
       <div
         style={{ left: "50%", top: "-24px" }}
-        className="absolute -translate-x-1/2 flex flex-col items-center cursor-grab active:cursor-grabbing"
+        className="absolute -translate-x-1/2 flex flex-col items-center cursor-grab active:cursor-grabbing pointer-events-auto"
         onPointerDown={(e) => handlePointerDown("rotate", e)}
       >
         <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-background shadow" />
@@ -228,14 +289,14 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         <div
           key={h.pos}
           style={h.style}
-          className="absolute w-2 h-2 bg-background border border-primary rounded-xs shadow-xs hover:scale-125 transition-transform"
+          className="absolute w-2.5 h-2.5 bg-background border border-primary rounded-xs shadow-xs hover:scale-125 transition-transform pointer-events-auto"
           onPointerDown={(e) => handlePointerDown(h.pos as HandleType, e)}
         />
       ))}
 
       {/* Live Dimension Badge */}
       <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 bg-card border border-border px-1.5 py-0.5 rounded text-[10px] font-mono text-foreground shadow-xs pointer-events-none whitespace-nowrap">
-        {Math.round(layerW)} × {Math.round(layerH)}
+        {Math.round(visualW)} × {Math.round(visualH)}
         {rotation ? ` (${rotation}°)` : ""}
       </div>
     </div>

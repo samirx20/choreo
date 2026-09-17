@@ -6,6 +6,14 @@ import { evaluateSceneAtTime } from "@/engine/evaluator";
 import { TransformBox } from "./TransformBox";
 import { SnapGuide } from "./snapping";
 import { CanvasContextMenu } from "./CanvasContextMenu";
+import { ContextualFloatingBar } from "./ContextualFloatingBar";
+import { Plus, Minus, Maximize } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface CanvasViewportProps {
   onOpenComponentsDrawer: () => void;
@@ -43,10 +51,10 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   const activeScreen =
     doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
 
-  // Selected root layer for transform bounding box
-  const selectedRootLayer = activeScreen.layers.find(
-    (l) => l.id === selectedLayerIds[0]
-  );
+  // Selected root layer for transform bounding box and contextual floating bar
+  const selectedRootLayer =
+    activeScreen.layers.find((l) => l.id === selectedLayerIds[0]) ||
+    findLayerInTree(activeScreen.layers, selectedLayerIds[0]);
 
   const siblingBoxes = activeScreen.layers
     .filter((l) => l.id !== selectedLayerIds[0])
@@ -60,15 +68,23 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   // Global spacebar listener for canvas panning
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !spacePressed) {
-        // Only if not focused on an input/textarea
-        if (
-          document.activeElement?.tagName !== "INPUT" &&
-          document.activeElement?.tagName !== "TEXTAREA"
-        ) {
-          e.preventDefault();
-          setSpacePressed(true);
-        }
+      if (
+        e.code === "Space" &&
+        !spacePressed &&
+        !(
+          e.target instanceof HTMLInputElement ||
+          e.target instanceof HTMLTextAreaElement
+        )
+      ) {
+        e.preventDefault();
+        setSpacePressed(true);
+      } else if (e.shiftKey && e.key === "!") {
+        // Shift + 1: Zoom to Fit
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
+      } else if ((e.ctrlKey || e.metaKey) && e.key === "0") {
+        setZoom(1);
+        setPan({ x: 0, y: 0 });
       }
     };
 
@@ -85,16 +101,42 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [spacePressed]);
+  }, [spacePressed, setZoom]);
 
-  // Handle zoom with Ctrl + Wheel
-  const handleWheel = (e: React.WheelEvent) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-      const delta = e.deltaY < 0 ? 0.05 : -0.05;
-      setZoom(Math.min(Math.max(zoom + delta, 0.2), 3));
-    }
-  };
+  // Native non-passive wheel listener for smooth cursor-centered zoom and panning
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onWheelNative = (e: WheelEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const rect = container.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left - rect.width / 2;
+        const mouseY = e.clientY - rect.top - rect.height / 2;
+
+        const currentZoom = useProjectStore.getState().zoom;
+        const factor = e.deltaY < 0 ? 1.08 : 0.92;
+        const nextZoom = Math.min(Math.max(currentZoom * factor, 0.2), 4.0);
+
+        setPan((prevPan) => ({
+          x: mouseX - (mouseX - prevPan.x) * (nextZoom / currentZoom),
+          y: mouseY - (mouseY - prevPan.y) * (nextZoom / currentZoom),
+        }));
+        setZoom(nextZoom);
+      } else {
+        // Smooth 2D panning via trackpad scroll or mouse wheel
+        e.preventDefault();
+        setPan((prev) => ({
+          x: prev.x - e.deltaX,
+          y: prev.y - e.deltaY,
+        }));
+      }
+    };
+
+    container.addEventListener("wheel", onWheelNative, { passive: false });
+    return () => container.removeEventListener("wheel", onWheelNative);
+  }, [setZoom]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (spacePressed || e.button === 1) {
@@ -154,7 +196,6 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   }, [isPlaying, activeScreen.duration, setCurrentTime]);
 
   // Fit scale calculation relative to viewport window
-  // e.g. if 1920x1080, scale down to fit container with margin
   const [viewportScale, setViewportScale] = useState(0.65);
 
   useEffect(() => {
@@ -175,10 +216,65 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
 
   const effectiveScale = viewportScale * zoom;
 
+  // Track visual DOM bounding box of active layer (handles root absolute layers and nested flex chunks)
+  const [selectedBounds, setSelectedBounds] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!selectedLayerIds[0]) {
+      setSelectedBounds(null);
+      return;
+    }
+
+    const measure = () => {
+      const el = document.getElementById(`layer-${selectedLayerIds[0]}`);
+      const screenEl = document.getElementById(`screen-${activeScreen.id}`);
+      if (el && screenEl) {
+        const elRect = el.getBoundingClientRect();
+        const screenRect = screenEl.getBoundingClientRect();
+        setSelectedBounds({
+          x: (elRect.left - screenRect.left) / effectiveScale,
+          y: (elRect.top - screenRect.top) / effectiveScale,
+          width: elRect.width / effectiveScale,
+          height: elRect.height / effectiveScale,
+        });
+      }
+    };
+
+    measure();
+    const frame = requestAnimationFrame(measure);
+    return () => cancelAnimationFrame(frame);
+  }, [selectedLayerIds, activeScreen.id, effectiveScale, doc]);
+
+  // Calculate position for ContextualFloatingBar
+  const barLayerX = selectedBounds
+    ? selectedBounds.x
+    : selectedRootLayer
+    ? selectedRootLayer.style.x || 0
+    : 0;
+  const barLayerY = selectedBounds
+    ? selectedBounds.y
+    : selectedRootLayer
+    ? selectedRootLayer.style.y || 0
+    : 0;
+  const barLayerW = selectedBounds
+    ? selectedBounds.width
+    : selectedRootLayer
+    ? typeof selectedRootLayer.style.width === "number"
+      ? selectedRootLayer.style.width
+      : 200
+    : 200;
+
+  const barX = barLayerX + barLayerW / 2;
+  const barY = Math.max(barLayerY - 14 / effectiveScale, 10);
+
   return (
     <main
       ref={containerRef}
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -193,7 +289,11 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         }
       }}
       className={`flex-1 relative bg-zinc-950 overflow-hidden flex items-center justify-center select-none ${
-        spacePressed ? (isPanning ? "cursor-grabbing" : "cursor-grab") : "cursor-default"
+        spacePressed
+          ? isPanning
+            ? "cursor-grabbing"
+            : "cursor-grab"
+          : "cursor-default"
       }`}
       style={{
         backgroundImage:
@@ -201,15 +301,6 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         backgroundSize: "24px 24px",
       }}
     >
-      {/* Canvas Canvas Resolution Badge */}
-      <div className="absolute top-3 left-4 z-20 flex items-center gap-2 bg-zinc-900/80 backdrop-blur-md px-2.5 py-1 rounded-md border border-zinc-800 text-[11px] text-zinc-400 font-mono">
-        <span>{doc.settings.width} × {doc.settings.height}</span>
-        <span className="text-zinc-600">•</span>
-        <span>16:9</span>
-        <span className="text-zinc-600">•</span>
-        <span className="text-primary font-semibold">{doc.settings.fps} FPS</span>
-      </div>
-
       {/* Canvas Frame */}
       <div
         style={{
@@ -232,7 +323,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           }}
         />
 
-        {/* Magnetic Snap Guides (Magenta Alignment Lines) */}
+        {/* Magnetic Snap Guides */}
         {guides.map((guide, idx) => (
           <div
             key={idx}
@@ -260,7 +351,34 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
             siblingBoxes={siblingBoxes}
             effectiveScale={effectiveScale}
             onGuidesChange={setGuides}
+            bounds={selectedBounds}
           />
+        )}
+
+        {/* Contextual Floating Action Bar (HUD) docked 10px above layer */}
+        {uiMode === "design" && selectedRootLayer && (
+          <div
+            style={{
+              position: "absolute",
+              left: `${barX}px`,
+              top: `${barY}px`,
+              transform: `translate(-50%, -100%) scale(${Math.max(
+                1 / effectiveScale,
+                0.75
+              )})`,
+              transformOrigin: "bottom center",
+            }}
+            className="z-50 pointer-events-auto"
+          >
+            <ContextualFloatingBar
+              layer={selectedRootLayer}
+              computedStyle={
+                (computedLayerStyles[selectedRootLayer.id] as any) ||
+                selectedRootLayer.style
+              }
+              canvasScale={effectiveScale}
+            />
+          </div>
         )}
       </div>
 
@@ -268,6 +386,53 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       {uiMode === "design" && (
         <FloatingToolbar onOpenComponentsDrawer={onOpenComponentsDrawer} />
       )}
+
+      {/* Floating Canvas Navigation & Zoom Widget (Bottom Right) */}
+      <div className="absolute bottom-6 right-6 z-30 flex items-center gap-1 bg-[#111111]/95 backdrop-blur-md px-2 py-1 rounded-full border border-[#222222] shadow-2xl text-xs text-[#eee8d5]">
+        <button
+          onClick={() => setZoom(Math.max(zoom - 0.1, 0.2))}
+          title="Zoom Out"
+          className="p-1 hover:bg-[#222222] rounded-full text-zinc-400 hover:text-white transition-colors"
+        >
+          <Minus className="h-3 w-3" />
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="px-1.5 py-0.5 font-mono text-[11px] text-zinc-300 hover:text-white transition-colors">
+              {Math.round(zoom * 100)}%
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="bg-[#171717] border-[#262626] text-xs">
+            {[50, 75, 100, 150, 200, 300].map((pct) => (
+              <DropdownMenuItem
+                key={pct}
+                onClick={() => setZoom(pct / 100)}
+                className="text-zinc-200 hover:text-white"
+              >
+                {pct}%
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <button
+          onClick={() => setZoom(Math.min(zoom + 0.1, 4.0))}
+          title="Zoom In"
+          className="p-1 hover:bg-[#222222] rounded-full text-zinc-400 hover:text-white transition-colors"
+        >
+          <Plus className="h-3 w-3" />
+        </button>
+        <div className="w-[1px] h-3.5 bg-[#222222] mx-0.5" />
+        <button
+          onClick={() => {
+            setZoom(1);
+            setPan({ x: 0, y: 0 });
+          }}
+          title="Fit to Screen (Shift+1)"
+          className="px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10 rounded-full transition-colors"
+        >
+          Fit
+        </button>
+      </div>
 
       {/* Right-Click Context Menu */}
       {contextMenu && (

@@ -3,7 +3,8 @@ import { LayerStyle } from "@/types/scene";
 
 export function layerStyleToCss(
   style: LayerStyle,
-  isChildInFlex = false
+  isChildInFlex = false,
+  isTextOrChunk = false
 ): CSSProperties {
   const css: CSSProperties = {};
 
@@ -23,10 +24,19 @@ export function layerStyleToCss(
     css.width = style.width;
   }
 
-  if (typeof style.height === "number") {
-    css.height = `${style.height}px`;
-  } else if (style.height) {
-    css.height = style.height;
+  if (isTextOrChunk) {
+    if (typeof style.height === "number") {
+      css.minHeight = `${style.height}px`;
+      css.height = "auto";
+    } else {
+      css.height = style.height || "auto";
+    }
+  } else {
+    if (typeof style.height === "number") {
+      css.height = `${style.height}px`;
+    } else if (style.height) {
+      css.height = style.height;
+    }
   }
 
   // Rotation & Transforms

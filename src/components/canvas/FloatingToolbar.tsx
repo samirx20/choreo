@@ -1,9 +1,10 @@
 import React from "react";
 import {
+  MousePointer,
   Type,
   Square,
   Circle,
-  FolderPlus,
+  CreditCard,
   Image as ImageIcon,
   Component,
   Star,
@@ -26,46 +27,31 @@ interface FloatingToolbarProps {
 export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   onOpenComponentsDrawer,
 }) => {
-  const { addLayer, document: doc } = useProjectStore();
+  const {
+    addLayer,
+    document: doc,
+    setEditingLayerId,
+  } = useProjectStore();
 
-  const handleAddText = (variant: "heading" | "subtitle" | "body") => {
-    const config = {
-      heading: {
-        fontSize: 72,
-        fontWeight: 800,
-        content: "New Heading",
-        color: "#FFFFFF",
-      },
-      subtitle: {
-        fontSize: 36,
-        fontWeight: 600,
-        content: "Subtitle Text",
-        color: "#A1A1AA",
-      },
-      body: {
-        fontSize: 24,
-        fontWeight: 400,
-        content: "Clean body copy describing your feature.",
-        color: "#D4D4D8",
-      },
-    }[variant];
-
+  // 1-Click instant text creation with live caret focus
+  const handleAddText = () => {
+    const newId = `text_${Date.now()}`;
     const newLayer: Layer = {
-      id: `text_${Date.now()}`,
-      name: config.content,
+      id: newId,
+      name: "Text Layer",
       type: "text",
-      content: config.content,
+      content: "Add text",
       style: {
-        x: doc.settings.width / 2 - 200,
+        x: doc.settings.width / 2 - 150,
         y: doc.settings.height / 2 - 40,
         width: "auto",
         height: "auto",
         rotation: 0,
         opacity: 1,
-        fontSize: config.fontSize,
-        fontWeight: config.fontWeight,
+        fontSize: 54,
+        fontWeight: 800,
         fontFamily: "Inter",
-        color: config.color,
+        color: THEME_TOKENS.typography.headingColor,
         textAlign: "center",
       },
       animation: {
@@ -76,6 +62,50 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
           easing: "bouncy",
         },
       },
+    };
+    addLayer(newLayer);
+    setEditingLayerId(newId);
+  };
+
+  // 1-Click Frame / Container Card creation
+  const handleAddCard = () => {
+    const newId = `card_${Date.now()}`;
+    const newLayer: Layer = {
+      id: newId,
+      name: "Card Container",
+      type: "group",
+      layout: {
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        align: "start",
+      },
+      autoFit: true,
+      autoLink: true,
+      staggerDelay: 0.15,
+      style: {
+        x: doc.settings.width / 2 - 250,
+        y: doc.settings.height / 2 - 175,
+        width: 500,
+        height: 350,
+        rotation: 0,
+        opacity: 1,
+        backgroundColor: THEME_TOKENS.surfaces.panelBackground,
+        padding: 32,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: THEME_TOKENS.surfaces.border,
+        shadows: [
+          {
+            x: 0,
+            y: 20,
+            blur: 40,
+            spread: -10,
+            color: "rgba(0,0,0,0.4)",
+          },
+        ],
+      },
+      children: [],
     };
     addLayer(newLayer);
   };
@@ -98,57 +128,15 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
             ? THEME_TOKENS.accent.highlight
             : THEME_TOKENS.accent.primary,
         borderRadius: shapeType === "circle" ? 9999 : 16,
-        shadows: [
-          {
-            x: 0,
-            y: 10,
-            blur: 25,
-            spread: -5,
-            color: "rgba(0,0,0,0.5)",
-          },
-        ],
       },
       animation: {
         in: {
-          preset: "grow",
+          preset: "pop",
           start: 0,
           duration: 0.6,
-          easing: "smooth",
+          easing: "bouncy",
         },
       },
-    };
-    addLayer(newLayer);
-  };
-
-  const handleAddGroup = () => {
-    const newLayer: Layer = {
-      id: `group_${Date.now()}`,
-      name: "New Group Card",
-      type: "group",
-      layout: {
-        display: "flex",
-        flexDirection: "column",
-        gap: 16,
-        align: "center",
-        justifyContent: "center",
-      },
-      autoFit: true,
-      autoLink: true,
-      staggerDelay: 0.15,
-      style: {
-        x: doc.settings.width / 2 - 250,
-        y: doc.settings.height / 2 - 150,
-        width: 500,
-        height: "auto",
-        rotation: 0,
-        opacity: 1,
-        backgroundColor: THEME_TOKENS.surfaces.panelBackground,
-        padding: 32,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: THEME_TOKENS.surfaces.border,
-      },
-      children: [],
     };
     addLayer(newLayer);
   };
@@ -184,76 +172,66 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   };
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-card/90 backdrop-blur-md border border-border shadow-xl px-2.5 py-1.5 rounded-full flex items-center gap-1">
-      {/* Add Text Menu */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-muted transition-colors">
-            <Type className="h-3.5 w-3.5 text-primary" />
-            <span>Text</span>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" side="top" className="bg-card border-border text-xs">
-          <DropdownMenuItem onClick={() => handleAddText("heading")}>
-            Heading (72px Bold)
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAddText("subtitle")}>
-            Subtitle (36px Semibold)
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAddText("body")}>
-            Body (24px Regular)
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-[#111111]/95 backdrop-blur-md border border-[#222222] shadow-2xl px-2.5 py-1.5 rounded-full flex items-center gap-1 text-xs select-none">
+      {/* 1-Click Instant Text Tool */}
+      <button
+        onClick={handleAddText}
+        title="1-Click Instant Text (T)"
+        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-white/10 transition-colors"
+      >
+        <Type className="h-3.5 w-3.5 text-primary" />
+        <span>Text</span>
+      </button>
+
+      {/* Frame / Card Tool */}
+      <button
+        onClick={handleAddCard}
+        title="Add Container Card / Frame (F)"
+        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-white/10 transition-colors"
+      >
+        <CreditCard className="h-3.5 w-3.5 text-blue-400" />
+        <span>Card</span>
+      </button>
 
       {/* Add Shape Menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-muted transition-colors">
+          <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-white/10 transition-colors">
             <Square className="h-3.5 w-3.5 text-emerald-400" />
             <span>Shapes</span>
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" side="top" className="bg-card border-border text-xs">
-          <DropdownMenuItem onClick={() => handleAddShape("rectangle")} className="gap-2">
-            <Square className="h-3 w-3" /> Rectangle / Card
+        <DropdownMenuContent align="center" side="top" className="bg-[#171717] border-[#262626] text-xs">
+          <DropdownMenuItem onClick={() => handleAddShape("rectangle")} className="gap-2 text-zinc-200">
+            <Square className="h-3 w-3" /> Rectangle
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAddShape("circle")} className="gap-2">
-            <Circle className="h-3 w-3" /> Circle / Ellipse
+          <DropdownMenuItem onClick={() => handleAddShape("circle")} className="gap-2 text-zinc-200">
+            <Circle className="h-3 w-3" /> Circle
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAddShape("triangle")} className="gap-2">
+          <DropdownMenuItem onClick={() => handleAddShape("triangle")} className="gap-2 text-zinc-200">
             <Triangle className="h-3 w-3" /> Triangle
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAddShape("star")} className="gap-2">
+          <DropdownMenuItem onClick={() => handleAddShape("star")} className="gap-2 text-zinc-200">
             <Star className="h-3 w-3" /> Star
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Add Flex Group */}
-      <button
-        onClick={handleAddGroup}
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-muted transition-colors"
-      >
-        <FolderPlus className="h-3.5 w-3.5 text-foreground/80" />
-        <span>Group</span>
-      </button>
-
       {/* Add Media */}
       <button
         onClick={handleAddSampleImage}
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-muted transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-white/10 transition-colors"
       >
         <ImageIcon className="h-3.5 w-3.5 text-pink-400" />
         <span>Media</span>
       </button>
 
-      <div className="h-4 w-px bg-border mx-0.5" />
+      <div className="h-4 w-px bg-[#262626] mx-0.5" />
 
       {/* Custom Components */}
       <button
         onClick={onOpenComponentsDrawer}
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-muted transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-white/10 transition-colors"
       >
         <Component className="h-3.5 w-3.5 text-primary" />
         <span>Components</span>

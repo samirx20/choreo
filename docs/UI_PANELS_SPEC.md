@@ -84,19 +84,30 @@ Fills remaining center space (`bg-zinc-900 overflow-hidden relative flex items-c
 
 ### B. Interactive Transform Bounding Box
 When an element or group is selected on the canvas:
-* Bounding outline with 8 resize handles (4 corners, 4 edges).
-* Top rotation handle with angle readout tooltip during drag.
+* Bounding outline with 8 resize handles (4 corners, 4 edges) and top rotation pin.
+* **Non-Blocking Architecture**: The interior of the bounding box has `pointer-events: none`, allowing mouse clicks and double-clicks to pass directly into text layers for immediate inline caret editing.
 * Smart alignment snapping guides (magenta lines when aligning to canvas center or sibling edges).
 * Freeform dragging ($X, Y$) for root layers; flex reordering handles when dragging inside flex groups.
 
-### C. Floating Add Toolbar (Design Mode Bottom Dock)
-Positioned at bottom center of the canvas viewport (`fixed bottom-8 z-30`):
-* Pill-shaped floating dock (`bg-zinc-900/90 backdrop-blur-md border border-zinc-700/60 shadow-2xl px-3 py-2 rounded-full flex items-center gap-2`).
-* **Tool Items**:
-  1. `[ T Text ]`: Dropdown for Heading (`72px Bold`), Subtitle (`36px Semibold`), Body (`24px Regular`), or click-to-type.
-  2. `[ ◼ Shapes ]`: Popover selecting Rectangle, Rounded Card, Ellipse/Circle, Triangle, Star, Line, Arrow, Custom SVG.
-  3. `[ 🖼 Media ]`: File uploader for PNG, JPG, WebP, MP4, and integrated Lucide Icon vector picker.
-  4. `[ 🧩 Components ]`: **Custom Component Library Drawer** (see Section 6).
+### C. Contextual Floating Action Bar (HUD)
+Docks dynamically **10px above the active/editing element** (or flips 10px below if within 60px of the canvas top edge):
+* Matches FigJam/Miro inline editing ergonomics (`bg-[#111111]/95 border border-[#222222] shadow-2xl rounded-full px-2.5 py-1.5 flex items-center gap-1 z-50`).
+* **Text Controls**: Color swatch `(●) ▾`, Font family `Aa ▾`, Size preset `Small ▾`, Bold `B`, Strikethrough `S̶`, Kinetic Chunks Splitter `⚡ Chunks`, Alignment `≡ ▾`, Quick Motion Preset `Pop In ▾`, Duplicate `⧉`, Delete `🗑`.
+* **Shape / Card Controls**: Fill swatch, Border, Corner radius, Auto-fit/Auto-link toggles, Quick Motion Preset, Duplicate, Delete.
+* **Multi-Selection Controls**: Group Selection (`Ctrl+G`), Align horizontal/vertical, Distribute gap, Stagger entrance preset, Delete.
+* See [CANVAS_UX_SPEC.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/CANVAS_UX_SPEC.md) for exhaustive interaction specs.
+
+### D. Floating Creation Dock (Bottom Center)
+Positioned at bottom center of the canvas viewport (`fixed bottom-6 z-30`):
+* Clean Figma creation dock: `[ ↖ Select (V) ] [ ⊡ Card (F) ] [ T Text (T) ] [ ◇ Shapes (R) ▾ ] [ 🖼 Media ] [ ❖ Components ]`.
+* **1-Click Text Creation**: Clicking `Text` immediately spawns `"Add text"` and places the user into live inline typing with blinking cursor—zero questionnaire dropdowns.
+* **Container Creation**: `Card (F)` creates an auto-fit layout container. Grouping is reserved for multi-selection (`Ctrl+G`), not creation.
+
+### E. Floating Canvas Navigation & Zoom Widget (Bottom Right)
+Positioned at bottom right of the canvas viewport (`fixed bottom-6 right-6 z-30`):
+* `[ − ] [ 100% ▾ ] [ + ] │ [ ⊡ Fit ]`.
+* Cursor-anchored trackpad pinch zoom and `Ctrl+Wheel` zoom.
+* `Shift + 1` instantly scales and centers the entire artboard to fit the available window.
 
 ---
 

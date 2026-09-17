@@ -263,19 +263,34 @@ export const DesignInspector: React.FC = () => {
               )}
             </button>
 
-            <div className="flex-1 flex items-center bg-zinc-900/80 rounded border border-zinc-800/80 px-2 py-1">
+            <div className="flex-1 flex items-center bg-zinc-900/80 rounded border border-zinc-800/80 px-2 py-1 gap-1">
               <span className="text-[10px] text-zinc-500 font-mono w-4">H</span>
               <input
                 type="text"
-                value={style.height}
+                value={style.height ?? "auto"}
                 onChange={(e) => {
-                  const val = isNaN(Number(e.target.value))
-                    ? e.target.value
-                    : Number(e.target.value);
+                  const raw = e.target.value.trim();
+                  const val =
+                    raw === "auto" || raw === "" || isNaN(Number(raw))
+                      ? "auto"
+                      : Number(raw);
                   updateLayerStyle(selectedLayer.id, { height: val as any });
                 }}
                 className="w-full bg-transparent text-xs text-zinc-100 focus:outline-none"
               />
+              {(selectedLayer.type === "text" || selectedLayer.type === "chunk") &&
+                style.height !== "auto" && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateLayerStyle(selectedLayer.id, { height: "auto" })
+                    }
+                    className="text-[9px] bg-primary/20 text-primary hover:bg-primary/30 px-1 py-0.5 rounded font-mono shrink-0"
+                    title="Reset to Auto Height"
+                  >
+                    Auto
+                  </button>
+                )}
             </div>
           </div>
 
@@ -383,25 +398,6 @@ export const DesignInspector: React.FC = () => {
                   </button>
                 </div>
               )}
-            </div>
-
-            {/* Text Content Field */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                <span>Text Content</span>
-                <span className="font-mono text-[9px] text-muted-foreground/80">
-                  {((selectedLayer as any).content || "").length} chars
-                </span>
-              </div>
-              <textarea
-                rows={2}
-                value={(selectedLayer as any).content || ""}
-                onChange={(e) =>
-                  updateLayer(selectedLayer.id, { content: e.target.value })
-                }
-                placeholder="Type layer text..."
-                className="w-full bg-muted/70 border border-border rounded px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary resize-none font-sans"
-              />
             </div>
 
             {/* Font Family & Weight */}
