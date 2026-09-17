@@ -68,6 +68,19 @@ The next agent must map out and present clear answers and specifications for the
   * *Selected (Single)*: Yellow `TransformBox` with 8 resize handles, rotation pin, live dimension badge ($W \times H$), and Contextual HUD docked 10px above.
   * *Selected (Multi)*: Enclosing union bounding box surrounding all selected layers.
   * *Deep Selected*: Clicking inside a group selects the group; double-clicking or `Ctrl+Click` deep-selects the child chunk. `Shift+Enter` ascends to parent.
+### Domain B: Selection, Hover, & Drag Surfaces (Default Canvas Behaviors)
+* **Default Tool**: Pointer / Move tool (`V`) is active by default.
+* **Canvas Event Triad**:
+  1. **Select**: Left-clicking any element selects it immediately.
+  2. **Move**: Clicking and dragging an element moves it across the canvas with magnetic snapping guides.
+  3. **Marquee Multi-Select (Click & Hold Left Drag)**: Clicking on empty canvas and holding left-click while dragging draws a translucent selection box (lasso). All intersecting/enclosed elements become selected together.
+  4. **Modifier Keys**: Holding `Shift` enables additive selection (adding/removing elements from current selection). Holding `Space` pans the canvas viewport.
+* **Visual States**:
+  * *Idle / Unselected*: Clean element rendering, no borders.
+  * *Hovered*: Subtle 1px cyan/gold hairline highlight indicating clickability.
+  * *Selected (Single)*: Yellow `TransformBox` with 8 resize handles, rotation pin, live dimension badge ($W \times H$), and Contextual HUD docked 10px above.
+  * *Selected (Multi)*: Enclosing union bounding box surrounding all selected layers with collective dragging.
+  * *Deep Selected*: Clicking inside a group selects the group; double-clicking or `Ctrl+Click` deep-selects the child chunk. `Shift+Enter` ascends to parent.
 * **Pointer & Grab Zones**:
   * *Center Body*: `cursor-move`, captures drag, updates $(X, Y)$ with magnetic snapping.
   * *Perimeter Edges*: 4 perimeter strips (5px thickness) for grabbing borders.
@@ -75,9 +88,6 @@ The next agent must map out and present clear answers and specifications for the
     * Corner handles (`nw`, `ne`, `se`, `sw`): Proportional scaling (or 1:1 with `Shift`).
     * Side handles (`n`, `s`, `e`, `w`): Directional resizing. For text, `e`/`w` changes width with auto-height reflow.
   * *Rotation Pin*: 24px above top center, allows 360° rotation (15° increments with `Shift`).
-* **Canvas Marquee Selection**:
-  * Dragging on empty background creates a selection rectangle that selects all intersecting layers.
-  * Holding `Shift` adds to existing selection.
 
 ### Domain C: Coordinate Systems & Hierarchy
 * **Root Canvas vs. Container Group**:
@@ -91,14 +101,40 @@ The next agent must map out and present clear answers and specifications for the
   * Dragging layers up/down reorders DOM z-index with a visual drop hairline.
   * Dragging onto a group nests the layer inside.
 
-### Domain D: Contextual HUD vs. Right Sidebar Separation
-* **Contextual HUD (Docked above element)**:
-  * Fast micro-interactions: Color swatch, Font Family, Font Size, Bold/Italic, Kinetic Split button, Motion preset shortcut.
-  * Never blocks canvas view; inverts canvas zoom scale to remain legible.
-* **Right Sidebar (Inspector)**:
-  * In Design Mode: Alignment tools (Left, Center, Right, Top, Middle, Bottom), Layout ($X, Y, W, H$, Aspect Lock, Angle), Typography (Weight, Line Height, Align), Appearance (Fill, Opacity, Corner Radius, Border, Shadow).
-  * **Strict Rule**: No redundant textareas in the sidebar. Text is edited directly on canvas.
-  * In Animate Mode: Timeline track parameters, In/Out animation presets, Easing curves, Stagger timing.
+### Domain D: Contextual HUD vs. Right Sidebar Separation (Direct Jitter Reference)
+* **Design Philosophy: "Minimal in Layout, Not Color"**:
+  * The layout is extremely clean, dense, and uncluttered: no bloated cards, no nested wrappers, no redundant textareas.
+  * Labels are placed directly above input pairs (`Position`, `Dimensions`, `Opacity` / `Corner radius`, `Weight`).
+  * Dark pill inputs with integrated icons (`X`, `Y`, `W`, `H`, `▦`, `⌜⌟`, `≡`).
+* **Right Sidebar Layout (Directly from User Reference Screenshots)**:
+  * **Header**: Layer Name (`Rectangle`), `⬚` (Style library), `◑` (Invert), `❏▾` (Duplicate dropdown), `⛶` (Frame bounds).
+  * **Position**:
+    * Alignment bar: 6 compact icon buttons (`|←`, `╪`, `→|`, `₸`, `╫`, `╨`).
+    * Position: `X [-102]` and `Y [-168]` side-by-side dark pill inputs.
+    * Rotation: `∠ 0°` plus 3 buttons: Rotate 90° (`↻`), Flip Horizontal (`▷|◁`), Flip Vertical (`▵/▿`).
+  * **Layout**:
+    * Dimensions: `W [185]` and `H [154]` with Aspect Ratio lock button (`⧉`).
+  * **Appearance**:
+    * Header icons: `👁` and `💧`.
+    * Two columns: `Opacity` (`▦ 100%`) and `Corner radius` (`⌜⌟ 17`) with 4-corner expander button (`⛶`).
+  * **Fill**:
+    * Swatch square, Hex string (`E64E4E`), Opacity (`100%`), Eye visibility toggle (`👁`), Remove (`—`).
+  * **Stroke**:
+    * Swatch, Hex (`000000`), Opacity (`100%`), Eye toggle (`👁`), Remove (`—`).
+    * Row 2: `Position` dropdown (`Inside ▾`), `Weight` input (`≡ 1`), stroke style settings (`⧉`).
+  * **Effects (`+` dropdown)**:
+    * 1. `Inner shadow`
+    * 2. `Drop shadow`
+    * 3. `Layer blur`
+    * 4. `Background blur`
+    * 5. `Noise`
+    * 6. `Texture`
+    * 7. `Glass`
+    * 8. `Shader` (Beta)
+  * **Export (`+`)**: Resolution multipliers and format selector.
+* **Contextual HUD (Docked above canvas element)**:
+  * Fast micro-actions: Color swatch, Font Family, Font Size, Bold/Italic, Kinetic Split button, Motion preset shortcut.
+  * Strict separation: Never duplicate full inspector panels on canvas. Keep it ultra-fast and lightweight.
 
 ---
 
