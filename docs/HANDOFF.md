@@ -1,169 +1,206 @@
-# HANDOFF.MD: Comprehensive Canvas Interaction & Architecture Handoff
+# Motion Studio: Next Session Handoff Briefing
 
-> [!CAUTION]
-> **CRITICAL MANDATE FOR THE NEXT AGENT / NEXT THREAD**:
-> **DO NOT JUMP INTO CODE. DO NOT RUSH TO CODE PATCHES.**
-> The user explicitly instructed: *"okay just stop coding for a second, do you not understand whta i'm saying for past few messages ? just write a handoff, for that, you will do that in the next thread"*.
->
-> The user's frustration is that past agents have been playing reactive "whack-a-mole"—rushing to write quick code fixes and running test scripts instead of fundamentally stepping back, thinking like a world-class systems designer (Figma / Jitter), and rigorously mapping out the complete interaction matrix, states, visual affordances, and edge cases across the entire canvas first.
->
-> **Your first task in the next thread is purely architectural, research-driven, and conceptual alignment.** Do not write code until the complete Interaction & State Matrix is designed, reviewed, and approved by the user.
+**Session Target**: Achieving Top-Tier Showcase Motion Graphics (Apple, Linear, Stripe Caliber)  
+**Current Baseline**: 4-Suite Architecture Live (`DESIGN`, `MOTION`, `3D Soon`, `EDITOR Soon`) • **112/112 Vitest Tests Passing (18 Suites)** • **Production Build 100% Clean** • Universal Reactive Dependency Engine (5 Modes) • Precision 2-Element Split Paradigm • Artboard vs. Infinite Pasteboard Isolation Active with "Send to Motion 🎬"  
+**Primary Briefing Rules**: Adhere strictly to [AGENTS.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/AGENTS.md), [docs/IMPLEMENTATION_PLAN.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/IMPLEMENTATION_PLAN.md), and [docs/WORKFLOWS_AND_INTERACTIONS_MAP.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/WORKFLOWS_AND_INTERACTIONS_MAP.md).
 
 ---
 
-## 1. Context & Why the User Stopped Us
+## 1. Executive Summary & Where We Stand
 
-The user is directing this project from mobile, holding high standards for a professional motion graphics tool on par with **Figma** and **Jitter.video**.
-
-When testing basic interactions, critical usability flaws became apparent:
-1. Multi-line text was overflowing because fixed pixel heights were accidentally written to the AST during horizontal resizing, causing the yellow selection box to only surround row 1 while rows 2 and 3 overflowed.
-2. Clicking inside text or cards failed to drag/move elements because drag handlers were absent on the inner body.
-3. The UI had redundant textareas in the right sidebar instead of relying on pure on-canvas typography editing.
-4. Canvas elements felt disconnected from a coherent hierarchy and coordinate system.
-
-The agent repeatedly rushed to patch individual symptoms in code and celebrate with automated screenshots, missing the user's fundamental demand: **stop rushing, rethink the entire UX holistically, design for every type of situation and specific case, document it thoroughly, and verify the model with the user first.**
-
----
-
-## 2. The Core Mission for Next Thread
-
-In the next thread, your goal is to produce and present the **Comprehensive Canvas Interaction & State Matrix**.
-
-You must think through, categorize, and specify:
-1. **Every type of canvas element**: Root Text, Chunks inside Flex, Container Cards/Frames, Vector Shapes, Media Images/Videos.
-2. **Every interaction mode**: Design Mode (resting state composition) vs. Animate Mode (temporal motion & keyframing).
-3. **Every interaction event**: Hover, Click, Double-Click, Pointer Down, Drag, Pointer Up, Right-Click, Marquee Drag, Keyboard Modifiers (`Shift`, `Alt`, `Ctrl`/`Cmd`, `Space`).
-4. **Every specific case and edge case**: How each element behaves under those events.
-
----
-
-## 3. The Required Interaction & State Matrix Checklist
-
-The next agent must map out and present clear answers and specifications for the following domains:
-
-### Domain A: Text Lifecycle & Auto-Sizing Paradigms (Figma Model)
-* **Creation (`T`)**: 1-click on canvas vs. click-and-drag bounding box.
-* **Auto-Width vs. Auto-Height vs. Fixed Dimensions**:
-  * *Auto-Width*: Default for single-click creation. Width grows horizontally as text is typed. Hitting `Enter` adds a newline; width becomes the longest line; height expands.
-  * *Auto-Height*: Triggered when user resizes width via East/West handles or inputs a fixed `W`. Text wraps at boundary width; height expands dynamically downward. `height` is strictly `auto`.
-  * *Fixed Size*: User explicitly resizes North/South handles. Text overflows or clips.
-* **Inline Editing State**:
-  * Caret positioning, text selection, and typography mirroring.
-  * `Enter`: Inserts newline in multi-line text.
-  * `Escape` or Click Outside: Commits text, cleans up ghost/empty layers, returns to selected state.
-  * `Ctrl + Enter`: Splits at caret or commits.
-  * `Tab`: Advances to next chunk or indents.
-* **Semantic Splitting**:
-  * Highlight-to-Split: User selects a substring $\to$ HUD displays `[ ✂ Split Selection ]` $\to$ slices into 3 chunks with 0px layout displacement inside a flex group.
-  * Split into Words / Chunks: Punctuation and word-boundary tokenization.
-* **Reverse Splitting (Notion/Google Docs model)**:
-  * `Backspace` at index 0 of Chunk $N$: Merges into Chunk $N-1$.
-  * `Delete` at end of Chunk $N$: Merges Chunk $N+1$ into Chunk $N$.
-  * Dissolve container: When only 1 chunk remains, automatically unpack group back into a single text layer.
-
-### Domain B: Selection, Hover, & Drag Surfaces
-* **Visual States**:
-  * *Idle / Unselected*: Clean element rendering, no borders.
-  * *Hovered*: Subtle 1px cyan/gold hairline highlight indicating clickability.
-  * *Selected (Single)*: Yellow `TransformBox` with 8 resize handles, rotation pin, live dimension badge ($W \times H$), and Contextual HUD docked 10px above.
-  * *Selected (Multi)*: Enclosing union bounding box surrounding all selected layers.
-  * *Deep Selected*: Clicking inside a group selects the group; double-clicking or `Ctrl+Click` deep-selects the child chunk. `Shift+Enter` ascends to parent.
-### Domain B: Selection, Hover, & Drag Surfaces (Default Canvas Behaviors)
-* **Default Tool**: Pointer / Move tool (`V`) is active by default.
-* **Canvas Event Triad**:
-  1. **Select**: Left-clicking any element selects it immediately.
-  2. **Move**: Clicking and dragging an element moves it across the canvas with magnetic snapping guides.
-  3. **Marquee Multi-Select (Click & Hold Left Drag)**: Clicking on empty canvas and holding left-click while dragging draws a translucent selection box (lasso). All intersecting/enclosed elements become selected together.
-  4. **Modifier Keys**: Holding `Shift` enables additive selection (adding/removing elements from current selection). Holding `Space` pans the canvas viewport.
-* **Visual States**:
-  * *Idle / Unselected*: Clean element rendering, no borders.
-  * *Hovered*: Subtle 1px cyan/gold hairline highlight indicating clickability.
-  * *Selected (Single)*: Yellow `TransformBox` with 8 resize handles, rotation pin, live dimension badge ($W \times H$), and Contextual HUD docked 10px above.
-  * *Selected (Multi)*: Enclosing union bounding box surrounding all selected layers with collective dragging.
-  * *Deep Selected*: Clicking inside a group selects the group; double-clicking or `Ctrl+Click` deep-selects the child chunk. `Shift+Enter` ascends to parent.
-* **Pointer & Grab Zones**:
-  * *Center Body*: `cursor-move`, captures drag, updates $(X, Y)$ with magnetic snapping.
-  * *Perimeter Edges*: 4 perimeter strips (5px thickness) for grabbing borders.
-  * *8 Resize Handles*:
-    * Corner handles (`nw`, `ne`, `se`, `sw`): Proportional scaling (or 1:1 with `Shift`).
-    * Side handles (`n`, `s`, `e`, `w`): Directional resizing. For text, `e`/`w` changes width with auto-height reflow.
-  * *Rotation Pin*: 24px above top center, allows 360° rotation (15° increments with `Shift`).
-
-### Domain C: Coordinate Systems & Hierarchy
-* **Root Canvas vs. Container Group**:
-  * Root elements use absolute canvas coordinates $(X, Y)$ relative to canvas $(0, 0)$ (e.g. $1920 \times 1080$).
-  * Grouped children use relative flex/layout coordinates.
-* **Grouping (`Ctrl+G`) & Ungrouping (`Ctrl+Shift+G`)**:
-  * Grouping computes minimal enclosing bounding box $(X_{min}, Y_{min})$, places `<Group>` at $(X_{min}, Y_{min})$, and translates children coordinates:
-    $$\Delta X_i = X_i - X_{min}, \quad \Delta Y_i = Y_i - Y_{min}$$
-  * Ungrouping reverses the calculation with zero visual jump on canvas.
-* **Left Sidebar Drag-and-Drop**:
-  * Dragging layers up/down reorders DOM z-index with a visual drop hairline.
-  * Dragging onto a group nests the layer inside.
-
-### Domain D: Contextual HUD vs. Right Sidebar Separation (Direct Jitter Reference)
-* **Design Philosophy: "Minimal in Layout, Not Color"**:
-  * The layout is extremely clean, dense, and uncluttered: no bloated cards, no nested wrappers, no redundant textareas.
-  * Labels are placed directly above input pairs (`Position`, `Dimensions`, `Opacity` / `Corner radius`, `Weight`).
-  * Dark pill inputs with integrated icons (`X`, `Y`, `W`, `H`, `▦`, `⌜⌟`, `≡`).
-* **Right Sidebar Layout (Directly from User Reference Screenshots)**:
-  * **Header**: Layer Name (`Rectangle`), `⬚` (Style library), `◑` (Invert), `❏▾` (Duplicate dropdown), `⛶` (Frame bounds).
-  * **Position**:
-    * Alignment bar: 6 compact icon buttons (`|←`, `╪`, `→|`, `₸`, `╫`, `╨`).
-    * Position: `X [-102]` and `Y [-168]` side-by-side dark pill inputs.
-    * Rotation: `∠ 0°` plus 3 buttons: Rotate 90° (`↻`), Flip Horizontal (`▷|◁`), Flip Vertical (`▵/▿`).
-  * **Layout**:
-    * Dimensions: `W [185]` and `H [154]` with Aspect Ratio lock button (`⧉`).
-  * **Appearance**:
-    * Header icons: `👁` and `💧`.
-    * Two columns: `Opacity` (`▦ 100%`) and `Corner radius` (`⌜⌟ 17`) with 4-corner expander button (`⛶`).
-  * **Fill**:
-    * Swatch square, Hex string (`E64E4E`), Opacity (`100%`), Eye visibility toggle (`👁`), Remove (`—`).
-  * **Stroke**:
-    * Swatch, Hex (`000000`), Opacity (`100%`), Eye toggle (`👁`), Remove (`—`).
-    * Row 2: `Position` dropdown (`Inside ▾`), `Weight` input (`≡ 1`), stroke style settings (`⧉`).
-  * **Effects (`+` dropdown)**:
-    * 1. `Inner shadow`
-    * 2. `Drop shadow`
-    * 3. `Layer blur`
-    * 4. `Background blur`
-    * 5. `Noise`
-    * 6. `Texture`
-    * 7. `Glass`
-    * 8. `Shader` (Beta)
-  * **Export (`+`)**: Resolution multipliers and format selector.
-* **Contextual HUD (Docked above canvas element)**:
-  * Fast micro-actions: Color swatch, Font Family, Font Size, Bold/Italic, Kinetic Split button, Motion preset shortcut.
-  * Strict separation: Never duplicate full inspector panels on canvas. Keep it ultra-fast and lightweight.
+In today's session, we completed major foundational milestones:
+1. **Pipeline Restructuring into 4 Operational Suites**:
+   - Replaced the generic "Animate" toggle with the 4-stage pipeline: **DESIGN** (staging & visual layout), **MOTION** (temporal sequencing & camera viewport), **3D** (badge: Soon), and **EDITOR** (badge: Soon).
+2. **Universal Reactive State Dependency & Linking Engine**:
+   - Built a comprehensive cross-element dependency solver (`dependencyEngine.ts`) supporting all 5 atomic linking modes across all element types (`text`, `shape`, `group`, `image`, `chunk`):
+     - 📍 **`pin`**: 9-point spatial anchor locking with $[dx, dy]$ offset.
+     - 📐 **`hug`**: Dynamic bounding-box hugging with 2D padding $[padX, padY]$ (e.g. chat bubbles expanding as text reveals).
+     - 🔗 **`match`**: Direct linear property proportionality ($v_{\text{target}} = v_{\text{driver}} \times M + O$).
+     - 🎚️ **`remap`**: Source $[s_{\min}, s_{\max}] \to$ target $[t_{\min}, t_{\max}]$ range remapping with easing.
+     - 🌊 **`lag`**: Temporal follower tracking driver motion with delay or spring inertia.
+   - Deterministic topological sort with cycle breaking via Kahn's algorithm; integrated at root of `evaluator.ts` for 100% deterministic 60fps playback and headless export.
+   - Dedicated **LINKED DEPENDENCIES** inspector panel (`BindingsSection.tsx`) and on-canvas glowing cyan dashed Bézier curve overlay with mode badge (`BindingConnectionOverlay.tsx`).
+3. **Precision 2-Element Selection Splitting & 1-Click Removal**:
+   - Removed artificial "Split Chunks" and "Split Words" 1-click buttons from Inspector and context menus.
+   - Implemented strict 2-element split: selecting text $\to$ right-click $\to$ Split (`Ctrl+Shift+S`) creates a `<Group>` containing exactly (1) the selected text chunk and (2) the unselected remainder chunk.
+4. **Infinite Pasteboard vs. Camera Artboard Separation**:
+   - The infinite canvas is an unrestricted staging ground outside the camera boundaries ($x < 0$, $y < 0$, $x > W$, $y > H$).
+   - Explicit **"Send to Motion 🎬"** action tests geometric intersection via `isLayerOnArtboard` and populates `motionLayerIds`.
+   - In MOTION mode, a 75% dark camera matte overlay (`boxShadow: 0 0 0 9999px rgba(9, 9, 11, 0.75)`) frames the artboard 1:1.
+5. **Rock-Solid Stability & Verification**:
+   - **112 / 112 unit tests passing** across 18 Vitest test suites.
+   - Production build `tsc -b && vite build` transforms 2,457 modules in 12.48s with 0 errors.
 
 ---
 
-## 4. Current State of the Codebase
+## 2. Tomorrow's Mission: World-Class Motion Graphics & Component Library
 
-* **Repository**: [`samirx20/choreo`](https://github.com/samirx20/choreo.git) on branch `main`.
-* **Build**: `npm run build` compiles cleanly with 0 TypeScript errors.
-* **Tests**: All 16 Vitest unit tests pass (`npm test`).
-* **Recent Patches**:
-  * `styleUtils.ts`: Added `isTextOrChunk` height protection (`minHeight` + `height: auto`).
-  * `TextRenderer.tsx`: Implemented CSS Grid mirror auto-sizing and `Escape` commit edit.
-  * `TransformBox.tsx`: Added interactive center body drag surface and horizontal vs vertical resize protection.
-  * `DesignInspector.tsx`: Added 1-click `Auto` height reset badge for text layers.
-* **Automated Visual Snapshots Available**:
-  * `08_multiline_selection_box.png`: Demonstrates yellow box wrapping all 3 lines of text.
-  * `09_dragged_moved_position.png`: Demonstrates element moved across canvas via center drag.
-  * `10_fixed_width_350_wrap.png`: Demonstrates fixed width 350 with auto-height reflow.
-* **Existing Documentation**:
-  * [docs/UI_PANELS_SPEC.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/UI_PANELS_SPEC.md)
-  * [docs/CANVAS_UX_SPEC.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/CANVAS_UX_SPEC.md)
-  * [docs/DEFAULT_BEHAVIORS_AND_INTERACTIONS.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/DEFAULT_BEHAVIORS_AND_INTERACTIONS.md)
-  * [docs/CONTEXT_MENU_MATRIX.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/CONTEXT_MENU_MATRIX.md)
-  * [walkthrough.md](file:///C:/Users/Sam/.gemini/antigravity/brain/b0d31a8d-1e9b-49f8-96f4-11895821e802/walkthrough.md)
+Tomorrow's core goal is to elevate Motion Studio from a tool that *can* animate elements to an engine that effortlessly outputs **billion-dollar product showcase animations** (the signature aesthetic of Apple keynotes, Linear release videos, Stripe Sessions showcases, and CashApp promos).
+
+Modern motion design does not rely on arbitrary constant-speed movement or generic slide-ins. It is defined by two foundational pillars:
+1. **The Signature Kinetic Dynamics ("The Apple / Linear Snappy Curve")**:
+   - Non-linear velocity profiles where elements launch with high speed, cover ~75% of the distance in the first 40–50% of the duration, and coast with luxurious deceleration into resting position.
+2. **Pre-Cooked Reusable UI Motion Components**:
+   - A library of production-ready components that modern tech showcases use constantly (e.g. asymmetric Chat Bubbles with typing indicators, macOS/Browser App Windows, Dynamic Island notification pills, KPI count-up metric cards, morphing segmented controls, and animated code terminals).
 
 ---
 
-## 5. First Action for the Next Thread
+## 3. Kinetic Easing Curves & Default Motion Dynamics
 
-When starting the next thread:
-1. **Acknowledge the mandate**: Explicitly state to the user that you are not touching code and will not rush.
-2. **Present the comprehensive Canvas Interaction & State Matrix**: Lay out every situation, case, and state machine transition for text, containers, selection, and drag/resize.
-3. **Align with the user**: Gather their feedback and refine the specification together before any implementation begins.
+### A. The "75% Distance in 50% Time" Curve: The Snappy Quintic Ease-Out
+The curve the user highlighted ("instead of moving at constant speed, it goes fast like cover the 75 percent distance in first 50 percent of time and 25 percent in last 50, most used") is the undisputed gold standard of modern motion UI:
+* **Industry Standard Names**: **"Snappy Ease-Out"**, **"Quintic Out" (`ease-out-quint`)**, **"Apple / Linear Motion Curve"**, or **"Fast-Start Decelerate"**.
+* **Cubic-Bézier Formula**: `cubic-bezier(0.16, 1, 0.3, 1)`
+  * $P_1 = (0.16, 1.0)$: Extremely steep initial slope $\to$ initial velocity $v_0$ is high. The element covers $75\%\text{--}80\%$ of its displacement within the first $40\%\text{--}50\%$ of time elapsed.
+  * $P_2 = (0.30, 1.0)$: Flat landing trajectory $\to$ the remaining $20\%\text{--}25\%$ of distance is spent smoothly decelerating to a whisper-quiet stop with $C^1$ velocity continuity ($v \to 0$).
+* **Why it works**:
+  * Linear motion ($v = \text{const}$) feels robotic, cheap, and amateurish.
+  * Standard `ease-in-out` is sluggish because it starts too slowly, making UI feel laggy.
+  * `cubic-bezier(0.16, 1, 0.3, 1)` feels instantly responsive to the human eye, commanding attention immediately, while the long-tail deceleration conveys premium luxury and weight.
+
+### B. The Quintessential Showcase Easing Suite
+Tomorrow we will codify these 5 core kinetic profiles into first-class presets and defaults:
+
+```
+┌─────────────────┬──────────────────────────────────┬────────────────────────────────────────────────────────┐
+│ CURVE NAME      │ BÉZIER / SPRING FORMULA          │ KINETIC INTENT & USE CASE                              │
+├─────────────────┼──────────────────────────────────┼────────────────────────────────────────────────────────┤
+│ 1. Snappy Out   │ cubic-bezier(0.16, 1, 0.3, 1)    │ Apple/Linear default. Covers 75% in 50% time. Slides,  │
+│    (Primary)    │                                  │ card entrances, dialog pops, drawer expansions.        │
+├─────────────────┼──────────────────────────────────┼────────────────────────────────────────────────────────┤
+│ 2. Damped Spring│ f_spring(t) with ζ=0.72, ω=14    │ Organic physical feel. Slight 5-8% overshoot before    │
+│    (Bouncy)     │                                  │ settling. Ideal for buttons, badge pops, icons.        │
+├─────────────────┼──────────────────────────────────┼────────────────────────────────────────────────────────┤
+│ 3. Anticipation │ cubic-bezier(0.34, 1.56, 0.64, 1)│ "Pull back & whip forward". Anticipates slightly (-5%) │
+│    Whip         │                                  │ before accelerating forward with dynamic snap.         │
+├─────────────────┼──────────────────────────────────┼────────────────────────────────────────────────────────┤
+│ 4. Cinematic S  │ cubic-bezier(0.65, 0, 0.35, 1)   │ Elegant S-curve. Perfect for camera pans, smooth       │
+│    (Smooth)     │                                  │ background morphs, and long ambient transitions.       │
+├─────────────────┼──────────────────────────────────┼────────────────────────────────────────────────────────┤
+│ 5. Elastic Jelly│ Volume-preserving oscillation    │ Scale X stretches (1.15) while Scale Y squashes (0.85) │
+│    Squash       │ scaleX/scaleY out-of-phase       │ on landing impact. Perfect for playful UI & stickers.  │
+└─────────────────┴──────────────────────────────────┴────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 4. Reusable UI Motion Components Library ("Showcase Primitives")
+
+To make billion-dollar showcase videos effortless for both humans and AI agents, we will create a dedicated collection of pre-built, production-ready components in `src/components/components/` (accessible via the Components Drawer `ComponentsDrawer.tsx` and the AI Command Bar):
+
+### 1. The Chat / Message Bubble Card
+* **Visual Blueprint**:
+  * Asymmetric corner radii: Sent bubble (`[18, 18, 4, 18]`), Received bubble (`[18, 18, 18, 4]`).
+  * Subtle 1px translucent border (`rgba(255, 255, 255, 0.1)`), deep background drop shadow.
+  * Avatar icon + sender handle badge.
+* **Kinetic Choreography**:
+  * **Phase 1: Typing Indicator**: 3 animated bouncing dots (`● ● ●`) oscillating with 0.15s sinusoidal phase offsets inside an auto-fitting pill container.
+  * **Phase 2: Bubble Entrance**: The typing pill morphs via FLIP into the message bubble using `cubic-bezier(0.16, 1, 0.3, 1)` scale & slide-up ($+24\text{px} \to 0\text{px}$).
+  * **Phase 3: Kinetic Text Reveal**: Words or semantic chunks stagger in with the Snappy curve and 0.08s cascade delay.
+
+### 2. The Dynamic Island / Notification Toast Pill
+* **Visual Blueprint**:
+  * Compact pill shape (`borderRadius: 9999px`, height `36px`, dark obsidian glass `#09090b` with `backdrop-filter: blur(20px)`).
+  * Left: Pulsing status indicator dot (Emerald green `#34d399` or Electric Blue `#60a5fa`).
+  * Center: Clean typography (`Inter SemiBold 13px`).
+  * Right: Micro action badge or chevron.
+* **Kinetic Choreography**:
+  * Morphs dynamically from compact icon pill to expanded interactive banner (`width: 140px \to 380px`, `height: 36px \to 72px`) with spring overshoot.
+
+### 3. macOS & Browser App Window Chrome
+* **Visual Blueprint**:
+  * Framed app card with macOS traffic light buttons (Close `#ff5f56`, Minimize `#ffbd2e`, Zoom `#27c93f`).
+  * Centered subtle URL bar / search pill.
+  * Inner content area with `clipContent: true` (overflow masked).
+* **Kinetic Choreography**:
+  * Window expands smoothly with 3D tilt perspective entrance (`rotationX: 12deg \to 0deg`, `scale: 0.92 \to 1.0`).
+  * Inner child layers slide up with staggered depth parallax.
+
+### 4. Interactive KPI Metric & Stat Count-Up Card
+* **Visual Blueprint**:
+  * Gradient dark background, subtle Stamp Gold border highlight.
+  * Stat label ("Monthly Recurring Revenue"), huge numerical display (`$124,500`), trend badge (`+34.2% ↑`).
+* **Kinetic Choreography**:
+  * Numerical counter ticks up smoothly from $0 to target value using logarithmic easing.
+  * Sparkline path draws itself with SVG `stroke-dashoffset` wipe.
+
+### 5. Interactive Segmented Switch / Tab Slider
+* **Visual Blueprint**:
+  * Container pill (`#18181b`, padding `4px`).
+  * Floating active indicator pill (`#27272a` with subtle glow) sliding behind text options.
+* **Kinetic Choreography**:
+  * Indicator pill morphs $X$-position and width smoothly between tabs with organic spring inertia.
+
+### 6. Terminal & Code Editor Window
+* **Visual Blueprint**:
+  * Dark monokai theme, line numbers, syntax-highlighted code chunks.
+* **Kinetic Choreography**:
+  * Line-by-line typewriter entrance with authentic blinking vertical bar caret (`opacity: 0 \leftrightarrow 1`).
+
+---
+
+## 5. Smart Default Animation Choreography
+
+When a user or AI drops a component or splits text, Motion Studio must never leave elements dead or statically appearing all at once. It must automatically assign **tasteful, cinematic defaults**:
+
+1. **Directional Coherence & Parallax Depth**:
+   - Parent container enters with a subtle $+20\text{px}$ slide-up.
+   - Child elements enter with $+10\text{px}$ slide-up and $0.1\text{s}$ stagger delay, creating instantaneous depth.
+2. **Dynamic Duration Proportionality**:
+   - Small micro-elements (badges, icons, pills) default to **0.4s – 0.5s** duration.
+   - Medium cards, chat bubbles, and modal frames default to **0.6s – 0.7s** duration.
+   - Full-screen scene wipes and backdrop transitions default to **0.8s – 1.0s** duration.
+3. **The 3-Phase Lifecycle Architecture**:
+   - **In (Entrance)**: How the element arrives on screen (`Pop In`, `Snappy Slide Up`, `Blur Reveal`, `3D Flip`).
+   - **Emphasis (Idle Attention)**: Subtle living loops during rest (`Pulse`, `Float Wave`, `Glow Shimmer`, `Heartbeat`).
+   - **Out (Exit)**: Clean, purposeful dismissal (`Snappy Slide Down`, `Fade Shrink`, `Blur Out`).
+
+---
+
+## 6. Actionable Implementation Checklist for Tomorrow
+
+```mermaid
+flowchart TD
+    A["1. Easing Engine Upgrades: Snappy (0.16, 1, 0.3, 1) & Spring Presets"] --> B["2. Component Templates Engine: chatBubble, appWindow, dynamicIsland, statCard"]
+    B --> C["3. Components Drawer UI & 1-Click Drop on Artboard"]
+    C --> D["4. Kinetic Text & Typing Indicator Orchestrator"]
+    D --> E["5. AI Command Bar Quick Prompts for Showcase Primitives"]
+    E --> F["6. Automated Vitest Matrix & High-Res Visual Verification"]
+```
+
+### Specific Steps:
+1. **Engine Updates (`src/engine/easings.ts`, `src/engine/evaluator.ts`)**:
+   - Make `snappy` (`cubic-bezier(0.16, 1, 0.3, 1)`) the default curve for all slide and scale presets.
+   - Expose explicit `snappy` easing pill in `AnimateInspector.tsx`.
+2. **Component Templates Data Model (`src/types/components.ts` / `src/store/componentTemplates.ts`)**:
+   - Define declarative JSON recipes for:
+     - `chatBubbleSent` & `chatBubbleReceived`
+     - `typingIndicator`
+     - `appWindow`
+     - `dynamicIslandPill`
+     - `kpiMetricCard`
+     - `codeTerminal`
+3. **Components Drawer (`src/components/components/ComponentsDrawer.tsx`)**:
+   - Populate visual preview cards for each showcase primitive.
+   - Clicking a component inserts it directly onto the active Artboard with resting styles and pre-wired kinetic animations.
+4. **Typing Indicator & Text Stagger Enhancements**:
+   - Add pulsating dots animation recipe in `evaluator.ts`.
+   - Ensure typing indicator seamlessly connects to the chat bubble appearance.
+5. **AI Assistant Integration (`AICommandBar.tsx`)**:
+   - Enable commands like *"Add chat message saying 'Welcome to Motion Studio!' with typing indicator"* to auto-compose the full component and timeline tracks.
+6. **Full Test & Visual Verification**:
+   - Maintain 100% test pass rate across all Vitest test suites.
+   - Capture high-resolution Playwright screenshots of each new showcase primitive in motion.
+
+---
+
+## 7. Quick Context & Commands Cheat Sheet
+
+* **Run Dev Server**: `npm run dev`
+* **Run Vitest Test Suite**: `npm test`
+* **Run Production Build**: `npm run build`
+* **Run Playwright Verification**: `node src/test/verify_architecture_ui.js`
+* **Key Store Actions**:
+  - `sendScreenToMotion(screenId)`: registers artboard layers and enters MOTION mode.
+  - `setUiMode("design" | "motion")`: switches operational suite.
+  - `updateLayerStyle(layerId, { borderRadius, clipContent, ... })`: updates design styles with live two-way sync.

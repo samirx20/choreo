@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useProjectStore, INITIAL_SCENE } from "./useProjectStore";
-import { Layer } from "@/types/scene";
+import { Layer, GroupLayer } from "@/types/scene";
 
 describe("useProjectStore Layer Tree Operations", () => {
   beforeEach(() => {
@@ -60,7 +60,7 @@ describe("useProjectStore Layer Tree Operations", () => {
     }
   });
 
-  it("splits text range into prefix, target highlight chunk, and suffix", () => {
+  it("splits text range into selection and remainder chunks", () => {
     const store = useProjectStore.getState();
     const textLayer: Layer = {
       id: "test_text_layer",
@@ -76,17 +76,16 @@ describe("useProjectStore Layer Tree Operations", () => {
 
     const updatedLayers = useProjectStore.getState().document.screens[0].layers;
     const group = updatedLayers.find(
-      (l) => l.type === "group" && l.id !== "group_hero" && (l as any).children?.length === 3
+      (l) => l.type === "group" && l.id !== "group_hero" && (l as any).children?.length === 2
     );
     expect(group).toBeDefined();
 
     if (group && group.type === "group") {
-      expect(group.children.length).toBe(3);
-      expect((group.children[0] as any).content).toBe("Hello ");
-      expect((group.children[1] as any).content).toBe("beautiful");
-      expect((group.children[2] as any).content).toBe(" world");
-      // Target chunk has bouncy pop preset
-      expect((group.children[1] as any).animation.in.preset).toBe("pop");
+      expect(group.children.length).toBe(2);
+      expect((group.children[0] as any).content).toBe("beautiful");
+      expect((group.children[1] as any).content).toBe("Hello world");
+      // Selected chunk has bouncy pop preset
+      expect((group.children[0] as any).animation.in.preset).toBe("pop");
     }
   });
 
@@ -101,7 +100,7 @@ describe("useProjectStore Layer Tree Operations", () => {
     };
     store.addLayer(textLayer);
 
-    // Split "Second" (indices 6 to 12) -> creates group with prefix "First " and highlight "Second"
+    // Split "Second" (indices 6 to 12) -> creates group with selection "Second" and remainder "First"
     useProjectStore.getState().splitTextRange("merge_test_text", 6, 12);
 
     let updatedLayers = useProjectStore.getState().document.screens[0].layers;
@@ -120,7 +119,7 @@ describe("useProjectStore Layer Tree Operations", () => {
       const dissolvedGroup = finalLayers.find((l) => l.id === group!.id);
       expect(dissolvedGroup).toBeUndefined();
 
-      const mergedLayer = finalLayers.find((l) => (l as any).content === "First Second");
+      const mergedLayer = finalLayers.find((l) => (l as any).content === "SecondFirst");
       expect(mergedLayer).toBeDefined();
     }
   });
@@ -154,13 +153,64 @@ describe("useProjectStore Layer Tree Operations", () => {
     const cardIdx = reorderedLayers.findIndex((l) => l.id === "test_card");
     expect(shapeIdx).toBeLessThan(cardIdx);
 
-    // Reorder shape inside the hero group
-    useProjectStore.getState().reorderLayer("test_shape", "group_hero", "inside");
+    // Add a target group and reorder shape inside it
+    const targetGroup: GroupLayer = {
+      id: "test_target_group",
+      name: "Target Group",
+      type: "group",
+      layout: { display: "flex", flexDirection: "column", gap: 8, align: "center" },
+      autoFit: true,
+      style: { x: 300, y: 300, width: 250, height: 250, rotation: 0, opacity: 1 },
+      children: [],
+    };
+    store.addLayer(targetGroup);
+
+    useProjectStore.getState().reorderLayer("test_shape", "test_target_group", "inside");
     const nestedLayers = useProjectStore.getState().document.screens[0].layers;
-    const heroGroup = nestedLayers.find((l) => l.id === "group_hero");
-    expect(heroGroup?.type).toBe("group");
-    if (heroGroup?.type === "group") {
-      expect(heroGroup.children.some((c) => c.id === "test_shape")).toBe(true);
+    const foundGroup = nestedLayers.find((l) => l.id === "test_target_group");
+    expect(foundGroup?.type).toBe("group");
+    if (foundGroup?.type === "group") {
+      const reparentedChild = foundGroup.children.find((c) => c.id === "test_shape");
+      expect(reparentedChild).toBeDefined();
+      // Coordinate normalization: world x (200) - group x (300) = -100
+      expect(reparentedChild?.style.x).toBe(-100);
+      expect(reparentedChild?.style.y).toBe(-100);
     }
+  });
+
+  it("handles Z-index stacking operations (bringToFront, sendToBack, bringForward, sendBackward)", () => {
+    const store = useProjectStore.getState();
+
+    const layerA: Layer = { id: "layer_a", name: "A", type: "shape", shapeType: "rectangle", style: { x: 0, y: 0, width: 100, height: 100, rotation: 0, opacity: 1 } };
+    const layerB: Layer = { id: "layer_b", name: "B", type: "shape", shapeType: "rectangle", style: { x: 10, y: 10, width: 100, height: 100, rotation: 0, opacity: 1 } };
+    const layerC: Layer = { id: "layer_c", name: "C", type: "shape", shapeType: "rectangle", style: { x: 20, y: 20, width: 100, height: 100, rotation: 0, opacity: 1 } };
+
+    store.addLayer(layerA);
+    store.addLayer(layerB);
+    store.addLayer(layerC);
+
+    // Initial order: [layer_a, layer_b, layer_c]
+    let layers = useProjectStore.getState().document.screens[0].layers;
+    expect(layers.map((l) => l.id)).toEqual(["layer_a", "layer_b", "layer_c"]);
+
+    // Bring A forward (swap A and B) -> [layer_b, layer_a, layer_c]
+    useProjectStore.getState().bringForward("layer_a");
+    layers = useProjectStore.getState().document.screens[0].layers;
+    expect(layers.map((l) => l.id)).toEqual(["layer_b", "layer_a", "layer_c"]);
+
+    // Bring A to front -> [layer_b, layer_c, layer_a]
+    useProjectStore.getState().bringToFront("layer_a");
+    layers = useProjectStore.getState().document.screens[0].layers;
+    expect(layers.map((l) => l.id)).toEqual(["layer_b", "layer_c", "layer_a"]);
+
+    // Send A backward (swap A and C) -> [layer_b, layer_a, layer_c]
+    useProjectStore.getState().sendBackward("layer_a");
+    layers = useProjectStore.getState().document.screens[0].layers;
+    expect(layers.map((l) => l.id)).toEqual(["layer_b", "layer_a", "layer_c"]);
+
+    // Send A to back -> [layer_a, layer_b, layer_c]
+    useProjectStore.getState().sendToBack("layer_a");
+    layers = useProjectStore.getState().document.screens[0].layers;
+    expect(layers.map((l) => l.id)).toEqual(["layer_a", "layer_b", "layer_c"]);
   });
 });

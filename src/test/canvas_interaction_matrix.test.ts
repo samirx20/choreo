@@ -1,5 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { useProjectStore, findParentGroupInTree, findTopmostParentGroupInTree } from "../store/useProjectStore";
+import { 
+  useProjectStore, 
+  findLayerInTree, 
+  findParentGroupInTree, 
+  findTopmostParentGroupInTree,
+  isLayerOnArtboard,
+  isMotionMode,
+} from "../store/useProjectStore";
+import { layerStyleToCss } from "../components/canvas/renderers/styleUtils";
 import { Layer, GroupLayer, TextLayer } from "../types/scene";
 
 describe("Canvas Interaction & State Matrix Tests", () => {
@@ -73,14 +81,13 @@ describe("Canvas Interaction & State Matrix Tests", () => {
         (l) => l.type === "group" && l.children?.some((c: any) => c.content === "is amazing")
       ) as GroupLayer;
       expect(group).toBeDefined();
-      expect(group.children.length).toBe(3);
+      expect(group.children.length).toBe(2);
       expect(group.autoFit).toBe(true);
       expect(group.autoLink).toBe(true);
 
-      const [c1, c2, c3] = group.children as any[];
-      expect(c1.content).toBe("Antigravity ");
-      expect(c2.content).toBe("is amazing");
-      expect(c3.content).toBe(" for choreo");
+      const [c1, c2] = group.children as any[];
+      expect(c1.content).toBe("is amazing");
+      expect(c2.content).toBe("Antigravity for choreo");
     });
 
     it("reverse-merges sibling chunks and automatically dissolves group when only 1 chunk remains", () => {
@@ -544,7 +551,7 @@ describe("Canvas Interaction & State Matrix Tests", () => {
       expect(useProjectStore.getState().activeTool).toBe("hand");
 
       state.setUiMode("animate");
-      expect(useProjectStore.getState().uiMode).toBe("animate");
+      expect(useProjectStore.getState().uiMode).toBe("motion");
       expect(useProjectStore.getState().activeTool).toBe("select");
 
       state.setTool("rectangle");
@@ -736,5 +743,135 @@ describe("Canvas Interaction & State Matrix Tests", () => {
       expect(multiRotation).toBe(0);
     });
   });
+
+  describe("Domain D: Multi-Suite Pipeline Architecture & Artboard Isolation", () => {
+    it("differentiates artboard layers from pasteboard/scratchpad layers", () => {
+      const screenW = 1920;
+      const screenH = 1080;
+
+      const artboardLayer: Layer = {
+        id: "hero_title",
+        name: "Hero Title",
+        type: "text",
+        content: "On Stage",
+        style: { x: 500, y: 300, width: 400, height: 100, rotation: 0, opacity: 1 },
+      };
+
+      const pasteboardLeft: Layer = {
+        id: "draft_card_left",
+        name: "Draft Card Left",
+        type: "shape",
+        shapeType: "rectangle",
+        style: { x: -600, y: 200, width: 300, height: 200, rotation: 0, opacity: 1 },
+      };
+
+      const pasteboardRight: Layer = {
+        id: "scratch_icon_right",
+        name: "Scratch Icon Right",
+        type: "shape",
+        shapeType: "circle",
+        style: { x: 2100, y: 400, width: 100, height: 100, rotation: 0, opacity: 1 },
+      };
+
+      expect(isLayerOnArtboard(artboardLayer, screenW, screenH)).toBe(true);
+      expect(isLayerOnArtboard(pasteboardLeft, screenW, screenH)).toBe(false);
+      expect(isLayerOnArtboard(pasteboardRight, screenW, screenH)).toBe(false);
+    });
+
+    it("sendScreenToMotion registers strictly artboard layers and transitions to motion mode", () => {
+      const state = useProjectStore.getState();
+      state.setUiMode("design");
+
+      const screen = state.document.screens[0];
+
+      const artLayer: Layer = {
+        id: "prod_card",
+        name: "Production Card",
+        type: "shape",
+        shapeType: "rectangle",
+        style: { x: 100, y: 100, width: 500, height: 300, rotation: 0, opacity: 1 },
+      };
+      const pasteLayer: Layer = {
+        id: "scratch_idea",
+        name: "Scratch Idea",
+        type: "text",
+        content: "Not ready yet",
+        style: { x: -400, y: -200, width: 200, height: 100, rotation: 0, opacity: 1 },
+      };
+
+      state.addLayer(artLayer);
+      state.addLayer(pasteLayer);
+
+      // Trigger Send to Motion
+      state.sendScreenToMotion(screen.id);
+
+      const updated = useProjectStore.getState();
+      expect(isMotionMode(updated.uiMode)).toBe(true);
+      expect(updated.uiMode).toBe("motion");
+      expect(updated.motionLayerIds).toContain("prod_card");
+      expect(updated.motionLayerIds).not.toContain("scratch_idea");
+    });
+
+    it("applies clipContent as overflow: hidden in layerStyleToCss", () => {
+      const clippedStyle = layerStyleToCss({
+        x: 0,
+        y: 0,
+        width: 400,
+        height: 300,
+        rotation: 0,
+        opacity: 1,
+        clipContent: true,
+      });
+      expect(clippedStyle.overflow).toBe("hidden");
+
+      const unclippedStyle = layerStyleToCss({
+        x: 0,
+        y: 0,
+        width: 400,
+        height: 300,
+        rotation: 0,
+        opacity: 1,
+        clipContent: false,
+      });
+      expect(unclippedStyle.overflow).toBe("visible");
+    });
+
+    it("preserves live two-way sync: updating design properties in DESIGN mode preserves animation in MOTION", () => {
+      const state = useProjectStore.getState();
+      const testLayerId = "sync_layer_1";
+
+      const animatedLayer: Layer = {
+        id: testLayerId,
+        name: "Animated Box",
+        type: "shape",
+        shapeType: "rectangle",
+        style: { x: 200, y: 200, width: 300, height: 150, borderRadius: 12, backgroundColor: "#3b82f6", rotation: 0, opacity: 1 },
+        animation: {
+          in: { preset: "pop", start: 0.5, duration: 0.8, easing: "bouncy" },
+        },
+      };
+
+      state.addLayer(animatedLayer);
+
+      // In DESIGN mode, user changes corner radius to 28 and color to stamp gold
+      state.setUiMode("design");
+      state.updateLayerStyle(testLayerId, { borderRadius: 28, backgroundColor: "#e8c547" });
+
+      // Switch to MOTION mode
+      state.setUiMode("motion");
+      const currentDoc = useProjectStore.getState().document;
+      const found = findLayerInTree(currentDoc.screens[0].layers, testLayerId);
+
+      expect(found).not.toBeNull();
+      // Resting visual style updated cleanly
+      expect(found?.style.borderRadius).toBe(28);
+      expect(found?.style.backgroundColor).toBe("#e8c547");
+      // Animation track fully preserved!
+      expect(found?.animation?.in?.preset).toBe("pop");
+      expect(found?.animation?.in?.start).toBe(0.5);
+      expect(found?.animation?.in?.duration).toBe(0.8);
+    });
+  });
 });
+
 

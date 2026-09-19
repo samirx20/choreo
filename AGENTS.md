@@ -44,48 +44,54 @@ Every "preset" (e.g. *Pop In*, *Slide Up*, *Mask Reveal*, *Drop In*, *Pulse*, *3
 
 ---
 
-## 3. UI/UX Workflow & Key Modes
+## 3. UI/UX Workflow: The 4 Operational Studios
 
-The application UI mirrors Jitter's clean, dark-mode design with two distinct operational modes:
+Motion Studio unifies modern motion storytelling into **4 Specialized Operational Studios**:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│  [Logo]   Project: Untitled    [ Design | Animate ]               [ AI Assistant ✨ ]  [ Export ] │
+│  [Logo]   Project: Untitled   [ DESIGN | MOTION | 3D | EDITOR ]   [Action]   [Export 🚀] │
 ├───────────────┬────────────────────────────────────────────────────────┬───────────────┤
-│ LAYERS &      │                      CANVAS                            │ INSPECTOR     │
-│ SCREENS       │                                                        │               │
-│               │   ┌────────────────────────────────────────────────┐   │ [Design Mode] │
-│ ▾ Screen 1    │   │                                                │   │ Typography    │
-│   ▾ Group 1   │   │     ┌────────────────────────────────────┐     │   │ Colors        │
-│     Chunk 1   │   │     │ [Hey Team,]                        │     │   │ Flex Layout   │
-│     Chunk 2   │   │     │ [I've got something big for you,]  │     │   │ Auto-Fit Box  │
-│     Chunk 3   │   │     │ [wanna see what it is?]            │     │   │               │
-│   ▸ Card Shape│   │     └────────────────────────────────────┘     │   │ [Split Tool]  │
-│               │   │                                                │   │ - By Chunks   │
-│               │   └────────────────────────────────────────────────┘   │ - By Words    │
+│ LEFT SIDEBAR  │                      CENTER VIEWPORT                   │ RIGHT SIDEBAR │
+│ (Mode-Adaptive│  - DESIGN: 2D Infinite Pasteboard + Artboard Camera    │ (Contextual   │
+│  Tree/Assets) │  - MOTION: 75% Camera Frustum Matte + Motion Trajectory│  Inspectors)  │
+│               │  - 3D: Three.js Spatial Viewport + Orbit Controls      │               │
+│               │  - EDITOR: Master Program Monitor + Safe Guides        │               │
 ├───────────────┴────────────────────────────────────────────────────────┴───────────────┤
-│ TIMELINE (Animate Mode Only)                                                           │
-│ 00:00:00  [Play ▶]  [Loop 🔁]  Zoom [---|---]                                         │
-│ ────────────────────────────────────────────────────────────────────────────────────── │
-│ ▾ Group 1 🔗 Auto-link [====================================================]          │
-│     Chunk 1            [======] (Pop In)                                               │
-│     Chunk 2                   [======] (Fade Up)                                       │
-│     Chunk 3                          [======] (Blur In)                                │
-│   Card Shape 📐 Auto-fit[===================================================]          │
+│ BOTTOM SEQUENCER / TIMELINE                                                            │
+│ (DESIGN: Hidden | MOTION: Shot Dope Sheet | 3D: Camera Track | EDITOR: Multi-Track NLE)│
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### A. Design Mode (Static Resting State)
-* Focuses purely on visual composition (the 100% completed screen).
-* Arrange layout, typography, padding, borders, shadows, and colors.
-* No timeline is displayed. Elements are static.
+### A. DESIGN Studio ("Vector Staging & Kinetic Motion Graphics Engine")
+* **Video-Native Motion Graphics Staging**: Purged of all static Web/Figma UI baggage (no CSS Flexbox Auto Layout, no DOM text-flow auto-width/auto-height, no CSS string injections).
+* **Kinetic Typography Engine**: Point Text (unconstrained single/multi-line anchored at invariant pivot) vs. Area Box (fixed boundary wrapping box); typography pass order (`fillOverStroke` vs. `strokeOverFill` for bold broadcast subtitles); tracking/letter-spacing, leading/line-height, vertical alignment (`top`, `middle`, `bottom`), and uppercase/lowercase transforms.
+* **9-Point Transform Pivot Matrix**: Interactive $3 \times 3$ anchor grid (`pivotX`, `pivotY` $\in \{0, 0.5, 1\}$) driving invariant spatial centers for scaling and rotations; Scale X% / Scale Y% with aspect lock; Proportional dimension scrubbing ($W, H$).
+* **Vector Path & Shape Engine**: SVG Trim Paths (`trimStart`, `trimEnd`, `trimOffset` from 0% to 100%) for radial donut rings and animated vector strokes; Apple G2 Squircle continuous curvature geometry.
+* **Polar Coordinate Drop Shadows**: Video-grade directional lighting controls (Angle $\angle^\circ$, Distance $d$, Blur $\sigma$, Spread, Color, Opacity) mathematically projected to $dx = d \cdot \cos(\theta), dy = d \cdot \sin(\theta)$.
+* **Smart Primitives & Media Staging**: Dedicated video playback inspectors (in-point, out-point, loop, audio volume, speed) and kinetic odometer/counter inspectors (start/end value, prefix, suffix, decimals).
+* **Spatial Pre-comp Containers**: Absolute spatial grouping and clipping containers replacing CSS auto-layout flexboxes.
+* **Video Safe Zones**: Action Safe 90%, Title Safe 80%, 9:16 Social UI overlays (TikTok / Reels / Shorts safe zones).
+* **Pasteboard ("Green Room")**: Infinite canvas workspace for staging off-screen assets and graphic elements.
+* Primary action: **`Send to Motion 🎬`**.
 
-### B. Animate Mode (Motion & Timing)
-* The bottom timeline panel slides up with timecode, playhead scrubber, and track blocks.
-* The right sidebar switches to animation parameters:
-  * In / Out / Emphasis preset dropdowns.
-  * Easing curves (`Smooth`, `Bouncy / Elastic`, `Overshoot`, `Snappy`).
-  * Start offset, duration, and stagger delay.
+### B. MOTION Studio ("Kinetic Motion Choreographer")
+* 75% dark camera matte frames the artboard 1:1.
+* In / Out / Emphasis presets with **Snappy Quintic Curve** (`0.16, 1, 0.3, 1`) and **Golden Spring** ($\zeta=0.72, \omega_n=14$).
+* Timeline panel slides up with transient clock, work area loop brackets (`B`/`N`), and ripple drag.
+* Primary actions: **`Send to 3D 🧊`** and **`Send to Editor 🎞️`**.
+
+### C. 3D Studio ("Spatial Device Mockups & Staging")
+* High-fidelity PBR rendering of tech hardware (iPhone 16 Pro, MacBook Pro, Smart Card).
+* **Screen-as-Texture Projection**: Live 2D screen or video texture projected dynamically onto 3D screen UVs.
+* 5 Declarative Camera Presets: `orbit360`, `isometric`, `dollyIn`, `hover`, and `cardFlip`.
+* Primary actions: **`Send to Editor 🎞️`** and **`Send to Motion 🎬`** (2D HUD annotations).
+
+### D. EDITOR Studio ("Multi-Track Video NLE & Master Sequencer")
+* Multi-track timeline ($V_1\text{--}V_3$, $A_1\text{--}A_3$) with audio waveforms.
+* **Razor Cut Tool (`S`)**: Instant sub-frame slicing of video/graphic clips.
+* **Kinetic Captions**: Word-level Whisper transcript clustering into phrase cards (`Spotlight`, `Hormozi`, `Cascade`, `Dynamic Island`).
+* Primary action: **`Export Video 🚀`**.
 
 ---
 
@@ -93,34 +99,72 @@ The application UI mirrors Jitter's clean, dark-mode design with two distinct op
 
 These are the primary differentiators of Motion Studio:
 
-### 1. One-Click Element Splitting & Auto-Grouping
-* **Problem in traditional tools**: Splitting a sentence into 3 parts breaks line wrapping, ruins alignment, and forces manual positioning of 3 separate text boxes.
-* **Our Solution**:
-  1. Highlight text in a paragraph (or click "Split into Chunks" / "Split into Words").
-  2. The original text element is automatically converted into a `<Group>` flex container.
-  3. The text inside becomes individual child `<Chunk>` elements.
-  4. The layout, line wrap, and visual positioning remain 100% identical.
+### 1. Precision Selection Splitting (2-Element Paradigm)
+* **The Paradigm**: Highlight any portion of an element on the canvas or in text, right-click, and click **Split** (`Ctrl+Shift+S`).
+* **The Result**: The element is automatically transformed into a `<Group>` flex container holding **exactly two elements**:
+  1. **Element 1**: Exactly what was selected.
+  2. **Element 2**: Everything that was not selected (the remainder).
+* 1-click artificial split buttons are intentionally banished in favor of direct user-directed selection.
 
-### 2. Auto-Linking & Cascade Staggers (🔗)
+### 2. Universal Reactive State Dependency & Linking System (🔗)
+* **Driver-Driven Engine (`dependencyEngine.ts`)**: Any element (`text`, `chunk`, `shape`, `group`, `image`) can be linked to another element so that state changes dynamically propagate across layers in a cycle-free DAG.
+* **5 Core Linking Modes**:
+  1. **📍 Spatial Pin (`pin`)**: Locks a target anchor (`top-left`, `center`, `top-right`, `bottom-left`, etc.) to a driver anchor with configurable $[dx, dy]$ offset.
+  2. **📐 Size Hug (`hug`)**: Automatically resizes target dimensions to envelope driver bounds plus customizable padding ($[padX, padY]$ or $[T, R, B, L]$):
+     - **Active-Token Bounding**: In typewriter and word-by-word reveal animations, the bounding box continuously measures active characters/words at time $t$.
+     - **Tail Anchor Invariance (`hugAnchor`)**: Locks a specified anchor point (e.g., `bottom-left` for messaging tails) in world space so that $(x, y+h)$ remains strictly invariant while the bubble dynamically inflates upward and outward.
+     - **Closed-Form Spring Expansion (`expansionPhysics: 'spring'`)**: Applies deterministic damped harmonic spring easing ($\zeta=0.72, \omega_n=220$) to container expansion without frame accumulation or state leakage.
+     - **Dimension Clamps**: Configurable `minWidth`, `minHeight`, `maxWidth`, `maxHeight` boundaries.
+  3. **🔗 Property Match (`match`)**: Drives any target property from a driver property ($\text{Target} = \text{Driver} \times \text{multiplier} + \text{offset}$), with optional `clampToTrack: true` for progress bar leading-edge indicator badges.
+  4. **🎚️ Range Remap (`remap`)**: Maps driver range $[s_{\min}, s_{\max}] \to$ target range $[t_{\min}, t_{\max}]$ with easing curves.
+  5. **🌊 Fluid Lag / Inertia (`lag`)**: Organic trailing follower tracking driver state with temporal delay or spring inertia.
+* **Visual Canvas Indicators (`BindingConnectionOverlay.tsx`)**: Glowing cyan dashed bezier curves with relationship badges connect driver and driven elements on the canvas.
+
+### 3. Auto-Linking & Cascade Staggers (🔗)
 * When elements are grouped or split, **Auto-Link** is enabled by default on the timeline track:
-  * Adjusting Chunk 1's duration automatically ripples Chunk 2 and Chunk 3 forward.
+  * Adjusting Chunk 1's duration automatically ripples Chunk 2 forward.
   * Setting a preset on the parent group cascades down to all children with a configurable stagger interval (e.g. 0.15s per chunk).
-  * Auto-Link can be toggled off if independent timing is desired.
 
-### 3. Auto-Fit Reactive Backgrounds
+### 4. Auto-Fit Reactive Backgrounds
 * When a container or background shape wraps chunks that animate in sequentially, enabling `autoFit: true` uses FLIP / layout animations.
-* As Chunk 1 enters $\to$ background fits Chunk 1. As Chunk 2 enters $\to$ background expands smoothly. As Chunk 3 enters $\to$ background reaches full size.
+* As Chunk 1 enters $\to$ background fits Chunk 1. As Chunk 2 enters $\to$ background expands smoothly.
+
+### 5. Autonomous Agent Perception & Multi-Frame Verification
+* **Multi-Frame Contact Sheet (`planSheet` / `planSheetSizes`)**: Merges up to 12 chronological preview frames into a single composite PNG image matching multimodal LLM token patch budgets ($2576 \times 1456$, exactly $92 \times 52$ patches of 28px). Delivers a **91.6% vision token reduction** with high-contrast dual-pass timecode badges (`01s15f`).
+* **Scene Structural Linter (`lintScreen`)**: Sub-2ms zero-GPU static AST validator running 8 diagnostic passes (`black-frames`, `no-visuals`, `never-visible`, `zero-duration`, `transparent`, `source-error`, `broken-binding`, `stagger-collision`).
+
+### 6. Scoped Video & 3D Mockup Systems
+* **Scoped Video Engine (`videoDecoder.ts` & `razorSplit.ts`)**: Keyframe indexing ($O(\log K)$ floor PTS lookup), sliding-window tile caching (`FrameCache`), rapid scrub (< 4ms) vs exact settle, sub-frame razor splitting (`S`), RMS audio waveform generation, and Whisper phrase clustering for kinetic captions (`Spotlight`, `Hormozi`, `Cascade`, `Dynamic Island`).
+* **Scoped 3D Mockup Studio (`ThreeStage.ts` & `ThreeCameraPresets.ts`)**: Three.js WebGL spatial stage isolated from PixiJS context via `ThreeRendererPool` ($\le 3$ active contexts), OLED physical screen materials with emissive self-illumination (0.85) and clearcoat glass reflections, dynamic Screen-as-Texture UV projection, and 5 declarative camera presets (`orbit360`, `isometric`, `dollyIn`, `hover`, `cardFlip`).
 
 ---
 
-## 5. Technology Stack & Packaging
+## 5. Technology Stack & Packaging (Revised Architecture)
 
-* **Desktop Application**: **Tauri v2** (Rust shell wrapping web frontend; lightweight binary, low memory footprint, handles local OS file access and bundles native FFmpeg).
-* **Frontend UI**: **React 19 + Vite** + **shadcn/ui** components + **Tailwind CSS** + **Lucide Icons** + **Radix UI** primitives.
-* **Canvas & Playhead**: `@remotion/player` (provides frame-accurate scrubber, play/pause, loop, timecode, and zoom controls out of the box).
-* **Preset Library**: Composable animation recipes based on Jitter's 8 atomic properties, inspired by Animate.css and AnimXYZ.
-* **Video Rendering Pipeline**: **In-Webview Virtual Clock + Bundled Native FFmpeg Sidecar** (Tauri pipes raw RGBA frames from offscreen Chromium webview directly to bundled `ffmpeg.exe` via stdin; 100% offline, zero separate Puppeteer/Chromium bloat).
-* **AI Interface (MCP)**: Node.js/TypeScript or Rust MCP server exposing tool calls for external AI agents.
+Refer to [Revised_plan.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/Revised_plan.md) for the detailed system architecture.
+
+* **Desktop Application**: **Tauri v2** (Rust shell wrapping web frontend; lightweight binary, low memory footprint, handles local OS file access and bundles native FFmpeg sidecar).
+* **Frontend UI & Chrome**: **React 19 + Vite** + **shadcn/ui** components + **Tailwind CSS** + **Lucide Icons** + **Radix UI** primitives + **Zustand**.
+* **UI/UX Architecture ("Creative Desktop Tool" Standard)**:
+  - **Light Mode First-Class Default**: High-readability neutral slate palette (`#0f172a` primary, `#e2e8f0` borders, `#f8fafc` surfaces, `#f1f5f9` card backgrounds). Zero purple/bluish/indigo SaaS accents. Neutral dark mode available via top bar toggle.
+  - **Consistent Corner Rounding Hierarchy**: `rounded-[20px]` (`1.25rem`) for docks, floating toolbars, and floating zoom widgets; `rounded-[12px]` for modular cards; `rounded-[8px]` for inputs, micro-buttons, and badges.
+  - **40px Clean Header (`TopNavBar.tsx`)**: Minimal wordmark "CHOREO", inline project rename, Undo/Redo, centered `DESIGN | MOTION` toggle, zoom pill, Sun/Moon theme toggle, AI trigger (`Cmd+K`), and quiet neutral `Export` button. "Send to Motion" and informal emojis completely purged.
+  - **Comfortable Floating Toolbar (`FloatingToolbar.tsx`)**: 44px tall pill (`h-11`, `rounded-[20px]`) with labeled buttons (`Select`, `Hand`, `Text` + dropdown, `Rectangle` + dropdown, `Media` + dropdown, `Components`). Unobstructed canvas workflow—floating editing pills over canvas selections are banished; all properties live cleanly in the right inspector.
+  - **Left Sidebar Screens Manager (`LeftSidebar.tsx`)**: Prominent dedicated **Screens** manager at top (Screen 1, Screen 2...) with duration pills and `+ Add` button; Layers outliner below with Artboard vs Pasteboard separation.
+  - **High-Density Micro-Components (`src/components/ui/`)**: `ScrubbableInput` (pointer lock horizontal dragging, Shift 10x, Alt 0.1x, inline math parser `1080/2`), `PropertyRow`, `CompactSegmentedControl`, `PopoverColorPicker`, `MinimalSection`.
+  - **Decomposed Modular Inspector (`src/components/inspector/design/`)**: Modular components (`CanvasSettingsCard`, `MultiSelectionCard`, `TransformSection`, `TypographySection`, `AppearanceSection`, `EffectsSection`, `MediaSection`, `CounterSection`) replacing monolithic inspector files. All inspectors respond dynamically to theme tokens.
+* **Rendering Engine (The Canvas)**: **PixiJS v8** (WebGL / WebGPU hardware-accelerated 2D/3D graphics, real-time shaders, bloom, displacement, glow, async GPU pixel buffer extraction with readback fences, and deterministic `seek(t)` state updates).
+* **Spatial & Viewport Matrix**: **`ViewportMatrix.ts`** (Pure 2D Affine transformation engine providing forward and inverse coordinate projections between world, viewport, and screen spaces with zoom-invariant handle scaling and snapping).
+* **Figma Interaction Layer**: **`TransformBox.tsx`** (Invariant world anchor $A_{\text{world}}$, local delta unprojection $R(-\theta)$, window pointer capture, dual-mode text scaling, rotated cursor tracking) + **`CanvasViewport.tsx`** (LMB rubberband marquee multi-selection with synthetic post-drag click suppression, real-time coordinate tracking, and automatic tool reset) + **`BindingConnectionOverlay.tsx`** (live visual dashed bezier connection curves with relationship badges) + Figma-style inline `<textarea>` overlay for double-click text editing.
+* **Reactive Dependency Engine**: **`dependencyEngine.ts`** (DAG topological sort with cycle breaking, 9-point anchor solvers, 5 linking modes [`pin`, `hug`, `match`, `remap`, `lag`], deterministic `resolveSceneBindings` evaluation in `evaluator.ts`).
+* **Perception & Linter Engine**: **`contactSheet.ts` + `linter.ts` + `timestampStamper.ts`** (12-cell patch-budgeted contact sheet generator, dual-pass contrast timecode badges, and 8-rule static AST linter).
+* **Scoped Video Engine**: **`videoDecoder.ts` + `audioWaveformExtractor.ts` + `razorSplit.ts` + `kineticCaptions.ts`** (Keyframe indexing, tile cache atlas, playhead razor cut `S`, RMS waveforms, and Whisper subtitle cards).
+* **Scoped 3D Mockup Engine**: **`ThreeStage.ts` + `ThreeCameraPresets.ts` + `ScreenTextureProjector.ts` + `ThreeRendererPool.ts`** (Procedural hardware models, 3-point studio lighting rig, OLED UV projection, 5 camera presets, and LRU context limiter $\le 3$).
+* **Canvas Viewport**: **`pixi-viewport`** (Spacebar + drag pan, cursor-centered pinch/wheel zoom).
+* **Animation & Timeline Engine**: **`AnimationClock.ts`** (High-performance pub/sub transient clock driving 60fps playhead movement and timecode readouts without VDOM re-render thrashing; immutable baseline snapshot ripple drag in `DraggableClip.tsx`) + **Theatre.js** (headless `@theatre/core` for deterministic background sequencing and sheet evaluation, decoupled from `@theatre/studio` with on-demand curve editor docking).
+* **Motion Presets & Curves**: **`evaluator.ts` + `easings.ts`** (8 atomic properties, second-order damped harmonic spring solver $f_{\text{spring}}$, 360° polar coordinate slides with trigonometric projection, 10 kinetic physics presets, Snappy quintic curve `cubic-bezier(0.16, 1, 0.3, 1)`, Golden Spring profile $\zeta=0.72, \omega_n=14$, and unicode-safe `Intl.Segmenter` text splitting).
+* **Video Rendering Pipeline**: **Deterministic Frame Stepper + Bundled Native FFmpeg Sidecar / WebCodecs Fallback** (Advances virtual clock frame-by-frame, extracts WebGL RGBA frame buffers via `pixiRegistry.ts`, and streams directly to `ffmpeg` stdin or client-side encoder; 100% offline, zero dropped frames).
+* **AI Interface (MCP)**: Native Streamable HTTP server daemon on `127.0.0.1:3274/mcp` and CLI proxy with JSON Schema 2020-12 compliance and inline base64 contact sheets.
 
 
 ---
@@ -136,7 +180,8 @@ The single source of truth format:
     "width": 1920,
     "height": 1080,
     "fps": 60,
-    "duration": 5.0
+    "duration": 5.0,
+    "palette": ["#000000", "#ffffff", "#e8c547", "#f5f0e8", "#ef4444", "#34d399", "#60a5fa", "#a855f7"]
   },
   "screens": [
     {
@@ -203,15 +248,13 @@ AI communicates with Motion Studio via the following MCP tools:
 
 ## 8. Detailed Architectural Documentation
 
-Refer to the dedicated specification files in `docs/` for complete implementation details:
-* [docs/HANDOFF.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/HANDOFF.md) - Session transition briefing and immediate starting instructions for Phase 1.
-* [docs/IMPLEMENTATION_PHASES.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/IMPLEMENTATION_PHASES.md) - Detailed 7-phase engineering roadmap with tasks and milestone deliverables.
-* [docs/UI_PANELS_SPEC.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/UI_PANELS_SPEC.md) - Specifications for all screens, panels, floating toolbars, timeline, and the `Ctrl+K` AI Command Bar.
-* [docs/CANVAS_UX_SPEC.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/CANVAS_UX_SPEC.md) - Figma-grade canvas UX: Contextual Floating Action Bar (HUD), 1-click text lifecycle, non-blocking selection, and cursor-centered zoom/pan math.
-* [docs/RIGHT_SIDEBAR_SPEC.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/RIGHT_SIDEBAR_SPEC.md) - Inspector breakdown for Design & Animate modes, matching the screenshot layouts with full HTML/CSS depth.
-* [docs/DEFAULT_BEHAVIORS_AND_INTERACTIONS.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/DEFAULT_BEHAVIORS_AND_INTERACTIONS.md) - Zero-friction defaults: text splitting, auto-grouping, auto-link cascade, FLIP auto-fit, animation copy-paste, smart magnetic snapping, and transactional undo/redo.
-* [docs/CONTEXT_MENU_MATRIX.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/CONTEXT_MENU_MATRIX.md) - Clean separation of concerns between Right-Click context menus and the Right Sidebar.
-* [docs/PROJECT_SPEC_AND_STORAGE.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/PROJECT_SPEC_AND_STORAGE.md) - `.motion` bundle architecture, font loading (Google Fonts + OS + custom), offline FFmpeg export, and adaptive canvas performance.
+Refer to the primary architectural and implementation documents:
+* [docs/HANDOFF.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/HANDOFF.md) - Next Session Handoff Briefing & 8-Agent Deep Research Swarm Blueprint.
+* [docs/DIFFUSION_STUDIO_ANALYSIS_AND_ADOPTIONS.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/DIFFUSION_STUDIO_ANALYSIS_AND_ADOPTIONS.md) - Architectural Benchmark vs Diffusion Studio, Feature Adoptions, Scoped Video (WebCodecs) & 3D (Theatre.js/Three.js) Roadmap.
+* [Revised_plan.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/Revised_plan.md) - System Architecture Documentation covering Tauri v2, PixiJS v8, `react-moveable` + `react-selecto`, `pixi-viewport`, Theatre.js, and deterministic FFmpeg rendering.
+* [docs/IMPLEMENTATION_PLAN.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/IMPLEMENTATION_PLAN.md) - Engineering Roadmap detailing all phases, milestones, and architectural verification steps.
+* [docs/research/AGENT_PERCEPTION_AND_LINTER.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/research/AGENT_PERCEPTION_AND_LINTER.md) - Autonomous AI Agent Perception, Multi-Frame Contact Sheets (`capture`), Scene Structural Linter (`check`), and Model Context Protocol (MCP) Blueprint.
+* [docs/WORKFLOWS_AND_INTERACTIONS_MAP.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/WORKFLOWS_AND_INTERACTIONS_MAP.md) - Comprehensive specification of all canvas interactions, screen format switcher, default states, and workflows.
 
 
 ---
@@ -222,4 +265,5 @@ Refer to the dedicated specification files in `docs/` for complete implementatio
 3. **Keep Presets Composable**: Avoid writing monolithic hardcoded CSS files for every animation. Build upon the 8 atomic actions and easing curves.
 4. **Follow the Design Language**: Use Jitter's dark-mode color palette (zinc-900 backgrounds, zinc-800 cards, crisp typography, clean accent highlights) with **shadcn/ui** components.
 5. **Continuous Documentation Synchronization**: Whenever new features, architectural decisions, UI panels, default behaviors, or data models are introduced or modified, the AI agent must immediately update `AGENTS.md` and the relevant specification documents in `docs/`. Documentation must never lag behind the implementation.
+6. **Implementation Plan Mirroring**: Any implementation plan or phased technical roadmap produced during development must always be saved and kept updated directly in `docs/IMPLEMENTATION_PLAN.md` with clear phase breakdowns and verification milestones.
 

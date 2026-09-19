@@ -63,40 +63,55 @@ This document serves as the definitive specification for all user interactions, 
 
 ---
 
-## 4. Operational Modes: Design Mode vs. Animate Mode
+## 4. Operational Suites & Architecture: DESIGN, MOTION, 3D & EDITOR
 
 ```
-┌────────────────────────────────────────────────────────────────────────────┐
-│ MODE SWITCHER: [ Design | Animate ] (Toggle via Tab key)                   │
-├─────────────────────────────────────┬──────────────────────────────────────┤
-│ DESIGN MODE                         │ ANIMATE MODE                         │
-├─────────────────────────────────────┼──────────────────────────────────────┤
-│ • Focus: 100% Resting State         │ • Focus: Motion, Timing & Presets    │
-│ • Bottom timeline is hidden         │ • Bottom timeline slides up          │
-│ • Floating creation toolbar visible │ • Floating creation toolbar hidden   │
-│ • Full spatial transforms & layout  │ • Moving canvas layer edits resting  │
-│ • Right Inspector: Colors, borders, │   pose; timeline scrub reviews motion│
-│   flex layout, typography, auto-fit │ • Right Inspector: Presets (In/Out/  │
-│ • Spacebar: Hand pan tool           │   Emphasis), duration, easing pills  │
-│                                     │ • Spacebar: Play / Pause toggle      │
-└─────────────────────────────────────┴──────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────┐
+│ TOP NAVIGATION: [ DESIGN | MOTION | 3D Soon | EDITOR Soon ]   [ Send to Motion 🎬 ]         │
+├─────────────────────────────────────┬──────────────────────────────────────────────────────┤
+│ DESIGN SUITE (Staging & Layout)     │ MOTION SUITE (Temporal Sequencer & Camera Frame)     │
+├─────────────────────────────────────┼──────────────────────────────────────────────────────┤
+│ • Infinite Pasteboard: Unrestricted │ • Camera Matte: 75% dark matte overlay frames the    │
+│   staging ground for draft assets,  │   active artboard 1:1 with overflow: hidden.         │
+│   scratchpad copy, alternate logos. │ • Filtered Timeline: Only layers registered on the   │
+│ • Artboard: Physical camera frame   │   active artboard (via "Send to Motion 🎬") appear    │
+│   (16:9, 9:16, 1:1, 4:5).           │   on timeline sequencer tracks.                      │
+│ • Floating creation toolbar active. │ • Bottom multi-track sequencer slides up.            │
+│ • Right Inspector: Appearance,      │ • Right Inspector: Presets (In/Out/Emphasis),        │
+│   Corner Radius (4-corner expand),  │   Duration, Delay, Easing curves, Theatre.js tracks. │
+│   Clip Content (Mask), Fills/Borders│ • Live Two-Way Sync: Modifying styling in DESIGN      │
+│ • Spacebar: Hand pan tool           │   instantly updates MOTION baseline without breaks.  │
+└─────────────────────────────────────┴──────────────────────────────────────────────────────┘
 ```
+
+### Artboard vs. Infinite Pasteboard Rules:
+* **The Infinite Pasteboard**: Users can freely place images, shapes, and draft text outside the artboard coordinates ($x < 0$, $y < 0$, $x > W$, $y > H$).
+* **Left Sidebar Categorization**: The layer tree is automatically categorized into **Artboard ({N})** (layers intersecting the physical camera frame) and **Pasteboard ({N})** (layers parked outside).
+* **Explicit "Send to Motion 🎬" Action**: Clicking the quick action button in the Top Navigation or Artboard header checks geometric intersection via `isLayerOnArtboard(layer, screenWidth, screenHeight)`. Only layers on the artboard are populated into `motionLayerIds` and forwarded to the timeline sequencer. Pasteboard items remain safely preserved in DESIGN mode without cluttering timeline tracks.
+* **Camera Matte & Viewport Isolation**: When entering MOTION mode, the camera artboard enforces `overflow: hidden` and applies a high-contrast dark surround (`boxShadow: 0 0 0 9999px rgba(9, 9, 11, 0.75)`), showing exactly what the exported video will capture.
+
+### Corner Radius & Clip Content (Masking):
+* **Corner Radius Controls**: Managed directly in the Inspector with a uniform scrubber plus an independent 4-corner expand button (`TL`, `TR`, `BR`, `BL`). Essential for chat bubbles (`[18, 18, 4, 18]`), browser mockups, and pill tabs (`[12, 12, 0, 0]`). On-canvas CAD drag handles are deliberately excluded to prevent handle collision and selection clutter.
+* **Clip Content (Masking)**: Available via a clean toggle button (`CLIPPED` / `OFF`) under both Group Auto-Layout and the Appearance section. When enabled, applies `overflow: hidden` to mask overflowing text slides, child chunks, or image assets (e.g. Apple-style text wipe reveals).
+
 
 ---
 
-## 5. Signature Feature: One-Click Text Splitting & Auto-Link
+## 5. Precision Selection Splitting (2-Element Paradigm)
 
-1. **Splitting Action**: Highlighting text or clicking **"Split into Chunks"** / **"Split into Words"** in the Right Sidebar or Right-Click Context Menu.
-2. **Structural Transformation**:
-   * The original text layer transforms into an **Auto-Layout Flex Group** (`layout: { display: 'flex', flexDirection: 'column', gap: 20 }`).
-   * `autoFit: true` is enabled on the parent background card.
-   * Semantic sentences or words become individual child `<Chunk>` layers.
-3. **Cinematic Motion Defaults**:
-   * **Preset**: `Pop In` (scale $0 \to 1$, opacity $0 \to 1$).
-   * **Duration**: `0.6s` per chunk.
-   * **Easing**: `bouncy` overshoot spring curve.
-   * **Cascade Stagger**: `0.15s` delay increment per chunk.
-   * **Auto-Link (🔗)**: Enabled on the parent group track. Adjusting Chunk 1's duration automatically ripples Chunk 2 and Chunk 3 forward.
+1. **Splitting Action**:
+   - The artificial 1-click "Split into Chunks" and "Split into Words" buttons have been completely removed.
+   - The user selects a specific portion of text inside inline editing or double-clicked text layer.
+   - Right-click $\to$ **Split** (or shortcut `Ctrl+Shift+S`).
+2. **Strict 2-Element Structural Transformation**:
+   - The target text layer transforms into a `<Group>` container.
+   - The group contains **exactly two child elements**:
+     1. **Element 1 (`selection`)**: Contains exactly the text that was highlighted.
+     2. **Element 2 (`remainder`)**: Contains everything that was unselected (the remainder of the text), automatically cleaned of redundant boundary whitespace.
+   - Visual positions, font styling, color, and hierarchy are strictly preserved without layout jumps.
+3. **Motion Defaults & Linking**:
+   - The newly created group can be freely styled, grouped, or bound using reactive constraints.
+   - When animation presets are applied, they cascade naturally or can be bound to background shapes via reactive `Hug` constraints.
 
 ---
 
@@ -127,7 +142,7 @@ This document serves as the definitive specification for all user interactions, 
 ### Design Mode Inspector:
 * **No Selection**: Artboard properties (width, height, FPS, duration, background fill).
 * **Shape / Image Selection**: Position, dimensions, aspect ratio lock, appearance, fills, strokes, drop shadows, blur/glow shaders.
-* **Text Selection**: Typography (font family, size, weight, line height, letter spacing, alignment), fills, text-shadows, and the **Split Tool**.
+* **Text Selection**: Typography (font family, size, weight, line height, letter spacing, alignment), fills, text-shadows, and Linked Dependencies (Bindings).
 * **Group Selection**:
   - **Freeform Groups**: Displays a clean `Auto Layout` header with a `+` button to add Auto Layout (no explanatory cards or clutter).
   - **Auto Layout Groups**: Displays `Auto Layout` header with a `-` button, and flex container controls (Row/Column direction, gap, 4-side padding, 9-point alignment matrix, and **Auto-Fit Background (FLIP)** toggle).
@@ -152,7 +167,7 @@ This document serves as the definitive specification for all user interactions, 
   * Group (`Ctrl+G`) / Ungroup (`Ctrl+Shift+G`)
   * Duplicate (`Ctrl+D`)
   * Rename (`F2`)
-  * Split into Chunks / Split into Words
+  * Split (`Ctrl+Shift+S`) (when text is highlighted)
   * Delete (`Delete` / `Backspace`)
 
 ---
@@ -200,3 +215,31 @@ This document serves as the definitive specification for all user interactions, 
 * **Clean State Initialization**:
   - New projects launch into a clean, empty canvas (`layers: []`, `selectedLayerIds: []`).
   - Prebuilt components (including the Hero Message Card) are available on-demand from the Components Drawer.
+
+---
+
+## 12. Reactive Element Linking & Constraint Bindings Engine (Driver-Driven Architecture)
+
+* **Cross-Element Universality**:
+  - Unlike restrictive text-only auto-fit, the **Driver-Driven Linking Engine** operates across any arbitrary element types: `text`, `shape`, `group`, `image`, and `chunk`.
+  - Any element can drive another element, or be driven by another element, creating rich kinetic choreography (e.g. background chat bubble expanding as words type, notification badges pinned to moving avatars, follower arrows with inertia lag).
+* **The 5 Atomic Linking Modes**:
+  1. 📍 **`pin` (Spatial Anchor Lock)**:
+     - Locks a target layer's 9-point anchor (e.g. `top-left`, `center`, `bottom-right`) to a driver layer's anchor point, with configurable 2D offset $[dx, dy]$.
+  2. 📐 **`hug` (Dynamic Bounding Box Hugging)**:
+     - Automatically resizes target width and/or height to hug the driver element's bounding box plus configurable 2D padding $[padX, padY]$.
+     - Essential for dynamic chat bubbles, responsive button backgrounds, and card containers.
+  3. 🔗 **`match` (Direct Property Proportionality)**:
+     - Evaluates $\text{Target Property} = \text{Driver Property} \times \text{Multiplier} + \text{Offset}$.
+     - Works across position ($x, y$), dimensions ($width, height$), rotation, opacity, and blur.
+  4. 🎚️ **`remap` (Range Remapping with Easing)**:
+     - Maps driver domain $[s_{\min}, s_{\max}]$ into target range $[t_{\min}, t_{\max}]$ with non-linear easing curves (e.g. driver rotation $0^\circ \to 360^\circ$ maps to target opacity $0.2 \to 1.0$).
+  5. 🌊 **`lag` (Temporal Follower with Damped Inertia)**:
+     - Drives follower motion behind the driver with a configurable time delay ($dt$) or second-order damped harmonic spring inertia.
+* **Deterministic DAG Resolution**:
+  - `src/engine/bindings/dependencyEngine.ts` sorts layer dependencies using Kahn's topological sort algorithm with automatic cycle-breaking.
+  - Pure, deterministic mathematical evaluation at time $t$ inside `evaluator.ts` ensures 60fps scrub, timeline playback, and headless FFmpeg exports are 100% frame-identical.
+* **Visual Canvas Indicators & Inspector Controls**:
+  - **On-Canvas Glow Overlay**: A glowing cyan dashed Bézier curve links the Driver layer anchor to the Driven layer anchor, equipped with a directional arrowhead and interactive mode pill badge (`📍 Pin`, `📐 Hug`, `🔗 Match`, `🎚️ Remap`, `🌊 Lag`).
+  - **Right Inspector (Design Mode)**: Dedicated **LINKED DEPENDENCIES** panel in `DesignInspector.tsx` (`BindingsSection.tsx`) with active binding cards, "+ Link to Element" dropdown, mode selector, anchor pickers, and live numeric scrubbers.
+
