@@ -41,11 +41,7 @@ type HandleType =
   | "s"
   | "sw"
   | "w"
-  | "rotate"
-  | "radius-nw"
-  | "radius-ne"
-  | "radius-se"
-  | "radius-sw";
+  | "rotate";
 
 interface DragSession {
   handle: HandleType;
@@ -337,41 +333,6 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         }
 
         updateLayerStyle(session.targetLayerId, { rotation: Math.round(deg) });
-      } else if (session.handle.startsWith("radius-")) {
-        const rad = (session.initialRotation * Math.PI) / 180;
-        const cos = Math.cos(rad);
-        const sin = Math.sin(rad);
-
-        const localDx = deltaX * cos + deltaY * sin;
-        const localDy = -deltaX * sin + deltaY * cos;
-
-        let deltaInward = 0;
-        const corner = session.handle.replace("radius-", "");
-        if (corner === "nw") deltaInward = (localDx + localDy) * 0.707;
-        else if (corner === "ne") deltaInward = (-localDx + localDy) * 0.707;
-        else if (corner === "se") deltaInward = (-localDx - localDy) * 0.707;
-        else if (corner === "sw") deltaInward = (localDx - localDy) * 0.707;
-
-        const maxR = Math.floor(Math.min(session.initialWidth, session.initialHeight) / 2);
-        const initR = Array.isArray(session.initialRadius)
-          ? session.initialRadius
-          : [
-              Number(session.initialRadius) || 0,
-              Number(session.initialRadius) || 0,
-              Number(session.initialRadius) || 0,
-              Number(session.initialRadius) || 0,
-            ];
-
-        const cornerIdx = corner === "nw" ? 0 : corner === "ne" ? 1 : corner === "se" ? 2 : 3;
-        const newR = Math.max(0, Math.min(maxR, Math.round(initR[cornerIdx] + deltaInward)));
-
-        if (e.altKey) {
-          const nextArr = [...initR];
-          nextArr[cornerIdx] = newR;
-          updateLayerStyle(session.targetLayerId, { borderRadius: nextArr as any });
-        } else {
-          updateLayerStyle(session.targetLayerId, { borderRadius: newR });
-        }
       } else {
         // Rotated Invariant Resizing
         const rad = (session.initialRotation * Math.PI) / 180;
@@ -492,6 +453,9 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
     getCanvasPoint,
   ]);
 
+  const pivotOriginX = isMulti ? "center" : `${(layer.style.pivotX ?? 0.5) * 100}%`;
+  const pivotOriginY = isMulti ? "center" : `${(layer.style.pivotY ?? 0.5) * 100}%`;
+
   return (
     <div
       style={{
@@ -501,11 +465,24 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         width: `${curVisualW}px`,
         height: `${curVisualH}px`,
         transform: rotation ? `rotate(${rotation}deg)` : undefined,
-        transformOrigin: "center center",
+        transformOrigin: `${pivotOriginX} ${pivotOriginY}`,
         pointerEvents: "none",
       }}
       className="z-40 ring-1 ring-primary select-none group pointer-events-none"
     >
+      {/* Pivot / Anchor Point Indicator */}
+      {!isMulti && (
+        <div
+          style={{
+            left: `${(layer.style.pivotX ?? 0.5) * 100}%`,
+            top: `${(layer.style.pivotY ?? 0.5) * 100}%`,
+          }}
+          className="absolute -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-primary/90 flex items-center justify-center pointer-events-none z-30 shadow-xs"
+          title="Anchor / Pivot Point"
+        >
+          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+        </div>
+      )}
       {/* Center Drag Body: Clicking and dragging anywhere inside the selection box moves the layer */}
       {!isEditing && (
         <div
@@ -598,23 +575,16 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
             <div
               key={h.pos}
               style={{ ...h.style, cursor: getRotatedCursor(h.pos, rotation) }}
-              className="absolute w-2.5 h-2.5 bg-background border border-primary rounded-xs shadow-xs hover:scale-125 transition-transform pointer-events-auto z-20"
+              className="absolute w-2 h-2 bg-white border border-black/80 rounded-xs shadow-xs hover:scale-125 transition-transform pointer-events-auto z-20"
               onPointerDown={(e) => handlePointerDown(h.pos as HandleType, e)}
               onDoubleClick={(e) => {
                 e.stopPropagation();
                 if (layer.type === "text" || layer.type === "chunk") {
-                  if (h.pos === "e" || h.pos === "w") {
-                    updateLayerStyle(layer.id, {
-                      width: "auto",
-                      height: "auto",
-                      textSizing: "auto-width",
-                    });
-                  } else if (h.pos === "n" || h.pos === "s") {
-                    updateLayerStyle(layer.id, {
-                      height: "auto",
-                      textSizing: "auto-height",
-                    });
-                  }
+                  const currentMode = layer.style.boxMode ?? "point";
+                  const nextMode = currentMode === "point" ? "area" : "point";
+                  updateLayerStyle(layer.id, {
+                    boxMode: nextMode,
+                  });
                 }
               }}
             />
@@ -622,52 +592,8 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         </>
       )}
 
-      {/* 4 Inner Corner Radius Handles (Figma Style Blue Points) */}
-      {!isMulti &&
-        !isEditing &&
-        visualW >= 36 &&
-        visualH >= 36 &&
-        (layer.type === "group" ||
-          layer.type === "image" ||
-          (layer.type === "shape" && (layer.shapeType === "rectangle" || !layer.shapeType))) &&
-        (() => {
-          const curR =
-            typeof layer.style.borderRadius === "number"
-              ? layer.style.borderRadius
-              : Array.isArray(layer.style.borderRadius)
-              ? layer.style.borderRadius[0]
-              : 0;
-          const maxR = Math.floor(Math.min(visualW, visualH) / 2);
-          const offset = Math.max(12, Math.min(maxR - 6, (curR || 0) + 8));
 
-          return (
-            <>
-              {[
-                { id: "radius-nw", pos: "nw", style: { left: `${offset - 10}px`, top: `${offset - 10}px` } },
-                { id: "radius-ne", pos: "ne", style: { right: `${offset - 10}px`, top: `${offset - 10}px` } },
-                { id: "radius-se", pos: "se", style: { right: `${offset - 10}px`, bottom: `${offset - 10}px` } },
-                { id: "radius-sw", pos: "sw", style: { left: `${offset - 10}px`, bottom: `${offset - 10}px` } },
-              ].map((rh) => (
-                <div
-                  key={rh.id}
-                  style={{
-                    ...rh.style,
-                    width: 20,
-                    height: 20,
-                    cursor: getRotatedCursor(rh.pos, rotation),
-                  }}
-                  onPointerDown={(e) => handlePointerDown(rh.id as HandleType, e)}
-                  title="Drag to adjust corner radius (Hold Alt for single corner)"
-                  className="absolute flex items-center justify-center pointer-events-auto z-30 group/radius"
-                >
-                  <div className="w-2.5 h-2.5 rounded-full bg-white border-2 border-[#0d99ff] shadow-[0_1px_4px_rgba(0,0,0,0.45)] transition-all group-hover/radius:scale-130 group-hover/radius:bg-[#0d99ff] group-hover/radius:border-white" />
-                </div>
-              ))}
-            </>
-          );
-        })()}
-
-      {/* Live Dimension / Radius HUD */}
+      {/* Live Dimension / Rotation HUD */}
       <div
         className={`absolute -bottom-6 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[10px] font-mono shadow-xs pointer-events-none whitespace-nowrap ${
           isAnimateMode

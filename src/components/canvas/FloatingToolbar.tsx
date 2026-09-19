@@ -1,24 +1,35 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import {
-  MousePointer,
+  MousePointer2,
+  Hand,
   Type,
   Square,
   Circle,
-  CreditCard,
-  Image as ImageIcon,
-  Component,
   Star,
   Triangle,
+  Image as ImageIcon,
+  Component,
+  ChevronDown,
+  Upload,
+  Sparkles,
+  Heading,
+  AlignLeft,
 } from "lucide-react";
 import { useProjectStore } from "@/store/useProjectStore";
 import { Layer } from "@/types/scene";
-import { THEME_TOKENS } from "@/theme/tokens";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface FloatingToolbarProps {
   onOpenComponentsDrawer: () => void;
@@ -28,106 +39,150 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
   onOpenComponentsDrawer,
 }) => {
   const {
+    activeTool,
+    setTool,
     addLayer,
     document: doc,
-    setEditingLayerId,
+    uiMode,
   } = useProjectStore();
 
-  // 1-Click instant text creation with live caret focus
-  const handleAddText = () => {
-    const newId = `text_${Date.now()}`;
-    const newLayer: Layer = {
-      id: newId,
-      name: "Text Layer",
-      type: "text",
-      content: "Add text",
-      style: {
-        x: doc.settings.width / 2 - 150,
-        y: doc.settings.height / 2 - 40,
-        width: "auto",
-        height: "auto",
-        rotation: 0,
-        opacity: 1,
-        fontSize: 54,
-        fontWeight: 800,
-        fontFamily: "Inter",
-        color: THEME_TOKENS.typography.headingColor,
-        textAlign: "center",
-      },
-      animation: {
-        in: {
-          preset: "pop",
-          start: 0,
-          duration: 0.6,
-          easing: "bouncy",
-        },
-      },
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedShape, setSelectedShape] = useState<"rectangle" | "circle" | "star" | "triangle">("rectangle");
+
+  // Handle native OS image / video upload
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const isVideo = file.type.startsWith("video/");
+    const reader = new FileReader();
+
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+
+      if (isVideo) {
+        const cleanName = file.name.replace(/\.[^/.]+$/, "");
+        const newLayer: Layer = {
+          id: `video_${Date.now()}`,
+          name: cleanName || "Video Layer",
+          type: "image",
+          src: dataUrl,
+          objectFit: "cover",
+          style: {
+            x: Math.round(doc.settings.width / 2 - 320),
+            y: Math.round(doc.settings.height / 2 - 180),
+            width: 640,
+            height: 360,
+            rotation: 0,
+            opacity: 1,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(0,0,0,0.1)",
+          },
+          animation: {
+            in: {
+              preset: "pop",
+              start: 0,
+              duration: 0.6,
+              easing: "bouncy",
+            },
+          },
+        };
+        addLayer(newLayer);
+        return;
+      }
+
+      // Image dimension extraction
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 600;
+        let width = img.naturalWidth || 400;
+        let height = img.naturalHeight || 300;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const cleanName = file.name.replace(/\.[^/.]+$/, "");
+        const newLayer: Layer = {
+          id: `image_${Date.now()}`,
+          name: cleanName || "Image Layer",
+          type: "image",
+          src: dataUrl,
+          objectFit: "cover",
+          style: {
+            x: Math.round(doc.settings.width / 2 - width / 2),
+            y: Math.round(doc.settings.height / 2 - height / 2),
+            width,
+            height,
+            rotation: 0,
+            opacity: 1,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(0,0,0,0.1)",
+            shadows: [
+              {
+                x: 0,
+                y: 20,
+                blur: 40,
+                spread: -10,
+                color: "rgba(0,0,0,0.25)",
+              },
+            ],
+          },
+          animation: {
+            in: {
+              preset: "pop",
+              start: 0,
+              duration: 0.6,
+              easing: "bouncy",
+            },
+          },
+        };
+        addLayer(newLayer);
+      };
+      img.src = dataUrl;
     };
-    addLayer(newLayer);
-    setEditingLayerId(newId);
+
+    reader.readAsDataURL(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // 1-Click Frame / Container Card creation
-  const handleAddCard = () => {
-    const newId = `card_${Date.now()}`;
+  // Sleek modern vector graphic
+  const handleInsertSampleGraphic = () => {
+    const svgData = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400"><rect width="600" height="400" rx="24" fill="%231e293b"/><circle cx="300" cy="200" r="110" fill="%2338bdf8" opacity="0.85"/><circle cx="370" cy="230" r="75" fill="%23f59e0b" opacity="0.75" style="mix-blend-mode: screen;"/></svg>`;
+
     const newLayer: Layer = {
-      id: newId,
-      name: "Card Container",
-      type: "group",
-      layout: {
-        display: "flex",
-        flexDirection: "column",
-        gap: 16,
-        align: "start",
-      },
-      autoFit: true,
-      autoLink: true,
-      staggerDelay: 0.15,
+      id: `media_${Date.now()}`,
+      name: "Vector Graphic",
+      type: "image",
+      src: svgData,
+      objectFit: "cover",
       style: {
-        x: doc.settings.width / 2 - 250,
-        y: doc.settings.height / 2 - 175,
-        width: 500,
-        height: 350,
+        x: Math.round(doc.settings.width / 2 - 300),
+        y: Math.round(doc.settings.height / 2 - 200),
+        width: 600,
+        height: 400,
         rotation: 0,
         opacity: 1,
-        backgroundColor: THEME_TOKENS.surfaces.panelBackground,
-        padding: 32,
-        borderRadius: 24,
+        borderRadius: 20,
         borderWidth: 1,
-        borderColor: THEME_TOKENS.surfaces.border,
+        borderColor: "rgba(0,0,0,0.1)",
         shadows: [
           {
             x: 0,
-            y: 20,
-            blur: 40,
+            y: 25,
+            blur: 50,
             spread: -10,
-            color: "rgba(0,0,0,0.4)",
+            color: "rgba(0,0,0,0.2)",
           },
         ],
-      },
-      children: [],
-    };
-    addLayer(newLayer);
-  };
-
-  const handleAddShape = (shapeType: "rectangle" | "circle" | "star" | "triangle") => {
-    const newLayer: Layer = {
-      id: `shape_${Date.now()}`,
-      name: `${shapeType.charAt(0).toUpperCase() + shapeType.slice(1)}`,
-      type: "shape",
-      shapeType,
-      style: {
-        x: doc.settings.width / 2 - 100,
-        y: doc.settings.height / 2 - 100,
-        width: 200,
-        height: 200,
-        rotation: 0,
-        opacity: 1,
-        backgroundColor:
-          shapeType === "circle"
-            ? THEME_TOKENS.accent.highlight
-            : THEME_TOKENS.accent.primary,
-        borderRadius: shapeType === "circle" ? 9999 : 16,
       },
       animation: {
         in: {
@@ -141,29 +196,31 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
     addLayer(newLayer);
   };
 
-  const handleAddSampleImage = () => {
+  const insertTextPreset = (content: string, fontSize: number, fontWeight: string) => {
     const newLayer: Layer = {
-      id: `image_${Date.now()}`,
-      name: "App Screenshot",
-      type: "image",
-      src: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80",
-      objectFit: "cover",
+      id: `text_${Date.now()}`,
+      name: content,
+      type: "text",
+      content,
       style: {
-        x: doc.settings.width / 2 - 240,
-        y: doc.settings.height / 2 - 150,
-        width: 480,
-        height: 300,
+        x: Math.round(doc.settings.width / 2 - 220),
+        y: Math.round(doc.settings.height / 2 - fontSize * 0.7),
+        width: 440,
+        height: Math.round(fontSize * 1.5),
+        fontSize,
+        fontWeight,
+        color: "#0f172a",
+        boxMode: "point",
+        lineHeight: 1.2,
+        letterSpacing: -0.5,
         rotation: 0,
         opacity: 1,
-        borderRadius: 16,
-        borderWidth: 1,
-        borderColor: THEME_TOKENS.surfaces.border,
       },
       animation: {
         in: {
-          preset: "slideUp",
+          preset: "fadeUp",
           start: 0,
-          duration: 0.7,
+          duration: 0.5,
           easing: "smooth",
         },
       },
@@ -171,71 +228,284 @@ export const FloatingToolbar: React.FC<FloatingToolbarProps> = ({
     addLayer(newLayer);
   };
 
+  const getShapeIcon = () => {
+    switch (selectedShape) {
+      case "circle":
+        return <Circle className="h-4 w-4" />;
+      case "star":
+        return <Star className="h-4 w-4" />;
+      case "triangle":
+        return <Triangle className="h-4 w-4" />;
+      default:
+        return <Square className="h-4 w-4" />;
+    }
+  };
+
+  const isShapeActive = ["rectangle", "circle", "star", "triangle"].includes(activeTool);
+
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-[#111111]/95 backdrop-blur-md border border-[#222222] shadow-2xl px-2.5 py-1.5 rounded-full flex items-center gap-1 text-xs select-none">
-      {/* 1-Click Instant Text Tool */}
-      <button
-        onClick={handleAddText}
-        title="1-Click Instant Text (T)"
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-white/10 transition-colors"
+    <TooltipProvider delayDuration={300}>
+      <div
+        className={cn(
+          "absolute left-1/2 -translate-x-1/2 z-30 transition-all duration-200",
+          "h-11 px-2.5 rounded-[20px] bg-card/95 backdrop-blur-md border border-border shadow-xl flex items-center gap-1 select-none",
+          uiMode === "motion" || uiMode === "animate" ? "top-3.5" : "bottom-6"
+        )}
       >
-        <Type className="h-3.5 w-3.5 text-primary" />
-        <span>Text</span>
-      </button>
+        {/* Hidden Native File Input for Real Image/Video Upload */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif,video/mp4"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
 
-      {/* Frame / Card Tool */}
-      <button
-        onClick={handleAddCard}
-        title="Add Container Card / Frame (F)"
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-white/10 transition-colors"
-      >
-        <CreditCard className="h-3.5 w-3.5 text-blue-400" />
-        <span>Card</span>
-      </button>
+        {/* 1. Move Tool (V) */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setTool("select")}
+              className={cn(
+                "h-8 px-2.5 rounded-[12px] flex items-center gap-1.5 text-xs font-medium transition-all",
+                activeTool === "select"
+                  ? "bg-accent text-accent-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              )}
+            >
+              <MousePointer2 className="h-4 w-4" />
+              <span>Select</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Select / Move (V)</TooltipContent>
+        </Tooltip>
 
-      {/* Add Shape Menu */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-white/10 transition-colors">
-            <Square className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Shapes</span>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" side="top" className="bg-[#171717] border-[#262626] text-xs">
-          <DropdownMenuItem onClick={() => handleAddShape("rectangle")} className="gap-2 text-zinc-200">
-            <Square className="h-3 w-3" /> Rectangle
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAddShape("circle")} className="gap-2 text-zinc-200">
-            <Circle className="h-3 w-3" /> Circle
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAddShape("triangle")} className="gap-2 text-zinc-200">
-            <Triangle className="h-3 w-3" /> Triangle
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleAddShape("star")} className="gap-2 text-zinc-200">
-            <Star className="h-3 w-3" /> Star
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        {/* 2. Hand Tool (H) */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setTool("hand")}
+              className={cn(
+                "h-8 w-8 rounded-[12px] flex items-center justify-center transition-all",
+                activeTool === "hand"
+                  ? "bg-accent text-accent-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              )}
+            >
+              <Hand className="h-4 w-4" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Hand Tool (H) - Pan canvas</TooltipContent>
+        </Tooltip>
 
-      {/* Add Media */}
-      <button
-        onClick={handleAddSampleImage}
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-white/10 transition-colors"
-      >
-        <ImageIcon className="h-3.5 w-3.5 text-pink-400" />
-        <span>Media</span>
-      </button>
+        <div className="h-5 w-px bg-border mx-1" />
 
-      <div className="h-4 w-px bg-[#262626] mx-0.5" />
+        {/* 3. Text Tool with Dropdown */}
+        <div className="flex items-center">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setTool("text")}
+                className={cn(
+                  "h-8 pl-2.5 pr-1.5 rounded-l-[12px] flex items-center gap-1.5 text-xs font-medium transition-all",
+                  activeTool === "text"
+                    ? "bg-accent text-accent-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                )}
+              >
+                <Type className="h-4 w-4" />
+                <span>Text</span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Text Tool (T) - Click canvas to type</TooltipContent>
+          </Tooltip>
 
-      {/* Custom Components */}
-      <button
-        onClick={onOpenComponentsDrawer}
-        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-foreground hover:bg-white/10 transition-colors"
-      >
-        <Component className="h-3.5 w-3.5 text-primary" />
-        <span>Components</span>
-      </button>
-    </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "h-8 px-1 rounded-r-[12px] flex items-center justify-center transition-all",
+                  activeTool === "text"
+                    ? "bg-accent text-accent-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                )}
+              >
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" side="top" className="w-48 p-1 rounded-[12px]">
+              <DropdownMenuItem
+                onClick={() => setTool("text")}
+                className="gap-2 py-1.5 cursor-pointer rounded-[8px]"
+              >
+                <Type className="h-4 w-4 text-muted-foreground" />
+                <span>Text Tool</span>
+                <span className="ml-auto text-[10px] text-muted-foreground font-mono">T</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => insertTextPreset("Heading", 72, "700")}
+                className="gap-2 py-1.5 cursor-pointer rounded-[8px]"
+              >
+                <Heading className="h-4 w-4 text-muted-foreground" />
+                <span>Heading</span>
+                <span className="ml-auto text-[10px] text-muted-foreground font-mono">72px</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => insertTextPreset("Subheading", 40, "600")}
+                className="gap-2 py-1.5 cursor-pointer rounded-[8px]"
+              >
+                <Heading className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>Subheading</span>
+                <span className="ml-auto text-[10px] text-muted-foreground font-mono">40px</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => insertTextPreset("Body text paragraph goes here", 22, "400")}
+                className="gap-2 py-1.5 cursor-pointer rounded-[8px]"
+              >
+                <AlignLeft className="h-4 w-4 text-muted-foreground" />
+                <span>Body</span>
+                <span className="ml-auto text-[10px] text-muted-foreground font-mono">22px</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* 4. Shapes Tool Dropdown */}
+        <div className="flex items-center">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => setTool(selectedShape)}
+                className={cn(
+                  "h-8 pl-2.5 pr-1.5 rounded-l-[12px] flex items-center gap-1.5 text-xs font-medium transition-all capitalize",
+                  isShapeActive
+                    ? "bg-accent text-accent-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                )}
+              >
+                {getShapeIcon()}
+                <span>{selectedShape}</span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">
+              Shape Tool ({selectedShape.charAt(0).toUpperCase() + selectedShape.slice(1)}) (R)
+            </TooltipContent>
+          </Tooltip>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "h-8 px-1 rounded-r-[12px] flex items-center justify-center transition-all",
+                  isShapeActive
+                    ? "bg-accent text-accent-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                )}
+              >
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" side="top" className="w-44 p-1 rounded-[12px]">
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedShape("rectangle");
+                  setTool("rectangle");
+                }}
+                className="gap-2 py-1.5 cursor-pointer rounded-[8px]"
+              >
+                <Square className="h-4 w-4 text-muted-foreground" />
+                <span>Rectangle</span>
+                <span className="ml-auto text-[10px] text-muted-foreground font-mono">R</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedShape("circle");
+                  setTool("circle");
+                }}
+                className="gap-2 py-1.5 cursor-pointer rounded-[8px]"
+              >
+                <Circle className="h-4 w-4 text-muted-foreground" />
+                <span>Circle</span>
+                <span className="ml-auto text-[10px] text-muted-foreground font-mono">O</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedShape("star");
+                  setTool("star");
+                }}
+                className="gap-2 py-1.5 cursor-pointer rounded-[8px]"
+              >
+                <Star className="h-4 w-4 text-muted-foreground" />
+                <span>Star</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedShape("triangle");
+                  setTool("triangle");
+                }}
+                className="gap-2 py-1.5 cursor-pointer rounded-[8px]"
+              >
+                <Triangle className="h-4 w-4 text-muted-foreground" />
+                <span>Triangle</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* 5. Media Tool Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className={cn(
+                "h-8 px-2.5 rounded-[12px] flex items-center gap-1.5 text-xs font-medium transition-all",
+                activeTool === "media"
+                  ? "bg-accent text-accent-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              )}
+              title="Place Image or Video (Cmd+Shift+K)"
+            >
+              <ImageIcon className="h-4 w-4" />
+              <span>Media</span>
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="center" side="top" className="w-52 p-1 rounded-[12px]">
+            <DropdownMenuItem
+              onClick={() => fileInputRef.current?.click()}
+              className="gap-2 py-1.5 cursor-pointer rounded-[8px]"
+            >
+              <Upload className="h-4 w-4 text-muted-foreground" />
+              <span>Upload Image / Video...</span>
+              <span className="ml-auto text-[10px] text-muted-foreground font-mono">⌘⇧K</span>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onClick={handleInsertSampleGraphic}
+              className="gap-2 py-1.5 cursor-pointer rounded-[8px]"
+            >
+              <Sparkles className="h-4 w-4 text-muted-foreground" />
+              <span>Insert Vector Graphic</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <div className="h-5 w-px bg-border mx-1" />
+
+        {/* 6. Components Drawer */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={onOpenComponentsDrawer}
+              className="h-8 px-2.5 rounded-[12px] flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all"
+            >
+              <Component className="h-4 w-4" />
+              <span>Components</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Components & Templates Library</TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
   );
 };

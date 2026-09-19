@@ -4,14 +4,11 @@ import {
   Redo2,
   Sparkles,
   Download,
-  Film,
-  Layers,
   ZoomIn,
-  Play,
-  Pause,
+  Maximize2,
+  Sun,
+  Moon,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useProjectStore } from "@/store/useProjectStore";
 import {
   DropdownMenu,
@@ -19,15 +16,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { CompactSegmentedControl } from "@/components/ui/compact-segmented-control";
 
 interface TopNavBarProps {
   onOpenAiBar: () => void;
   onOpenExportModal: () => void;
+  onToggleZenMode?: () => void;
 }
 
 export const TopNavBar: React.FC<TopNavBarProps> = ({
   onOpenAiBar,
   onOpenExportModal,
+  onToggleZenMode,
 }) => {
   const {
     document: doc,
@@ -40,8 +40,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     redo,
     zoom,
     setZoom,
-    isPlaying,
-    setIsPlaying,
+    theme,
+    toggleTheme,
   } = useProjectStore();
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -57,23 +57,24 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   };
 
   return (
-    <header className="h-12 w-full bg-background border-b border-border px-3 flex items-center justify-between z-40 select-none">
-      {/* Left: Branding & Editable Title */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-card border border-border flex items-center justify-center shadow-xs text-primary">
-            <Film className="h-4 w-4" />
-          </div>
-          <span className="font-bold text-sm tracking-tight text-foreground flex items-center gap-1.5">
-            Choreo
-            <Badge variant="secondary" className="text-[9px] px-1 py-0 h-4 bg-muted text-muted-foreground font-mono">
-              v0.1
-            </Badge>
+    <header className="h-10 w-full bg-card border-b border-border px-3.5 flex items-center justify-between z-[9999] relative select-none shrink-0 text-foreground">
+      {/* Left: App Wordmark, Breadcrumb Title & History */}
+      <div className="flex items-center gap-2.5">
+        {/* Minimal Wordmark */}
+        <div className="flex items-center gap-1.5">
+          <span className="font-bold text-xs tracking-tight text-foreground flex items-center gap-1.5">
+            CHOREO
           </span>
+          {/* Subtle Saved Indicator Dot */}
+          <span
+            className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]"
+            title="All changes saved to project"
+          />
         </div>
 
-        <div className="h-4 w-px bg-border" />
+        <div className="h-3.5 w-px bg-border" />
 
+        {/* Inline Editable Project Title */}
         {isEditingTitle ? (
           <input
             type="text"
@@ -88,7 +89,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               }
             }}
             autoFocus
-            className="h-7 px-2 text-xs font-medium text-foreground bg-muted rounded border border-primary focus:outline-none w-48"
+            className="h-6 px-1.5 text-xs font-medium text-foreground bg-muted/60 rounded-[6px] border border-primary outline-none w-44 font-mono"
           />
         ) : (
           <div
@@ -96,98 +97,60 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               setTitleInput(doc.name);
               setIsEditingTitle(true);
             }}
-            className="h-7 px-2 flex items-center text-xs font-medium text-foreground/90 hover:text-foreground hover:bg-muted/60 rounded cursor-pointer transition-colors max-w-[200px] truncate"
+            className="h-6 px-1.5 flex items-center text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-[6px] cursor-pointer transition-colors max-w-[180px] truncate"
             title="Click to rename project"
           >
             {doc.name}
           </div>
         )}
 
-        <Badge variant="outline" className="text-[10px] text-muted-foreground border-border h-4 py-0 px-1">
-          Auto-saved
-        </Badge>
-      </div>
+        <div className="h-3.5 w-px bg-border" />
 
-      {/* Center: Mode Switcher [ Design | Animate ] */}
-      <div className="flex items-center bg-muted/70 p-0.5 rounded-lg border border-border shadow-inner">
-        <button
-          onClick={() => setUiMode("design")}
-          className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all ${
-            uiMode === "design"
-              ? "bg-secondary text-foreground shadow-xs font-semibold"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Layers className="h-3.5 w-3.5" />
-          <span>Design</span>
-        </button>
-        <button
-          onClick={() => setUiMode("animate")}
-          className={`flex items-center gap-1.5 px-3 py-1 text-xs font-medium rounded-md transition-all ${
-            uiMode === "animate"
-              ? "bg-primary text-primary-foreground shadow-xs font-semibold"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          <Film className="h-3.5 w-3.5" />
-          <span>Animate</span>
-        </button>
-      </div>
-
-      {/* Right: History, Zoom, AI Prompt & Export */}
-      <div className="flex items-center gap-2">
-        {/* Play/Pause Quick Toggle */}
-        <Button
-          variant="ghost"
-          size="iconSm"
-          onClick={() => setIsPlaying(!isPlaying)}
-          title={isPlaying ? "Pause (Space)" : "Play Preview (Space)"}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-        </Button>
-
-        <div className="h-4 w-px bg-border" />
-
-        {/* Undo / Redo */}
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="iconSm"
+        {/* History: Undo / Redo */}
+        <div className="flex items-center gap-0.5">
+          <button
             disabled={!canUndo}
             onClick={undo}
-            title="Undo (Ctrl+Z)"
-            className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+            title="Undo (Cmd+Z)"
+            className="h-6 w-6 rounded-[6px] flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-20 transition-colors"
           >
             <Undo2 className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="iconSm"
+          </button>
+          <button
             disabled={!canRedo}
             onClick={redo}
-            title="Redo (Ctrl+Shift+Z)"
-            className="text-muted-foreground hover:text-foreground disabled:opacity-30"
+            title="Redo (Cmd+Shift+Z)"
+            className="h-6 w-6 rounded-[6px] flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-20 transition-colors"
           >
             <Redo2 className="h-3.5 w-3.5" />
-          </Button>
+          </button>
         </div>
+      </div>
 
-        <div className="h-4 w-px bg-border" />
+      {/* Center: Studio Switcher [ DESIGN | MOTION ] */}
+      <div className="w-52">
+        <CompactSegmentedControl
+          value={uiMode === "motion" || uiMode === "animate" ? "motion" : "design"}
+          onChange={(val) => setUiMode(val as "design" | "motion")}
+          options={[
+            { value: "design", label: "DESIGN", tooltip: "Static Vector & Kinetic Staging" },
+            { value: "motion", label: "MOTION", tooltip: "Motion Choreography & Timeline" },
+          ]}
+          size="sm"
+        />
+      </div>
 
-        {/* Canvas Zoom Selector */}
+      {/* Right: Zoom, Theme, AI, Zen Mode & Export */}
+      <div className="flex items-center gap-2">
+        {/* Canvas Zoom */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs px-2 gap-1 text-foreground border-border bg-secondary/50 hover:bg-muted"
-            >
+            <button className="h-7 text-[11px] font-mono px-2 gap-1 text-muted-foreground hover:text-foreground border border-border bg-muted/40 hover:bg-muted rounded-[8px] flex items-center transition-colors">
               <ZoomIn className="h-3 w-3 text-muted-foreground" />
               <span>{Math.round(zoom * 100)}%</span>
-            </Button>
+            </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-card border-border text-xs">
+          <DropdownMenuContent align="end" className="text-xs">
             <DropdownMenuItem onClick={() => setZoom(0.5)}>50%</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setZoom(0.75)}>75%</DropdownMenuItem>
             <DropdownMenuItem onClick={() => setZoom(1)}>100% (Fit)</DropdownMenuItem>
@@ -197,29 +160,54 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* AI Assistant Trigger */}
-        <Button
-          onClick={onOpenAiBar}
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs px-2.5 gap-1.5 border-border bg-secondary/80 text-foreground hover:bg-muted hover:text-foreground"
+        {/* Theme Toggle (Light / Dark) */}
+        <button
+          onClick={toggleTheme}
+          className="h-7 w-7 rounded-[8px] border border-border bg-muted/40 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+          title={`Switch to ${theme === "dark" ? "Light" : "Dark"} Mode`}
         >
-          <Sparkles className="h-3.5 w-3.5 text-primary" />
-          <span>AI Prompt</span>
-          <kbd className="text-[10px] bg-muted px-1.5 py-0.5 rounded border border-border text-muted-foreground font-mono">
-            Ctrl+K
-          </kbd>
-        </Button>
+          {theme === "dark" ? (
+            <Sun className="h-3.5 w-3.5" />
+          ) : (
+            <Moon className="h-3.5 w-3.5" />
+          )}
+        </button>
 
-        {/* Export Video */}
-        <Button
+        {/* AI Command Bar Trigger */}
+        <button
+          onClick={onOpenAiBar}
+          className="h-7 text-[11px] px-2 gap-1.5 border border-border bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-[8px] flex items-center transition-colors"
+          title="Open AI Command Palette (Cmd+K)"
+        >
+          <Sparkles className="h-3 w-3 text-muted-foreground" />
+          <span>AI</span>
+          <kbd className="text-[9px] bg-background/80 px-1 py-0.2 rounded border border-border/60 text-muted-foreground font-mono">
+            ⌘K
+          </kbd>
+        </button>
+
+        {/* Zen Presentation Mode Toggle */}
+        {onToggleZenMode && (
+          <button
+            onClick={onToggleZenMode}
+            className="h-7 w-7 rounded-[8px] border border-border bg-muted/40 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            title="Toggle Zen Presentation Mode (Cmd+\)"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+
+        <div className="h-3.5 w-px bg-border" />
+
+        {/* Neutral Export Action */}
+        <button
           onClick={onOpenExportModal}
-          size="sm"
-          className="h-7 text-xs px-3 gap-1.5 bg-primary text-primary-foreground font-semibold hover:bg-primary/90 shadow-sm"
+          className="h-7 text-xs font-medium px-3 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[8px] flex items-center gap-1.5 transition-colors shadow-xs"
+          title="Export video"
         >
           <Download className="h-3.5 w-3.5" />
           <span>Export</span>
-        </Button>
+        </button>
       </div>
     </header>
   );

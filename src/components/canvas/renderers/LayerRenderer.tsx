@@ -5,6 +5,7 @@ import { TextRenderer } from "./TextRenderer";
 import { ChunkRenderer } from "./ChunkRenderer";
 import { ShapeRenderer } from "./ShapeRenderer";
 import { ImageRenderer } from "./ImageRenderer";
+import { VideoRenderer } from "./VideoRenderer";
 
 interface LayerRendererProps {
   layer: Layer;
@@ -41,6 +42,17 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({
           computedStyle={computedStyle}
           computedLayerStyles={computedLayerStyles}
           onSelectLayer={onSelectLayer}
+          renderChild={(child, childInFlex) => (
+            <LayerRenderer
+              key={child.id}
+              layer={child}
+              selectedLayerIds={selectedLayerIds}
+              isChildInFlex={childInFlex}
+              computedStyle={computedLayerStyles[child.id]}
+              computedLayerStyles={computedLayerStyles}
+              onSelectLayer={onSelectLayer}
+            />
+          )}
         />
       );
 
@@ -66,6 +78,21 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({
         />
       );
 
+    case "counter":
+      return (
+        <TextRenderer
+          layer={{
+            ...layer,
+            type: "text",
+            content: (layer as any).renderedValue || (layer as any).content || `${(layer as any).prefix || ""}${(layer as any).startValue || 0}${(layer as any).suffix || ""}`,
+          }}
+          isSelected={isSelected}
+          isChildInFlex={isChildInFlex}
+          computedStyle={computedStyle}
+          onClick={handleClick}
+        />
+      );
+
     case "shape":
       return (
         <ShapeRenderer
@@ -80,6 +107,17 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({
     case "image":
       return (
         <ImageRenderer
+          layer={layer}
+          isSelected={isSelected}
+          isChildInFlex={isChildInFlex}
+          computedStyle={computedStyle}
+          onClick={handleClick}
+        />
+      );
+
+    case "video":
+      return (
+        <VideoRenderer
           layer={layer}
           isSelected={isSelected}
           isChildInFlex={isChildInFlex}

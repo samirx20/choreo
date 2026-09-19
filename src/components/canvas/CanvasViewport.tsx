@@ -9,6 +9,12 @@ import { TransformBox } from "./TransformBox";
 import { SnapGuide } from "./snapping";
 import { CanvasContextMenu } from "./CanvasContextMenu";
 import { DistanceOverlay } from "./DistanceOverlay";
+import { BindingConnectionOverlay } from "./BindingConnectionOverlay";
+import { useContextMenuStore } from "@/store/useContextMenuStore";
+import {
+  buildCanvasElementMenu,
+  buildCanvasPasteboardMenu,
+} from "@/components/contextmenu/contextMenuBuilders";
 import { Plus, Minus, Maximize } from "lucide-react";
 import {
   DropdownMenu,
@@ -17,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function getLayerBounds(
+function getLayerBounds(
   layer: Layer,
   screenRect: DOMRect,
   domScale: number
@@ -568,8 +574,13 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           style: {
             x: Math.round(canvasX),
             y: Math.round(canvasY),
-            width: "auto",
-            height: "auto",
+            width: 400,
+            height: 80,
+            boxMode: "point",
+            scaleX: 1,
+            scaleY: 1,
+            pivotX: 0.5,
+            pivotY: 0.5,
             rotation: 0,
             opacity: 1,
             fontSize: 54,
@@ -607,6 +618,10 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
             y: Math.round(canvasY - 100),
             width: 200,
             height: 200,
+            scaleX: 1,
+            scaleY: 1,
+            pivotX: 0.5,
+            pivotY: 0.5,
             rotation: 0,
             opacity: 1,
             backgroundColor:
@@ -916,18 +931,34 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       }}
       onContextMenu={(e) => {
         e.preventDefault();
+        const store = useProjectStore.getState();
+        const openMenu = useContextMenuStore.getState().openContextMenu;
         if (selectedLayerIds.length > 0) {
-          setContextMenu({
-            x: e.clientX,
-            y: e.clientY,
-            layerId: selectedLayerIds[0],
-          });
+          const screen =
+            store.document.screens.find((s) => s.id === store.activeScreenId) ||
+            store.document.screens[0];
+          const selectedLayer = screen?.layers.find((l) => l.id === selectedLayerIds[0]);
+          if (selectedLayer) {
+            openMenu({
+              x: e.clientX,
+              y: e.clientY,
+              zone: "canvas-element",
+              items: buildCanvasElementMenu({ layer: selectedLayer, store }),
+            });
+            return;
+          }
         }
+        openMenu({
+          x: e.clientX,
+          y: e.clientY,
+          zone: "canvas-pasteboard",
+          items: buildCanvasPasteboardMenu({ store }),
+        });
       }}
-      className={`flex-1 relative bg-zinc-950 overflow-hidden flex items-center justify-center select-none ${getCanvasCursor()}`}
+      className={`flex-1 relative bg-muted/30 overflow-hidden flex items-center justify-center select-none ${getCanvasCursor()}`}
       style={{
         backgroundImage:
-          "radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.05) 1px, transparent 0)",
+          "radial-gradient(circle at 1px 1px, var(--canvas-dot, rgba(0, 0, 0, 0.08)) 1px, transparent 0)",
         backgroundSize: "24px 24px",
       }}
     >
@@ -953,6 +984,12 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
             }
             deselectAll();
           }}
+        />
+
+        {/* Reactive Element Binding Connection Curves */}
+        <BindingConnectionOverlay
+          canvasWidth={doc.settings.width}
+          canvasHeight={doc.settings.height}
         />
 
         {/* Marquee Selection Rectangle */}
@@ -1027,26 +1064,26 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       )}
 
       {/* Floating Canvas Navigation & Zoom Widget (Bottom Right) */}
-      <div className="absolute bottom-6 right-6 z-30 flex items-center gap-1 bg-[#111111]/95 backdrop-blur-md px-2 py-1 rounded-full border border-[#222222] shadow-2xl text-xs text-[#eee8d5]">
+      <div className="absolute bottom-6 right-6 z-30 flex items-center gap-1 bg-card/95 backdrop-blur-md px-2.5 py-1 rounded-[20px] border border-border shadow-xl text-xs text-foreground">
         <button
           onClick={() => setZoom(Math.max(zoom - 0.1, 0.2))}
           title="Zoom Out"
-          className="p-1 hover:bg-[#222222] rounded-full text-zinc-400 hover:text-white transition-colors"
+          className="p-1 hover:bg-muted rounded-[8px] text-muted-foreground hover:text-foreground transition-colors"
         >
           <Minus className="h-3 w-3" />
         </button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="px-1.5 py-0.5 font-mono text-[11px] text-zinc-300 hover:text-white transition-colors">
+            <button className="px-1.5 py-0.5 font-mono text-[11px] text-foreground/80 hover:text-foreground transition-colors">
               {Math.round(zoom * 100)}%
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-[#171717] border-[#262626] text-xs">
+          <DropdownMenuContent className="bg-popover border-border text-xs text-popover-foreground">
             {[50, 75, 100, 150, 200, 300].map((pct) => (
               <DropdownMenuItem
                 key={pct}
                 onClick={() => setZoom(pct / 100)}
-                className="text-zinc-200 hover:text-white"
+                className="text-popover-foreground hover:bg-accent hover:text-accent-foreground"
               >
                 {pct}%
               </DropdownMenuItem>
@@ -1056,18 +1093,18 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         <button
           onClick={() => setZoom(Math.min(zoom + 0.1, 4.0))}
           title="Zoom In"
-          className="p-1 hover:bg-[#222222] rounded-full text-zinc-400 hover:text-white transition-colors"
+          className="p-1 hover:bg-muted rounded-[8px] text-muted-foreground hover:text-foreground transition-colors"
         >
           <Plus className="h-3 w-3" />
         </button>
-        <div className="w-[1px] h-3.5 bg-[#222222] mx-0.5" />
+        <div className="w-[1px] h-3.5 bg-border mx-0.5" />
         <button
           onClick={() => {
             setZoom(1);
             setPan({ x: 0, y: 0 });
           }}
           title="Fit to Screen (Shift+1)"
-          className="px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10 rounded-full transition-colors"
+          className="px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10 rounded-[8px] transition-colors"
         >
           Fit
         </button>

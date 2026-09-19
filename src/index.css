@@ -4,47 +4,85 @@
 
 @layer base {
   :root {
-    --background: 0 0% 4%; /* #0a0a0a Shop Night */
-    --foreground: 45 44% 88%; /* #eee8d5 Cream Light */
+    --background: 210 20% 98%; /* #f8fafc slate-50 */
+    --foreground: 222 47% 11%; /* #0f172a slate-900 */
 
-    --card: 0 0% 6.7%; /* #111111 Night Card */
-    --card-foreground: 45 44% 88%;
+    --card: 0 0% 100%; /* #ffffff Studio Panel */
+    --card-foreground: 222 47% 11%;
 
-    --popover: 0 0% 6.7%; /* #111111 */
-    --popover-foreground: 45 44% 88%;
+    --popover: 0 0% 100%; /* #ffffff */
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 47 79% 59%; /* #e8c547 Stamp Gold */
-    --primary-foreground: 0 0% 4%; /* #0a0a0a */
+    --primary: 222 47% 11%; /* #0f172a neutral slate-900 */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 7.5%; /* #131313 Night Raised */
-    --secondary-foreground: 45 44% 88%;
+    --secondary: 210 40% 96.1%; /* #f1f5f9 */
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 0 0% 8.6%; /* #161616 Night Muted */
-    --muted-foreground: 30 5% 51%; /* #8a837c Night Ink Soft */
+    --muted: 210 40% 96.1%; /* #f1f5f9 */
+    --muted-foreground: 215 16% 47%; /* #64748b slate-500 */
 
-    --accent: 0 0% 8.6%; /* #161616 */
-    --accent-foreground: 45 44% 88%;
+    --accent: 210 40% 96.1%; /* #f1f5f9 */
+    --accent-foreground: 222 47% 11%;
 
-    --destructive: 0 84% 60%; /* #ef4444 Alert Red */
-    --destructive-foreground: 30 100% 97%;
+    --destructive: 0 84% 60%; /* #ef4444 */
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 13.3%; /* #222222 Night Line */
-    --input: 0 0% 13.3%; /* #222222 */
-    --ring: 47 79% 59%; /* #e8c547 Stamp Gold */
+    --border: 214 32% 91%; /* #e2e8f0 slate-200 */
+    --input: 214 32% 91%; /* #e2e8f0 */
+    --ring: 222 47% 11%;
 
-    /* Stashq Semantic Studio Highlight Accent */
-    --highlight: 47 79% 59%; /* #e8c547 Stamp Gold */
-    --highlight-soft: 40 40% 93%; /* #f5f0e8 Cartridge Cream */
-    --highlight-foreground: 0 0% 4%;
+    /* Highlight Accents - Clean Neutral */
+    --highlight: 222 47% 11%;
+    --highlight-soft: 210 40% 96.1%;
+    --highlight-foreground: 0 0% 100%;
 
-    --radius: 0.625rem; /* 10px derived radius scale */
+    --canvas-dot: rgba(15, 23, 42, 0.08);
+
+    --radius: 0.75rem; /* 12px base radius */
+  }
+
+  .dark {
+    --background: 240 10% 4%; /* #09090b */
+    --foreground: 0 0% 98%;
+
+    --card: 240 6% 8%; /* #141417 */
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 6% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+
+    --secondary: 240 4% 14%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 240 4% 14%;
+    --muted-foreground: 240 5% 65%;
+
+    --accent: 240 4% 14%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 4% 18%;
+    --input: 240 4% 18%;
+    --ring: 0 0% 98%;
+
+    --canvas-dot: rgba(255, 255, 255, 0.06);
+
+    --highlight: 0 0% 98%;
+    --highlight-soft: 240 4% 14%;
+    --highlight-foreground: 240 5.9% 10%;
   }
 }
 
 /* Custom minimal scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -52,12 +90,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: rgba(100, 116, 139, 0.2);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: rgba(100, 116, 139, 0.4);
 }
 
 /* Prevent image and text dragging when editing canvas */
@@ -65,3 +103,123 @@ img, svg {
   user-select: none;
   -webkit-user-drag: none;
 }
+
+/* Interactive preset preview keyframes */
+@keyframes preview-pop {
+  0% { transform: scale(0.6); opacity: 0.2; }
+  70% { transform: scale(1.18); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes preview-grow {
+  0% { transform: scale(0.5); opacity: 0.3; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes preview-shrink {
+  0% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.75); opacity: 0.6; }
+}
+
+@keyframes preview-slide-up {
+  0% { transform: translateY(12px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes preview-slide-down {
+  0% { transform: translateY(-12px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes preview-fade {
+  0% { opacity: 0.1; }
+  100% { opacity: 1; }
+}
+
+@keyframes preview-blur {
+  0% { filter: blur(5px); opacity: 0.2; }
+  100% { filter: blur(0px); opacity: 1; }
+}
+
+@keyframes preview-spin {
+  0% { transform: rotate(0deg) scale(0.7); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes preview-twist {
+  0% { transform: rotate(-45deg) scale(0.7); }
+  70% { transform: rotate(15deg) scale(1.1); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
+@keyframes preview-flip-x {
+  0% { transform: perspective(300px) rotateX(85deg); opacity: 0; }
+  100% { transform: perspective(300px) rotateX(0deg); opacity: 1; }
+}
+
+@keyframes preview-flip-y {
+  0% { transform: perspective(300px) rotateY(85deg); opacity: 0; }
+  100% { transform: perspective(300px) rotateY(0deg); opacity: 1; }
+}
+
+@keyframes preview-drop-in {
+  0% { transform: translateY(-16px) scale(1.2); opacity: 0; }
+  70% { transform: translateY(3px) scale(0.95); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.group:hover .anim-preview-pop {
+  animation: preview-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate;
+}
+.group:hover .anim-preview-grow {
+  animation: preview-grow 0.6s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+}
+.group:hover .anim-preview-shrink {
+  animation: preview-shrink 0.6s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+}
+.group:hover .anim-preview-slide-up {
+  animation: preview-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+}
+.group:hover .anim-preview-slide-down {
+  animation: preview-slide-down 0.6s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+}
+.group:hover .anim-preview-fade {
+  animation: preview-fade 0.6s ease-in-out infinite alternate;
+}
+.group:hover .anim-preview-blur {
+  animation: preview-blur 0.6s ease-out infinite alternate;
+}
+.group:hover .anim-preview-spin {
+  animation: preview-spin 0.8s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+}
+.group:hover .anim-preview-twist {
+  animation: preview-twist 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate;
+}
+.group:hover .anim-preview-flip-x {
+  animation: preview-flip-x 0.7s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+}
+.group:hover .anim-preview-flip-y {
+  animation: preview-flip-y 0.7s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+}
+.group:hover .anim-preview-drop-in {
+  animation: preview-drop-in 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) infinite alternate;
+}
+
+/* Theatre.js Studio GUI docking & containment */
+#theatrejs-studio-root:not(.theatre-visible),
+.theatrejs-studio-root:not(.theatre-visible) {
+  display: none !important;
+}
+
+#theatrejs-studio-root.theatre-visible,
+.theatrejs-studio-root.theatre-visible {
+  top: 48px !important;
+  max-height: calc(100vh - 48px) !important;
+  z-index: 45 !important;
+}
+
+#theatrejs-studio-root * {
+  font-family: inherit;
+}
+
+

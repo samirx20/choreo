@@ -1,48 +1,61 @@
 /**
- * Centralized Design System Tokens for Motion Studio / Choreo
+ * Centralized Design System Tokens for Motion Studio
  * 
  * Single source of truth for brand accents, typography hierarchy,
- * and UI component colors. Changing a color here updates all
- * AST defaults, canvas components, and tools automatically.
+ * and UI component colors. Inspired by Linear, Figma UI3, and Teenage Engineering.
  */
 
 export const THEME_TOKENS = {
-  // Stashq Brand Accents (The Workshop at Night)
+  // Brand & Functional Accents (Clean, authoritative neutral tool system)
   accent: {
-    // Primary action stamp: Stamp Gold
-    primary: "#e8c547",
-    primaryHover: "#dcb737",
-    primaryForeground: "#0a0a0a",
-    primaryMuted: "rgba(232, 197, 71, 0.15)",
+    primary: "#0f172a", // Slate 900
+    primaryHover: "#1e293b",
+    primaryForeground: "#ffffff",
+    primaryMuted: "rgba(15, 23, 42, 0.08)",
     
     // Highlight accents
-    highlight: "#e8c547", // Stamp Gold
-    highlightSoft: "#f5f0e8", // Cartridge Cream
-    highlightWarm: "#dcb737",
+    highlight: "#0f172a",
+    highlightSoft: "#f1f5f9",
+    highlightWarm: "#d97706",
     
     // Semantic
     alertRed: "#ef4444",
-    goodGreen: "#34d399",
+    goodGreen: "#10b981",
   },
 
-  // Stashq Typography defaults
+  // Typography defaults
   typography: {
-    headingColor: "#eee8d5", // Cream Light (warm off-white ink)
-    subheadingColor: "#e8c547", // Stamp Gold
-    accentTextColor: "#f5f0e8", // Cartridge Cream
-    bodyColor: "#eee8d5", // Cream Light
-    mutedColor: "#8a837c", // Night Ink Soft (4.84:1 contrast)
+    headingColor: "#0f172a", // Slate 900
+    subheadingColor: "#475569", // Slate 600
+    accentTextColor: "#0f172a",
+    bodyColor: "#334155", // Slate 700
+    mutedColor: "#64748b", // Slate 500
   },
 
-  // Stashq Surfaces & Layout (The Workshop at Night)
+  // Creative Tool Neutral Surfaces (Light Mode)
   surfaces: {
-    appBackground: "#0a0a0a", // Shop Night
-    panelBackground: "#111111", // Night Card
-    cardBackground: "#131313", // Night Raised
-    mutedBackground: "#161616", // Night Muted
-    border: "#222222", // Night Line (hairline rules)
-    cardBorder: "#222222",
-    canvasGridDot: "rgba(238, 232, 213, 0.08)",
+    void: "#f1f5f9", // Pasteboard background
+    pasteboard: "#e2e8f0", // Canvas infinite workspace
+    appBackground: "#f8fafc",
+    panelBackground: "#ffffff", // Studio Panels (Sidebars, Header, Timeline)
+    cardBackground: "#f8fafc", // Raised cards
+    mutedBackground: "#f1f5f9", // Inputs, scrub pills
+    input: "#ffffff", // Explicit input surface
+    popover: "#ffffff", // Context menus & dropdowns
+    border: "#e2e8f0", // Hairline 1px rules
+    borderHairline: "#e2e8f0",
+    borderHover: "#cbd5e1",
+    cardBorder: "#e2e8f0",
+    canvasGridDot: "rgba(0, 0, 0, 0.08)",
+  },
+
+  // Canonical Studio Dimensions
+  dimensions: {
+    headerHeight: 40,
+    leftSidebarWidth: 240,
+    rightInspectorWidth: 260,
+    sequencerHeight: 210,
+    toolbarHeight: 44,
   },
 } as const;
 

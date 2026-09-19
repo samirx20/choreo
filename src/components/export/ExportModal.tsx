@@ -10,6 +10,9 @@ import {
 } from "lucide-react";
 import { useProjectStore } from "@/store/useProjectStore";
 import { exportMotionBundle } from "@/engine/bundle";
+import { getActivePixiStage } from "@/engine/pixi/pixiRegistry";
+import { videoExporter } from "@/engine/export/videoExporter";
+import { HeadlessRenderStage } from "@/engine/export/HeadlessRenderStage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -19,12 +22,17 @@ interface ExportModalProps {
 }
 
 export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => {
-  const { document: doc } = useProjectStore();
+  const { document: doc, activeScreenId } = useProjectStore();
   const [format, setFormat] = useState<"motion" | "webm" | "gif">("motion");
   const [fps, setFps] = useState<30 | 60>(60);
   const [resolution, setResolution] = useState<"1080p" | "9:16" | "1:1">("1080p");
   const [isExporting, setIsExporting] = useState(false);
   const [isDone, setIsDone] = useState(false);
+  const [exportProgress, setExportProgress] = useState<{
+    currentFrame: number;
+    totalFrames: number;
+    percent: number;
+  } | null>(null);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -40,17 +48,44 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
   const handleExport = async () => {
     setIsExporting(true);
     setIsDone(false);
+    setExportProgress(null);
 
     try {
       if (format === "motion") {
         await exportMotionBundle(doc);
         setIsDone(true);
       } else {
-        // Simulated web rendering pipeline before Tauri native FFmpeg bundling
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        // Fallback export bundle
-        await exportMotionBundle(doc);
-        setIsDone(true);
+        const activeScreen =
+          doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
+        let stage = getActivePixiStage();
+        let headlessStage: HeadlessRenderStage | null = null;
+
+        if (!stage) {
+          headlessStage = new HeadlessRenderStage();
+          stage = await headlessStage.init(doc.settings);
+        }
+
+        try {
+          const videoBlob = await videoExporter.exportVideo({
+            pixiStage: stage,
+            screen: activeScreen,
+            settings: doc.settings,
+            format: "webm",
+            fps,
+            onProgress: (p) => setExportProgress(p),
+          });
+          const url = URL.createObjectURL(videoBlob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `motion_export_${Date.now()}.${format === "webm" ? "webm" : "mp4"}`;
+          a.click();
+          URL.revokeObjectURL(url);
+          setIsDone(true);
+        } finally {
+          if (headlessStage) {
+            headlessStage.destroy();
+          }
+        }
       }
     } catch (err) {
       console.error("Export error:", err);
@@ -58,6 +93,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
       setIsExporting(false);
     }
   };
+
 
   return (
     <div
@@ -168,6 +204,24 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
             </div>
           </div>
         </div>
+
+        {/* Rendering Frame Progress Bar */}
+        {isExporting && exportProgress && (
+          <div className="space-y-1.5 bg-secondary/60 p-3 rounded-xl border border-border text-xs">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+              <span className="font-medium text-foreground">Rendering Video Frames...</span>
+              <span className="font-mono">
+                Frame {exportProgress.currentFrame} / {exportProgress.totalFrames} ({exportProgress.percent}%)
+              </span>
+            </div>
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all duration-100"
+                style={{ width: `${exportProgress.percent}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Status or Button */}
         {isDone ? (

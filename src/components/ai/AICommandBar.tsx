@@ -20,6 +20,8 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
     addLayer,
     removeLayer,
     undo,
+    startTransaction,
+    commitTransaction,
   } = useProjectStore();
 
   const [prompt, setPrompt] = useState("");
@@ -46,6 +48,7 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
     const query = text.toLowerCase().trim();
     if (!query) return;
 
+    startTransaction();
     let appliedDescription = "";
 
     // 1. Stagger / Pop in instruction
@@ -151,7 +154,8 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
       }
     }
 
-    setToastMessage(`AI Applied: ${appliedDescription || "Requested changes"}`);
+    commitTransaction();
+    setToastMessage(`Applied AI generation: ${appliedDescription || "Requested changes"}`);
     setPrompt("");
     onClose();
 

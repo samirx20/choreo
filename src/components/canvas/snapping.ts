@@ -10,10 +10,9 @@ export interface SnappingResult {
   guides: SnapGuide[];
 }
 
-const SNAP_THRESHOLD = 8; // Snap within 8 pixels
-
 /**
  * Calculates magnetic snapping for a dragged layer against canvas boundaries and siblings.
+ * Snapping threshold is normalized by effectiveScale to ensure invariant screen-space radius (8px).
  */
 export function calculateSnapping(
   targetX: number,
@@ -22,8 +21,10 @@ export function calculateSnapping(
   targetHeight: number,
   canvasWidth: number,
   canvasHeight: number,
-  siblingBoxes: { x: number; y: number; width: number; height: number }[]
+  siblingBoxes: { x: number; y: number; width: number; height: number }[],
+  effectiveScale = 1.0
 ): SnappingResult {
+  const SNAP_THRESHOLD = 8 / Math.max(effectiveScale, 0.001);
   let snappedX = targetX;
   let snappedY = targetY;
   const guides: SnapGuide[] = [];
@@ -96,6 +97,72 @@ export function calculateSnapping(
     } else if (Math.abs(targetCenterY - siblingCenterY) < SNAP_THRESHOLD) {
       snappedY = siblingCenterY - targetHeight / 2;
       guides.push({ type: "horizontal", position: siblingCenterY });
+    }
+  }
+
+  // 3. Equidistant Distribution & Distance Badges
+  if (siblingBoxes.length >= 2) {
+    for (let i = 0; i < siblingBoxes.length; i++) {
+      for (let j = i + 1; j < siblingBoxes.length; j++) {
+        const b1 = siblingBoxes[i];
+        const b2 = siblingBoxes[j];
+
+        // Horizontal equidistant spacing: b1 on left, target in middle, b2 on right
+        const leftBox = b1.x < b2.x ? b1 : b2;
+        const rightBox = b1.x < b2.x ? b2 : b1;
+        const leftEdge = leftBox.x + leftBox.width;
+        const rightEdge = rightBox.x;
+
+        if (targetX >= leftEdge && targetRight <= rightEdge) {
+          const availableSpace = rightEdge - leftEdge - targetWidth;
+          if (availableSpace > 0) {
+            const equalGap = availableSpace / 2;
+            const targetEquidistantX = leftEdge + equalGap;
+            if (Math.abs(targetX - targetEquidistantX) < SNAP_THRESHOLD) {
+              snappedX = targetEquidistantX;
+              const roundedGap = Math.round(equalGap);
+              guides.push({
+                type: "vertical",
+                position: leftEdge,
+                label: `${roundedGap}px`,
+              });
+              guides.push({
+                type: "vertical",
+                position: rightEdge,
+                label: `${roundedGap}px`,
+              });
+            }
+          }
+        }
+
+        // Vertical equidistant spacing: topBox above, target in middle, bottomBox below
+        const topBox = b1.y < b2.y ? b1 : b2;
+        const bottomBox = b1.y < b2.y ? b2 : b1;
+        const topEdge = topBox.y + topBox.height;
+        const bottomEdge = bottomBox.y;
+
+        if (targetY >= topEdge && targetBottom <= bottomEdge) {
+          const availableSpace = bottomEdge - topEdge - targetHeight;
+          if (availableSpace > 0) {
+            const equalGap = availableSpace / 2;
+            const targetEquidistantY = topEdge + equalGap;
+            if (Math.abs(targetY - targetEquidistantY) < SNAP_THRESHOLD) {
+              snappedY = targetEquidistantY;
+              const roundedGap = Math.round(equalGap);
+              guides.push({
+                type: "horizontal",
+                position: topEdge,
+                label: `${roundedGap}px`,
+              });
+              guides.push({
+                type: "horizontal",
+                position: bottomEdge,
+                label: `${roundedGap}px`,
+              });
+            }
+          }
+        }
+      }
     }
   }
 
