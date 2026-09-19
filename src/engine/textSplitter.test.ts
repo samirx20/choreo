@@ -30,7 +30,7 @@ describe("Text Splitter Engine (0px Visual Shift Guarantee)", () => {
     expect(group.type).toBe("group");
     expect(group.style.x).toBe(baseTextLayer.style.x);
     expect(group.style.y).toBe(baseTextLayer.style.y);
-    expect(group.layout.flexDirection).toBe("column");
+    expect(group.layout?.flexDirection).toBe("column");
     expect(group.autoFit).toBe(true);
 
     // Should have split into 3 chunks by commas/exclamation
@@ -49,8 +49,8 @@ describe("Text Splitter Engine (0px Visual Shift Guarantee)", () => {
     const wordGroup = splitTextIntoWords(baseTextLayer);
 
     expect(wordGroup.type).toBe("group");
-    expect(wordGroup.layout.flexDirection).toBe("row");
-    expect(wordGroup.layout.flexWrap).toBe("wrap");
+    expect(wordGroup.layout?.flexDirection).toBe("row");
+    expect(wordGroup.layout?.flexWrap).toBe("wrap");
     expect(wordGroup.autoFit).toBe(true);
     expect(wordGroup.children.length).toBe(10);
     expect((wordGroup.children[0] as any).content).toBe("Hey");

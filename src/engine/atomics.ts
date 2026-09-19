@@ -49,7 +49,7 @@ export function compileTransform(state: TransformState): string {
 }
 
 // 1. Move
-export function evalMove(
+function evalMove(
   progress: number,
   startX: number,
   startY: number,
@@ -63,7 +63,7 @@ export function evalMove(
 }
 
 // 2. Scale
-export function evalScale(
+function evalScale(
   progress: number,
   startScale: number,
   endScale: number
@@ -72,7 +72,7 @@ export function evalScale(
 }
 
 // 3. Rotate
-export function evalRotate(
+function evalRotate(
   progress: number,
   startAngle: number,
   endAngle: number
@@ -81,7 +81,7 @@ export function evalRotate(
 }
 
 // 4. Opacity
-export function evalOpacity(
+function evalOpacity(
   progress: number,
   startOpacity: number,
   endOpacity: number
@@ -90,7 +90,7 @@ export function evalOpacity(
 }
 
 // 5. Blur
-export function evalBlur(
+function evalBlur(
   progress: number,
   startBlur: number,
   endBlur: number
@@ -116,7 +116,7 @@ function hexToRgba(hex: string): [number, number, number, number] {
   return [(num >> 16) & 255, (num >> 8) & 255, num & 255, 1];
 }
 
-export function evalColor(
+function evalColor(
   progress: number,
   startColor: string,
   endColor: string
@@ -135,7 +135,7 @@ export function evalColor(
 }
 
 // 7. Shadow
-export function evalShadow(
+function evalShadow(
   progress: number,
   startBlur: number,
   endBlur: number,

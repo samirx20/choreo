@@ -5,13 +5,29 @@ import { TextLayer, GroupLayer, ChunkLayer, Layer } from "@/types/scene";
  */
 export function splitTextIntoChunks(layer: TextLayer): GroupLayer {
   const rawText = layer.content;
-  // Split by newlines or punctuation delimiters (commas, periods, question marks)
-  const segments = rawText
-    .split(/(?<=[,\.\?!])\s+|\n+/)
+  // Split by newlines or punctuation delimiters (commas, periods, question marks, colons, semicolons)
+  let segments = rawText
+    .split(/(?<=[,\.\?!;:])\s+|\n+/)
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const chunks: ChunkLayer[] = (segments.length > 1 ? segments : [rawText]).map(
+  if (segments.length <= 1 && typeof Intl !== "undefined" && (Intl as any).Segmenter) {
+    try {
+      const segmenter = new (Intl as any).Segmenter(undefined, { granularity: "sentence" });
+      const segs: string[] = [];
+      for (const item of segmenter.segment(rawText)) {
+        const trimmed = item.segment.trim();
+        if (trimmed) segs.push(trimmed);
+      }
+      if (segs.length > 1) segments = segs;
+    } catch {
+      // Ignore and fallback
+    }
+  }
+
+  const finalSegments = segments.length > 1 ? segments : [rawText];
+
+  const chunks: ChunkLayer[] = finalSegments.map(
     (chunkText, idx) => ({
       id: `chunk_${Date.now()}_${idx}`,
       name: chunkText,
@@ -33,10 +49,10 @@ export function splitTextIntoChunks(layer: TextLayer): GroupLayer {
       },
       animation: {
         in: {
-          preset: idx === 0 ? "pop" : idx === 1 ? "slideUp" : "blurIn",
-          start: idx * 0.4,
+          preset: "pop",
+          start: idx * 0.15,
           duration: 0.6,
-          easing: "smooth",
+          easing: "bouncy",
         },
       },
     })
@@ -80,7 +96,27 @@ export function splitTextIntoChunks(layer: TextLayer): GroupLayer {
  * Splits a text layer into individual words in a flex-row wrap container.
  */
 export function splitTextIntoWords(layer: TextLayer): GroupLayer {
-  const words = layer.content.split(/\s+/).filter(Boolean);
+  let words: string[] = [];
+
+  if (typeof Intl !== "undefined" && (Intl as any).Segmenter) {
+    try {
+      const segmenter = new (Intl as any).Segmenter(undefined, { granularity: "word" });
+      for (const item of segmenter.segment(layer.content)) {
+        if (item.isWordLike) {
+          words.push(item.segment);
+        }
+      }
+    } catch {
+      // Ignore and fallback
+    }
+  }
+
+  if (words.length === 0) {
+    words = layer.content.split(/\s+/).filter(Boolean);
+  }
+
+  const fontSize = typeof layer.style.fontSize === "number" ? layer.style.fontSize : 48;
+  const wordGap = Math.max(6, Math.round(fontSize * 0.28));
 
   const chunks: ChunkLayer[] = words.map((word, idx) => ({
     id: `word_${Date.now()}_${idx}`,
@@ -118,7 +154,7 @@ export function splitTextIntoWords(layer: TextLayer): GroupLayer {
       display: "flex",
       flexDirection: "row",
       flexWrap: "wrap",
-      gap: 10,
+      gap: wordGap,
       align: "center",
       justifyContent:
         layer.style.textAlign === "left"
@@ -144,3 +180,4 @@ export function splitTextIntoWords(layer: TextLayer): GroupLayer {
 
   return group;
 }
+

@@ -35,4 +35,29 @@ describe(".motion Bundle Archive Fidelity", () => {
       INITIAL_SCENE.screens[0].layers.length
     );
   });
+
+  it("packs registered assets from assetManager and restores them on unpack", async () => {
+    const { assetManager } = await import("@/engine/assets/assetManager");
+    const { importMotionBundle } = await import("@/engine/bundle");
+
+    assetManager.clear();
+    const fakeBlob = new Blob(["fake-image-content"], { type: "image/png" });
+    const entry = assetManager.register(fakeBlob, "logo.png");
+    expect(assetManager.getAll().length).toBe(1);
+
+    const zip = new JSZip();
+    zip.file("scene.json", JSON.stringify(INITIAL_SCENE, null, 2));
+    zip.file(`assets/images/${entry.id}_${entry.name}`, fakeBlob);
+
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const file = new File([zipBlob], "test.motion");
+
+    assetManager.clear();
+    expect(assetManager.getAll().length).toBe(0);
+
+    const doc = await importMotionBundle(file);
+    expect(doc.version).toBe(INITIAL_SCENE.version);
+    expect(assetManager.getAll().length).toBe(1);
+    expect(assetManager.get(entry.id)?.name).toBe("logo.png");
+  });
 });
