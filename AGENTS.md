@@ -263,7 +263,14 @@ Refer to the primary architectural and implementation documents:
 1. **Always preserve state determinism**: Time $t$ must always render the exact same frame. Never use non-deterministic timers (`Date.now()`) inside the render loop.
 2. **Respect the Single Source of Truth**: Any GUI modification must update `scene.json`, and any MCP tool call must update `scene.json`. Do not introduce divergent state.
 3. **Keep Presets Composable**: Avoid writing monolithic hardcoded CSS files for every animation. Build upon the 8 atomic actions and easing curves.
-4. **Follow the Design Language**: Use Jitter's dark-mode color palette (zinc-900 backgrounds, zinc-800 cards, crisp typography, clean accent highlights) with **shadcn/ui** components.
+4. **Follow the Design Language**: Creative Desktop Tool standards—Light Mode first-class default with neutral slate surfaces, clean border contrasts, `rounded-[20px]` docks and `rounded-[12px]` cards, no loud SaaS gradients. Neutral dark mode available via top-bar toggle.
 5. **Continuous Documentation Synchronization**: Whenever new features, architectural decisions, UI panels, default behaviors, or data models are introduced or modified, the AI agent must immediately update `AGENTS.md` and the relevant specification documents in `docs/`. Documentation must never lag behind the implementation.
 6. **Implementation Plan Mirroring**: Any implementation plan or phased technical roadmap produced during development must always be saved and kept updated directly in `docs/IMPLEMENTATION_PLAN.md` with clear phase breakdowns and verification milestones.
+7. **Continuous & Frequent Git Commits (Software Engineering Fundamentals)**:
+   - **Commit Early & Often**: Never accumulate large backlogs of uncommitted code across multiple turns.
+   - **Atomic Semantic Commits**: As soon as a logical unit of work passes verification (e.g. a feature phase, bugfix, refactor, or test suite addition), create an atomic commit with conventional commit format (`feat:`, `fix:`, `refactor:`, `test:`, `chore:`).
+   - **Always Push to Remote**: After completing a task or milestone, immediately push your commits to GitHub (`git push origin <branch>`). Do not leave commits unpushed.
+8. **Forensic Codebase Hygiene & Dead-Code Prevention**:
+   - Never commit or leave temporary scratch scripts (e.g. `reproduce_*.js`, `verify_*.js`), debug logs, or root screenshot dumps on disk.
+   - Run `npx fallow dead-code` to guarantee zero unused files, zero unreferenced dependencies, zero circular dependencies, and zero dead exports.
 
