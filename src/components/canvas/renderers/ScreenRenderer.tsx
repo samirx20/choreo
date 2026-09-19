@@ -77,73 +77,73 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
   return (
     <div className="relative select-none">
       {/* Figma-Style Artboard Header with 1-Click Screen Format Switcher & Guides & Send to Motion */}
-      <div className="absolute -top-7 left-0 right-0 flex items-center justify-between text-[11px] font-medium text-[#8a8a98] z-20">
+      <div className="absolute -top-7 left-0 right-0 flex items-center justify-between text-[11px] font-medium text-muted-foreground z-20">
         <div className="flex items-center gap-2">
-          <span className="text-[#a1a1aa] font-medium">{screen.name}</span>
-          <span className="text-[#3f3f46]">•</span>
+          <span className="text-foreground font-medium">{screen.name}</span>
+          <span className="text-muted-foreground/60">•</span>
 
           {/* Aspect Ratio Format Switcher Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-[#18181b]/80 hover:bg-[#27272a] text-[#d4d4d8] hover:text-white border border-[#27272a] text-[10px] font-mono transition-colors shadow-xs"
+                className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-card/90 hover:bg-muted text-foreground border border-border text-[10px] font-mono transition-colors shadow-xs"
                 title="Click to switch screen aspect ratio"
               >
                 {settings.width > settings.height ? (
                   <Monitor className="h-3 w-3 text-primary" />
                 ) : settings.width < settings.height ? (
-                  <Smartphone className="h-3 w-3 text-amber-400" />
+                  <Smartphone className="h-3 w-3 text-amber-500" />
                 ) : (
-                  <Square className="h-3 w-3 text-cyan-400" />
+                  <Square className="h-3 w-3 text-cyan-500" />
                 )}
                 <span>{getFormatLabel()}</span>
-                <span className="text-[#71717a]">({settings.width}×{settings.height})</span>
-                <ChevronDown className="h-2.5 w-2.5 text-[#71717a]" />
+                <span className="text-muted-foreground">({settings.width}×{settings.height})</span>
+                <ChevronDown className="h-2.5 w-2.5 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent className="bg-[#18181b] border-[#27272a] text-xs text-[#d4d4d8] shadow-2xl p-1 w-56">
+            <DropdownMenuContent className="bg-popover border-border text-xs text-popover-foreground shadow-2xl p-1 w-56">
               <DropdownMenuItem
                 onClick={() => updateSettings({ width: 1920, height: 1080 })}
-                className="flex items-center gap-2.5 py-1.5 cursor-pointer text-[#d4d4d8] hover:text-white"
+                className="flex items-center gap-2.5 py-1.5 cursor-pointer rounded-[6px] hover:bg-accent hover:text-accent-foreground"
               >
                 <Monitor className="h-3.5 w-3.5 text-primary" />
                 <div className="flex flex-col">
                   <span className="font-medium">16:9 Landscape</span>
-                  <span className="text-[10px] text-[#71717a] font-mono">1920 × 1080 (YouTube, Desktop)</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">1920 × 1080 (YouTube, Desktop)</span>
                 </div>
               </DropdownMenuItem>
 
               <DropdownMenuItem
                 onClick={() => updateSettings({ width: 1080, height: 1920 })}
-                className="flex items-center gap-2.5 py-1.5 cursor-pointer text-[#d4d4d8] hover:text-white"
+                className="flex items-center gap-2.5 py-1.5 cursor-pointer rounded-[6px] hover:bg-accent hover:text-accent-foreground"
               >
-                <Smartphone className="h-3.5 w-3.5 text-amber-400" />
+                <Smartphone className="h-3.5 w-3.5 text-amber-500" />
                 <div className="flex flex-col">
                   <span className="font-medium">9:16 Portrait</span>
-                  <span className="text-[10px] text-[#71717a] font-mono">1080 × 1920 (TikTok, Reels, Shorts)</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">1080 × 1920 (TikTok, Reels, Shorts)</span>
                 </div>
               </DropdownMenuItem>
 
               <DropdownMenuItem
                 onClick={() => updateSettings({ width: 1080, height: 1080 })}
-                className="flex items-center gap-2.5 py-1.5 cursor-pointer text-[#d4d4d8] hover:text-white"
+                className="flex items-center gap-2.5 py-1.5 cursor-pointer rounded-[6px] hover:bg-accent hover:text-accent-foreground"
               >
-                <Square className="h-3.5 w-3.5 text-cyan-400" />
+                <Square className="h-3.5 w-3.5 text-cyan-500" />
                 <div className="flex flex-col">
                   <span className="font-medium">1:1 Square</span>
-                  <span className="text-[10px] text-[#71717a] font-mono">1080 × 1080 (Post, Feed)</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">1080 × 1080 (Post, Feed)</span>
                 </div>
               </DropdownMenuItem>
 
               <DropdownMenuItem
                 onClick={() => updateSettings({ width: 1080, height: 1350 })}
-                className="flex items-center gap-2.5 py-1.5 cursor-pointer text-[#d4d4d8] hover:text-white"
+                className="flex items-center gap-2.5 py-1.5 cursor-pointer rounded-[6px] hover:bg-accent hover:text-accent-foreground"
               >
-                <Smartphone className="h-3.5 w-3.5 text-pink-400" />
+                <Smartphone className="h-3.5 w-3.5 text-pink-500" />
                 <div className="flex flex-col">
                   <span className="font-medium">4:5 Social</span>
-                  <span className="text-[10px] text-[#71717a] font-mono">1080 × 1350 (Instagram Feed)</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">1080 × 1350 (Instagram Feed)</span>
                 </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -155,89 +155,89 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
               <button
                 className={`flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-mono transition-colors shadow-xs ${
                   hasActiveGuides
-                    ? "bg-primary/15 text-primary border-primary/40 font-semibold"
-                    : "bg-[#18181b]/80 hover:bg-[#27272a] text-[#d4d4d8] hover:text-white border-[#27272a]"
+                    ? "bg-primary text-primary-foreground border-primary font-semibold"
+                    : "bg-card/90 hover:bg-muted text-foreground border-border"
                 }`}
                 title="Toggle Safe-Zone Overlays and Framing Guides"
               >
                 <Grid className="h-3 w-3" />
                 <span>Guides</span>
-                <ChevronDown className="h-2.5 w-2.5 text-[#71717a]" />
+                <ChevronDown className="h-2.5 w-2.5 text-muted-foreground" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-[#18181b] border-[#27272a] text-xs text-[#d4d4d8] shadow-2xl p-1.5 w-60">
-              <div className="text-[10px] font-semibold text-[#71717a] uppercase tracking-wider px-2 py-1">
+            <DropdownMenuContent className="bg-popover border-border text-xs text-popover-foreground shadow-2xl p-1.5 w-60">
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">
                 Video Framing & Safe Zones
               </div>
               <DropdownMenuItem
                 onClick={() => toggleSafeZone("actionSafe")}
-                className="flex items-center justify-between py-1.5 px-2 cursor-pointer text-[#d4d4d8] hover:text-white"
+                className="flex items-center justify-between py-1.5 px-2 cursor-pointer rounded-[6px] hover:bg-accent hover:text-accent-foreground"
               >
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${safeZones.actionSafe ? "bg-green-500" : "bg-neutral-600"}`} />
+                  <div className={`w-2 h-2 rounded-full ${safeZones.actionSafe ? "bg-green-500" : "bg-muted-foreground/40"}`} />
                   <span>Action Safe (90%)</span>
                 </div>
-                <span className="text-[10px] font-mono text-[#71717a]">{safeZones.actionSafe ? "ON" : "OFF"}</span>
+                <span className="text-[10px] font-mono text-muted-foreground">{safeZones.actionSafe ? "ON" : "OFF"}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => toggleSafeZone("titleSafe")}
-                className="flex items-center justify-between py-1.5 px-2 cursor-pointer text-[#d4d4d8] hover:text-white"
+                className="flex items-center justify-between py-1.5 px-2 cursor-pointer rounded-[6px] hover:bg-accent hover:text-accent-foreground"
               >
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${safeZones.titleSafe ? "bg-amber-400" : "bg-neutral-600"}`} />
+                  <div className={`w-2 h-2 rounded-full ${safeZones.titleSafe ? "bg-amber-500" : "bg-muted-foreground/40"}`} />
                   <span>Title Safe (80%)</span>
                 </div>
-                <span className="text-[10px] font-mono text-[#71717a]">{safeZones.titleSafe ? "ON" : "OFF"}</span>
+                <span className="text-[10px] font-mono text-muted-foreground">{safeZones.titleSafe ? "ON" : "OFF"}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => toggleSafeZone("ruleOfThirds")}
-                className="flex items-center justify-between py-1.5 px-2 cursor-pointer text-[#d4d4d8] hover:text-white"
+                className="flex items-center justify-between py-1.5 px-2 cursor-pointer rounded-[6px] hover:bg-accent hover:text-accent-foreground"
               >
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${safeZones.ruleOfThirds ? "bg-cyan-400" : "bg-neutral-600"}`} />
+                  <div className={`w-2 h-2 rounded-full ${safeZones.ruleOfThirds ? "bg-cyan-500" : "bg-muted-foreground/40"}`} />
                   <span>Rule of Thirds</span>
                 </div>
-                <span className="text-[10px] font-mono text-[#71717a]">{safeZones.ruleOfThirds ? "ON" : "OFF"}</span>
+                <span className="text-[10px] font-mono text-muted-foreground">{safeZones.ruleOfThirds ? "ON" : "OFF"}</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => toggleSafeZone("centerCrosshair")}
-                className="flex items-center justify-between py-1.5 px-2 cursor-pointer text-[#d4d4d8] hover:text-white"
+                className="flex items-center justify-between py-1.5 px-2 cursor-pointer rounded-[6px] hover:bg-accent hover:text-accent-foreground"
               >
                 <div className="flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${safeZones.centerCrosshair ? "bg-white" : "bg-neutral-600"}`} />
+                  <div className={`w-2 h-2 rounded-full ${safeZones.centerCrosshair ? "bg-foreground" : "bg-muted-foreground/40"}`} />
                   <span>Center Crosshair</span>
                 </div>
-                <span className="text-[10px] font-mono text-[#71717a]">{safeZones.centerCrosshair ? "ON" : "OFF"}</span>
+                <span className="text-[10px] font-mono text-muted-foreground">{safeZones.centerCrosshair ? "ON" : "OFF"}</span>
               </DropdownMenuItem>
 
-              <div className="border-t border-[#27272a] my-1" />
-              <div className="text-[10px] font-semibold text-[#71717a] uppercase tracking-wider px-2 py-1">
+              <div className="border-t border-border my-1" />
+              <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-2 py-1">
                 Social UI Exclusion (9:16)
               </div>
               <DropdownMenuItem
                 onClick={() => setSocialOverlay(safeZones.socialOverlay === "tiktok" ? "none" : "tiktok")}
-                className="flex items-center justify-between py-1.5 px-2 cursor-pointer text-[#d4d4d8] hover:text-white"
+                className="flex items-center justify-between py-1.5 px-2 cursor-pointer rounded-[6px] hover:bg-accent hover:text-accent-foreground"
               >
                 <span>TikTok UI Guard</span>
-                <span className="text-[10px] font-mono text-[#71717a]">
+                <span className="text-[10px] font-mono text-muted-foreground">
                   {safeZones.socialOverlay === "tiktok" ? "ACTIVE" : "OFF"}
                 </span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setSocialOverlay(safeZones.socialOverlay === "reels" ? "none" : "reels")}
-                className="flex items-center justify-between py-1.5 px-2 cursor-pointer text-[#d4d4d8] hover:text-white"
+                className="flex items-center justify-between py-1.5 px-2 cursor-pointer rounded-[6px] hover:bg-accent hover:text-accent-foreground"
               >
                 <span>Instagram Reels Guard</span>
-                <span className="text-[10px] font-mono text-[#71717a]">
+                <span className="text-[10px] font-mono text-muted-foreground">
                   {safeZones.socialOverlay === "reels" ? "ACTIVE" : "OFF"}
                 </span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => setSocialOverlay(safeZones.socialOverlay === "shorts" ? "none" : "shorts")}
-                className="flex items-center justify-between py-1.5 px-2 cursor-pointer text-[#d4d4d8] hover:text-white"
+                className="flex items-center justify-between py-1.5 px-2 cursor-pointer rounded-[6px] hover:bg-accent hover:text-accent-foreground"
               >
                 <span>YouTube Shorts Guard</span>
-                <span className="text-[10px] font-mono text-[#71717a]">
+                <span className="text-[10px] font-mono text-muted-foreground">
                   {safeZones.socialOverlay === "shorts" ? "ACTIVE" : "OFF"}
                 </span>
               </DropdownMenuItem>
@@ -252,12 +252,12 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
         style={{
           width: `${settings.width}px`,
           height: `${settings.height}px`,
-          backgroundColor: settings.backgroundColor || "#09090b",
+          backgroundColor: settings.backgroundColor || "#000000",
           position: "relative",
           overflow: isMotionMode(uiMode) ? "hidden" : "visible",
           boxShadow: isMotionMode(uiMode)
-            ? "0 0 0 9999px rgba(9, 9, 11, 0.75), 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.2)"
-            : "0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.12)",
+            ? "0 0 0 9999px rgba(0, 0, 0, 0.75), 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.15)"
+            : "0 20px 50px -10px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--border, rgba(0, 0, 0, 0.1))",
         }}
         onClick={(e) => {
           if (e.target === e.currentTarget && onCanvasClick) {

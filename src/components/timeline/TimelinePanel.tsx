@@ -262,18 +262,18 @@ export const TimelinePanel: React.FC = () => {
 
   return (
     <div
-      className="flex flex-col w-full h-[260px] bg-[#f8fafc] dark:bg-slate-900 border-t border-slate-200/80 dark:border-slate-800 select-none text-xs"
+      className="flex flex-col w-full h-[260px] bg-card border-t border-border select-none text-xs"
       data-testid="timeline-panel"
     >
       {/* 1. 36px Modern Transport Control Bar */}
-      <div className="h-9 px-3 flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm z-30">
+      <div className="h-9 px-3 flex items-center justify-between border-b border-border bg-card/95 backdrop-blur-sm z-30">
         {/* Left: Timecode / SMPTE Toggle & Split Button */}
         <div className="flex items-center gap-2">
           <button
             ref={timeDisplayRef}
             type="button"
             onClick={() => setIsSmpte(!isSmpte)}
-            className="px-2 py-0.5 rounded-[6px] font-mono font-semibold text-xs bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+            className="px-2 py-0.5 rounded-[6px] font-mono font-semibold text-xs bg-muted text-foreground hover:bg-muted/80 transition-colors"
             title="Toggle SMPTE Frames / Timecode"
           >
             {isSmpte ? `F${Math.round(currentTime * fps)} / ${totalFrames}` : formatTime(currentTime)}
@@ -290,22 +290,22 @@ export const TimelinePanel: React.FC = () => {
             disabled={selectedLayerIds.length === 0}
             className={`flex items-center gap-1 px-2 py-1 rounded-[6px] text-xs font-medium border transition-colors ${
               selectedLayerIds.length > 0
-                ? "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
-                : "opacity-40 cursor-not-allowed border-transparent text-slate-400"
+                ? "bg-card text-foreground border-border hover:bg-muted"
+                : "opacity-40 cursor-not-allowed border-transparent text-muted-foreground"
             }`}
             title="Razor Cut at Playhead (S)"
           >
-            <Scissors className="w-3.5 h-3.5 text-slate-500" />
+            <Scissors className="w-3.5 h-3.5 text-muted-foreground" />
             <span>Split (S)</span>
           </button>
         </div>
 
         {/* Center: Transport Cluster */}
-        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/90 p-0.5 rounded-[8px] border border-slate-200/60 dark:border-slate-700/60">
+        <div className="flex items-center gap-1 bg-muted p-0.5 rounded-[8px] border border-border">
           <button
             type="button"
             onClick={() => setCurrentTime(Math.max(0, currentTime - 1 / fps))}
-            className="p-1 rounded-[6px] text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-colors"
+            className="p-1 rounded-[6px] text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
             title="Step Back 1 Frame"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
@@ -314,7 +314,7 @@ export const TimelinePanel: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsPlaying(!isPlaying)}
-            className="px-2.5 py-1 rounded-[6px] bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm font-semibold flex items-center gap-1 transition-all"
+            className="px-2.5 py-1 rounded-[6px] bg-primary text-primary-foreground shadow-xs font-semibold flex items-center gap-1 transition-all"
             title="Play / Pause (Space)"
           >
             {isPlaying ? (
@@ -327,7 +327,7 @@ export const TimelinePanel: React.FC = () => {
           <button
             type="button"
             onClick={() => setCurrentTime(Math.min(duration, currentTime + 1 / fps))}
-            className="p-1 rounded-[6px] text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-colors"
+            className="p-1 rounded-[6px] text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
             title="Step Forward 1 Frame"
           >
             <ChevronRight className="w-3.5 h-3.5" />
@@ -342,8 +342,8 @@ export const TimelinePanel: React.FC = () => {
             onClick={() => setIsSnapEnabled(!isSnapEnabled)}
             className={`p-1.5 rounded-[6px] border transition-colors ${
               isSnapEnabled
-                ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 shadow-sm"
-                : "bg-white dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 hover:text-slate-700"
+                ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted"
             }`}
             title="Toggle Magnetic Snapping"
           >
@@ -352,14 +352,14 @@ export const TimelinePanel: React.FC = () => {
 
           {/* Work Area Status */}
           {workArea && (
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 font-mono text-[10px]">
+            <div className="flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-mono text-[10px]">
               <span>
                 [{workArea.start.toFixed(1)}s - {workArea.end.toFixed(1)}s]
               </span>
               <button
                 type="button"
                 onClick={() => setWorkArea(null)}
-                className="hover:text-amber-900 font-bold ml-1"
+                className="hover:text-amber-700 font-bold ml-1"
                 title="Clear Work Area (Shift+B)"
               >
                 ×
@@ -373,8 +373,8 @@ export const TimelinePanel: React.FC = () => {
             onClick={() => setZoomLevel(1)}
             className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-xs font-medium transition-colors ${
               zoomLevel === 1
-                ? "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700"
-                : "bg-white dark:bg-slate-850 text-slate-600 border-slate-200 hover:bg-slate-50"
+                ? "bg-muted text-foreground border-border font-semibold"
+                : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted"
             }`}
             title="Fit to Timeline Viewport"
           >
@@ -390,14 +390,14 @@ export const TimelinePanel: React.FC = () => {
         className="flex-1 overflow-y-auto overflow-x-hidden relative"
       >
         {/* Sticky 28px Time Ruler Row */}
-        <div className="sticky top-0 z-20 flex h-7 bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div className="sticky top-0 z-20 flex h-7 bg-card border-b border-border shadow-xs">
           {/* Header Column Label */}
-          <div className="w-56 shrink-0 sticky left-0 z-30 px-3 flex items-center justify-between border-r border-slate-200/80 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 text-[11px] font-semibold text-slate-500">
+          <div className="w-56 shrink-0 sticky left-0 z-30 px-3 flex items-center justify-between border-r border-border bg-card/95 backdrop-blur-sm text-[11px] font-semibold text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-slate-400" />
+              <Layers className="w-3.5 h-3.5 text-muted-foreground" />
               Layers & Tracks
             </span>
-            <span className="text-[10px] font-mono text-slate-400">
+            <span className="text-[10px] font-mono text-muted-foreground">
               {visibleLayers.length}
             </span>
           </div>
@@ -433,7 +433,7 @@ export const TimelinePanel: React.FC = () => {
               <>
                 {/* Pre-In Scrim */}
                 <div
-                  className="absolute top-0 bottom-0 left-0 bg-slate-900/10 dark:bg-black/30 pointer-events-none"
+                  className="absolute top-0 bottom-0 left-0 bg-primary/10 pointer-events-none"
                   style={{ width: `${(workArea.start / duration) * 100}%` }}
                 />
                 {/* Active Work Area Bracket Span */}
@@ -446,7 +446,7 @@ export const TimelinePanel: React.FC = () => {
                 />
                 {/* Post-Out Scrim */}
                 <div
-                  className="absolute top-0 bottom-0 right-0 bg-slate-900/10 dark:bg-black/30 pointer-events-none"
+                  className="absolute top-0 bottom-0 right-0 bg-primary/10 pointer-events-none"
                   style={{
                     left: `${(workArea.end / duration) * 100}%`,
                     width: `${100 - (workArea.end / duration) * 100}%`,
@@ -467,12 +467,12 @@ export const TimelinePanel: React.FC = () => {
                   <div
                     className={`w-px ${
                       tick.major
-                        ? "h-3 bg-slate-400 dark:bg-slate-500"
-                        : "h-1.5 bg-slate-200 dark:bg-slate-700"
+                        ? "h-3 bg-muted-foreground/60"
+                        : "h-1.5 bg-border"
                     }`}
                   />
                   {tick.label && (
-                    <span className="text-[9px] font-mono text-slate-400 dark:text-slate-500 -translate-x-1/2 mt-0.5">
+                    <span className="text-[9px] font-mono text-muted-foreground -translate-x-1/2 mt-0.5">
                       {tick.label}
                     </span>
                   )}
@@ -486,17 +486,19 @@ export const TimelinePanel: React.FC = () => {
               className="absolute top-0 -translate-x-1/2 pointer-events-none z-40 transition-none"
               style={{ left: `${(currentTime / duration) * 100}%` }}
             >
-              <div className="w-2.5 h-3 bg-slate-900 dark:bg-white rounded-b-sm shadow-md" />
+              <div className="w-2.5 h-3 bg-primary rounded-b-sm shadow-md" />
             </div>
           </div>
         </div>
 
-        {/* Global Vertical Playhead Line across all tracks */}
-        <div
-          ref={playheadLineRef}
-          className="absolute top-7 bottom-0 w-px bg-slate-900 dark:bg-white pointer-events-none z-30 transition-none shadow-[0_0_8px_rgba(15,23,42,0.4)]"
-          style={{ left: `${(currentTime / duration) * 100}%` }}
-        />
+        {/* Global Vertical Playhead Line across all tracks - correctly offset by w-56 (14rem) */}
+        <div className="absolute left-56 right-0 top-7 bottom-0 pointer-events-none overflow-hidden z-30">
+          <div
+            ref={playheadLineRef}
+            className="absolute top-0 bottom-0 w-px bg-primary pointer-events-none transition-none shadow-[0_0_8px_rgba(0,0,0,0.4)]"
+            style={{ left: `${(currentTime / duration) * 100}%` }}
+          />
+        </div>
 
         {/* Track Rows (Left Header + Right Lane) */}
         {visibleLayers.length > 0 ? (
@@ -519,10 +521,10 @@ export const TimelinePanel: React.FC = () => {
               <div
                 key={layer.id}
                 style={{ height: trackHeight }}
-                className={`flex border-b border-slate-200/60 dark:border-slate-800/60 transition-colors ${
+                className={`flex border-b border-border/60 transition-colors ${
                   isSelected
-                    ? "bg-slate-100/70 dark:bg-slate-800/40"
-                    : "hover:bg-slate-50/50 dark:hover:bg-slate-850/30"
+                    ? "bg-muted/70"
+                    : "hover:bg-muted/30"
                 }`}
               >
                 {/* Sticky Left Track Header (Zone B Context Menu) */}
@@ -543,14 +545,14 @@ export const TimelinePanel: React.FC = () => {
                       }),
                     });
                   }}
-                  className={`w-56 shrink-0 sticky left-0 z-10 px-3 flex items-center justify-between border-r border-slate-200/80 dark:border-slate-800 cursor-pointer transition-colors ${
+                  className={`w-56 shrink-0 sticky left-0 z-10 px-3 flex items-center justify-between border-r border-border cursor-pointer transition-colors ${
                     isSelected
-                      ? "bg-slate-100 dark:bg-slate-800 font-semibold text-slate-900 dark:text-white"
-                      : "bg-[#f8fafc] dark:bg-slate-900 text-slate-700 dark:text-slate-300"
+                      ? "bg-muted font-semibold text-foreground"
+                      : "bg-card text-foreground"
                   }`}
                 >
                   <div className="flex items-center gap-2 truncate">
-                    <LayerIcon className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <LayerIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                     <span className="truncate text-xs">{layer.name}</span>
                   </div>
 

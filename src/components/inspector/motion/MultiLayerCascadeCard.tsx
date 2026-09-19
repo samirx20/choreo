@@ -86,14 +86,14 @@ export const MultiLayerCascadeCard: React.FC<MultiLayerCascadeCardProps> = ({
   return (
     <div className="flex flex-col gap-4 p-4 text-xs select-none">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-slate-800">
+      <div className="flex items-center justify-between pb-2 border-b border-border">
         <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-slate-500" />
-          <span className="font-semibold text-slate-900 dark:text-slate-100">
+          <Layers className="w-4 h-4 text-muted-foreground" />
+          <span className="font-semibold text-foreground">
             Multi-Layer Cascade
           </span>
         </div>
-        <span className="text-[10px] font-medium bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-400">
+        <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
           {layerIds.length} layers
         </span>
       </div>
@@ -114,14 +114,14 @@ export const MultiLayerCascadeCard: React.FC<MultiLayerCascadeCardProps> = ({
                 onChange={setStaggerInterval}
               />
             </div>
-            <div className="flex rounded-[8px] bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200/70 dark:border-slate-700">
+            <div className="flex rounded-[8px] bg-muted p-0.5 border border-border">
               <button
                 type="button"
                 onClick={() => setCascadeOrder("top-down")}
                 className={`p-1.5 rounded-[6px] transition-colors ${
                   cascadeOrder === "top-down"
-                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-600"
+                    ? "bg-card text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
                 title="Top to Bottom"
               >
@@ -132,8 +132,8 @@ export const MultiLayerCascadeCard: React.FC<MultiLayerCascadeCardProps> = ({
                 onClick={() => setCascadeOrder("bottom-up")}
                 className={`p-1.5 rounded-[6px] transition-colors ${
                   cascadeOrder === "bottom-up"
-                    ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-600"
+                    ? "bg-card text-foreground shadow-xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
                 title="Bottom to Top"
               >
@@ -145,7 +145,7 @@ export const MultiLayerCascadeCard: React.FC<MultiLayerCascadeCardProps> = ({
           <button
             type="button"
             onClick={handleCascadeStagger}
-            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-[8px] bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-medium hover:bg-slate-800 dark:hover:bg-slate-100 transition-colors shadow-sm"
+            className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-[8px] bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity shadow-xs"
           >
             <Clock className="w-3.5 h-3.5" />
             Cascade Stagger Timings
@@ -159,21 +159,21 @@ export const MultiLayerCascadeCard: React.FC<MultiLayerCascadeCardProps> = ({
           <button
             type="button"
             onClick={() => handleBulkPreset("pop")}
-            className="py-1.5 px-2 rounded-[8px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 font-medium text-center"
+            className="py-1.5 px-2 rounded-[8px] border border-border bg-card text-foreground hover:bg-muted font-medium text-center"
           >
             Pop In
           </button>
           <button
             type="button"
             onClick={() => handleBulkPreset("slideUp")}
-            className="py-1.5 px-2 rounded-[8px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 font-medium text-center"
+            className="py-1.5 px-2 rounded-[8px] border border-border bg-card text-foreground hover:bg-muted font-medium text-center"
           >
             Slide Up
           </button>
           <button
             type="button"
             onClick={() => handleBulkPreset("fade")}
-            className="py-1.5 px-2 rounded-[8px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 font-medium text-center"
+            className="py-1.5 px-2 rounded-[8px] border border-border bg-card text-foreground hover:bg-muted font-medium text-center"
           >
             Fade
           </button>
@@ -185,7 +185,7 @@ export const MultiLayerCascadeCard: React.FC<MultiLayerCascadeCardProps> = ({
         <button
           type="button"
           onClick={handleAlignAllToPlayhead}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-[8px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 font-medium transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-[8px] border border-border bg-card text-foreground hover:bg-muted font-medium transition-colors"
         >
           <Sparkles className="w-3.5 h-3.5" />
           Align All In-Points to Playhead

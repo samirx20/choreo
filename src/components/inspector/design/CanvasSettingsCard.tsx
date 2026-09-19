@@ -47,7 +47,7 @@ export const CanvasSettingsCard: React.FC = () => {
     });
   };
 
-  const currentBg = settings.palette?.[0] || "#ffffff";
+  const currentBg = settings.backgroundColor || "#000000";
 
   return (
     <div className="p-3 space-y-4 text-xs select-none">
@@ -103,9 +103,7 @@ export const CanvasSettingsCard: React.FC = () => {
         <PopoverColorPicker
           color={currentBg}
           onChangeColor={(c) => {
-            const nextPalette = [...(settings.palette || [])];
-            nextPalette[0] = c;
-            updateSettings({ palette: nextPalette });
+            updateSettings({ backgroundColor: c });
           }}
           showOpacity={false}
         />
@@ -116,9 +114,7 @@ export const CanvasSettingsCard: React.FC = () => {
             <button
               key={swatch}
               onClick={() => {
-                const nextPalette = [...(settings.palette || [])];
-                nextPalette[0] = swatch;
-                updateSettings({ palette: nextPalette });
+                updateSettings({ backgroundColor: swatch });
               }}
               className={cn(
                 "h-4 w-4 rounded-full border transition-transform shadow-xs",

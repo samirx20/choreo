@@ -12,7 +12,7 @@ export const MotionInspector: React.FC = () => {
   // State A: Global Shot Dynamics (No element selected)
   if (!selectedLayerIds || selectedLayerIds.length === 0) {
     return (
-      <div className="w-80 h-full border-l border-slate-200/80 dark:border-slate-800 bg-[#f8fafc] dark:bg-slate-900 overflow-y-auto overflow-x-hidden">
+      <div className="w-80 h-full border-l border-border bg-card text-card-foreground overflow-y-auto overflow-x-hidden">
         <ShotDynamicsCard />
       </div>
     );
@@ -21,7 +21,7 @@ export const MotionInspector: React.FC = () => {
   // State D: Multi-Layer Cascade Studio (Multiple elements selected)
   if (selectedLayerIds.length > 1) {
     return (
-      <div className="w-80 h-full border-l border-slate-200/80 dark:border-slate-800 bg-[#f8fafc] dark:bg-slate-900 overflow-y-auto overflow-x-hidden">
+      <div className="w-80 h-full border-l border-border bg-card text-card-foreground overflow-y-auto overflow-x-hidden">
         <MultiLayerCascadeCard layerIds={selectedLayerIds} />
       </div>
     );
@@ -33,7 +33,7 @@ export const MotionInspector: React.FC = () => {
   // State C: Focused Clip Parameter Inspector
   if (selectedClipIds && selectedClipIds.length === 1) {
     return (
-      <div className="w-80 h-full border-l border-slate-200/80 dark:border-slate-800 bg-[#f8fafc] dark:bg-slate-900 overflow-y-auto overflow-x-hidden">
+      <div className="w-80 h-full border-l border-border bg-card text-card-foreground overflow-y-auto overflow-x-hidden">
         <ClipParameterInspector layerId={activeLayerId} clipId={selectedClipIds[0]} />
       </div>
     );
@@ -41,7 +41,7 @@ export const MotionInspector: React.FC = () => {
 
   // State B: Layer Motion Lifecycle Stack (Entrance, Actions, Exit)
   return (
-    <div className="w-80 h-full border-l border-slate-200/80 dark:border-slate-800 bg-[#f8fafc] dark:bg-slate-900 overflow-y-auto overflow-x-hidden">
+    <div className="w-80 h-full border-l border-border bg-card text-card-foreground overflow-y-auto overflow-x-hidden">
       <MotionStackCard layerId={activeLayerId} />
     </div>
   );

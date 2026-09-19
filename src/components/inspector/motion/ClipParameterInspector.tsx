@@ -77,17 +77,17 @@ export const ClipParameterInspector: React.FC<ClipParameterInspectorProps> = ({
   return (
     <div className="flex flex-col gap-4 p-4 text-xs select-none">
       {/* Breadcrumb Navigation */}
-      <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-slate-800">
+      <div className="flex items-center justify-between pb-2 border-b border-border">
         <button
           type="button"
           onClick={() => setSelectedClips([])}
-          className="flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+          className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Layer Stack</span>
         </button>
 
-        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full text-[10px] font-medium">
+        <div className="flex items-center gap-1.5 bg-muted px-2 py-0.5 rounded-full text-[10px] font-medium text-muted-foreground">
           {typeIcon}
           <span className="capitalize">{clip.type}</span>
         </div>
@@ -98,19 +98,19 @@ export const ClipParameterInspector: React.FC<ClipParameterInspectorProps> = ({
         <button
           type="button"
           onClick={() => setIsPickerOpen(!isPickerOpen)}
-          className="w-full flex items-center justify-between p-2.5 rounded-[10px] bg-slate-50 dark:bg-slate-850 border border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600 transition-colors text-left"
+          className="w-full flex items-center justify-between p-2.5 rounded-[10px] bg-card text-card-foreground border border-border hover:bg-muted/50 transition-colors text-left"
         >
           <div className="flex flex-col">
-            <span className="text-[10px] text-slate-400 font-medium">Selected Preset</span>
-            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 capitalize">
+            <span className="text-[10px] text-muted-foreground font-medium">Selected Preset</span>
+            <span className="text-xs font-semibold text-foreground capitalize">
               {clip.preset}
             </span>
           </div>
-          <ChevronDown className="w-4 h-4 text-slate-400" />
+          <ChevronDown className="w-4 h-4 text-muted-foreground" />
         </button>
 
         {isPickerOpen && (
-          <div className="absolute top-full left-0 right-0 mt-1 z-30 p-2 rounded-[12px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl">
+          <div className="absolute top-full left-0 right-0 mt-1 z-30 p-2 rounded-[12px] bg-popover text-popover-foreground border border-border shadow-xl">
             <PresetPickerSheet
               type={clip.type}
               selectedPreset={clip.preset}
@@ -151,12 +151,12 @@ export const ClipParameterInspector: React.FC<ClipParameterInspectorProps> = ({
         {/* Action Clip Loop / Intensity Controls */}
         {(clip.type === "action" || clip.type === "emphasis") && (
           <div className="flex items-center justify-between pt-2">
-            <label className="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-300 text-[11px]">
+            <label className="flex items-center gap-1.5 cursor-pointer text-foreground text-[11px]">
               <input
                 type="checkbox"
                 checked={!!clip.loop}
                 onChange={(e) => handleUpdate({ loop: e.target.checked })}
-                className="rounded text-slate-900 focus:ring-0 w-3.5 h-3.5"
+                className="rounded text-primary focus:ring-0 w-3.5 h-3.5"
               />
               Loop Continuously
             </label>
@@ -223,14 +223,14 @@ export const ClipParameterInspector: React.FC<ClipParameterInspectorProps> = ({
       )}
 
       {/* Actions: Duplicate & Delete */}
-      <div className="flex items-center gap-2 pt-2 border-t border-slate-200/80 dark:border-slate-800">
+      <div className="flex items-center gap-2 pt-2 border-t border-border">
         <button
           type="button"
           onClick={() => {
             const newId = store.duplicateAnimationClip(layerId, clipId);
             if (newId) setSelectedClips([newId]);
           }}
-          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[8px] border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750 font-medium transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-[8px] border border-border bg-card text-foreground hover:bg-muted font-medium transition-colors"
         >
           <Copy className="w-3.5 h-3.5" />
           Duplicate
@@ -242,7 +242,7 @@ export const ClipParameterInspector: React.FC<ClipParameterInspectorProps> = ({
             store.removeAnimationClip(layerId, clipId);
             setSelectedClips([]);
           }}
-          className="flex items-center justify-center p-2 rounded-[8px] border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/40 text-red-600 hover:bg-red-100 transition-colors"
+          className="flex items-center justify-center p-2 rounded-[8px] border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
           title="Delete Animation"
         >
           <Trash2 className="w-3.5 h-3.5" />

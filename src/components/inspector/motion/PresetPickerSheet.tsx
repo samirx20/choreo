@@ -72,7 +72,7 @@ export const PresetPickerSheet: React.FC<PresetPickerSheetProps> = ({
 
   return (
     <div className="flex flex-col gap-2 max-h-[320px] overflow-y-auto pr-1 select-none">
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 px-1">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground px-1">
         {icon}
         <span className="capitalize">{type} Presets</span>
       </div>
@@ -87,15 +87,15 @@ export const PresetPickerSheet: React.FC<PresetPickerSheetProps> = ({
               onClick={() => onSelect(p.id)}
               className={`flex items-center justify-between px-2.5 py-2 rounded-[8px] text-left transition-all border ${
                 isSelected
-                  ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900 dark:border-white shadow-sm"
-                  : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300 dark:hover:border-slate-600"
+                  ? "bg-primary text-primary-foreground border-primary shadow-xs font-medium"
+                  : "bg-card text-card-foreground border-border hover:bg-muted/60"
               }`}
             >
               <div className="flex flex-col truncate pr-2">
                 <span className="text-xs font-semibold truncate">{p.name}</span>
                 <span
                   className={`text-[10px] truncate ${
-                    isSelected ? "text-slate-300 dark:text-slate-600" : "text-slate-400 dark:text-slate-500"
+                    isSelected ? "text-primary-foreground/75" : "text-muted-foreground"
                   }`}
                 >
                   {p.desc}

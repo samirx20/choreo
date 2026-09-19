@@ -48,13 +48,13 @@ export const ShotDynamicsCard: React.FC = () => {
   return (
     <div className="flex flex-col gap-4 p-4 text-xs select-none">
       {/* Header Info */}
-      <div className="flex items-center gap-2 pb-2 border-b border-slate-200/80 dark:border-slate-800">
-        <Film className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+      <div className="flex items-center gap-2 pb-2 border-b border-border">
+        <Film className="w-4 h-4 text-muted-foreground" />
         <div className="flex flex-col">
-          <span className="font-semibold text-slate-900 dark:text-slate-100">
+          <span className="font-semibold text-foreground">
             Shot Dynamics
           </span>
-          <span className="text-[10px] text-slate-400 dark:text-slate-500">
+          <span className="text-[10px] text-muted-foreground">
             Global shot timing & camera staging
           </span>
         </div>
@@ -74,10 +74,10 @@ export const ShotDynamicsCard: React.FC = () => {
             onChange={handleDurationChange}
           />
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+            <span className="text-[10px] text-muted-foreground font-medium">
               Framerate
             </span>
-            <div className="flex rounded-[8px] bg-slate-100 dark:bg-slate-800 p-0.5 border border-slate-200/70 dark:border-slate-700">
+            <div className="flex rounded-[8px] bg-muted p-0.5 border border-border">
               {[24, 30, 60].map((f) => (
                 <button
                   key={f}
@@ -85,8 +85,8 @@ export const ShotDynamicsCard: React.FC = () => {
                   onClick={() => handleFpsChange(f)}
                   className={`flex-1 py-1 text-[10px] font-medium rounded-[6px] transition-all text-center ${
                     settings.fps === f
-                      ? "bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm font-semibold"
-                      : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                      ? "bg-card text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {f}fps
@@ -127,8 +127,8 @@ export const ShotDynamicsCard: React.FC = () => {
             onClick={() => updateSettings({ width: 1920, height: 1080 })}
             className={`flex-1 py-1 text-[10px] rounded-[6px] border font-medium transition-colors ${
               settings.width === 1920 && settings.height === 1080
-                ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900"
-                : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted/40 text-muted-foreground border-input hover:border-border hover:text-foreground hover:bg-muted/70"
             }`}
           >
             16:9 Landscape
@@ -138,8 +138,8 @@ export const ShotDynamicsCard: React.FC = () => {
             onClick={() => updateSettings({ width: 1080, height: 1920 })}
             className={`flex-1 py-1 text-[10px] rounded-[6px] border font-medium transition-colors ${
               settings.width === 1080 && settings.height === 1920
-                ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900"
-                : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted/40 text-muted-foreground border-input hover:border-border hover:text-foreground hover:bg-muted/70"
             }`}
           >
             9:16 Vertical
@@ -149,8 +149,8 @@ export const ShotDynamicsCard: React.FC = () => {
             onClick={() => updateSettings({ width: 1080, height: 1080 })}
             className={`flex-1 py-1 text-[10px] rounded-[6px] border font-medium transition-colors ${
               settings.width === 1080 && settings.height === 1080
-                ? "bg-slate-900 text-white border-slate-900 dark:bg-white dark:text-slate-900"
-                : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100"
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-muted/40 text-muted-foreground border-input hover:border-border hover:text-foreground hover:bg-muted/70"
             }`}
           >
             1:1 Square
@@ -161,40 +161,40 @@ export const ShotDynamicsCard: React.FC = () => {
       {/* Broadcast & Social Safe Guides */}
       <MinimalSection title="Safe Framing Guides">
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between py-1 px-1.5 rounded-[8px] hover:bg-slate-50 dark:hover:bg-slate-850">
-            <span className="text-slate-700 dark:text-slate-300">Action Safe (90%)</span>
+          <div className="flex items-center justify-between py-1 px-1.5 rounded-[8px] hover:bg-muted/50">
+            <span className="text-foreground">Action Safe (90%)</span>
             <input
               type="checkbox"
               checked={!!safeZones.actionSafe}
               onChange={() => handleToggleSafe("actionSafe")}
-              className="rounded text-slate-900 focus:ring-0 w-4 h-4 cursor-pointer"
+              className="rounded text-primary focus:ring-0 w-4 h-4 cursor-pointer"
             />
           </div>
-          <div className="flex items-center justify-between py-1 px-1.5 rounded-[8px] hover:bg-slate-50 dark:hover:bg-slate-850">
-            <span className="text-slate-700 dark:text-slate-300">Title Safe (80%)</span>
+          <div className="flex items-center justify-between py-1 px-1.5 rounded-[8px] hover:bg-muted/50">
+            <span className="text-foreground">Title Safe (80%)</span>
             <input
               type="checkbox"
               checked={!!safeZones.titleSafe}
               onChange={() => handleToggleSafe("titleSafe")}
-              className="rounded text-slate-900 focus:ring-0 w-4 h-4 cursor-pointer"
+              className="rounded text-primary focus:ring-0 w-4 h-4 cursor-pointer"
             />
           </div>
-          <div className="flex items-center justify-between py-1 px-1.5 rounded-[8px] hover:bg-slate-50 dark:hover:bg-slate-850">
-            <span className="text-slate-700 dark:text-slate-300">Center Crosshair</span>
+          <div className="flex items-center justify-between py-1 px-1.5 rounded-[8px] hover:bg-muted/50">
+            <span className="text-foreground">Center Crosshair</span>
             <input
               type="checkbox"
               checked={!!safeZones.centerCrosshair}
               onChange={() => handleToggleSafe("centerCrosshair")}
-              className="rounded text-slate-900 focus:ring-0 w-4 h-4 cursor-pointer"
+              className="rounded text-primary focus:ring-0 w-4 h-4 cursor-pointer"
             />
           </div>
 
           <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400">Social UI Overlay</span>
+            <span className="text-[11px] text-muted-foreground">Social UI Overlay</span>
             <select
               value={safeZones.socialOverlay || "none"}
               onChange={(e) => handleSocialOverlayChange(e.target.value as any)}
-              className="text-[11px] bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[6px] px-2 py-1 text-slate-800 dark:text-slate-200 outline-none"
+              className="text-[11px] bg-muted border border-input rounded-[6px] px-2 py-1 text-foreground outline-none"
             >
               <option value="none">None</option>
               <option value="tiktok">TikTok Safe Zone</option>

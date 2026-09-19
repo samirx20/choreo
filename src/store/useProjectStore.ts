@@ -24,7 +24,7 @@ export const INITIAL_SCENE: SceneDocument = {
     height: 1080,
     fps: 60,
     duration: 5.0,
-    backgroundColor: THEME_TOKENS.surfaces.appBackground,
+    backgroundColor: "#000000",
     palette: [
       "#000000",
       "#ffffff",

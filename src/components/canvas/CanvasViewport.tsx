@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
+import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { useProjectStore, findLayerInTree, findParentGroupInTree, findTopmostParentGroupInTree, CanvasTool } from "@/store/useProjectStore";
 import { Layer } from "@/types/scene";
 import { THEME_TOKENS } from "@/theme/tokens";
@@ -120,32 +120,37 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
 
   // Fit scale calculation relative to viewport window
-  const [viewportScale, setViewportScale] = useState(0.65);
-  const [hasMounted, setHasMounted] = useState(false);
+  const [viewportScale, setViewportScale] = useState(0.45);
 
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
-
-  const updateAutoFit = () => {
+  const updateAutoFit = useCallback(() => {
     if (!containerRef.current) return;
     const { clientWidth, clientHeight } = containerRef.current;
     if (clientWidth <= 0 || clientHeight <= 0) return;
-    const margin = 80;
+    const margin = 64;
     const scaleX = (clientWidth - margin) / doc.settings.width;
     const scaleY = (clientHeight - margin) / doc.settings.height;
     const fit = Math.min(scaleX, scaleY, 1);
-    setViewportScale(fit);
-  };
+    setViewportScale(Math.max(0.1, Math.round(fit * 1000) / 1000));
+  }, [doc.settings.width, doc.settings.height]);
 
   useLayoutEffect(() => {
     updateAutoFit();
-  }, [doc.settings.width, doc.settings.height]);
+  }, [updateAutoFit, uiMode]);
 
   useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      updateAutoFit();
+    });
+    observer.observe(containerRef.current);
+    updateAutoFit();
+
     window.addEventListener("resize", updateAutoFit);
-    return () => window.removeEventListener("resize", updateAutoFit);
-  }, [doc.settings.width, doc.settings.height]);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateAutoFit);
+    };
+  }, [updateAutoFit, uiMode]);
 
   const effectiveScale = viewportScale * zoom;
 
