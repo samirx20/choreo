@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore, isMotionMode } from "@/store/useProjectStore";
 import { TopNavBar } from "@/components/layout/TopNavBar";
 import { LeftSidebar } from "@/components/sidebar/LeftSidebar";
 import { CanvasViewport } from "@/components/canvas/CanvasViewport";
 import { DesignInspector } from "@/components/inspector/DesignInspector";
-import { AnimateInspector } from "@/components/inspector/AnimateInspector";
+import { MotionInspector } from "@/components/inspector/motion/MotionInspector";
 import { TimelinePanel } from "@/components/timeline/TimelinePanel";
 import { AICommandBar } from "@/components/ai/AICommandBar";
 import { ComponentsDrawer } from "@/components/components/ComponentsDrawer";
 import { ExportModal } from "@/components/export/ExportModal";
 import { ShortcutsModal } from "@/components/modals/ShortcutsModal";
+import { TheatreStudioHost } from "@/components/timeline/TheatreStudioHost";
+import { UniversalContextMenuPortal } from "@/components/common/UniversalContextMenuPortal";
+import { cn } from "@/lib/utils";
 
-export const App: React.FC = () => {
+const App: React.FC = () => {
   const {
     uiMode,
     setUiMode,
@@ -21,20 +24,47 @@ export const App: React.FC = () => {
     setIsPlaying,
     selectedLayerIds,
     duplicateLayer,
-    removeLayer,
   } = useProjectStore();
 
   const [isAiBarOpen, setIsAiBarOpen] = useState(false);
   const [isComponentsDrawerOpen, setIsComponentsDrawerOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
+  const [isZenMode, setIsZenMode] = useState(false);
+
+  const theme = useProjectStore((s) => s.theme);
+
+  useEffect(() => {
+    (window as any).__store = useProjectStore;
+  }, []);
+
+  // Synchronize document theme class
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [theme]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isInput =
-        document.activeElement?.tagName === "INPUT" ||
-        document.activeElement?.tagName === "TEXTAREA";
+        ["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName) ||
+        (e.target as HTMLElement).isContentEditable;
+
+      // 0. Zen Presentation Mode: Ctrl+\ or Cmd+\ (or Esc to exit Zen mode)
+      if ((e.ctrlKey || e.metaKey) && e.key === "\\") {
+        e.preventDefault();
+        setIsZenMode((prev) => !prev);
+        return;
+      }
+      if (e.key === "Escape" && isZenMode) {
+        e.preventDefault();
+        setIsZenMode(false);
+        return;
+      }
 
       // 1. AI Command Bar: Ctrl+K or Cmd+K
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
@@ -43,63 +73,59 @@ export const App: React.FC = () => {
         return;
       }
 
-      // 2. Undo: Ctrl+Z
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
-        if (!isInput) {
-          e.preventDefault();
-          undo();
-          return;
-        }
-      }
-
-      // 3. Redo: Ctrl+Shift+Z or Ctrl+Y
-      if (
-        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "z") ||
-        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y")
-      ) {
-        if (!isInput) {
-          e.preventDefault();
-          redo();
-          return;
-        }
-      }
-
-      // 4. Mode Toggle: Tab
-      if (e.key === "Tab" && !isInput) {
+      // 2. Undo: Ctrl+Z / Cmd+Z
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey && !isInput) {
         e.preventDefault();
-        setUiMode(uiMode === "design" ? "animate" : "design");
+        undo();
         return;
       }
 
-      // 5. Play / Pause: Space
-      if (e.code === "Space" && !isInput) {
+      // 3. Redo: Ctrl+Shift+Z / Cmd+Shift+Z / Ctrl+Y
+      if (
+        ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey && !isInput) ||
+        ((e.ctrlKey || e.metaKey) && e.key === "y" && !isInput)
+      ) {
+        e.preventDefault();
+        redo();
+        return;
+      }
+
+      // 4. Duplicate: Ctrl+D / Cmd+D
+      if ((e.ctrlKey || e.metaKey) && e.key === "d" && !isInput) {
+        e.preventDefault();
+        selectedLayerIds.forEach((id) => duplicateLayer(id));
+        return;
+      }
+
+      // 5. Mode Toggle: Tab (when not editing input)
+      if (e.key === "Tab" && !isInput) {
+        e.preventDefault();
+        setUiMode(uiMode === "design" ? "motion" : "design");
+        return;
+      }
+
+      // 6. Play / Pause: Space (Motion Mode only; in Design Mode, Space pans canvas)
+      if (e.code === "Space" && !isInput && isMotionMode(uiMode)) {
         e.preventDefault();
         setIsPlaying(!isPlaying);
         return;
       }
 
-      // 6. Duplicate Layer: Ctrl+D
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d" && !isInput) {
-        e.preventDefault();
-        if (selectedLayerIds.length > 0) {
-          duplicateLayer(selectedLayerIds[0]);
-        }
-        return;
-      }
-
-      // 7. Delete Layer: Delete or Backspace
-      if ((e.key === "Delete" || e.key === "Backspace") && !isInput) {
-        if (selectedLayerIds.length > 0) {
-          e.preventDefault();
-          removeLayer(selectedLayerIds[0]);
-        }
-        return;
-      }
-
-      // 8. Keyboard Shortcuts Modal: ? or Ctrl+/
+      // 7. Keyboard Shortcuts Modal: ? or Ctrl+/
       if ((e.key === "?" || ((e.ctrlKey || e.metaKey) && e.key === "/")) && !isInput) {
         e.preventDefault();
         setIsShortcutsModalOpen((prev) => !prev);
+        return;
+      }
+
+      // 8. Rename Layer: F2
+      if (e.key === "F2" && !isInput && selectedLayerIds.length > 0) {
+        e.preventDefault();
+        window.dispatchEvent(
+          new CustomEvent("motion-rename-layer", {
+            detail: { layerId: selectedLayerIds[0] },
+          })
+        );
         return;
       }
     };
@@ -115,33 +141,50 @@ export const App: React.FC = () => {
     setIsPlaying,
     selectedLayerIds,
     duplicateLayer,
-    removeLayer,
+    isZenMode,
   ]);
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
-      {/* 1. Global Header */}
-      <TopNavBar
-        onOpenAiBar={() => setIsAiBarOpen(true)}
-        onOpenExportModal={() => setIsExportModalOpen(true)}
-      />
+    <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans select-none relative">
+      {/* 1. Global Tool Header */}
+      {!isZenMode && (
+        <TopNavBar
+          onOpenAiBar={() => setIsAiBarOpen(true)}
+          onOpenExportModal={() => setIsExportModalOpen(true)}
+          onToggleZenMode={() => setIsZenMode((prev) => !prev)}
+        />
+      )}
 
       {/* 2. Main Studio Workspace */}
       <div className="flex-1 flex min-h-0 relative">
-        {/* Left Sidebar: Screens & Layers */}
-        <LeftSidebar />
+        {/* Left Sidebar: Screens & Outliner */}
+        {!isZenMode && <LeftSidebar />}
 
-        {/* Center: Canvas Viewport */}
+        {/* Center: Studio Viewport */}
         <CanvasViewport
           onOpenComponentsDrawer={() => setIsComponentsDrawerOpen(true)}
         />
 
-        {/* Right Sidebar Inspector (Design or Animate based on active mode) */}
-        {uiMode === "design" ? <DesignInspector /> : <AnimateInspector />}
+        {/* Right Sidebar Inspector */}
+        {!isZenMode && (uiMode === "design" ? <DesignInspector /> : <MotionInspector />)}
       </div>
 
-      {/* 3. Bottom Multi-Track Sequencer & Timeline (Animate Mode Only) */}
-      {uiMode === "animate" && <TimelinePanel />}
+      {/* 3. Bottom Multi-Track Sequencer & Timeline (Motion Mode) */}
+      {!isZenMode && isMotionMode(uiMode) && (
+        <div className="shrink-0 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
+          <TimelinePanel />
+        </div>
+      )}
+
+      {/* Zen Mode Exit Badge */}
+      {isZenMode && (
+        <div
+          onClick={() => setIsZenMode(false)}
+          className="absolute top-4 right-4 z-50 bg-[#101014]/90 backdrop-blur-md border border-white/[0.1] text-[11px] text-[#a1a1aa] hover:text-white px-2.5 py-1 rounded-full cursor-pointer shadow-2xl transition-all"
+        >
+          Exit Zen Mode (Esc)
+        </div>
+      )}
 
       {/* 4. Floating Overlays & Modals */}
       <AICommandBar
@@ -163,6 +206,12 @@ export const App: React.FC = () => {
         isOpen={isShortcutsModalOpen}
         onClose={() => setIsShortcutsModalOpen(false)}
       />
+
+      {/* Theatre.js Studio Host */}
+      <TheatreStudioHost />
+
+      {/* Universal Context Menu Portal (Zones A-G) */}
+      <UniversalContextMenuPortal />
     </div>
   );
 };

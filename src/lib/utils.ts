@@ -12,6 +12,6 @@ export function formatTime(seconds: number): string {
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}:${ms.toString().padStart(2, "0")}`;
 }
 
-export function formatSeconds(seconds: number): string {
+function formatSeconds(seconds: number): string {
   return `${seconds.toFixed(2)}s`;
 }
