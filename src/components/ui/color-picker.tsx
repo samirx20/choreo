@@ -3,7 +3,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { Input } from "./input";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/store/useProjectStore";
-import { Pipette, X, Plus, ChevronDown, Trash2 } from "lucide-react";
+import { Pipette, X, Plus, ChevronDown, Trash2, ArrowLeftRight } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // HSV <-> HEX Conversion Math (Closed-form, pure & fast)
@@ -130,12 +130,14 @@ export interface GradientStop {
 }
 
 export interface ParsedGradient {
-  angle: number;
+  type: "linear" | "radial";
+  angle: number; // For linear: degrees 0-360
   stops: GradientStop[];
 }
 
 export function parseLinearGradientString(str: string): ParsedGradient {
   const fallback: ParsedGradient = {
+    type: "linear",
     angle: 135,
     stops: [
       { id: "s1", color: "#6366F1", alpha: 1, offset: 0 },
@@ -143,10 +145,12 @@ export function parseLinearGradientString(str: string): ParsedGradient {
     ],
   };
 
-  if (!str.includes("linear-gradient")) return fallback;
+  const isRadial = str.includes("radial-gradient");
+  const isLinear = str.includes("linear-gradient");
+  if (!isRadial && !isLinear) return fallback;
 
-  // Extract inner contents of linear-gradient(...)
-  const innerMatch = str.match(/linear-gradient\((.*)\)/i);
+  // Extract inner contents of gradient(...)
+  const innerMatch = str.match(/(?:linear|radial)-gradient\((.*)\)/i);
   if (!innerMatch) return fallback;
 
   const rawParts = innerMatch[1].split(/,(?![^(]*\))/).map((s) => s.trim());
@@ -155,22 +159,28 @@ export function parseLinearGradientString(str: string): ParsedGradient {
   let angle = 135;
   let stopParts = rawParts;
 
-  // Check if first part is an angle or direction
-  const firstPart = rawParts[0].toLowerCase();
-  if (firstPart.includes("deg")) {
-    const degMatch = firstPart.match(/(-?\d+(?:\.\d+)?)deg/);
-    if (degMatch) angle = parseFloat(degMatch[1]);
-    stopParts = rawParts.slice(1);
-  } else if (firstPart.startsWith("to ")) {
-    if (firstPart.includes("right") && firstPart.includes("bottom")) angle = 135;
-    else if (firstPart.includes("right") && firstPart.includes("top")) angle = 45;
-    else if (firstPart.includes("left") && firstPart.includes("bottom")) angle = 225;
-    else if (firstPart.includes("left") && firstPart.includes("top")) angle = 315;
-    else if (firstPart.includes("right")) angle = 90;
-    else if (firstPart.includes("bottom")) angle = 180;
-    else if (firstPart.includes("left")) angle = 270;
-    else if (firstPart.includes("top")) angle = 0;
-    stopParts = rawParts.slice(1);
+  if (isLinear) {
+    const firstPart = rawParts[0].toLowerCase();
+    if (firstPart.includes("deg")) {
+      const degMatch = firstPart.match(/(-?\d+(?:\.\d+)?)deg/);
+      if (degMatch) angle = parseFloat(degMatch[1]);
+      stopParts = rawParts.slice(1);
+    } else if (firstPart.startsWith("to ")) {
+      if (firstPart.includes("right") && firstPart.includes("bottom")) angle = 135;
+      else if (firstPart.includes("right") && firstPart.includes("top")) angle = 45;
+      else if (firstPart.includes("left") && firstPart.includes("bottom")) angle = 225;
+      else if (firstPart.includes("left") && firstPart.includes("top")) angle = 315;
+      else if (firstPart.includes("right")) angle = 90;
+      else if (firstPart.includes("bottom")) angle = 180;
+      else if (firstPart.includes("left")) angle = 270;
+      else if (firstPart.includes("top")) angle = 0;
+      stopParts = rawParts.slice(1);
+    }
+  } else {
+    // Radial gradient
+    if (rawParts[0].includes("circle") || rawParts[0].includes("at ")) {
+      stopParts = rawParts.slice(1);
+    }
   }
 
   const stops: GradientStop[] = [];
@@ -192,16 +202,63 @@ export function parseLinearGradientString(str: string): ParsedGradient {
   });
 
   if (stops.length < 2) return fallback;
-  return { angle: ((angle % 360) + 360) % 360, stops };
+  return {
+    type: isRadial ? "radial" : "linear",
+    angle: ((angle % 360) + 360) % 360,
+    stops,
+  };
 }
 
-export function serializeGradient(angle: number, stops: GradientStop[]): string {
+export function serializeGradient(
+  type: "linear" | "radial",
+  angle: number,
+  stops: GradientStop[]
+): string {
   const sorted = [...stops].sort((a, b) => a.offset - b.offset);
   const stopStrings = sorted.map((s) => {
     const col = s.alpha < 1 ? hexToRgbaString(s.color, s.alpha) : s.color;
     return `${col} ${Math.round(s.offset)}%`;
   });
+
+  if (type === "radial") {
+    return `radial-gradient(circle, ${stopStrings.join(", ")})`;
+  }
   return `linear-gradient(${Math.round(angle)}deg, ${stopStrings.join(", ")})`;
+}
+
+// ---------------------------------------------------------------------------
+// Angle <-> 2D Vector Handle Position Math (Normalized [0, 1])
+// ---------------------------------------------------------------------------
+function angleToHandlePoints(angleDeg: number): {
+  p1: { x: number; y: number };
+  p2: { x: number; y: number };
+} {
+  // CSS: 0deg is bottom to top (dy < 0), 90deg is left to right (dx > 0)
+  const rad = ((angleDeg - 90) * Math.PI) / 180;
+  const dx = Math.cos(rad);
+  const dy = Math.sin(rad);
+  const r = 0.32; // normalized length radius from center
+  return {
+    p1: {
+      x: Math.max(0.08, Math.min(0.92, 0.5 - dx * r)),
+      y: Math.max(0.08, Math.min(0.92, 0.5 - dy * r)),
+    },
+    p2: {
+      x: Math.max(0.08, Math.min(0.92, 0.5 + dx * r)),
+      y: Math.max(0.08, Math.min(0.92, 0.5 + dy * r)),
+    },
+  };
+}
+
+function handlePointsToAngle(
+  p1: { x: number; y: number },
+  p2: { x: number; y: number }
+): number {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const rad = Math.atan2(dy, dx);
+  const deg = (rad * 180) / Math.PI + 90;
+  return Math.round(((deg % 360) + 360) % 360);
 }
 
 // ---------------------------------------------------------------------------
@@ -216,7 +273,7 @@ const DEFAULT_SWATCHES = [
   "#ec4899", // Pink
   "#ef4444", // Red
   "#f97316", // Orange
-  "#8b5cf6", // Violet
+  "linear-gradient(135deg, #6366f1 0%, #ec4899 100%)",
 ];
 
 // Checkerboard pattern for opacity transparency visualization
@@ -248,20 +305,24 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   // Mode: "solid" | "gradient"
-  const isInitialGradient = Boolean(value && value.includes("linear-gradient"));
+  const isInitialGradient = Boolean(value && (value.includes("gradient")));
   const [mode, setMode] = useState<"solid" | "gradient">(isInitialGradient ? "gradient" : "solid");
 
   // Solid state
   const initialSolid = parseHexOrRgba(value && !value.includes("gradient") ? value : "#3B82F6");
   const [solidHsv, setSolidHsv] = useState(() => hexToHsv(initialSolid.hex));
   const [solidAlpha, setSolidAlpha] = useState(initialSolid.alpha);
-  const [hexInput, setHexInput] = useState(() => initialSolid.hex.replace("#", "").toUpperCase());
+  const [solidHexInput, setSolidHexInput] = useState(() => initialSolid.hex.replace("#", "").toUpperCase());
 
   // Gradient state
-  const initialGrad = parseLinearGradientString(value && value.includes("linear-gradient") ? value : "");
+  const initialGrad = parseLinearGradientString(value && value.includes("gradient") ? value : "");
+  const [gradientType, setGradientType] = useState<"linear" | "radial">(initialGrad.type);
   const [gradientAngle, setGradientAngle] = useState(initialGrad.angle);
   const [gradientStops, setGradientStops] = useState<GradientStop[]>(initialGrad.stops);
   const [activeStopIndex, setActiveStopIndex] = useState(0);
+
+  // 2-point vector dragger positions in normalized [0, 1]
+  const [vectorPoints, setVectorPoints] = useState(() => angleToHandlePoints(initialGrad.angle));
 
   // Saved swatches
   const [savedSwatches, setSavedSwatches] = useState<string[]>(DEFAULT_SWATCHES);
@@ -270,35 +331,37 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   const satAreaRef = useRef<HTMLDivElement>(null);
   const hueSliderRef = useRef<HTMLDivElement>(null);
   const alphaSliderRef = useRef<HTMLDivElement>(null);
+  const gradientCanvasRef = useRef<HTMLDivElement>(null);
   const stopBarRef = useRef<HTMLDivElement>(null);
 
   const isDraggingSat = useRef(false);
   const isDraggingHue = useRef(false);
   const isDraggingAlpha = useRef(false);
+  const isDraggingVectorHandle = useRef<1 | 2 | null>(null);
   const isDraggingStop = useRef<number | null>(null);
 
   const rafRef = useRef<number | null>(null);
 
-  // Current active color (either solid or active gradient stop)
+  // Active stop in gradient mode
   const activeStop = gradientStops[activeStopIndex] || gradientStops[0];
-  const currentHsv = mode === "solid" ? solidHsv : hexToHsv(activeStop?.color || "#3B82F6");
-  const currentAlpha = mode === "solid" ? solidAlpha : (activeStop?.alpha ?? 1);
 
   // Synchronize when external value changes while closed
   useEffect(() => {
     if (!isOpen) {
-      if (value && value.includes("linear-gradient")) {
+      if (value && value.includes("gradient")) {
         setMode("gradient");
         const parsed = parseLinearGradientString(value);
+        setGradientType(parsed.type);
         setGradientAngle(parsed.angle);
         setGradientStops(parsed.stops);
+        setVectorPoints(angleToHandlePoints(parsed.angle));
         setActiveStopIndex(0);
       } else {
         setMode("solid");
         const { hex, alpha } = parseHexOrRgba(value || "#3B82F6");
         setSolidHsv(hexToHsv(hex));
         setSolidAlpha(alpha);
-        setHexInput(hex.replace("#", "").toUpperCase());
+        setSolidHexInput(hex.replace("#", "").toUpperCase());
       }
     }
   }, [value, isOpen]);
@@ -318,7 +381,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   const emitSolidUpdate = useCallback(
     (h: number, s: number, v: number, a: number) => {
       const hex = hsvToHex(h, s, v);
-      setHexInput(hex.replace("#", "").toUpperCase());
+      setSolidHexInput(hex.replace("#", "").toUpperCase());
       const result = a < 1 ? hexToRgbaString(hex, a) : hex;
       emitChange(result);
     },
@@ -327,15 +390,15 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
 
   // Emit gradient update
   const emitGradientUpdate = useCallback(
-    (angle: number, stops: GradientStop[]) => {
-      const result = serializeGradient(angle, stops);
+    (type: "linear" | "radial", angle: number, stops: GradientStop[]) => {
+      const result = serializeGradient(type, angle, stops);
       emitChange(result);
     },
     [emitChange]
   );
 
   // ---------------------------------------------------------------------------
-  // Saturation / Value Drag Handler
+  // Solid: Saturation / Value Drag Handler
   // ---------------------------------------------------------------------------
   const handleSatMove = useCallback(
     (e: PointerEvent | React.PointerEvent) => {
@@ -347,26 +410,13 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       const s = x / rect.width;
       const v = 1 - y / rect.height;
 
-      if (mode === "solid") {
-        setSolidHsv((prev) => {
-          const next = { ...prev, s, v };
-          emitSolidUpdate(next.h, next.s, next.v, solidAlpha);
-          return next;
-        });
-      } else {
-        setGradientStops((prev) => {
-          const updated = [...prev];
-          const cur = updated[activeStopIndex] || updated[0];
-          const h = hexToHsv(cur.color).h;
-          const newHex = hsvToHex(h, s, v);
-          updated[activeStopIndex] = { ...cur, color: newHex };
-          setHexInput(newHex.replace("#", "").toUpperCase());
-          emitGradientUpdate(gradientAngle, updated);
-          return updated;
-        });
-      }
+      setSolidHsv((prev) => {
+        const next = { ...prev, s, v };
+        emitSolidUpdate(next.h, next.s, next.v, solidAlpha);
+        return next;
+      });
     },
-    [mode, solidAlpha, activeStopIndex, gradientAngle, emitSolidUpdate, emitGradientUpdate]
+    [solidAlpha, emitSolidUpdate]
   );
 
   const handleSatDown = (e: React.PointerEvent) => {
@@ -379,7 +429,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   };
 
   // ---------------------------------------------------------------------------
-  // Hue Slider Drag Handler
+  // Hue Slider Drag Handler (Solid Mode)
   // ---------------------------------------------------------------------------
   const handleHueMove = useCallback(
     (e: PointerEvent | React.PointerEvent) => {
@@ -388,26 +438,13 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
       const h = Math.round((x / rect.width) * 360) % 360;
 
-      if (mode === "solid") {
-        setSolidHsv((prev) => {
-          const next = { ...prev, h };
-          emitSolidUpdate(next.h, next.s, next.v, solidAlpha);
-          return next;
-        });
-      } else {
-        setGradientStops((prev) => {
-          const updated = [...prev];
-          const cur = updated[activeStopIndex] || updated[0];
-          const { s, v } = hexToHsv(cur.color);
-          const newHex = hsvToHex(h, s, v);
-          updated[activeStopIndex] = { ...cur, color: newHex };
-          setHexInput(newHex.replace("#", "").toUpperCase());
-          emitGradientUpdate(gradientAngle, updated);
-          return updated;
-        });
-      }
+      setSolidHsv((prev) => {
+        const next = { ...prev, h };
+        emitSolidUpdate(next.h, next.s, next.v, solidAlpha);
+        return next;
+      });
     },
-    [mode, solidAlpha, activeStopIndex, gradientAngle, emitSolidUpdate, emitGradientUpdate]
+    [solidAlpha, emitSolidUpdate]
   );
 
   const handleHueDown = (e: React.PointerEvent) => {
@@ -420,7 +457,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   };
 
   // ---------------------------------------------------------------------------
-  // Alpha / Opacity Drag Handler
+  // Alpha Slider Drag Handler (Solid Mode)
   // ---------------------------------------------------------------------------
   const handleAlphaMove = useCallback(
     (e: PointerEvent | React.PointerEvent) => {
@@ -430,20 +467,10 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       const rawAlpha = Math.max(0, Math.min(1, x / rect.width));
       const alpha = Math.round(rawAlpha * 100) / 100;
 
-      if (mode === "solid") {
-        setSolidAlpha(alpha);
-        emitSolidUpdate(solidHsv.h, solidHsv.s, solidHsv.v, alpha);
-      } else {
-        setGradientStops((prev) => {
-          const updated = [...prev];
-          const cur = updated[activeStopIndex] || updated[0];
-          updated[activeStopIndex] = { ...cur, alpha };
-          emitGradientUpdate(gradientAngle, updated);
-          return updated;
-        });
-      }
+      setSolidAlpha(alpha);
+      emitSolidUpdate(solidHsv.h, solidHsv.s, solidHsv.v, alpha);
     },
-    [mode, solidHsv, activeStopIndex, gradientAngle, emitSolidUpdate, emitGradientUpdate]
+    [solidHsv, emitSolidUpdate]
   );
 
   const handleAlphaDown = (e: React.PointerEvent) => {
@@ -453,6 +480,39 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     useProjectStore.getState().startTransaction();
     e.currentTarget.setPointerCapture(e.pointerId);
     handleAlphaMove(e);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Gradient 2-Point Vector Dragger Handler
+  // ---------------------------------------------------------------------------
+  const handleVectorMove = useCallback(
+    (e: PointerEvent | React.PointerEvent) => {
+      if (!isDraggingVectorHandle.current || !gradientCanvasRef.current) return;
+      const rect = gradientCanvasRef.current.getBoundingClientRect();
+      const x = Math.max(0.04, Math.min(0.96, (e.clientX - rect.left) / rect.width));
+      const y = Math.max(0.04, Math.min(0.96, (e.clientY - rect.top) / rect.height));
+
+      const handleNum = isDraggingVectorHandle.current;
+      setVectorPoints((prev) => {
+        const next = {
+          p1: handleNum === 1 ? { x, y } : prev.p1,
+          p2: handleNum === 2 ? { x, y } : prev.p2,
+        };
+        const newAngle = handlePointsToAngle(next.p1, next.p2);
+        setGradientAngle(newAngle);
+        emitGradientUpdate(gradientType, newAngle, gradientStops);
+        return next;
+      });
+    },
+    [gradientType, gradientStops, emitGradientUpdate]
+  );
+
+  const handleVectorDown = (e: React.PointerEvent, handle: 1 | 2) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingVectorHandle.current = handle;
+    useProjectStore.getState().startTransaction();
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   // ---------------------------------------------------------------------------
@@ -470,11 +530,11 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         const updated = [...prev];
         if (!updated[targetIdx]) return prev;
         updated[targetIdx] = { ...updated[targetIdx], offset };
-        emitGradientUpdate(gradientAngle, updated);
+        emitGradientUpdate(gradientType, gradientAngle, updated);
         return updated;
       });
     },
-    [gradientAngle, emitGradientUpdate]
+    [gradientType, gradientAngle, emitGradientUpdate]
   );
 
   const handleStopBarDown = (e: React.PointerEvent) => {
@@ -487,7 +547,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     const offset = Math.round((x / rect.width) * 100);
 
     // Check if clicked close to an existing stop
-    const existingIdx = gradientStops.findIndex((s) => Math.abs(s.offset - offset) <= 5);
+    const existingIdx = gradientStops.findIndex((s) => Math.abs(s.offset - offset) <= 6);
     if (existingIdx >= 0) {
       setActiveStopIndex(existingIdx);
       isDraggingStop.current = existingIdx;
@@ -497,8 +557,8 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       // Add a new stop at click location
       const newStop: GradientStop = {
         id: `stop-${Date.now()}`,
-        color: hsvToHex(currentHsv.h, currentHsv.s, currentHsv.v),
-        alpha: currentAlpha,
+        color: activeStop?.color || "#6366F1",
+        alpha: activeStop?.alpha ?? 1,
         offset,
       };
       const updated = [...gradientStops, newStop].sort((a, b) => a.offset - b.offset);
@@ -508,7 +568,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       isDraggingStop.current = newIdx;
       useProjectStore.getState().startTransaction();
       e.currentTarget.setPointerCapture(e.pointerId);
-      emitGradientUpdate(gradientAngle, updated);
+      emitGradientUpdate(gradientType, gradientAngle, updated);
     }
   };
 
@@ -518,11 +578,13 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       isDraggingSat.current ||
       isDraggingHue.current ||
       isDraggingAlpha.current ||
+      isDraggingVectorHandle.current !== null ||
       isDraggingStop.current !== null
     ) {
       isDraggingSat.current = false;
       isDraggingHue.current = false;
       isDraggingAlpha.current = false;
+      isDraggingVectorHandle.current = null;
       isDraggingStop.current = null;
       useProjectStore.getState().commitTransaction();
     }
@@ -535,11 +597,13 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         isDraggingSat.current ||
         isDraggingHue.current ||
         isDraggingAlpha.current ||
+        isDraggingVectorHandle.current !== null ||
         isDraggingStop.current !== null
       ) {
         isDraggingSat.current = false;
         isDraggingHue.current = false;
         isDraggingAlpha.current = false;
+        isDraggingVectorHandle.current = null;
         isDraggingStop.current = null;
         useProjectStore.getState().commitTransaction();
       }
@@ -557,19 +621,9 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         if (result?.sRGBHex) {
           const pickedHex = result.sRGBHex.toUpperCase();
           const newHsv = hexToHsv(pickedHex);
-          setHexInput(pickedHex.replace("#", ""));
-          if (mode === "solid") {
-            setSolidHsv(newHsv);
-            emitSolidUpdate(newHsv.h, newHsv.s, newHsv.v, solidAlpha);
-          } else {
-            setGradientStops((prev) => {
-              const updated = [...prev];
-              const cur = updated[activeStopIndex] || updated[0];
-              updated[activeStopIndex] = { ...cur, color: pickedHex };
-              emitGradientUpdate(gradientAngle, updated);
-              return updated;
-            });
-          }
+          setSolidHexInput(pickedHex.replace("#", ""));
+          setSolidHsv(newHsv);
+          emitSolidUpdate(newHsv.h, newHsv.s, newHsv.v, solidAlpha);
         }
       } catch {
         // User cancelled picker
@@ -582,44 +636,83 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     setMode(newMode);
     useProjectStore.getState().startTransaction();
     if (newMode === "solid") {
-      const curHex = hsvToHex(currentHsv.h, currentHsv.s, currentHsv.v);
-      const result = currentAlpha < 1 ? hexToRgbaString(curHex, currentAlpha) : curHex;
+      const curHex = hsvToHex(solidHsv.h, solidHsv.s, solidHsv.v);
+      const result = solidAlpha < 1 ? hexToRgbaString(curHex, solidAlpha) : curHex;
       emitChange(result);
     } else {
-      const result = serializeGradient(gradientAngle, gradientStops);
+      const result = serializeGradient(gradientType, gradientAngle, gradientStops);
       emitChange(result);
     }
     useProjectStore.getState().commitTransaction();
   };
 
-  // Delete a gradient stop
+  // Reverse / Flip gradient direction (⇄)
+  const handleReverseGradient = () => {
+    useProjectStore.getState().startTransaction();
+    const newAngle = (gradientAngle + 180) % 360;
+    setGradientAngle(newAngle);
+    setVectorPoints(angleToHandlePoints(newAngle));
+
+    const reversedStops = gradientStops
+      .map((s) => ({
+        ...s,
+        offset: 100 - s.offset,
+      }))
+      .sort((a, b) => a.offset - b.offset);
+
+    setGradientStops(reversedStops);
+    emitGradientUpdate(gradientType, newAngle, reversedStops);
+    useProjectStore.getState().commitTransaction();
+  };
+
+  // Delete active gradient stop
   const handleDeleteStop = (idx: number) => {
     if (gradientStops.length <= 2) return;
     useProjectStore.getState().startTransaction();
     const updated = gradientStops.filter((_, i) => i !== idx);
     setGradientStops(updated);
     setActiveStopIndex(Math.max(0, idx - 1));
-    emitGradientUpdate(gradientAngle, updated);
+    emitGradientUpdate(gradientType, gradientAngle, updated);
     useProjectStore.getState().commitTransaction();
   };
 
-  // Add current color/gradient to saved swatches
+  // Update active stop's color
+  const updateActiveStopColor = (newHex: string) => {
+    const updated = [...gradientStops];
+    const cur = updated[activeStopIndex] || updated[0];
+    updated[activeStopIndex] = { ...cur, color: newHex };
+    setGradientStops(updated);
+    emitGradientUpdate(gradientType, gradientAngle, updated);
+  };
+
+  // Update active stop's opacity
+  const updateActiveStopAlpha = (newAlpha: number) => {
+    const updated = [...gradientStops];
+    const cur = updated[activeStopIndex] || updated[0];
+    updated[activeStopIndex] = { ...cur, alpha: newAlpha };
+    setGradientStops(updated);
+    emitGradientUpdate(gradientType, gradientAngle, updated);
+  };
+
+  // Add current value to saved swatches
   const handleAddSwatch = () => {
     const activeValue =
       mode === "solid"
-        ? currentAlpha < 1
-          ? hexToRgbaString(hsvToHex(currentHsv.h, currentHsv.s, currentHsv.v), currentAlpha)
-          : hsvToHex(currentHsv.h, currentHsv.s, currentHsv.v)
-        : serializeGradient(gradientAngle, gradientStops);
+        ? solidAlpha < 1
+          ? hexToRgbaString(hsvToHex(solidHsv.h, solidHsv.s, solidHsv.v), solidAlpha)
+          : hsvToHex(solidHsv.h, solidHsv.s, solidHsv.v)
+        : serializeGradient(gradientType, gradientAngle, gradientStops);
 
     if (!savedSwatches.includes(activeValue)) {
       setSavedSwatches((prev) => [...prev, activeValue]);
     }
   };
 
-  const pureHueHex = hsvToHex(currentHsv.h, 1, 1);
-  const currentHex = hsvToHex(currentHsv.h, currentHsv.s, currentHsv.v);
-  const gradientBarCss = `linear-gradient(to right, ${gradientStops
+  const solidPureHue = hsvToHex(solidHsv.h, 1, 1);
+  const solidCurrentHex = hsvToHex(solidHsv.h, solidHsv.s, solidHsv.v);
+
+  const liveGradientCss = serializeGradient(gradientType, gradientAngle, gradientStops);
+  const gradientBarTrackCss = `linear-gradient(to right, ${gradientStops
     .map((s) => `${s.alpha < 1 ? hexToRgbaString(s.color, s.alpha) : s.color} ${s.offset}%`)
     .join(", ")})`;
 
@@ -646,7 +739,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         align="end"
         sideOffset={6}
         onPointerDown={(e) => e.stopPropagation()}
-        className="w-[260px] p-3 bg-popover text-popover-foreground border-border shadow-2xl rounded-xl space-y-3 z-50 select-none"
+        className="w-[264px] p-3 bg-popover text-popover-foreground border-border shadow-2xl rounded-xl space-y-3 z-50 select-none"
       >
         {/* Tab Header: Solid | Gradient + Close Button */}
         <div className="flex items-center justify-between border-b border-border/60 pb-2">
@@ -688,256 +781,379 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
           </button>
         </div>
 
-        {/* Gradient Stop Bar & Angle (Visible only in Gradient mode) */}
-        {mode === "gradient" && (
-          <div className="space-y-2 pt-0.5">
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>Stops</span>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] uppercase font-mono">Angle</span>
-                <div className="relative w-14">
-                  <Input
-                    type="number"
-                    min={0}
-                    max={360}
-                    value={gradientAngle}
-                    onChange={(e) => {
-                      const deg = parseInt(e.target.value, 10) || 0;
-                      setGradientAngle(deg);
-                      emitGradientUpdate(deg, gradientStops);
+        {/* ================================================================= */}
+        {/* VIEW 1: SOLID COLOR VIEW                                          */}
+        {/* ================================================================= */}
+        {mode === "solid" && (
+          <div className="space-y-3">
+            {/* 2D Saturation / Value Gradient Canvas */}
+            <div
+              ref={satAreaRef}
+              onPointerDown={handleSatDown}
+              onPointerMove={(e) => {
+                if (isDraggingSat.current) handleSatMove(e);
+              }}
+              onPointerUp={handlePointerUp}
+              className="relative w-full h-36 rounded-lg overflow-hidden cursor-crosshair shadow-inner"
+              style={{
+                backgroundColor: solidPureHue,
+                backgroundImage: `
+                  linear-gradient(to right, #fff 0%, transparent 100%),
+                  linear-gradient(to top, #000 0%, transparent 100%)
+                `,
+              }}
+            >
+              <div
+                className="absolute w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_3px_rgba(0,0,0,0.8)] pointer-events-none"
+                style={{
+                  left: `${solidHsv.s * 100}%`,
+                  top: `${(1 - solidHsv.v) * 100}%`,
+                  backgroundColor: solidCurrentHex,
+                }}
+              />
+            </div>
+
+            {/* Controls Row: Eyedropper + Hue + Opacity */}
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleEyeDropper}
+                className="h-8 w-8 rounded-lg border border-border/80 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors shrink-0 shadow-2xs cursor-pointer"
+                title="Eyedropper (Pick screen color)"
+              >
+                <Pipette className="h-3.5 w-3.5" />
+              </button>
+
+              <div className="flex-1 space-y-2">
+                {/* 1D Rainbow Hue Slider */}
+                <div
+                  ref={hueSliderRef}
+                  onPointerDown={handleHueDown}
+                  onPointerMove={(e) => {
+                    if (isDraggingHue.current) handleHueMove(e);
+                  }}
+                  onPointerUp={handlePointerUp}
+                  className="relative w-full h-2.5 rounded-full cursor-pointer shadow-inner"
+                  style={{
+                    backgroundImage:
+                      "linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)",
+                  }}
+                >
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 border-white shadow-[0_0_2px_rgba(0,0,0,0.8)] pointer-events-none"
+                    style={{
+                      left: `${(solidHsv.h / 360) * 100}%`,
+                      backgroundColor: solidPureHue,
                     }}
-                    className="h-5 px-1.5 text-[11px] text-center font-mono py-0"
                   />
-                  <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">
-                    °
-                  </span>
+                </div>
+
+                {/* Opacity / Alpha Slider */}
+                <div
+                  ref={alphaSliderRef}
+                  onPointerDown={handleAlphaDown}
+                  onPointerMove={(e) => {
+                    if (isDraggingAlpha.current) handleAlphaMove(e);
+                  }}
+                  onPointerUp={handlePointerUp}
+                  className="relative w-full h-2.5 rounded-full cursor-pointer shadow-inner overflow-hidden"
+                  style={CHECKERBOARD_STYLE}
+                >
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      backgroundImage: `linear-gradient(to right, transparent, ${solidCurrentHex})`,
+                    }}
+                  />
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 border-white shadow-[0_0_2px_rgba(0,0,0,0.8)] pointer-events-none"
+                    style={{
+                      left: `${solidAlpha * 100}%`,
+                      backgroundColor: solidCurrentHex,
+                    }}
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Gradient Stop Slider Track */}
-            <div
-              ref={stopBarRef}
-              onPointerDown={handleStopBarDown}
-              onPointerMove={(e) => {
-                if (isDraggingStop.current !== null) handleStopMove(e);
-              }}
-              onPointerUp={handlePointerUp}
-              className="relative w-full h-4 rounded-md cursor-pointer border border-border/70 shadow-inner"
-              style={{ background: gradientBarCss }}
-              title="Click to add stop, drag to move"
-            >
-              {gradientStops.map((stop, idx) => (
-                <div
-                  key={stop.id || idx}
-                  className={cn(
-                    "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full border-2 shadow-md cursor-grab active:cursor-grabbing transition-transform hover:scale-110",
-                    activeStopIndex === idx
-                      ? "border-primary ring-2 ring-primary/40 scale-110 z-10"
-                      : "border-white z-0"
-                  )}
-                  style={{
-                    left: `${stop.offset}%`,
-                    backgroundColor: stop.color,
-                  }}
-                  onPointerDown={(e) => {
-                    e.stopPropagation();
-                    setActiveStopIndex(idx);
-                    isDraggingStop.current = idx;
-                    useProjectStore.getState().startTransaction();
-                    e.currentTarget.setPointerCapture(e.pointerId);
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* Delete active stop (if >2 stops) */}
-            {gradientStops.length > 2 && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => handleDeleteStop(activeStopIndex)}
-                  className="text-[10px] text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors cursor-pointer"
-                  title="Delete selected stop"
-                >
-                  <Trash2 className="h-2.5 w-2.5" />
-                  <span>Remove stop</span>
-                </button>
+            {/* Inputs: Format + Hex + Opacity % */}
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 px-2 h-7 rounded border border-border/80 bg-muted/40 text-[11px] font-medium text-muted-foreground shrink-0 select-none">
+                <span>Hex</span>
+                <ChevronDown className="h-3 w-3 opacity-60" />
               </div>
-            )}
+
+              <div className="flex-1 relative flex items-center">
+                <div
+                  className="absolute left-2 w-3 h-3 rounded-full border border-border/60 shrink-0 shadow-2xs pointer-events-none"
+                  style={{ backgroundColor: solidCurrentHex }}
+                />
+                <Input
+                  type="text"
+                  value={solidHexInput}
+                  maxLength={6}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
+                    setSolidHexInput(clean);
+                    if (clean.length === 6 || clean.length === 3) {
+                      const fullHex = `#${clean}`;
+                      const newHsv = hexToHsv(fullHex);
+                      setSolidHsv(newHsv);
+                      emitSolidUpdate(newHsv.h, newHsv.s, newHsv.v, solidAlpha);
+                    }
+                  }}
+                  onBlur={() => {
+                    setSolidHexInput(solidCurrentHex.replace("#", "").toUpperCase());
+                  }}
+                  className="h-7 pl-6 pr-2 font-mono text-xs uppercase"
+                />
+              </div>
+
+              <div className="relative w-16 shrink-0">
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={Math.round(solidAlpha * 100)}
+                  onChange={(e) => {
+                    const num = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
+                    const newAlpha = num / 100;
+                    setSolidAlpha(newAlpha);
+                    emitSolidUpdate(solidHsv.h, solidHsv.s, solidHsv.v, newAlpha);
+                  }}
+                  className="h-7 pr-4 text-center font-mono text-xs"
+                />
+                <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">
+                  %
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* 2D Saturation / Value Gradient Canvas */}
-        <div
-          ref={satAreaRef}
-          onPointerDown={handleSatDown}
-          onPointerMove={(e) => {
-            if (isDraggingSat.current) handleSatMove(e);
-          }}
-          onPointerUp={handlePointerUp}
-          className="relative w-full h-32 rounded-lg overflow-hidden cursor-crosshair shadow-inner"
-          style={{
-            backgroundColor: pureHueHex,
-            backgroundImage: `
-              linear-gradient(to right, #fff 0%, transparent 100%),
-              linear-gradient(to top, #000 0%, transparent 100%)
-            `,
-          }}
-        >
-          {/* Thumb marker */}
-          <div
-            className="absolute w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_3px_rgba(0,0,0,0.8)] pointer-events-none"
-            style={{
-              left: `${currentHsv.s * 100}%`,
-              top: `${(1 - currentHsv.v) * 100}%`,
-              backgroundColor: currentHex,
-            }}
-          />
-        </div>
-
-        {/* Slider Controls Row: Eyedropper + Hue Slider + Alpha Slider */}
-        <div className="flex items-center gap-2.5 pt-0.5">
-          {/* Native Eyedropper Button */}
-          <button
-            type="button"
-            onClick={handleEyeDropper}
-            className="h-8 w-8 rounded-lg border border-border/80 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors shrink-0 shadow-2xs cursor-pointer"
-            title="Eyedropper (Pick screen color)"
-          >
-            <Pipette className="h-3.5 w-3.5" />
-          </button>
-
-          {/* Dual Sliders: Hue and Alpha */}
-          <div className="flex-1 space-y-2">
-            {/* 1D Rainbow Hue Slider */}
+        {/* ================================================================= */}
+        {/* VIEW 2: GRADIENT VIEW (Interactive 2-Point Vector Dragger)        */}
+        {/* ================================================================= */}
+        {mode === "gradient" && (
+          <div className="space-y-3">
+            {/* Live Interactive Gradient Preview with 2-Point Dragger & Dashed Line */}
             <div
-              ref={hueSliderRef}
-              onPointerDown={handleHueDown}
+              ref={gradientCanvasRef}
               onPointerMove={(e) => {
-                if (isDraggingHue.current) handleHueMove(e);
+                if (isDraggingVectorHandle.current) handleVectorMove(e);
               }}
               onPointerUp={handlePointerUp}
-              className="relative w-full h-2.5 rounded-full cursor-pointer shadow-inner"
+              className="relative w-full h-40 rounded-lg overflow-hidden border border-border/60 shadow-inner select-none cursor-default"
               style={{
-                backgroundImage:
-                  "linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)",
+                background: liveGradientCss,
               }}
             >
+              {/* Dashed line connecting the 2 vector points */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+                {/* Dark shadow stroke for high contrast */}
+                <line
+                  x1={`${vectorPoints.p1.x * 100}%`}
+                  y1={`${vectorPoints.p1.y * 100}%`}
+                  x2={`${vectorPoints.p2.x * 100}%`}
+                  y2={`${vectorPoints.p2.y * 100}%`}
+                  stroke="rgba(0, 0, 0, 0.6)"
+                  strokeWidth="2.5"
+                  strokeDasharray="4 4"
+                />
+                {/* Crisp white dashed line */}
+                <line
+                  x1={`${vectorPoints.p1.x * 100}%`}
+                  y1={`${vectorPoints.p1.y * 100}%`}
+                  x2={`${vectorPoints.p2.x * 100}%`}
+                  y2={`${vectorPoints.p2.y * 100}%`}
+                  stroke="#ffffff"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 4"
+                />
+              </svg>
+
+              {/* Point 1 Draggable Handle (Start) */}
               <div
-                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 border-white shadow-[0_0_2px_rgba(0,0,0,0.8)] pointer-events-none"
+                className="absolute -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-white shadow-[0_2px_6px_rgba(0,0,0,0.6)] cursor-grab active:cursor-grabbing hover:scale-110 transition-transform z-10 flex items-center justify-center"
                 style={{
-                  left: `${(currentHsv.h / 360) * 100}%`,
-                  backgroundColor: pureHueHex,
+                  left: `${vectorPoints.p1.x * 100}%`,
+                  top: `${vectorPoints.p1.y * 100}%`,
+                  backgroundColor: gradientStops[0]?.color || "#ffffff",
+                }}
+                onPointerDown={(e) => handleVectorDown(e, 1)}
+                title="Drag to change gradient origin"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-white shadow-xs" />
+              </div>
+
+              {/* Point 2 Draggable Handle (End) */}
+              <div
+                className="absolute -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-white shadow-[0_2px_6px_rgba(0,0,0,0.6)] cursor-grab active:cursor-grabbing hover:scale-110 transition-transform z-10 flex items-center justify-center"
+                style={{
+                  left: `${vectorPoints.p2.x * 100}%`,
+                  top: `${vectorPoints.p2.y * 100}%`,
+                  backgroundColor: gradientStops[gradientStops.length - 1]?.color || "#ffffff",
+                }}
+                onPointerDown={(e) => handleVectorDown(e, 2)}
+                title="Drag to change gradient direction"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-white shadow-xs" />
+              </div>
+            </div>
+
+            {/* Gradient Type Selector & Reverse Button */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextType = gradientType === "linear" ? "radial" : "linear";
+                    setGradientType(nextType);
+                    emitGradientUpdate(nextType, gradientAngle, gradientStops);
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border/80 bg-muted/40 text-xs font-medium text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+                  title="Toggle gradient type"
+                >
+                  <span className="capitalize">{gradientType}</span>
+                  <ChevronDown className="h-3 w-3 opacity-60" />
+                </button>
+                <span className="text-[11px] text-muted-foreground font-mono">
+                  {gradientAngle}°
+                </span>
+              </div>
+
+              {/* Reverse Gradient Direction Button (⇄) */}
+              <button
+                type="button"
+                onClick={handleReverseGradient}
+                className="h-7 w-7 rounded border border-border/80 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors cursor-pointer shadow-2xs"
+                title="Reverse gradient direction"
+              >
+                <ArrowLeftRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Gradient Stop Slider Track */}
+            <div className="space-y-1 pt-0.5">
+              <div
+                ref={stopBarRef}
+                onPointerDown={handleStopBarDown}
+                onPointerMove={(e) => {
+                  if (isDraggingStop.current !== null) handleStopMove(e);
+                }}
+                onPointerUp={handlePointerUp}
+                className="relative w-full h-4 rounded-md cursor-pointer border border-border/70 shadow-inner"
+                style={{ background: gradientBarTrackCss }}
+                title="Click to add stop, drag to move"
+              >
+                {gradientStops.map((stop, idx) => (
+                  <div
+                    key={stop.id || idx}
+                    className={cn(
+                      "absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 rounded-full border-2 shadow-md cursor-grab active:cursor-grabbing transition-transform hover:scale-110",
+                      activeStopIndex === idx
+                        ? "border-primary ring-2 ring-primary/40 scale-110 z-10"
+                        : "border-white z-0"
+                    )}
+                    style={{
+                      left: `${stop.offset}%`,
+                      backgroundColor: stop.color,
+                    }}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      setActiveStopIndex(idx);
+                      isDraggingStop.current = idx;
+                      useProjectStore.getState().startTransaction();
+                      e.currentTarget.setPointerCapture(e.pointerId);
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Active Stop Inspector: Color + Hex + Alpha + Delete */}
+            <div className="p-2 rounded-lg bg-muted/40 border border-border/60 space-y-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-medium text-muted-foreground">
+                  Stop {activeStopIndex + 1} ({Math.round(activeStop?.offset || 0)}%)
+                </span>
+                {gradientStops.length > 2 && (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteStop(activeStopIndex)}
+                    className="text-[10px] text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Remove this stop"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    <span>Delete</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Stop Hex Input & Opacity Input */}
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-6 h-6 rounded border border-border/80 shadow-xs shrink-0"
+                  style={{ backgroundColor: activeStop?.color || "#ffffff" }}
+                />
+                <div className="flex-1 relative">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground">
+                    #
+                  </span>
+                  <Input
+                    type="text"
+                    value={(activeStop?.color || "#ffffff").replace("#", "").toUpperCase()}
+                    maxLength={6}
+                    onChange={(e) => {
+                      const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
+                      if (clean.length === 6 || clean.length === 3) {
+                        updateActiveStopColor(`#${clean}`);
+                      }
+                    }}
+                    className="h-6 pl-5 pr-2 font-mono text-xs uppercase"
+                  />
+                </div>
+
+                <div className="relative w-14 shrink-0">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={Math.round((activeStop?.alpha ?? 1) * 100)}
+                    onChange={(e) => {
+                      const num = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
+                      updateActiveStopAlpha(num / 100);
+                    }}
+                    className="h-6 pr-3.5 text-center font-mono text-xs py-0"
+                  />
+                  <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground pointer-events-none">
+                    %
+                  </span>
+                </div>
+              </div>
+
+              {/* Stop Quick Spectrum Color Bar */}
+              <div
+                className="relative w-full h-2 rounded-full cursor-pointer shadow-inner"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)",
+                }}
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+                  const h = Math.round((x / rect.width) * 360) % 360;
+                  const newHex = hsvToHex(h, 1, 1);
+                  updateActiveStopColor(newHex);
                 }}
               />
             </div>
-
-            {/* Opacity / Alpha Slider */}
-            <div
-              ref={alphaSliderRef}
-              onPointerDown={handleAlphaDown}
-              onPointerMove={(e) => {
-                if (isDraggingAlpha.current) handleAlphaMove(e);
-              }}
-              onPointerUp={handlePointerUp}
-              className="relative w-full h-2.5 rounded-full cursor-pointer shadow-inner overflow-hidden"
-              style={CHECKERBOARD_STYLE}
-            >
-              <div
-                className="absolute inset-0"
-                style={{
-                  backgroundImage: `linear-gradient(to right, transparent, ${currentHex})`,
-                }}
-              />
-              <div
-                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 rounded-full border-2 border-white shadow-[0_0_2px_rgba(0,0,0,0.8)] pointer-events-none"
-                style={{
-                  left: `${currentAlpha * 100}%`,
-                  backgroundColor: currentHex,
-                }}
-              />
-            </div>
           </div>
-        </div>
+        )}
 
-        {/* Inputs: Format (Hex) + Hex Code + Opacity Percentage */}
-        <div className="flex items-center gap-1.5 pt-0.5">
-          {/* Format selector pill */}
-          <div className="flex items-center gap-1 px-2 h-7 rounded border border-border/80 bg-muted/40 text-[11px] font-medium text-muted-foreground shrink-0 select-none">
-            <span>Hex</span>
-            <ChevronDown className="h-3 w-3 opacity-60" />
-          </div>
-
-          {/* Hex Value Input with Live Swatch Dot */}
-          <div className="flex-1 relative flex items-center">
-            <div
-              className="absolute left-2 w-3 h-3 rounded-full border border-border/60 shrink-0 shadow-2xs pointer-events-none"
-              style={{ backgroundColor: currentHex }}
-            />
-            <Input
-              type="text"
-              value={hexInput}
-              maxLength={6}
-              onChange={(e) => {
-                const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
-                setHexInput(clean);
-                if (clean.length === 6 || clean.length === 3) {
-                  const fullHex = `#${clean}`;
-                  const newHsv = hexToHsv(fullHex);
-                  if (mode === "solid") {
-                    setSolidHsv(newHsv);
-                    emitSolidUpdate(newHsv.h, newHsv.s, newHsv.v, currentAlpha);
-                  } else {
-                    setGradientStops((prev) => {
-                      const updated = [...prev];
-                      const cur = updated[activeStopIndex] || updated[0];
-                      updated[activeStopIndex] = { ...cur, color: fullHex };
-                      emitGradientUpdate(gradientAngle, updated);
-                      return updated;
-                    });
-                  }
-                }
-              }}
-              onBlur={() => {
-                setHexInput(currentHex.replace("#", "").toUpperCase());
-              }}
-              className="h-7 pl-6 pr-2 font-mono text-xs uppercase"
-            />
-          </div>
-
-          {/* Opacity Percentage Input */}
-          <div className="relative w-16 shrink-0">
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              value={Math.round(currentAlpha * 100)}
-              onChange={(e) => {
-                const num = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
-                const newAlpha = num / 100;
-                if (mode === "solid") {
-                  setSolidAlpha(newAlpha);
-                  emitSolidUpdate(currentHsv.h, currentHsv.s, currentHsv.v, newAlpha);
-                } else {
-                  setGradientStops((prev) => {
-                    const updated = [...prev];
-                    const cur = updated[activeStopIndex] || updated[0];
-                    updated[activeStopIndex] = { ...cur, alpha: newAlpha };
-                    emitGradientUpdate(gradientAngle, updated);
-                    return updated;
-                  });
-                }
-              }}
-              className="h-7 pr-4 text-center font-mono text-xs"
-            />
-            <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">
-              %
-            </span>
-          </div>
-        </div>
-
-        {/* Saved Swatches Section: Circular Dots + Add Button */}
+        {/* ================================================================= */}
+        {/* COMMON FOOTER: SAVED CIRCULAR SWATCHES                            */}
+        {/* ================================================================= */}
         <div className="pt-2 border-t border-border/60 space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-foreground">Saved</span>
@@ -952,7 +1168,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
             </button>
           </div>
 
-          {/* Horizontal row of small circular dots matching the user's reference design */}
+          {/* Small circular dots row matching reference screenshot */}
           <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none">
             {savedSwatches.map((swatch, idx) => (
               <button
@@ -960,11 +1176,13 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                 type="button"
                 onClick={() => {
                   useProjectStore.getState().startTransaction();
-                  if (swatch.includes("linear-gradient")) {
+                  if (swatch.includes("gradient")) {
                     setMode("gradient");
                     const parsed = parseLinearGradientString(swatch);
+                    setGradientType(parsed.type);
                     setGradientAngle(parsed.angle);
                     setGradientStops(parsed.stops);
+                    setVectorPoints(angleToHandlePoints(parsed.angle));
                     setActiveStopIndex(0);
                     emitChange(swatch);
                   } else {
@@ -972,7 +1190,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                     const { hex, alpha } = parseHexOrRgba(swatch);
                     setSolidHsv(hexToHsv(hex));
                     setSolidAlpha(alpha);
-                    setHexInput(hex.replace("#", "").toUpperCase());
+                    setSolidHexInput(hex.replace("#", "").toUpperCase());
                     emitChange(swatch);
                   }
                   useProjectStore.getState().commitTransaction();

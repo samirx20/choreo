@@ -953,5 +953,27 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 36 test suites (303 tests) pass 100%.
   * Production build compiles cleanly in 9.75s with zero errors.
 
+---
+
+### Decision 43: Interactive 2-Point Vector Gradient Dragger & Clean View Separation
+* **Clean Dual-View Specialization**:
+  * Eliminated redundant controls copied between views. Solid view and Gradient view are now engineered as two distinct, specialized workspaces.
+* **View 1: Solid Color Workspace**:
+  * Focuses purely on solid color composition: 2D Saturation/Value canvas, native Eyedropper (`window.EyeDropper`), rainbow Hue slider, checkerboard Opacity slider, Hex input with live dot, and % input.
+* **View 2: Gradient Workspace (2-Point Vector Dragger & Dashed Line)**:
+  * **Interactive 2D Gradient Canvas**: The top canvas displays the live gradient in real-time, overlaid with 2 draggable circular handles connected by an SVG high-contrast dashed vector line.
+  * **Natural Direction & Angle Vector Math**: Dragging either handle dynamically recalculates the vector angle ($\theta = \text{atan2}(dy, dx)$), giving users physical, intuitive control over angle, origin, and spread directly on the canvas.
+  * **Gradient Controls Row**:
+    - Mode toggle dropdown (`Linear` / `Radial`).
+    - Reverse button (`ArrowLeftRight` / `⇄`) that inverts the stop sequence.
+  * **Stop Track & Compact Stop Inspector**:
+    - Live multi-stop track with draggable thumb markers and click-to-add stop functionality.
+    - Compact, non-redundant Stop Inspector: Stop index/offset, color swatch, hex input, opacity % input, delete stop button (when $>2$ stops), and quick hue spectrum bar.
+  * **Common Footer**: Shared circular palette swatches with `+ Add` button.
+* **Verification**:
+  * Full test suite: 36 test suites (303 tests) pass 100%.
+  * Production build compiles cleanly in 10.39s with zero errors.
+
+
 
 

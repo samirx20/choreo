@@ -68,8 +68,11 @@ describe("Color & Linear Gradient Picker Engine", () => {
         { id: "3", color: "#EC4899", alpha: 1, offset: 100 },
       ];
 
-      const serialized = serializeGradient(90, stops);
+      const serialized = serializeGradient("linear", 90, stops);
       expect(serialized).toBe("linear-gradient(90deg, #3B82F6 0%, rgba(16, 185, 129, 0.8) 50%, #EC4899 100%)");
+
+      const radialSerialized = serializeGradient("radial", 0, stops);
+      expect(radialSerialized).toBe("radial-gradient(circle, #3B82F6 0%, rgba(16, 185, 129, 0.8) 50%, #EC4899 100%)");
     });
   });
 
