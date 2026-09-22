@@ -9,10 +9,16 @@
 ## 1. Current Verified Baseline
 
 The repository is in a clean, fully verified, production-ready state:
-* **Automated Unit & Integration Tests**: All **37 test suites (314 tests)** passing via Vitest (`npm test`).
-* **Production Build**: Compiles cleanly with **0 TypeScript / Vite bundling errors in 9.53s** (`npm run build`).
+* **Automated Unit & Integration Tests**: All **38 test suites (317 tests)** passing via Vitest (`npm test`).
+* **Production Build**: Compiles cleanly with **0 TypeScript / Vite bundling errors in 8.56s** (`npm run build`).
 * **Git Status**: Clean working tree on `main`.
 * **Recent Deliverables Completed**:
+  * **Multi-Scene Sequence Export & Downward-Expanding Export Card**:
+    * Seamless sequence stitching across multiple scenes with continuous time mapping and zero black frames.
+    * Transparent alpha video export (`video/webm; codecs=vp09.00.10.08`) with instant stage background toggling and automatic restoration.
+    * Downward-expanding Radix Popover card anchored to the top-right Export button, replacing the modal.
+    * Precision two-decision interface: Background (`With Background` vs `Transparent`) and Scope (`All Scenes` vs `Current Scene`).
+    * In-card real-time render progress: frame counter, gradient progress bar, rolling ETA, and cancel/abort button.
   * **Official `.mtn` Custom Save File & File System Adapter**:
     * Strictly validated `MotionStudioFileSchema` (v1) with Zod, wrapping project metadata and `SceneDocument`.
     * Dual-format auto-normalization (`validateAndNormalizeProjectFile`) supporting both `.mtn` packages and legacy raw JSON / `.motion` files with 100% backward compatibility.

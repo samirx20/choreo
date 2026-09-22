@@ -1038,6 +1038,26 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * 37 test suites, 314 unit and integration tests passing (`npm test`).
   * Production build compiles cleanly with 0 TypeScript / Vite bundling errors in 9.53s (`npm run build`).
 
+---
+
+### Decision 54: Multi-Scene Sequence Export, Transparent Alpha Video & Downward-Expanding Export Card
+* **Multi-Scene Sequence Stitching (`src/engine/export/videoExporter.ts`)**:
+  * Upgraded `videoExporter.exportVideo` to support sequence stitching across multiple scenes (`screens: Screen[]`):
+    $$\text{Sequence Duration} = \sum_{i} \text{screen}_i.\text{duration}$$
+  * Deterministic frame-accurate clock ($t_{\text{global}} = k / \text{fps}$) resolving to active scene and relative local time $t_{\text{local}} = t_{\text{global}} - \text{sceneStart}$.
+  * Handles scene transitions and triggers `pixiStage.renderScreen(scene)` on scene boundaries with zero black frames or timing drift.
+* **Transparent Alpha Video Export**:
+  * Integrated true alpha channel export: sets `pixiStage.setTransparentBackground(true)` (renderer alpha `0.0`, hidden artboard border and shadow).
+  * Automatically encodes with VP9 alpha profile (`video/webm; codecs=vp09.00.10.08` or `video/webm; codecs=vp9`).
+  * Automatically restores solid artboard fill and shadow upon export completion or abort.
+* **Downward-Expanding Export Popover Card (`src/components/export/ExportPopover.tsx`)**:
+  * Replaced the disruptive full-screen modal with a compact Radix `Popover` anchored directly to the purple Export button in `TopNavBar`.
+  * **Precision Two-Decision UI**: Exposes strictly Background (`With Background` vs `Transparent`) and Scope (`All Scenes` vs `Current Scene`), eliminating redundant frame rate pickers that would disrupt per-scene aesthetic `stepFps` (e.g., 8 FPS stop-motion vs 60 FPS fluid springs).
+  * **In-Card Live Progress**: Transitions within the popover to show live frame counter (`Frame 142 / 300`), animated gradient progress bar, rolling ETA (`~4s left`), and an instant `Cancel Export` button.
+* **Verification**:
+  * 38 test suites, 317 unit and integration tests passing cleanly (`npm test`).
+  * Production build compiles cleanly with 0 TypeScript / Vite bundling errors in 8.56s (`npm run build`).
+
 
 
 

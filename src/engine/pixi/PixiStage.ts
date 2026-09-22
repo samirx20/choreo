@@ -26,6 +26,7 @@ export class PixiStage {
   public isReady = false;
 
   private layerDisplayObjects = new Map<string, Container>();
+  private isTransparent = false;
 
   constructor(options: PixiStageOptions) {
     this.options = options;
@@ -45,6 +46,7 @@ export class PixiStage {
       autoDensity: true,
       antialias: true,
       backgroundColor: 0x09090b, // Zinc-950
+      backgroundAlpha: 1,
       preference: "webgl",
     });
 
@@ -153,16 +155,44 @@ export class PixiStage {
     this.artboardMask.fill({ color: 0xffffff });
   }
 
+  public setTransparentBackground(transparent: boolean): void {
+    this.isTransparent = transparent;
+    if (this.app?.renderer?.background) {
+      this.app.renderer.background.alpha = transparent ? 0.0 : 1.0;
+    }
+    if (transparent) {
+      this.artboardBg.visible = false;
+    } else {
+      this.artboardBg.visible = true;
+      this.updateArtboardBackground(
+        this.options.artboardWidth,
+        this.options.artboardHeight,
+        this.options.backgroundColor || "#18181b"
+      );
+    }
+    if (this.app?.renderer) {
+      this.app.renderer.render(this.app.stage);
+    }
+  }
+
   public renderScreen(screen: Screen) {
     if (!this.isReady) return;
 
-    // Dynamically update artboard background to matching scene fill
-    const screenBg = screen.backgroundColor || this.options.backgroundColor || "#18181b";
-    this.updateArtboardBackground(
-      this.options.artboardWidth,
-      this.options.artboardHeight,
-      screenBg
-    );
+    if (this.isTransparent) {
+      this.artboardBg.visible = false;
+      if (this.app?.renderer?.background) {
+        this.app.renderer.background.alpha = 0.0;
+      }
+    } else {
+      this.artboardBg.visible = true;
+      // Dynamically update artboard background to matching scene fill
+      const screenBg = screen.backgroundColor || this.options.backgroundColor || "#18181b";
+      this.updateArtboardBackground(
+        this.options.artboardWidth,
+        this.options.artboardHeight,
+        screenBg
+      );
+    }
 
     // Clear obsolete display objects
     const currentLayerIds = new Set<string>();

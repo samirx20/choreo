@@ -19,17 +19,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useProjectRegistryStore } from "@/store/useProjectRegistryStore";
+import { ExportPopover } from "@/components/export/ExportPopover";
 
 interface TopNavBarProps {
   onOpenAiBar?: () => void;
-  onOpenExportModal: () => void;
   onToggleZenMode?: () => void;
   onBackToWorkspace?: () => void;
 }
 
 export const TopNavBar: React.FC<TopNavBarProps> = ({
   onOpenAiBar,
-  onOpenExportModal,
   onToggleZenMode,
   onBackToWorkspace,
 }) => {
@@ -191,7 +190,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               <DropdownMenuSeparator className="bg-[#27272a]" />
 
               <DropdownMenuItem
-                onClick={onOpenExportModal}
+                onClick={() => window.dispatchEvent(new CustomEvent("motion-open-export-popover"))}
                 className="text-xs cursor-pointer flex items-center justify-between"
               >
                 <div className="flex items-center gap-2">
@@ -270,15 +269,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Purple Export Pill Button */}
-        <button
-          onClick={onOpenExportModal}
-          className="h-8 text-xs font-medium px-4 bg-[#7c3aed] hover:bg-[#6d28d9] text-white rounded-md flex items-center gap-1.5 transition-colors shadow-sm"
-          title="Export video"
-        >
-          <Download className="h-3.5 w-3.5" />
-          <span>Export</span>
-        </button>
+        {/* Downward-Expanding Export Popover Card */}
+        <ExportPopover />
       </div>
     </header>
   );

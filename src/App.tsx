@@ -9,7 +9,6 @@ import { RightInspectorPanel } from "@/components/inspector/RightInspectorPanel"
 import { TimelinePanel } from "@/components/timeline/TimelinePanel";
 import { AICommandBar } from "@/components/ai/AICommandBar";
 import { ComponentsDrawer } from "@/components/components/ComponentsDrawer";
-import { ExportModal } from "@/components/export/ExportModal";
 import { ShortcutsModal } from "@/components/modals/ShortcutsModal";
 import { UniversalContextMenuPortal } from "@/components/common/UniversalContextMenuPortal";
 import { cn } from "@/lib/utils";
@@ -41,7 +40,6 @@ const App: React.FC = () => {
 
   const [isAiBarOpen, setIsAiBarOpen] = useState(false);
   const [isComponentsDrawerOpen, setIsComponentsDrawerOpen] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [isZenMode, setIsZenMode] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
@@ -269,7 +267,6 @@ const App: React.FC = () => {
           {!isZenMode && (
             <TopNavBar
               onOpenAiBar={() => setIsAiBarOpen(true)}
-              onOpenExportModal={() => setIsExportModalOpen(true)}
               onToggleZenMode={() => setIsZenMode((prev) => !prev)}
               onBackToWorkspace={closeProject}
             />
@@ -316,11 +313,6 @@ const App: React.FC = () => {
           <ComponentsDrawer
             isOpen={isComponentsDrawerOpen}
             onClose={() => setIsComponentsDrawerOpen(false)}
-          />
-
-          <ExportModal
-            isOpen={isExportModalOpen}
-            onClose={() => setIsExportModalOpen(false)}
           />
 
           <ShortcutsModal
