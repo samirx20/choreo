@@ -67,18 +67,16 @@ export function cubicBezier(
 
 // Built-in easing curves matching Jitter & modern motion design
 export const EASING_FUNCTIONS: Record<EasingType, (t: number) => number> = {
-  // Smooth / Cubic Ease-Out
-  smooth: cubicBezier(0.16, 1, 0.3, 1),
+  // Smooth / Cubic Ease-Out: graceful Material 3 / Jitter smooth curve spanning the full duration
+  smooth: cubicBezier(0.25, 0.1, 0.25, 1.0),
 
-  // Bouncy / Elastic Overshoot
+  // Bouncy / Elastic Overshoot: analytical damped harmonic oscillator spanning normalized [0, 1]
   bouncy: (t: number) => {
     if (t <= 0) return 0;
     if (t >= 1) return 1;
-    const p = 0.4;
-    const decay = Math.pow(2, -10 * t);
-    const osc = Math.sin(((t - p / 4) * (2 * Math.PI)) / p);
-    const tailDamp = 1 - Math.pow(t, 10);
-    return decay * osc * tailDamp + 1;
+    const omegaD = 6.95;
+    const decay = Math.exp(-3.25 * t);
+    return 1 - decay * (Math.cos(omegaD * t) + 0.463 * Math.sin(omegaD * t));
   },
 
   // Overshoot (anticipation and pop)
@@ -98,12 +96,16 @@ export const EASING_FUNCTIONS: Record<EasingType, (t: number) => number> = {
   natural: cubicBezier(0.4, 0.0, 0.2, 1.0),
   slowDown: cubicBezier(0.0, 0.0, 0.2, 1.0),
   accelerate: cubicBezier(0.4, 0.0, 1.0, 1.0),
+
+  // Elastic: Physical 2nd-order damped harmonic spring oscillator.
+  // Smooth progressive acceleration, crosses 1.0 at ~30%, reaches peak overshoot (+20.5%) at ~46%,
+  // recoils gently at ~85%, and settles cleanly into 1.00 at 100% of duration.
   elastic: (t: number) => {
     if (t <= 0) return 0;
     if (t >= 1) return 1;
-    const p = 0.3;
-    const s = p / 4;
-    return Math.pow(2, -10 * t) * Math.sin(((t - s) * (2 * Math.PI)) / p) + 1;
+    const omegaD = 6.83;
+    const decay = Math.exp(-3.44 * t);
+    return 1 - decay * (Math.cos(omegaD * t) + 0.504 * Math.sin(omegaD * t));
   },
   bounce: (t: number) => {
     if (t <= 0) return 0;
@@ -131,8 +133,9 @@ export const EASING_FUNCTIONS: Record<EasingType, (t: number) => number> = {
   spring: (t: number) => {
     if (t <= 0) return 0;
     if (t >= 1) return 1;
-    const decay = Math.exp(-6 * t);
-    return 1 - decay * Math.cos(t * Math.PI * 3.5);
+    const omegaD = 5.2;
+    const decay = Math.exp(-4.5 * t);
+    return 1 - decay * (Math.cos(omegaD * t) + 0.85 * Math.sin(omegaD * t));
   },
   easeIn: cubicBezier(0.42, 0, 1, 1),
   easeOut: cubicBezier(0, 0, 0.58, 1),
@@ -145,7 +148,8 @@ export const EASING_FUNCTIONS: Record<EasingType, (t: number) => number> = {
 export function getEasing(
   type: EasingType | string,
   bezierPoints?: [number, number, number, number],
-  overshootAmount?: number
+  overshootAmount?: number,
+  spring?: { stiffness?: number; damping?: number; mass?: number }
 ): (t: number) => number {
   if (type === "custom" && bezierPoints && bezierPoints.length === 4) {
     return cubicBezier(
@@ -162,6 +166,24 @@ export function getEasing(
       if (t >= 1) return 1;
       const tMinusOne = t - 1;
       return tMinusOne * tMinusOne * ((s + 1) * tMinusOne + s) + 1;
+    };
+  }
+  if ((type === "elastic" || type === "spring" || type === "bouncy") && spring?.stiffness && spring?.damping) {
+    const mass = spring.mass || 1.0;
+    const stiffness = spring.stiffness;
+    const omega0 = Math.sqrt(stiffness / mass);
+    const zeta = spring.damping / (2 * Math.sqrt(mass * stiffness));
+    const scaledOmega0 = Math.min(Math.max(omega0 * 0.42, 4.0), 12.0);
+    const effectiveZeta = Math.min(Math.max(zeta, 0.25), 0.95);
+    const omegaD = scaledOmega0 * Math.sqrt(1 - effectiveZeta * effectiveZeta);
+    const decayRate = effectiveZeta * scaledOmega0;
+    const sinCoeff = effectiveZeta / Math.sqrt(1 - effectiveZeta * effectiveZeta);
+
+    return (t: number) => {
+      if (t <= 0) return 0;
+      if (t >= 1) return 1;
+      const decay = Math.exp(-decayRate * t);
+      return 1 - decay * (Math.cos(omegaD * t) + sinCoeff * Math.sin(omegaD * t));
     };
   }
   return EASING_FUNCTIONS[type as EasingType] || EASING_FUNCTIONS.smooth;

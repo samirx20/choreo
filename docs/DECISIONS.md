@@ -795,3 +795,27 @@ The engine provides first-class, motion-first reactive primitives for each eleme
     * Optical and bounded properties (`opacity`, `color`, `blur`, `backdropBlur`, and `out` exits) reject non-monotonic physics easings (`elastic`, `bounce`, `overshoot`) that cause unnatural numerical clipping, presenting only monotonic curves (`Smooth`, `Natural`, `Slow down`, `Accelerate`, `Linear`).
     * Spatial transforms (`move`, `scale`, `rotate`) retain all 8 full physical and curve presets.
 
+---
+
+### Decision 36: Full Duration-Spanning Physical Spring & Easing Mechanics
+* **The "0.1s Snapping" Problem**:
+  * Legacy Flash/Penner easing formulas (`elastic: Math.pow(2, -10 * t) * Math.sin(...)` with $p = 0.3$) had an extremely rapid exponential decay ($2^{-10t}$) and high frequency.
+  * In normalized clip time $t \in [0, 1]$, this caused animations to hit 100% target value at $t = 0.075$ (within $0.08\text{s}$ of an animation with $1.16\text{s}$ duration), peak at $t = 0.15$ ($0.17\text{s}$), and sit completely frozen and motionless for the remaining $85\%$ of the clip.
+  * This completely defeated the user's intent when configuring animation duration: setting duration to $1.16\text{s}$ appeared to finish in $0.1\text{s}$.
+* **Closed-Form Analytical Spring Solution ($t \in [0, 1]$)**:
+  * Upgraded `EASING_FUNCTIONS.elastic`, `bouncy`, and `spring` to second-order damped harmonic oscillator closed-form analytical waveforms:
+    $$x(t) = 1 - e^{-\zeta \omega_n t} \left( \cos(\omega_d t) + \frac{\zeta}{\sqrt{1 - \zeta^2}} \sin(\omega_d t) \right)$$
+  * Carefully calibrated so that:
+    * Starts smoothly from rest at $t = 0.0$.
+    * Progresses continuously through the growth phase ($x \approx 0.38$ at $t = 0.14$, where playhead sits in $1.16\text{s}$ clip).
+    * Crosses initial target $1.0$ at $t \approx 0.30 - 0.35$.
+    * Reaches graceful overshoot peak ($+20.5\%$) around the midpoint of the animation ($t \approx 0.46$).
+    * Recoils through gentle undershoot ($x \approx 0.96$) at $t \approx 0.85$.
+    * Settles smoothly and cleanly into $1.00$ exactly at $t = 1.00$ (the end of the clip).
+* **Resting State Permanence**:
+  * The timeline clip duration strictly dictates the **transition duration** (the time taken to grow from Initial value to Target value).
+  * Once the clip ends ($t \ge \text{start} + \text{duration}$), the element permanently holds its final target state on screen without requiring an infinite animation clip, remaining fully visible and interactive until an explicit `Out` exit animation occurs.
+* **Spring Parameter Propagation**:
+  * Enhanced `getEasing` to accept physical `spring?: { stiffness?: number; damping?: number; mass?: number }` parameters, dynamically mapping them into normalized analytical spring trajectories for custom spring tuning.
+
+

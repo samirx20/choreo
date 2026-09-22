@@ -117,7 +117,15 @@ export function evaluateClipDelta(
     progress = (elapsed % safeDur) / safeDur;
   } else {
     const rawProgress = Math.min(Math.max((t - start) / safeDur, 0), 1);
-    const easeFn = getEasing(easing, bezierPoints, params.overshootAmount);
+    const springConfig =
+      clip.springStiffness || clip.springDamping
+        ? {
+            stiffness: clip.springStiffness,
+            damping: clip.springDamping,
+            mass: clip.springMass,
+          }
+        : undefined;
+    const easeFn = getEasing(easing, bezierPoints, params.overshootAmount, springConfig);
     progress = easeFn(rawProgress);
   }
 
@@ -140,7 +148,15 @@ export function evaluateClipDelta(
       ? (Math.max(0, t - start) % safeDur) / safeDur
       : Math.min(Math.max((t - start) / safeDur, 0), 1);
     const rawPingPong = rawPhase < 0.5 ? rawPhase * 2 : (1 - rawPhase) * 2;
-    const easeFn = getEasing(easing, bezierPoints, params.overshootAmount);
+    const springConfig =
+      clip.springStiffness || clip.springDamping
+        ? {
+            stiffness: clip.springStiffness,
+            damping: clip.springDamping,
+            mass: clip.springMass,
+          }
+        : undefined;
+    const easeFn = getEasing(easing, bezierPoints, params.overshootAmount, springConfig);
     const pingPong = easeFn(rawPingPong);
     const intensity = clip.intensity ?? 1;
     const scaleBase = clip.scaleAmount ?? params.scale ?? 0.15;

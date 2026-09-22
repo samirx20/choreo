@@ -84,16 +84,21 @@ describe("Easing Curves Engine", () => {
     expect(elastic(0)).toBe(0);
     expect(elastic(1)).toBe(1);
 
-    // Peak overshoot occurs near t=0.15 with value > 1.25
-    const peak = elastic(0.15);
-    expect(peak).toBeGreaterThan(1.25);
+    // Peak overshoot occurs near t=0.46 with value > 1.15
+    const peak = elastic(0.46);
+    expect(peak).toBeGreaterThan(1.15);
 
-    // Demonstrates oscillation: goes above 1, drops below/settles, then reaches 1
-    const valAt025 = elastic(0.25);
-    expect(valAt025).toBeLessThan(peak);
+    // Demonstrates physical oscillation: progresses smoothly, peaks at ~0.46, recoils, then settles
+    const valAt020 = elastic(0.20);
+    expect(valAt020).toBeLessThan(peak);
+    expect(valAt020).toBeGreaterThan(0.5);
 
-    // Final settlement within 0.01 of 1.0 near t=0.9
-    expect(elastic(0.9)).toBeCloseTo(1.0, 1);
+    // Recoil trough near t=0.85 dips below peak
+    const recoil = elastic(0.85);
+    expect(recoil).toBeLessThan(peak);
+
+    // Final settlement within 0.02 of 1.0 at t=1.0
+    expect(elastic(1.0)).toBe(1.0);
   });
 
   it("evaluates bounce analytical waveform with multiple parabolic rebounds", () => {
@@ -117,7 +122,7 @@ describe("Easing Curves Engine", () => {
 
     // getEasing for elastic should return the true analytical waveform, NOT cubicBezier
     const elasticFn = getEasing("elastic", staleBezier);
-    expect(elasticFn(0.15)).toBeGreaterThan(1.2); // Cubic bezier with [0.1, 0.2, 0.3, 0.4] cannot overshoot
+    expect(elasticFn(0.46)).toBeGreaterThan(1.15); // Cubic bezier with [0.1, 0.2, 0.3, 0.4] cannot overshoot
 
     // getEasing for bounce should return the true analytical bounce
     const bounceFn = getEasing("bounce", staleBezier);

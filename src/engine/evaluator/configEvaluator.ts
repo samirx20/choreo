@@ -19,7 +19,15 @@ export function evaluateAnimationConfig(
   clipPath?: string;
 } {
   const { start, duration, preset, easing, bezierPoints, params = {} } = config;
-  const easeFn = getEasing(easing, bezierPoints, params.overshootAmount);
+  const springConfig =
+    (config as any).springStiffness || (config as any).springDamping
+      ? {
+          stiffness: (config as any).springStiffness,
+          damping: (config as any).springDamping,
+          mass: (config as any).springMass,
+        }
+      : undefined;
+  const easeFn = getEasing(easing, bezierPoints, params.overshootAmount, springConfig);
   const t = quantizeTime(currentTime, config.stepFps ?? inheritedStepFps);
 
   // Check if before start

@@ -193,4 +193,45 @@ describe("Universal Animation Roles (In | Action | Out) & Element Lifecycle", ()
       "linear",
     ]);
   });
+
+  it("spans the full duration for transitions (e.g. 1.16s clip animates continuously, not snapping at 0.1s)", () => {
+    const store = useProjectStore.getState();
+    const layerId = "plus_icon_layer";
+
+    // Replicate user scenario:
+    // Scale animation starts at 1.60s with duration 1.16s (finishes at 2.76s), from 0.0 to 1.30, easing: Elastic
+    store.updateAnimationClip(layerId, "clip_scale_entrance", {
+      type: "in",
+      preset: "custom_scale",
+      start: 1.6,
+      duration: 1.16,
+      easing: "elastic",
+      from: { scale: 0 },
+      params: { scaleAmount: 1.3 },
+    });
+
+    const layer = useProjectStore.getState().document.screens[0].layers[0];
+
+    // At t = 1.60s (start): scale is 0.0x
+    expect(compoundLayerAnimations(layer, 1.60).transform.scaleX).toBe(0);
+
+    // At t = 1.76s (only 0.16s into clip / 13.8% progress):
+    // MUST NOT be fully grown! It is in the early smooth growth phase (around ~0.35x - 0.55x)!
+    const at016IntoClip = compoundLayerAnimations(layer, 1.76);
+    expect(at016IntoClip.transform.scaleX).toBeGreaterThan(0.25);
+    expect(at016IntoClip.transform.scaleX).toBeLessThan(0.70);
+
+    // At t = 2.13s (~46% into clip): reaches spring overshoot peak > 1.3x
+    const atPeak = compoundLayerAnimations(layer, 2.13);
+    expect(atPeak.transform.scaleX).toBeGreaterThan(1.4);
+
+    // At t = 2.76s (exact end of clip): settles cleanly to target 1.30x
+    const atEnd = compoundLayerAnimations(layer, 2.76);
+    expect(atEnd.transform.scaleX).toBeCloseTo(1.30, 2);
+
+    // At t = 3.50s (after clip ends): remains resting on screen at 1.30x with no additional animation needed!
+    const postClipResting = compoundLayerAnimations(layer, 3.50);
+    expect(postClipResting.transform.scaleX).toBeCloseTo(1.30, 2);
+    expect(postClipResting.opacity).toBe(1.0);
+  });
 });

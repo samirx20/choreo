@@ -483,13 +483,13 @@ describe("Animate Inspector & Motion Matrix Tests", () => {
   it("verifies elastic overshoot peak and bounce impact mechanics", async () => {
     const { EASING_FUNCTIONS } = await import("../engine/easings");
 
-    // Elastic reaches peak overshoot above 1.0 around t = 0.15
-    const elasticPeak = EASING_FUNCTIONS.elastic(0.15);
-    expect(elasticPeak).toBeGreaterThan(1.2); // > 120% extension
+    // Elastic reaches peak overshoot above 1.0 around t = 0.46
+    const elasticPeak = EASING_FUNCTIONS.elastic(0.46);
+    expect(elasticPeak).toBeGreaterThan(1.15); // > 115% extension
 
-    // Elastic dips back down below 1.0 around t = 0.28
-    const elasticDip = EASING_FUNCTIONS.elastic(0.28);
-    expect(elasticDip).toBeLessThan(1.0);
+    // Elastic recoils gently around t = 0.85
+    const elasticRecoil = EASING_FUNCTIONS.elastic(0.85);
+    expect(elasticRecoil).toBeLessThan(elasticPeak);
 
     // Elastic settles into 1.0 at t = 1.0
     expect(EASING_FUNCTIONS.elastic(1.0)).toBe(1.0);

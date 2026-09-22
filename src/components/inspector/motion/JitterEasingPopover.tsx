@@ -17,7 +17,7 @@ export const JITTER_EASINGS: JitterEasingOption[] = [
     id: "smooth",
     label: "Smooth",
     renderPath: () => "M 10 42 C 18 42, 42 10, 50 10",
-    defaultBezier: [0.16, 1.0, 0.3, 1.0],
+    defaultBezier: [0.25, 0.1, 0.25, 1.0],
   },
   {
     id: "natural",
