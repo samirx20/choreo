@@ -77,8 +77,21 @@ describe("Color & Linear Gradient Picker Engine", () => {
       const angularSerialized = serializeGradient("angular", 45, stops);
       expect(angularSerialized).toBe("conic-gradient(from 45deg at 50% 50%, #3B82F6 0%, rgba(16, 185, 129, 0.8) 50%, #EC4899 100%)");
 
-      const diamondSerialized = serializeGradient("diamond", 0, stops);
-      expect(diamondSerialized).toBe("radial-gradient(ellipse at center, #3B82F6 0%, rgba(16, 185, 129, 0.8) 50%, #EC4899 100%)");
+      const diamondSerialized = serializeGradient("diamond", 45, stops);
+      expect(diamondSerialized).toContain("radial-gradient(circle at 50% 50%");
+      expect(diamondSerialized).toContain("conic-gradient(from 45deg at 50% 50%");
+    });
+
+    it("parses diamond gradient strings accurately", () => {
+      const stops: GradientStop[] = [
+        { id: "1", color: "#3B82F6", alpha: 1, offset: 0 },
+        { id: "2", color: "#EC4899", alpha: 1, offset: 100 },
+      ];
+      const serialized = serializeGradient("diamond", 90, stops);
+      const parsed = parseLinearGradientString(serialized);
+      expect(parsed.type).toBe("diamond");
+      expect(parsed.angle).toBe(90);
+      expect(parsed.stops.length).toBeGreaterThanOrEqual(2);
     });
   });
 

@@ -136,7 +136,7 @@ export class PixiStage {
   public updateArtboardBackground(w: number, h: number, bgHex: string) {
     this.artboardBg.clear();
     let cleanHex = bgHex;
-    if (bgHex && bgHex.includes("linear-gradient")) {
+    if (bgHex && bgHex.includes("gradient")) {
       const match = bgHex.match(/#[0-9a-fA-F]{3,8}/);
       cleanHex = match ? match[0] : "#18181b";
     }

@@ -164,7 +164,9 @@ export function parseLinearGradientString(str: string): ParsedGradient {
   if (!str) return fallback;
 
   let type: GradientType = "linear";
-  if (str.includes("radial-gradient")) {
+  if (str.includes("conic-gradient") && str.includes("radial-gradient")) {
+    type = "diamond";
+  } else if (str.includes("radial-gradient")) {
     type = str.includes("ellipse") ? "diamond" : "radial";
   } else if (str.includes("conic-gradient")) {
     type = "angular";
@@ -172,6 +174,42 @@ export function parseLinearGradientString(str: string): ParsedGradient {
     type = "linear";
   } else {
     return fallback;
+  }
+
+  // Handle diamond gradient parsing
+  if (type === "diamond") {
+    let angle = 135;
+    const fromMatch = str.match(/from\s+(-?\d+(?:\.\d+)?)deg/i);
+    if (fromMatch) {
+      angle = parseFloat(fromMatch[1]);
+    }
+
+    const colorMatches = str.match(/(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))/gi) || [];
+    const validColors: { hex: string; alpha: number }[] = [];
+    const seen = new Set<string>();
+    for (const rawCol of colorMatches) {
+      if (rawCol.toLowerCase() === "transparent") continue;
+      const parsed = parseHexOrRgba(rawCol);
+      const key = `${parsed.hex.toLowerCase()}-${parsed.alpha.toFixed(2)}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        validColors.push(parsed);
+      }
+    }
+
+    if (validColors.length >= 2) {
+      const stops: GradientStop[] = validColors.slice(0, 4).map((c, idx, arr) => ({
+        id: `stop-${idx}-${Date.now()}`,
+        color: c.hex,
+        alpha: c.alpha,
+        offset: idx === 0 ? 0 : idx === arr.length - 1 ? 100 : Math.round((idx / (arr.length - 1)) * 100),
+      }));
+      return {
+        type: "diamond",
+        angle: ((angle % 360) + 360) % 360,
+        stops,
+      };
+    }
   }
 
   // Extract inner contents of gradient(...)
@@ -208,7 +246,7 @@ export function parseLinearGradientString(str: string): ParsedGradient {
       stopParts = rawParts.slice(1);
     }
   } else {
-    // Radial / Diamond
+    // Radial / Diamond fallback
     if (rawParts[0].includes("circle") || rawParts[0].includes("ellipse") || rawParts[0].includes("at ")) {
       stopParts = rawParts.slice(1);
     }
@@ -263,7 +301,24 @@ export function serializeGradient(
     return `conic-gradient(from ${Math.round(angle)}deg at 50% 50%, ${stopStrings.join(", ")})`;
   }
   if (type === "diamond") {
-    return `radial-gradient(ellipse at center, ${stopStrings.join(", ")})`;
+    // True 4-fold faceted diamond starburst reflection matching Figma and reference UI
+    const c0 = sorted[0];
+    const cLast = sorted[sorted.length - 1];
+    const col0 = c0.alpha < 1 ? hexToRgbaString(c0.color, c0.alpha) : c0.color;
+    const colLast = cLast.alpha < 1 ? hexToRgbaString(cLast.color, cLast.alpha) : cLast.color;
+
+    // 4-facet diamond reflection: 4 bright diamond lobes at 45deg, 135deg, 225deg, 315deg
+    // meeting darker facets at 0deg, 90deg, 180deg, 270deg
+    const facetParts: string[] = [];
+    for (let q = 0; q < 4; q++) {
+      const baseAngle = q * 90;
+      facetParts.push(`${colLast} ${baseAngle}deg`);
+      facetParts.push(`${col0} ${baseAngle + 45}deg`);
+    }
+    facetParts.push(`${colLast} 360deg`);
+
+    const centerGlow = c0.alpha < 1 ? hexToRgbaString(c0.color, c0.alpha * 0.45) : hexToRgbaString(c0.color, 0.45);
+    return `radial-gradient(circle at 50% 50%, ${centerGlow} 0%, transparent 68%), conic-gradient(from ${Math.round(angle)}deg at 50% 50%, ${facetParts.join(", ")})`;
   }
   return `linear-gradient(${Math.round(angle)}deg, ${stopStrings.join(", ")})`;
 }
@@ -1207,37 +1262,37 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border/80 bg-muted/40 text-xs font-medium text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-border bg-background text-xs font-semibold text-foreground hover:bg-muted transition-colors cursor-pointer shadow-2xs"
                     >
                       <span className="capitalize">{gradientType}</span>
                       <ChevronDown className="h-3 w-3 opacity-60" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-32 bg-popover border-border text-xs z-50">
+                  <DropdownMenuContent align="start" className="w-32 bg-popover border border-border text-foreground shadow-lg rounded-lg p-1 text-xs z-50">
                     <DropdownMenuItem
                       onClick={() => handleSetGradientType("linear")}
-                      className="flex items-center justify-between cursor-pointer"
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted cursor-pointer transition-colors"
                     >
                       <span>Linear</span>
                       {gradientType === "linear" && <Check className="h-3 w-3 text-primary" />}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => handleSetGradientType("radial")}
-                      className="flex items-center justify-between cursor-pointer"
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted cursor-pointer transition-colors"
                     >
                       <span>Radial</span>
                       {gradientType === "radial" && <Check className="h-3 w-3 text-primary" />}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => handleSetGradientType("angular")}
-                      className="flex items-center justify-between cursor-pointer"
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted cursor-pointer transition-colors"
                     >
                       <span>Angular</span>
                       {gradientType === "angular" && <Check className="h-3 w-3 text-primary" />}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => handleSetGradientType("diamond")}
-                      className="flex items-center justify-between cursor-pointer"
+                      className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium text-foreground hover:bg-muted cursor-pointer transition-colors"
                     >
                       <span>Diamond</span>
                       {gradientType === "diamond" && <Check className="h-3 w-3 text-primary" />}
@@ -1466,7 +1521,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                 </div>
 
                 {/* Opacity % */}
-                <div className="relative w-14 shrink-0">
+                <div className="relative w-16 shrink-0">
                   <Input
                     type="number"
                     min={0}
@@ -1476,9 +1531,9 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                       const num = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
                       updateActiveStopAlpha(num / 100);
                     }}
-                    className="h-7 pr-3.5 text-center font-mono text-xs py-0"
+                    className="h-7 pr-4 text-center font-mono text-xs py-0"
                   />
-                  <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground pointer-events-none">
+                  <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">
                     %
                   </span>
                 </div>

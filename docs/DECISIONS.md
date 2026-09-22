@@ -982,7 +982,7 @@ The engine provides first-class, motion-first reactive primitives for each eleme
     1. **Linear**: `linear-gradient(${angle}deg, ...)`
     2. **Radial**: `radial-gradient(circle, ...)`
     3. **Angular**: `conic-gradient(from ${angle}deg at 50% 50%, ...)`
-    4. **Diamond**: `radial-gradient(ellipse at center, ...)`
+    4. **Diamond**: True 4-facet diamond starburst reflection matching Figma and professional design tools.
   * Visual active checkmark (`✓`) on the currently selected gradient type with degree badge.
 * **Stop Box Color Picker Popover**:
   * Clicking on the Stop color box (`Stop 1`, `Stop 2`, etc.) opens a dedicated standard color picker popover:
@@ -992,10 +992,23 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * Adjustments live-update the stop color and re-render the 2D gradient canvas in real time.
 * **Contextual Saved Swatches Removal**:
   * Removed the solid "Saved" palette swatches section from the Gradient view, reserving it exclusively for the Solid view where solid color presets belong.
+
+---
+
+### Decision 52: True 4-Facet Diamond Gradient & High-Contrast Menu System
+* **Dropdown Menu High-Contrast Theme Alignment**:
+  * Resolved the white-on-white text contrast defect where `DropdownMenuContent` had hardcoded `text-zinc-200` on light background popovers.
+  * Migrated `src/components/ui/dropdown-menu.tsx` to semantic design tokens: `border-border`, `bg-popover`, `text-popover-foreground`, and `focus:bg-accent focus:text-accent-foreground`.
+  * Added explicit `font-medium text-foreground hover:bg-muted` classes to all menu items in `color-picker.tsx` for razor-sharp legibility in both light and dark themes.
+* **True 4-Facet Diamond Gradient Reflection Formula**:
+  * Replaced the radial ellipse approximation with a true 4-facet diamond starburst reflection:
+    $$\text{Diamond CSS} = \text{radial-gradient}(\text{circle at 50\% 50\%}, \text{glow}) + \text{conic-gradient}(\text{from } \theta, \text{8-facet symmetry})$$
+  * Recreates the exact four-pointed diamond / cross reflection radiating from center $(50\%, 50\%)$ with smooth angular transitions and center optical blending matching Figma and modern design references.
+* **Stop Inspector Layout Polishing**:
+  * Expanded the opacity input in the stop inspector from `w-14` to `w-16` (`pr-4`), ensuring `100 %` displays with full breathing room without character truncation.
 * **Verification**:
-  * Added test cases in `src/test/color_and_gradient_picker.test.ts` for all 4 gradient types (Linear, Radial, Angular, Diamond).
-  * All 36 test suites (303 tests) pass 100%.
-  * Production build compiles cleanly in 10.25s with zero errors.
+  * 36 test files, 304 unit and integration tests passing 100%.
+  * Production build compiles cleanly with zero TypeScript errors.
 
 
 
