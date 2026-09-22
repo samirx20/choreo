@@ -152,72 +152,46 @@ export function createProject(options: CreateProjectOptions): { id: string; docu
   const duration = options.duration || 5.0;
   const backgroundColor = options.backgroundColor || "#09090b";
 
-  let doc: SceneDocument;
-
-  if (options.template === "teaser") {
-    // Clone INITIAL_SCENE with updated dimensions
-    doc = {
-      ...INITIAL_SCENE,
-      name: options.name || "Motion Studio Teaser",
-      settings: {
-        ...INITIAL_SCENE.settings,
-        width,
-        height,
-        fps,
-        duration,
-        backgroundColor,
-      },
-      screens: INITIAL_SCENE.screens.map((screen) => ({
-        ...screen,
-        duration,
-        width,
-        height,
-        backgroundColor,
-      })),
-    };
-  } else {
-    // Clean blank project
-    doc = {
-      version: "1.0",
-      name: options.name || "Untitled Project",
-      settings: {
-        width,
-        height,
-        fps,
-        duration,
-        backgroundColor,
-        palette: [
-          "#000000",
-          "#ffffff",
-          "#e8c547",
-          "#f5f0e8",
-          "#ef4444",
-          "#34d399",
-          "#60a5fa",
-          "#a855f7",
-        ],
-        safeZones: {
-          actionSafe: false,
-          titleSafe: false,
-          ruleOfThirds: false,
-          centerCrosshair: false,
-          socialOverlay: "none",
-          socialOverlayOpacity: 0.7,
-        },
-      },
-      screens: [
-        {
-          id: "screen_1",
-          name: "Scene 1",
-          duration,
-          width,
-          height,
-          backgroundColor,
-          layers: [],
-        },
+  const doc: SceneDocument = {
+    version: "1.0",
+    name: options.name || "Untitled Project",
+    settings: {
+      width,
+      height,
+      fps,
+      duration,
+      backgroundColor,
+      palette: [
+        "#000000",
+        "#ffffff",
+        "#e8c547",
+        "#f5f0e8",
+        "#ef4444",
+        "#34d399",
+        "#60a5fa",
+        "#a855f7",
       ],
-    };
-  }
+      safeZones: {
+        actionSafe: false,
+        titleSafe: false,
+        ruleOfThirds: false,
+        centerCrosshair: false,
+        socialOverlay: "none",
+        socialOverlayOpacity: 0.7,
+      },
+    },
+    screens: [
+      {
+        id: "screen_1",
+        name: "Scene 1",
+        duration,
+        width,
+        height,
+        backgroundColor,
+        layers: [],
+      },
+    ],
+  };
 
   saveProjectDocument(id, doc);
   return { id, document: doc };
@@ -340,12 +314,12 @@ export function migrateLegacyProjectIfPresent(): ProjectMeta[] {
     console.warn("Legacy project migration skipped:", err);
   }
 
-  // If no legacy project exists, seed initial showcase teaser
-  const defaultId = "proj_default_teaser";
+  // If no legacy project exists, seed initial default project
+  const defaultId = "proj_default_initial";
   const defaultDoc = { ...INITIAL_SCENE };
   const initialMeta: ProjectMeta = {
     id: defaultId,
-    name: defaultDoc.name || "Motion Studio Teaser",
+    name: defaultDoc.name || "Untitled Project",
     width: defaultDoc.settings?.width || 1920,
     height: defaultDoc.settings?.height || 1080,
     fps: defaultDoc.settings?.fps || 60,

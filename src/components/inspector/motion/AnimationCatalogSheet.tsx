@@ -130,7 +130,7 @@ const CUSTOM_CHANNELS: { id: string; name: string; desc: string; icon: any; pres
   {
     id: "custom_radius",
     name: "Corner Radius",
-    desc: "Morph Squircle Rounding",
+    desc: "Morph Corner Rounding",
     icon: Square,
     preset: { id: "custom_radius", name: "Custom Radius", type: "action", duration: 0.8, easing: "snappy" },
   },

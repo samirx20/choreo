@@ -133,22 +133,6 @@ export const TransformCard: React.FC<TransformCardProps> = ({ selectedLayer }) =
                 className="w-16"
               />
               <button
-                onClick={() =>
-                  updateLayerStyle(selectedLayer.id, {
-                    squircleFactor: style.squircleFactor ? undefined : 0.6,
-                  })
-                }
-                className={cn(
-                  "px-1.5 h-6 rounded text-[10px] font-semibold transition-colors cursor-pointer",
-                  style.squircleFactor
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:text-foreground"
-                )}
-                title="Apple G2 Continuous Curvature (Squircle)"
-              >
-                G2
-              </button>
-              <button
                 onClick={() => setExpandedCorners(!expandedCorners)}
                 className={cn(
                   "p-1 rounded transition-colors",

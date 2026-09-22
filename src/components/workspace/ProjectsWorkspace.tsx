@@ -7,7 +7,7 @@ import {
   Monitor,
   Smartphone,
   Square,
-  Sparkles,
+  LayoutTemplate,
   ArrowUpDown,
 } from "lucide-react";
 import { useProjectRegistryStore } from "@/store/useProjectRegistryStore";
@@ -224,27 +224,27 @@ export const ProjectsWorkspace: React.FC = () => {
               </div>
             </button>
 
-            {/* Starter Showcase Teaser */}
+            {/* 4:5 Preset */}
             <button
               type="button"
               onClick={() =>
                 handleQuickCreate({
-                  name: "Showcase Teaser",
-                  width: 1920,
-                  height: 1080,
-                  template: "teaser",
+                  name: "Portrait Video",
+                  width: 1080,
+                  height: 1350,
+                  template: "blank",
                 })
               }
               className="group p-3 rounded-lg bg-[#141416] border border-[#27272a] hover:border-zinc-500 text-left transition-colors flex items-center gap-3"
             >
-              <div className="p-2 rounded bg-zinc-800 text-purple-400 group-hover:bg-purple-500/10 transition-colors">
-                <Sparkles className="w-4 h-4" />
+              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-purple-400 group-hover:bg-purple-500/10 transition-colors">
+                <LayoutTemplate className="w-4 h-4" />
               </div>
               <div className="min-w-0">
                 <div className="text-xs font-medium text-zinc-200 group-hover:text-white">
-                  Showcase Teaser
+                  4:5 Portrait
                 </div>
-                <div className="text-[10px] text-zinc-500 font-mono">Sample Scene</div>
+                <div className="text-[10px] text-zinc-500 font-mono">1080×1350</div>
               </div>
             </button>
           </div>

@@ -8,7 +8,7 @@ This document establishes the mandatory engineering standards, architectural rul
 
 ## 1. Core Mission & Philosophy
 
-* **Target Output**: Apple Keynote & Google Material 3 showcase-grade motion graphics (fluid spring physics, G2 continuous curvature, metric-aligned typographic reveals, cinematic telephoto 3D camera staging, and optical depth).
+* **Target Output**: Apple Keynote & Google Material 3 showcase-grade motion graphics (fluid spring physics, metric-aligned typographic reveals, cinematic telephoto 3D camera staging, and optical depth).
 * **Target Author**: AI agents. The engine is an **Aesthetic Compiler and Guardian**: it guarantees spatial validity, physical momentum, and narrative timing by construction, leaving the agent to specify creative and structural intent.
 * **Mental Model**: **State-Based Storyboards with Magic Move on a Modular Video Grid**, operated via **Step-by-Step Tool Calling**.
 
@@ -40,7 +40,7 @@ src/
 │   ├── grid/           # Modular video grid solver & box-fit auto-scaling
 │   ├── physics/        # Analytical 2nd-order harmonic oscillator spring solvers
 │   ├── storyboard/     # Beat solver & Magic Move interpolation engine
-│   ├── pixi/           # 2D Canvas vector, squircle, and text rendering
+│   ├── pixi/           # 2D Canvas vector, shape, and text rendering
 │   ├── three/          # 3D stage, PBR materials, telephoto camera, & FBO projection
 │   ├── export/         # WebCodecs / FFmpeg frame-accurate video exporters
 │   └── perception/     # AST pre-flight linter & contact sheet generator
@@ -131,7 +131,7 @@ Before completing any generation or refactoring, verify against this checklist:
 - [ ] **Grid Validity**: Are all elements positioned on the aspect-ratio grid within safe margins?
 - [ ] **No Overflows**: Does text auto-fit inside its assigned grid cell?
 - [ ] **Velocity Continuity ($C^1$)**: Are transitions between beats using smooth spring momentum hand-offs?
-- [ ] **G2 Curvature**: Are all rounded card corners using continuous squircles?
+- [ ] **Corner Radius**: Are card corners cleanly and intentionally rounded without arbitrary magic curvature?
 - [ ] **Metric-Aligned Text**: Are text reveals clipping along the baseline without chopping descenders ("g", "y", "p")?
 - [ ] **Zero Layout Shift on Split**: Does text splitting maintain 0.0px visual shift from unsplit resting state?
 - [ ] **Zero Eyebrows or Kickers**: Are headings clean and self-standing without floating category badges?

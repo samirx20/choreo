@@ -58,25 +58,25 @@ describe("Project Management & Storage Engine", () => {
     expect(registry[0].duration).toBe(8.0);
   });
 
-  it("creates a showcase teaser project from template", () => {
+  it("creates a vertical 9:16 project", () => {
     const { id, document: doc } = createProject({
-      name: "Teaser Project",
+      name: "Reel Project",
       width: 1080,
       height: 1920,
       fps: 30,
       duration: 5.0,
-      template: "teaser",
+      template: "blank",
     });
 
     expect(id).toBeDefined();
-    expect(doc.name).toBe("Teaser Project");
+    expect(doc.name).toBe("Reel Project");
     expect(doc.settings.width).toBe(1080);
     expect(doc.settings.height).toBe(1920);
-    expect(doc.screens[0].layers.length).toBeGreaterThan(0);
+    expect(doc.screens[0].layers.length).toBe(0);
 
     const loaded = loadProjectDocument(id);
     expect(loaded).not.toBeNull();
-    expect(loaded?.name).toBe("Teaser Project");
+    expect(loaded?.name).toBe("Reel Project");
   });
 
   it("duplicates an existing project with (Copy) suffix", () => {

@@ -39,7 +39,7 @@ export const AESTHETIC_PROFILES: Record<AestheticMood, AestheticProfile> = {
     name: 'Product Showcase',
     emoji: '🍏',
     stepFps: 'smooth',
-    description: '60 FPS fluid spring motion, G2 continuous squircles, telephoto 3D staging, and soft elevation blurs.',
+    description: '60 FPS fluid spring motion, smooth curvature, telephoto 3D staging, and soft elevation blurs.',
     defaultShadowMode: 'soft',
     defaultEasing: 'snappy',
     surfaceStyle: {
