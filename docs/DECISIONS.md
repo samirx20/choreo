@@ -857,3 +857,32 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * 33 test suites (273 tests) pass cleanly.
   * Automated regression tests in `src/test/design_and_motion_truth_matrix.test.ts` verify all custom channels filtering across text, line, icon, image, and shape primitives.
   * Production bundle compiles cleanly with 0 TypeScript errors.
+
+---
+
+### Decision 39: Canvas Interaction, Smart Magnetic Guides & Multi-Selection Transform Engine
+* **Segment-Bounded Smart Guides (`src/components/canvas/snapping.ts`)**:
+  * Upgraded `SnapGuide` to track both primary axis coordinates and cross-axis segment boundaries (`start` and `end`).
+  * Replaced harsh, full-bleed screen red laser lines with crisp, professional magenta smart guides (`#ec4899`).
+  * When aligning elements, lines span specifically between the aligned primitives (with 8px extension) and endpoint tick marks rather than spanning the entire canvas.
+  * Canvas center and edge anchors span canvas dimensions with high-contrast centered alignment badges (`Center`, `Middle`).
+* **Cross-Edge & Adjacent Snapping**:
+  * Added magnetic snapping for adjacent edge placement (target Left to sibling Right, target Right to sibling Left, target Top to sibling Bottom, target Bottom to sibling Top).
+  * Enables effortless modular card grids, columns, toolbars, and button row layouts without manual coordinate calculations.
+* **Equidistant Distribution & Gap Measurement**:
+  * Added 3-element equidistant gap solver emitting centered distance badges (`16px`, `24px`, etc.) when elements are spaced evenly.
+* **Multi-Selection Snapping & Proportional Resizing (`src/components/canvas/TransformBox.tsx`)**:
+  * **Collective Multi-Selection Snapping**: When dragging multiple selected layers, the collective bounding box snaps magnetically against canvas centers, canvas edges, and all unselected sibling elements, translating all layers with exact alignment.
+  * **Multi-Selection Resize Handles**: Enabled 8 transform handles on the multi-selection bounding box. Resizing the bounding box proportionally computes scale factors ($X, Y$) and scales every layer's position and dimensions relative to the selection origin.
+  * **Aspect Ratio & Center Constraints**: Supports `Shift` (preserve aspect ratio) and `Alt` (symmetric resize from center) for both single and multi-layer selections.
+* **Keyboard Nudge Precision (`src/components/canvas/hooks/useCanvasHotkeys.ts`)**:
+  * Added arrow key navigation for selected canvas elements:
+    - `ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`: $1\text{px}$ micro-nudge.
+    - `Shift + Arrow`: $10\text{px}$ rapid-nudge.
+  * Atomically wrapped with `startTransaction()` and `commitTransaction()`.
+  * Safely ignored when typing in input fields, textareas, or inline text editing.
+* **Verification**:
+  * Created dedicated test matrix `src/test/canvas_smart_guides_matrix.test.ts` with 14 comprehensive unit tests.
+  * All 34 test suites (287 tests) pass 100%.
+  * Production build compiles cleanly with zero TypeScript errors.
+

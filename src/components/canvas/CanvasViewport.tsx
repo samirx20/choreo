@@ -882,35 +882,71 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
             />
           )}
 
-        {/* Magnetic Snap Guides (Red magnetic lines) */}
+        {/* Magnetic Smart Guides (Crisp Segment-Bounded Magenta Lines) */}
         {guides.map((guide, idx) => {
           const sWidth = activeScreen.width ?? doc.settings.width;
           const sHeight = activeScreen.height ?? doc.settings.height;
+
+          const isVert = guide.type === "vertical";
+          const startCoord = guide.start !== undefined ? Math.max(0, guide.start) : 0;
+          const endCoord =
+            guide.end !== undefined
+              ? Math.min(isVert ? sHeight : sWidth, guide.end)
+              : isVert
+              ? sHeight
+              : sWidth;
+          const spanLength = Math.max(1, endCoord - startCoord);
 
           return (
             <div
               key={idx}
               style={
-                guide.type === "vertical"
+                isVert
                   ? {
                       left: `${guide.position + activeScreenX}px`,
-                      top: `${activeScreenY}px`,
-                      height: `${sHeight}px`,
+                      top: `${startCoord + activeScreenY}px`,
+                      height: `${spanLength}px`,
                       width: "1px",
                     }
                   : {
                       top: `${guide.position + activeScreenY}px`,
-                      left: `${activeScreenX}px`,
-                      width: `${sWidth}px`,
+                      left: `${startCoord + activeScreenX}px`,
+                      width: `${spanLength}px`,
                       height: "1px",
                     }
               }
-              className="absolute bg-red-500 z-50 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.9)]"
+              className="absolute bg-[#ec4899] z-50 pointer-events-none"
             >
+              {/* Subtle endpoint tick marks on segment-bounded guides */}
+              {!guide.isCanvasAxis && (
+                <>
+                  <div
+                    className={
+                      isVert
+                        ? "absolute -top-1 -left-[2px] w-[5px] h-[2px] bg-[#ec4899] rounded-xs"
+                        : "absolute -left-1 -top-[2px] h-[5px] w-[2px] bg-[#ec4899] rounded-xs"
+                    }
+                  />
+                  <div
+                    className={
+                      isVert
+                        ? "absolute -bottom-1 -left-[2px] w-[5px] h-[2px] bg-[#ec4899] rounded-xs"
+                        : "absolute -right-1 -top-[2px] h-[5px] w-[2px] bg-[#ec4899] rounded-xs"
+                    }
+                  />
+                </>
+              )}
+
               {guide.label && (
-                <span className="absolute top-2 left-2 bg-red-600 text-white text-[9px] px-1 py-0.2 rounded font-mono">
+                <div
+                  className={
+                    isVert
+                      ? "absolute top-1/2 -translate-y-1/2 left-2 px-1.5 py-0.5 rounded-full bg-[#ec4899] text-white text-[10px] font-mono font-medium shadow-xs whitespace-nowrap"
+                      : "absolute left-1/2 -translate-x-1/2 top-2 px-1.5 py-0.5 rounded-full bg-[#ec4899] text-white text-[10px] font-mono font-medium shadow-xs whitespace-nowrap"
+                  }
+                >
                   {guide.label}
-                </span>
+                </div>
               )}
             </div>
           );

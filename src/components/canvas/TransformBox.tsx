@@ -59,7 +59,7 @@ interface DragSession {
   anchorWorld: { x: number; y: number };
   anchorLocal: { x: number; y: number };
   targetLayerId: string;
-  initialLayers: { id: string; x: number; y: number }[];
+  initialLayers: { id: string; x: number; y: number; width: number; height: number }[];
   initialRadius: number | [number, number, number, number];
 }
 
@@ -212,16 +212,28 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
     let targetLayerId = layer.id;
     let initialLayers =
       isMulti && selectedLayers
-        ? selectedLayers.map((l) => ({ id: l.id, x: l.style.x || 0, y: l.style.y || 0 }))
+        ? selectedLayers.map((l) => ({
+            id: l.id,
+            x: l.style.x || 0,
+            y: l.style.y || 0,
+            width: typeof l.style.width === "number" ? l.style.width : 100,
+            height: typeof l.style.height === "number" ? l.style.height : 50,
+          }))
         : [];
 
     // Alt + Drag Duplication
     if (handle === "move" && e.altKey) {
       if (isMulti && selectedLayers && selectedLayers.length > 1) {
-        const clonedList: { id: string; x: number; y: number }[] = [];
+        const clonedList: { id: string; x: number; y: number; width: number; height: number }[] = [];
         for (const l of selectedLayers) {
           const newId = duplicateLayerInPlace(l.id);
-          clonedList.push({ id: newId, x: l.style.x || 0, y: l.style.y || 0 });
+          clonedList.push({
+            id: newId,
+            x: l.style.x || 0,
+            y: l.style.y || 0,
+            width: typeof l.style.width === "number" ? l.style.width : 100,
+            height: typeof l.style.height === "number" ? l.style.height : 50,
+          });
         }
         initialLayers = clonedList;
         useProjectStore.setState({ selectedLayerIds: clonedList.map((c) => c.id) });
@@ -280,16 +292,6 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
       const deltaY = mouseCanvas.y - session.startY;
 
       if (session.handle === "move") {
-        if (isMulti && session.initialLayers.length > 0) {
-          for (const item of session.initialLayers) {
-            updateLayerStyle(item.id, {
-              x: Math.round(item.x + deltaX),
-              y: Math.round(item.y + deltaY),
-            });
-          }
-          return;
-        }
-
         let nextX = session.initialX + deltaX;
         let nextY = session.initialY + deltaY;
 
@@ -312,8 +314,21 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
           effectiveScale
         );
 
-        const parentOffset = getParentWorldOffset(session.targetLayerId);
         onGuidesChange(snap.guides);
+
+        if (isMulti && session.initialLayers.length > 0) {
+          const snappedDeltaX = snap.x - session.initialX;
+          const snappedDeltaY = snap.y - session.initialY;
+          for (const item of session.initialLayers) {
+            updateLayerStyle(item.id, {
+              x: Math.round(item.x + snappedDeltaX),
+              y: Math.round(item.y + snappedDeltaY),
+            });
+          }
+          return;
+        }
+
+        const parentOffset = getParentWorldOffset(session.targetLayerId);
         updateLayerStyle(session.targetLayerId, {
           x: Math.round(snap.x - parentOffset.x),
           y: Math.round(snap.y - parentOffset.y),
@@ -392,6 +407,28 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
 
         const newX = newCenterX - newW / 2;
         const newY = newCenterY - newH / 2;
+
+        if (isMulti && session.initialLayers.length > 0) {
+          const scaleFactorX = session.initialWidth > 0 ? newW / session.initialWidth : 1;
+          const scaleFactorY = session.initialHeight > 0 ? newH / session.initialHeight : 1;
+
+          for (const item of session.initialLayers) {
+            const relX = item.x - session.initialX;
+            const relY = item.y - session.initialY;
+            const itemNewX = newX + relX * scaleFactorX;
+            const itemNewY = newY + relY * scaleFactorY;
+            const itemNewW = Math.max(10, item.width * scaleFactorX);
+            const itemNewH = Math.max(10, item.height * scaleFactorY);
+
+            updateLayerStyle(item.id, {
+              x: Math.round(itemNewX),
+              y: Math.round(itemNewY),
+              width: Math.round(itemNewW),
+              height: Math.round(itemNewH),
+            });
+          }
+          return;
+        }
 
         const parentOffset = getParentWorldOffset(session.targetLayerId);
         const updates: Partial<LayerStyle> = {
@@ -546,7 +583,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
             onPointerDown={(e) => handlePointerDown("move", e)}
           />
 
-          {/* Rotation Lever & Handles */}
+          {/* Rotation Lever & Handles (Single-Selection Only) */}
           {!isMulti && (
             <>
               <div
@@ -580,38 +617,39 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
                   title="Click and drag to rotate (Hold Shift for 15° snap)"
                 />
               ))}
-
-              {[
-                { pos: "nw", style: { top: -4, left: -4 } },
-                { pos: "n", style: { top: -4, left: "50%", transform: "translateX(-50%)" } },
-                { pos: "ne", style: { top: -4, right: -4 } },
-                { pos: "e", style: { top: "50%", right: -4, transform: "translateY(-50%)" } },
-                { pos: "se", style: { bottom: -4, right: -4 } },
-                { pos: "s", style: { bottom: -4, left: "50%", transform: "translateX(-50%)" } },
-                { pos: "sw", style: { bottom: -4, left: -4 } },
-                { pos: "w", style: { top: "50%", left: -4, transform: "translateY(-50%)" } },
-              ].map((h) => (
-                <div
-                  key={h.pos}
-                  style={{ ...h.style, cursor: getRotatedCursor(h.pos, rotation) }}
-                  className={`absolute w-2 h-2 bg-white border border-[#7c3aed] rounded-xs shadow-xs hover:scale-125 transition-transform z-20 ${
-                    isPanMode ? "pointer-events-none" : "pointer-events-auto"
-                  }`}
-                  onPointerDown={(e) => handlePointerDown(h.pos as HandleType, e)}
-                  onDoubleClick={(e) => {
-                    e.stopPropagation();
-                    if (layer.type === "text" || layer.type === "chunk") {
-                      const currentMode = layer.style.boxMode ?? "point";
-                      const nextMode = currentMode === "point" ? "area" : "point";
-                      updateLayerStyle(layer.id, {
-                        boxMode: nextMode,
-                      });
-                    }
-                  }}
-                />
-              ))}
             </>
           )}
+
+          {/* 8 Bounding Box Resize Handles (Single & Multi-Selection) */}
+          {[
+            { pos: "nw", style: { top: -4, left: -4 } },
+            { pos: "n", style: { top: -4, left: "50%", transform: "translateX(-50%)" } },
+            { pos: "ne", style: { top: -4, right: -4 } },
+            { pos: "e", style: { top: "50%", right: -4, transform: "translateY(-50%)" } },
+            { pos: "se", style: { bottom: -4, right: -4 } },
+            { pos: "s", style: { bottom: -4, left: "50%", transform: "translateX(-50%)" } },
+            { pos: "sw", style: { bottom: -4, left: -4 } },
+            { pos: "w", style: { top: "50%", left: -4, transform: "translateY(-50%)" } },
+          ].map((h) => (
+            <div
+              key={h.pos}
+              style={{ ...h.style, cursor: getRotatedCursor(h.pos, rotation) }}
+              className={`absolute w-2 h-2 bg-white border border-[#7c3aed] rounded-xs shadow-xs hover:scale-125 transition-transform z-20 ${
+                isPanMode ? "pointer-events-none" : "pointer-events-auto"
+              }`}
+              onPointerDown={(e) => handlePointerDown(h.pos as HandleType, e)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                if (!isMulti && (layer.type === "text" || layer.type === "chunk")) {
+                  const currentMode = layer.style.boxMode ?? "point";
+                  const nextMode = currentMode === "point" ? "area" : "point";
+                  updateLayerStyle(layer.id, {
+                    boxMode: nextMode,
+                  });
+                }
+              }}
+            />
+          ))}
         </>
       )}
 

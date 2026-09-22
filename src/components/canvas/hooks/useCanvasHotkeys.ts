@@ -212,6 +212,29 @@ export function useCanvasHotkeys({
             store.alignSelectedLayers("middle", rel);
           }
         }
+      } else if (
+        !isInput &&
+        !editingLayerId &&
+        selectedLayerIds.length > 0 &&
+        ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)
+      ) {
+        // Keyboard Nudge: 1px micro-nudge, 10px rapid-nudge with Shift
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
+        const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
+
+        store.startTransaction();
+        for (const id of selectedLayerIds) {
+          const layer = findLayerInTree(activeScreen.layers, id);
+          if (layer) {
+            store.updateLayerStyle(id, {
+              x: Math.round((layer.style.x ?? 0) + dx),
+              y: Math.round((layer.style.y ?? 0) + dy),
+            });
+          }
+        }
+        store.commitTransaction();
       } else if (!isInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
         // Creative Tool Hotkeys
         if (e.key === "v" || e.key === "V") {
