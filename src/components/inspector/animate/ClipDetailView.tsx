@@ -34,6 +34,7 @@ import { Layer, AnimationClip } from "@/types/scene";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ScrubbableInput } from "@/components/ui/scrubbable-input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { JitterEasingPopover } from "../motion/JitterEasingPopover";
 import {
   DropdownMenu,
@@ -937,11 +938,10 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
             <span className="text-[13px] text-muted-foreground font-medium">Initial value</span>
             {hasInitialValue("color") ? (
               <div className="flex items-center gap-2">
-                <input
-                  type="color"
+                <ColorPicker
                   value={getInitialValue("color", clipLayer.style.backgroundColor || "#3b82f6")}
-                  onChange={(e) => setInitialValue("color", e.target.value)}
-                  className="w-6 h-6 rounded cursor-pointer border border-border p-0 bg-transparent"
+                  onChange={(c) => setInitialValue("color", c)}
+                  className="w-6 h-6"
                 />
                 <input
                   type="text"
@@ -971,15 +971,14 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
           <div className="py-3 flex items-center justify-between border-b border-border/60">
             <span className="text-[13px] text-muted-foreground font-medium">To</span>
             <div className="flex items-center gap-2">
-              <input
-                type="color"
+              <ColorPicker
                 value={selectedClip.params?.color || "#6d28d9"}
-                onChange={(e) =>
+                onChange={(c) =>
                   updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, color: e.target.value, toColor: e.target.value },
+                    params: { ...selectedClip.params, color: c, toColor: c },
                   })
                 }
-                className="w-6 h-6 rounded cursor-pointer border border-border p-0 bg-transparent"
+                className="w-6 h-6"
               />
               <input
                 type="text"
@@ -1197,15 +1196,14 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
           <div className="py-3 flex items-center justify-between border-b border-border/60">
             <span className="text-[13px] text-muted-foreground font-medium">Color</span>
             <div className="flex items-center gap-2">
-              <input
-                type="color"
+              <ColorPicker
                 value={selectedClip.params?.strokeColor || "#6d28d9"}
-                onChange={(e) =>
+                onChange={(c) =>
                   updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, strokeColor: e.target.value },
+                    params: { ...selectedClip.params, strokeColor: c },
                   })
                 }
-                className="w-6 h-6 rounded cursor-pointer border border-border p-0 bg-transparent"
+                className="w-6 h-6"
               />
               <input
                 type="text"

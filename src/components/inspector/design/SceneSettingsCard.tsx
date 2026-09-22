@@ -18,6 +18,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { ColorPicker } from "@/components/ui/color-picker";
 
 export const SceneSettingsCard: React.FC = () => {
   const {
@@ -34,6 +35,7 @@ export const SceneSettingsCard: React.FC = () => {
 
   const [isEditingSceneName, setIsEditingSceneName] = useState(false);
   const [sceneNameInput, setSceneNameInput] = useState(activeScreen.name);
+  const [applyToAllScenes, setApplyToAllScenes] = useState(false);
 
   useEffect(() => {
     setSceneNameInput(activeScreen.name);
@@ -229,7 +231,12 @@ export const SceneSettingsCard: React.FC = () => {
         <div
           onClick={() => {
             const nextFill = hasSceneFill ? "transparent" : (settings.backgroundColor || "#ffffff");
-            updateScreen(activeScreen.id, { backgroundColor: nextFill });
+            if (applyToAllScenes) {
+              doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: nextFill }));
+              updateSettings({ backgroundColor: nextFill });
+            } else {
+              updateScreen(activeScreen.id, { backgroundColor: nextFill });
+            }
           }}
           className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
         >
@@ -238,44 +245,73 @@ export const SceneSettingsCard: React.FC = () => {
             checked={hasSceneFill}
             onCheckedChange={() => {
               const nextFill = hasSceneFill ? "transparent" : (settings.backgroundColor || "#ffffff");
-              updateScreen(activeScreen.id, { backgroundColor: nextFill });
+              if (applyToAllScenes) {
+                doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: nextFill }));
+                updateSettings({ backgroundColor: nextFill });
+              } else {
+                updateScreen(activeScreen.id, { backgroundColor: nextFill });
+              }
             }}
             className="pointer-events-none"
           />
         </div>
 
         {hasSceneFill && (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Color</span>
               <div className="flex items-center gap-1.5 w-36 justify-end">
                 <Input
                   type="text"
                   value={currentBg.replace("#", "").toUpperCase()}
-                  onChange={(e) => updateScreen(activeScreen.id, { backgroundColor: `#${e.target.value}` })}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
+                    if (clean.length === 6 || clean.length === 3) {
+                      const newColor = `#${clean}`;
+                      if (applyToAllScenes) {
+                        doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: newColor }));
+                        updateSettings({ backgroundColor: newColor });
+                      } else {
+                        updateScreen(activeScreen.id, { backgroundColor: newColor });
+                      }
+                    }
+                  }}
                   className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
                 />
-                <input
-                  type="color"
+                <ColorPicker
                   value={currentBg.startsWith("#") ? currentBg : "#ffffff"}
-                  onChange={(e) => updateScreen(activeScreen.id, { backgroundColor: e.target.value })}
-                  className="h-7 w-7 rounded border border-border cursor-pointer p-0.5 bg-transparent"
+                  onChange={(newColor) => {
+                    if (applyToAllScenes) {
+                      doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: newColor }));
+                      updateSettings({ backgroundColor: newColor });
+                    } else {
+                      updateScreen(activeScreen.id, { backgroundColor: newColor });
+                    }
+                  }}
                 />
               </div>
             </div>
+
             {doc.screens.length > 1 && (
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: currentBg }));
-                    updateSettings({ backgroundColor: currentBg });
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <Checkbox
+                  id="apply-to-all-scenes"
+                  checked={applyToAllScenes}
+                  onCheckedChange={(checked) => {
+                    const isChecked = Boolean(checked);
+                    setApplyToAllScenes(isChecked);
+                    if (isChecked) {
+                      doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: currentBg }));
+                      updateSettings({ backgroundColor: currentBg });
+                    }
                   }}
-                  className="text-[10px] text-muted-foreground hover:text-primary transition-colors cursor-pointer"
-                  title="Copy this background color to all scenes in the project"
+                />
+                <label
+                  htmlFor="apply-to-all-scenes"
+                  className="text-[11px] text-muted-foreground hover:text-foreground cursor-pointer select-none"
                 >
                   Apply to all scenes
-                </button>
+                </label>
               </div>
             )}
           </div>

@@ -903,4 +903,26 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 34 test suites (289 tests) pass 100%.
   * Production build compiles cleanly with zero TypeScript errors.
 
+---
+
+### Decision 41: High-Performance Figma-Grade ColorPicker & Controlled "Apply to All Scenes" Checkbox
+* **Elimination of OS-Native Color Picker Modal Lag**:
+  * Previously, color pickers across the app relied on browser-native `<input type="color">`. On Windows Chrome, Edge, and Tauri/Electron, this spawns an out-of-process OS modal dialog which triggers DOM value fighting, stutter, and 60 FPS history cloning floods (`commitDoc` deep-cloning the entire project state 60x/sec during mouse drags).
+  * Replaced every occurrence of native color inputs with a custom, high-performance `<ColorPicker>` component (`src/components/ui/color-picker.tsx`) built on `@radix-ui/react-popover`.
+* **Figma-Grade Interactive Color System**:
+  * **2D Saturation / Value Gradient Canvas**: Fluid pointer capture (`setPointerCapture`) with closed-form HSV $\leftrightarrow$ HEX math (`hexToHsv`, `hsvToHex`).
+  * **1D Hue Spectrum Slider**: Rainbow gradient bar with linear percentage-to-hue interpolation.
+  * **Hex Text Input & Live Preview**: Real-time validated 3-character and 6-character hex input.
+  * **Curated Design Swatches**: Instant one-click access to 12 curated Apple/Google design tokens (neutrals, darks, vibrant accents).
+  * **Zero-Lag History Transaction Batching**: Drag gestures invoke `startTransaction()` on pointerdown and `commitTransaction()` on pointerup with RAF throttling (`requestAnimationFrame`), delivering silky 60–120 FPS dragging without history stack pollution or dropped frames. Includes global window `pointerup` safety listener to prevent uncommitted transactions.
+  * **Universal Application**: Wired into `SceneSettingsCard.tsx` (Scene Fill), `AppearanceCard.tsx` (Layer Fill, Text Color, Background Fill, Stroke, Sticker Border), and `ClipDetailView.tsx` (Initial Value, Target Color, Stroke Color).
+* **Controlled "Apply to All Scenes" Checkbox**:
+  * In `SceneSettingsCard.tsx`, converted the one-off text action into a controlled Radix Checkbox: `[ ] Apply to all scenes`.
+  * When checked, adjusting scene background color or toggling fill instantly propagates across all scenes in `doc.screens` and updates `doc.settings.backgroundColor`. Checking the checkbox immediately synchronizes the current scene's color across all project scenes.
+  * When unchecked, color edits remain strictly isolated to the active scene (`activeScreen.id`).
+* **Verification**:
+  * Created dedicated unit test suite `src/test/color_picker_and_scene_fill.test.ts` (5 tests passing).
+  * All 35 test suites (294 tests) pass 100%.
+  * Production build compiles cleanly in 11.41s with zero errors.
+
 

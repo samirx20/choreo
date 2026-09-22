@@ -4,6 +4,7 @@ import { useProjectStore } from "@/store/useProjectStore";
 import { ScrubbableInput } from "@/components/ui/scrubbable-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { cn } from "@/lib/utils";
 
 interface AppearanceCardProps {
@@ -66,21 +67,21 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
                 type="text"
                 value={(((isText || isIcon) ? style.color : style.backgroundColor) || "#B3B3B3").replace("#", "").toUpperCase()}
                 onChange={(e) => {
-                  const c = `#${e.target.value}`;
-                  if (isText || isIcon) updateLayerStyle(selectedLayer.id, { color: c });
-                  else updateLayerStyle(selectedLayer.id, { backgroundColor: c });
+                  const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
+                  if (clean.length === 6 || clean.length === 3) {
+                    const c = `#${clean}`;
+                    if (isText || isIcon) updateLayerStyle(selectedLayer.id, { color: c });
+                    else updateLayerStyle(selectedLayer.id, { backgroundColor: c });
+                  }
                 }}
                 className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
               />
-              <input
-                type="color"
+              <ColorPicker
                 value={((isText || isIcon) ? style.color : style.backgroundColor) || "#B3B3B3"}
-                onChange={(e) => {
-                  const c = e.target.value;
+                onChange={(c) => {
                   if (isText || isIcon) updateLayerStyle(selectedLayer.id, { color: c });
                   else updateLayerStyle(selectedLayer.id, { backgroundColor: c });
                 }}
-                className="h-7 w-7 rounded border border-border cursor-pointer p-0.5 bg-transparent"
               />
             </div>
           </div>
@@ -110,17 +111,18 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
                   type="text"
                   value={(style.backgroundColor || "#f4f4f5").replace("#", "").toUpperCase()}
                   onChange={(e) => {
-                    updateLayerStyle(selectedLayer.id, { backgroundColor: `#${e.target.value}` });
+                    const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
+                    if (clean.length === 6 || clean.length === 3) {
+                      updateLayerStyle(selectedLayer.id, { backgroundColor: `#${clean}` });
+                    }
                   }}
                   className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
                 />
-                <input
-                  type="color"
+                <ColorPicker
                   value={style.backgroundColor || "#f4f4f5"}
-                  onChange={(e) => {
-                    updateLayerStyle(selectedLayer.id, { backgroundColor: e.target.value });
+                  onChange={(c) => {
+                    updateLayerStyle(selectedLayer.id, { backgroundColor: c });
                   }}
-                  className="h-7 w-7 rounded border border-border cursor-pointer p-0.5 bg-transparent"
                 />
               </div>
             </div>
@@ -173,11 +175,9 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
                 }
                 className="w-16"
               />
-              <input
-                type="color"
+              <ColorPicker
                 value={style.borderColor || "#18181b"}
-                onChange={(e) => updateLayerStyle(selectedLayer.id, { borderColor: e.target.value })}
-                className="h-7 w-7 rounded border border-border cursor-pointer p-0.5 bg-transparent"
+                onChange={(c) => updateLayerStyle(selectedLayer.id, { borderColor: c })}
               />
             </div>
           </div>
@@ -349,18 +349,16 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
                   }
                   className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
                 />
-                <input
-                  type="color"
+                <ColorPicker
                   value={style.stickerBorder?.color || "#ffffff"}
-                  onChange={(e) =>
+                  onChange={(c) =>
                     updateLayerStyle(selectedLayer.id, {
                       stickerBorder: {
                         width: style.stickerBorder?.width || 4,
-                        color: e.target.value,
+                        color: c,
                       },
                     })
                   }
-                  className="h-7 w-7 rounded border border-border cursor-pointer p-0.5 bg-transparent"
                 />
               </div>
             </div>
