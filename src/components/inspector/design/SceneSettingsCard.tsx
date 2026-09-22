@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Square, MoreHorizontal, Pencil, Copy, Maximize2, Trash2 } from "lucide-react";
+import { Square, MoreHorizontal, Pencil, Copy, Maximize2, Trash2, Lock } from "lucide-react";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ScrubbableInput } from "@/components/ui/scrubbable-input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -40,6 +40,9 @@ export const SceneSettingsCard: React.FC = () => {
     setIsEditingSceneName(false);
   }, [activeScreen.id, activeScreen.name]);
 
+  const sceneIndex = doc.screens.findIndex((s) => s.id === activeScreen.id);
+  const isFirstScene = sceneIndex <= 0;
+
   const settings = doc.settings;
   const is16_9 = settings.width === 1920 && settings.height === 1080;
   const is9_16 = settings.width === 1080 && settings.height === 1920;
@@ -56,7 +59,8 @@ export const SceneSettingsCard: React.FC = () => {
     ? "4:5 Portrait"
     : "Custom";
 
-  const hasSceneFill = settings.backgroundColor !== "transparent" && Boolean(settings.backgroundColor);
+  const currentBg = activeScreen.backgroundColor ?? settings.backgroundColor ?? "#ffffff";
+  const hasSceneFill = activeScreen.backgroundColor !== "transparent" && Boolean(currentBg);
 
   return (
     <div className="p-4 space-y-4 text-foreground text-xs select-none">
@@ -152,9 +156,17 @@ export const SceneSettingsCard: React.FC = () => {
       {/* Layout Section */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-semibold text-foreground">Layout</h4>
+          <div className="flex items-center gap-1.5">
+            <h4 className="text-xs font-semibold text-foreground">Canvas Format</h4>
+            {!isFirstScene && (
+              <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/80 px-1.5 py-0.5 rounded font-medium">
+                <Lock className="h-2.5 w-2.5 text-muted-foreground" />
+                <span>Project (Scene 1)</span>
+              </span>
+            )}
+          </div>
           <span className="text-[11px] text-muted-foreground">
-            Scene {doc.screens.findIndex((s) => s.id === activeScreen.id) + 1} of {doc.screens.length}
+            Scene {sceneIndex + 1} of {doc.screens.length}
           </span>
         </div>
 
@@ -163,6 +175,7 @@ export const SceneSettingsCard: React.FC = () => {
           <span className="text-xs text-muted-foreground">Format</span>
           <div className="w-36">
             <Select
+              disabled={!isFirstScene}
               value={currentFormat}
               onValueChange={(val) => {
                 if (val === "16:9 Landscape") updateSettings({ width: 1920, height: 1080 });
@@ -171,7 +184,7 @@ export const SceneSettingsCard: React.FC = () => {
                 else if (val === "4:5 Portrait") updateSettings({ width: 1080, height: 1350 });
               }}
             >
-              <SelectTrigger className="w-36 h-7">
+              <SelectTrigger className="w-36 h-7 disabled:opacity-60 disabled:cursor-not-allowed">
                 <SelectValue placeholder="Format" />
               </SelectTrigger>
               <SelectContent align="end">
@@ -191,31 +204,32 @@ export const SceneSettingsCard: React.FC = () => {
           <div className="flex items-center gap-1.5 w-36">
             <ScrubbableInput
               label="W"
+              disabled={!isFirstScene}
               value={settings.width}
               min={100}
               step={10}
               onChange={(val) => updateSettings({ width: val })}
-              className="w-full"
+              className="w-full disabled:opacity-60"
             />
             <ScrubbableInput
               label="H"
+              disabled={!isFirstScene}
               value={settings.height}
               min={100}
               step={10}
               onChange={(val) => updateSettings({ height: val })}
-              className="w-full"
+              className="w-full disabled:opacity-60"
             />
           </div>
         </div>
       </div>
 
-      {/* Fill Section */}
+      {/* Fill Section (Per-Scene Background Color) */}
       <div className="pt-3 border-t border-border space-y-2.5">
         <div
           onClick={() => {
-            updateSettings({
-              backgroundColor: hasSceneFill ? "transparent" : "#ffffff",
-            });
+            const nextFill = hasSceneFill ? "transparent" : (settings.backgroundColor || "#ffffff");
+            updateScreen(activeScreen.id, { backgroundColor: nextFill });
           }}
           className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
         >
@@ -223,31 +237,47 @@ export const SceneSettingsCard: React.FC = () => {
           <Checkbox
             checked={hasSceneFill}
             onCheckedChange={() => {
-              updateSettings({
-                backgroundColor: hasSceneFill ? "transparent" : "#ffffff",
-              });
+              const nextFill = hasSceneFill ? "transparent" : (settings.backgroundColor || "#ffffff");
+              updateScreen(activeScreen.id, { backgroundColor: nextFill });
             }}
             className="pointer-events-none"
           />
         </div>
 
         {hasSceneFill && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Color</span>
-            <div className="flex items-center gap-1.5 w-36 justify-end">
-              <Input
-                type="text"
-                value={(settings.backgroundColor || "#ffffff").replace("#", "").toUpperCase()}
-                onChange={(e) => updateSettings({ backgroundColor: `#${e.target.value}` })}
-                className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
-              />
-              <input
-                type="color"
-                value={settings.backgroundColor || "#ffffff"}
-                onChange={(e) => updateSettings({ backgroundColor: e.target.value })}
-                className="h-7 w-7 rounded border border-border cursor-pointer p-0.5 bg-transparent"
-              />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Color</span>
+              <div className="flex items-center gap-1.5 w-36 justify-end">
+                <Input
+                  type="text"
+                  value={currentBg.replace("#", "").toUpperCase()}
+                  onChange={(e) => updateScreen(activeScreen.id, { backgroundColor: `#${e.target.value}` })}
+                  className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
+                />
+                <input
+                  type="color"
+                  value={currentBg.startsWith("#") ? currentBg : "#ffffff"}
+                  onChange={(e) => updateScreen(activeScreen.id, { backgroundColor: e.target.value })}
+                  className="h-7 w-7 rounded border border-border cursor-pointer p-0.5 bg-transparent"
+                />
+              </div>
             </div>
+            {doc.screens.length > 1 && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: currentBg }));
+                    updateSettings({ backgroundColor: currentBg });
+                  }}
+                  className="text-[10px] text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                  title="Copy this background color to all scenes in the project"
+                >
+                  Apply to all scenes
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

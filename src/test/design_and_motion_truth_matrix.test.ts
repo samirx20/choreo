@@ -557,4 +557,95 @@ describe("Design & Motion Truth Matrix: Full Parity & Combinatorial Audit", () =
       expect(allItemIds).toContain("custom_scale");
     });
   });
+
+  // =========================================================================
+  // 7. MULTI-SCENE BACKGROUND COLOR & CANVAS FORMAT INVARIANTS
+  // =========================================================================
+  describe("Multi-Scene Background Color & Canvas Format Invariants", () => {
+    it("allows independent background colors per scene without global overwrite", () => {
+      const store = useProjectStore.getState();
+      useProjectStore.setState({
+        document: {
+          ...INITIAL_SCENE,
+          settings: {
+            ...INITIAL_SCENE.settings,
+            backgroundColor: "#000000",
+          },
+          screens: [
+            {
+              id: "scene_1",
+              name: "Hero Intro",
+              duration: 3.0,
+              backgroundColor: "#09090b",
+              layers: [],
+            },
+            {
+              id: "scene_2",
+              name: "Feature Showcase",
+              duration: 4.0,
+              backgroundColor: "#ffffff",
+              layers: [],
+            },
+            {
+              id: "scene_3",
+              name: "Brand Outro",
+              duration: 2.5,
+              backgroundColor: "#7c3aed",
+              layers: [],
+            },
+          ],
+        },
+      });
+
+      // Update Scene 2's background color specifically
+      store.updateScreen("scene_2", { backgroundColor: "#f43f5e" });
+
+      const updatedScreens = useProjectStore.getState().document.screens;
+      expect(updatedScreens[0].backgroundColor).toBe("#09090b"); // Scene 1 unchanged
+      expect(updatedScreens[1].backgroundColor).toBe("#f43f5e"); // Scene 2 updated
+      expect(updatedScreens[2].backgroundColor).toBe("#7c3aed"); // Scene 3 unchanged
+    });
+
+    it("preserves global project canvas format while allowing scenes to have independent duration and stepped fps", () => {
+      const store = useProjectStore.getState();
+      useProjectStore.setState({
+        document: {
+          ...INITIAL_SCENE,
+          settings: {
+            ...INITIAL_SCENE.settings,
+            width: 1920,
+            height: 1080,
+            fps: 60,
+          },
+          screens: [
+            {
+              id: "scene_fluid",
+              name: "Fluid Scene",
+              duration: 2.0,
+              stepFps: "smooth",
+              layers: [],
+            },
+            {
+              id: "scene_stopmotion",
+              name: "Stop-Motion Scene",
+              duration: 3.5,
+              stepFps: 8,
+              layers: [],
+            },
+          ],
+        },
+      });
+
+      const doc = useProjectStore.getState().document;
+      // Canonical video container dimensions
+      expect(doc.settings.width).toBe(1920);
+      expect(doc.settings.height).toBe(1080);
+
+      // Independent scene cadence
+      expect(doc.screens[0].stepFps).toBe("smooth");
+      expect(doc.screens[1].stepFps).toBe(8);
+      expect(doc.screens[0].duration).toBe(2.0);
+      expect(doc.screens[1].duration).toBe(3.5);
+    });
+  });
 });

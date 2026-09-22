@@ -886,3 +886,21 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 34 test suites (287 tests) pass 100%.
   * Production build compiles cleanly with zero TypeScript errors.
 
+---
+
+### Decision 40: True Per-Scene Background Color & Canvas Format Locking
+* **Project-Wide Canvas Format Locking on Secondary Scenes**:
+  * An exported motion graphic file (MP4, WebM, ProRes) is a single rectangular video file with one canonical resolution and aspect ratio (16:9, 9:16, 1:1, 4:5).
+  * In `SceneSettingsCard.tsx`, the layout controls are explicitly designated as **Canvas Format**.
+  * On scenes subsequent to the first scene (`sceneIndex > 0`), Format dropdown and Size inputs are safely locked with a clean lock badge: `Project (Scene 1)`, preventing accidental global dimension shifts that would scramble previous scenes.
+* **True Per-Scene Background Fill (`updateScreen`)**:
+  * Previously, changing the Fill in `SceneSettingsCard.tsx` mistakenly called `updateSettings({ backgroundColor })`, causing all scenes to change color globally and forcing users into tedious dummy rectangle workarounds.
+  * Connected Fill controls directly to `updateScreen(activeScreen.id, { backgroundColor })`. Each scene can now feature its own independent background color (e.g. Scene 1 dark `#09090b`, Scene 2 editorial white `#ffffff`, Scene 3 brand accent `#7c3aed`).
+  * Added a convenient one-click **"Apply to all scenes"** action for users who want unified branding across all scenes.
+  * Updated `PixiStage.ts`'s `renderScreen` so the export engine dynamically repaints the artboard to the active scene's specific background color.
+* **Verification**:
+  * Added test cases to `src/test/design_and_motion_truth_matrix.test.ts` verifying independent multi-scene background persistence and project canvas invariants.
+  * All 34 test suites (289 tests) pass 100%.
+  * Production build compiles cleanly with zero TypeScript errors.
+
+

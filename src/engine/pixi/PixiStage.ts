@@ -151,6 +151,14 @@ export class PixiStage {
   public renderScreen(screen: Screen) {
     if (!this.isReady) return;
 
+    // Dynamically update artboard background to matching scene fill
+    const screenBg = screen.backgroundColor || this.options.backgroundColor || "#18181b";
+    this.updateArtboardBackground(
+      this.options.artboardWidth,
+      this.options.artboardHeight,
+      screenBg
+    );
+
     // Clear obsolete display objects
     const currentLayerIds = new Set<string>();
     const collectIds = (layers: Layer[]) => {
