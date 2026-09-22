@@ -727,11 +727,30 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Standard Aspect Ratio Presets**:
   * First-class format starters for 16:9 Landscape (`1920×1080`), 9:16 Vertical (`1080×1920`), 1:1 Square (`1080×1080`), 4:5 Portrait (`1080×1350`), and Custom dimensions.
   * Option to start from a blank canvas or from the curated Showcase Teaser.
-* **Adherence to AGENTS.md Design Floor**:
-  * Single elevation system (clean 1px borders, zero muddy blur-border combinations).
-  * Absolute ban on eyebrow labels, kickers, and floating category pills above titles.
-  * High information density, search filtering, and inline project renaming.
+---
 
-
-
-
+### Decision 33: Jitter-Aligned Categorized Custom Animation System & Full Channel Property Editing
+* **Clean Categorized List (Zero Preview Box Clutter)**:
+  * Only the `PRESETS` and continuous `EFFECTS` tabs display live animated preview window cards.
+  * The `CUSTOM` tab is restructured to match Jitter's clean, high-signal list layout across 4 core sections:
+    1. **Transform**: `Scale`, `Rotate`, `Move`
+    2. **Style**: `Opacity`, `Color`, `Shadow`
+    3. **Effects**: `Layer Blur`, `Background Blur`, `Glass`
+    4. **Other**: `Hide / Show`, `Resize`, `Morph`, `Corner Radius`, `Stroke`
+  * Each item displays its purple Lucide icon, channel label, clean hover highlight, and active selection checkmark without large preview card noise.
+* **Full Property Customizability in `ClipDetailView`**:
+  * In Custom mode, users can configure any property of the selected animation clip:
+    * `Color`: Target color swatch and uppercase hex input (`#RRGGBB`).
+    * `Shadow`: Blur (px), Distance (px), and Shadow Color.
+    * `Layer Blur`: Optical blur radius (px).
+    * `Background Blur`: Backdrop blur radius (px).
+    * `Glass`: Combined backdrop blur (px) and opacity (%).
+    * `Hide / Show`: Segmented toggle [ Hide | Show ].
+    * `Resize`: Width Delta (px) and Height Delta (px).
+    * `Morph`: Morph intensity (%).
+    * `Corner Radius`: Target corner radius (px).
+    * `Stroke`: Stroke Width (px) and Stroke Color.
+    * `Transform`: Scale factor, Rotation degrees & direction (CW/CCW), Distance & direction (Up/Down/Left/Right).
+* **Deterministic Compounded Evaluation**:
+  * All 14 custom channels are evaluated in `evaluateClipDelta` and compounded in `compoundLayerAnimations`.
+  * `evaluateSceneAtTime` binds all computed properties (`backgroundColor`, `color`, `borderRadius`, `borderWidth`, `borderColor`, `boxShadow`, `backdropFilter`, `width`, `height`, `opacity`, `transform`) directly to the canvas rendering pipeline for deterministic scrubbing and real-time playback.
