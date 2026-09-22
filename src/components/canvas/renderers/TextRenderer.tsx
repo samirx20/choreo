@@ -36,7 +36,7 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
 
   const isEditing = Boolean(editingLayerId === layer.id && isSelected);
   const [text, setText] = useState(layer.content);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const editableRef = useRef<HTMLSpanElement>(null);
   const initialFocusRef = useRef(false);
   const textRef = useRef(text);
   textRef.current = text;
@@ -47,11 +47,15 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
   }, [layer.content]);
 
   useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
+    if (isEditing && editableRef.current) {
+      editableRef.current.focus();
       // Only select all text on the very first time the layer is placed with default "Add text"
       if (layer.content === "Add text" && !initialFocusRef.current) {
-        inputRef.current.select();
+        const range = document.createRange();
+        range.selectNodeContents(editableRef.current);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
         initialFocusRef.current = true;
       }
     }
@@ -63,7 +67,7 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
     if (typeof window !== "undefined" && window.getSelection) {
       window.getSelection()?.removeAllRanges();
     }
-    const currentText = textRef.current;
+    const currentText = (editableRef.current?.innerText ?? textRef.current).replace(/\r\n/g, "\n");
     const trimmed = currentText.trim();
     if (trimmed.length === 0) {
       // Clean up ghost empty text layer
@@ -83,7 +87,7 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
   // Sync edits if isEditing transitions to false externally (e.g. clicking artboard/canvas)
   useEffect(() => {
     if (isEditingRef.current && !isEditing) {
-      const currentText = textRef.current;
+      const currentText = (editableRef.current?.innerText ?? textRef.current).replace(/\r\n/g, "\n");
       const trimmed = currentText.trim();
       if (trimmed.length === 0) {
         removeLayer(layer.id);
@@ -102,7 +106,7 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
   useEffect(() => {
     return () => {
       if (isEditingRef.current) {
-        const currentText = textRef.current;
+        const currentText = (editableRef.current?.innerText ?? textRef.current).replace(/\r\n/g, "\n");
         const trimmed = currentText.trim();
         if (trimmed.length === 0) {
           removeLayer(layer.id);
@@ -113,24 +117,41 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
     };
   }, [layer.id, layer.content, removeLayer, updateLayer]);
 
-  const handleSelect = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
-    const target = e.currentTarget;
-    const start = target.selectionStart;
-    const end = target.selectionEnd;
-    if (start !== null && end !== null && start !== end) {
+  const updateTextSelection = () => {
+    if (typeof window === "undefined" || !window.getSelection) return;
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+      setActiveTextSelection(null);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    const selectedStr = sel.toString();
+    if (!selectedStr) {
+      setActiveTextSelection(null);
+      return;
+    }
+    const el = editableRef.current;
+    if (el && el.contains(range.commonAncestorContainer)) {
+      const preRange = range.cloneRange();
+      preRange.selectNodeContents(el);
+      preRange.setEnd(range.startContainer, range.startOffset);
+      const start = preRange.toString().length;
+      const end = start + selectedStr.length;
       setActiveTextSelection({
         layerId: layer.id,
         start,
         end,
-        text: target.value.substring(start, end),
+        text: selectedStr,
       });
-    } else {
-      setActiveTextSelection(null);
     }
   };
 
   const baseCss = layerStyleToCss(layer.style, isChildInFlex, true);
-  const combinedStyle = { ...baseCss, ...computedStyle };
+  const combinedStyle: React.CSSProperties = {
+    ...baseCss,
+    ...computedStyle,
+    overflow: isEditing ? "visible" : (baseCss.overflow ?? "visible"),
+  };
 
   return (
     <div
@@ -148,64 +169,51 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
       )}
     >
       {isEditing ? (
-        <div
-          className="grid grid-cols-1 grid-rows-1 relative w-full min-w-[20px]"
+        <span
+          ref={editableRef}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={(e) => {
+            const val = e.currentTarget.innerText || "";
+            setText(val);
+            textRef.current = val;
+          }}
+          onBlur={() => commitEdit(false)}
           onMouseDown={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
-          onMouseUp={(e) => e.stopPropagation()}
+          onMouseUp={(e) => {
+            e.stopPropagation();
+            updateTextSelection();
+          }}
           onClick={(e) => e.stopPropagation()}
           onDoubleClick={(e) => e.stopPropagation()}
+          onKeyUp={() => updateTextSelection()}
+          onKeyDown={(e) => {
+            if (e.nativeEvent.isComposing || (e as any).isComposing) {
+              return;
+            }
+            if (e.key === "Escape") {
+              e.stopPropagation();
+              commitEdit(true);
+            } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+              // Ctrl / Cmd + Enter: Commit
+              e.preventDefault();
+              e.stopPropagation();
+              commitEdit(true);
+            }
+          }}
+          className={cn(
+            "w-full text-inherit font-inherit leading-inherit outline-none border-none bg-transparent cursor-text select-text inline-block",
+            layer.style.tailwindClasses
+          )}
+          style={{
+            textAlign: (layer.style.textAlign as any) || "center",
+            wordBreak: "break-word",
+            whiteSpace: "pre-wrap",
+          }}
         >
-          {/* Hidden Mirror to automatically size parent box to match text dimensions */}
-          <span
-            aria-hidden="true"
-            className="invisible whitespace-pre-wrap col-start-1 row-start-1 p-0 m-0 pointer-events-none break-words select-none"
-            style={{
-              font: "inherit",
-              letterSpacing: "inherit",
-              lineHeight: "inherit",
-              textAlign: (layer.style.textAlign as any) || "center",
-            }}
-          >
-            {text ? (text.endsWith("\n") ? text + "\u00A0" : text) : "\u00A0"}
-          </span>
-
-          <textarea
-            ref={inputRef}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onSelect={handleSelect}
-            onBlur={() => commitEdit(false)}
-            onMouseDown={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            onMouseUp={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-            onDoubleClick={(e) => e.stopPropagation()}
-            onKeyDown={(e) => {
-              if (e.nativeEvent.isComposing || (e as any).isComposing) {
-                return;
-              }
-              if (e.key === "Escape") {
-                e.stopPropagation();
-                commitEdit(true);
-              } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                // Ctrl / Cmd + Enter: Commit
-                e.preventDefault();
-                e.stopPropagation();
-                commitEdit(true);
-              }
-            }}
-            className="col-start-1 row-start-1 bg-transparent border-none outline-none resize-none p-0 m-0 w-full h-full overflow-hidden"
-            style={{
-              font: "inherit",
-              color: "inherit",
-              letterSpacing: "inherit",
-              lineHeight: "inherit",
-              textAlign: (layer.style.textAlign as any) || "center",
-              wordBreak: "break-word",
-            }}
-          />
-        </div>
+          {layer.content}
+        </span>
       ) : (() => {
         const inPreset = layer.animation?.in?.preset;
         const outPreset = layer.animation?.out?.preset;

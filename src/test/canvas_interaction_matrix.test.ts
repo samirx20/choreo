@@ -1,3 +1,4 @@
+import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
 import { 
   useProjectStore, 
@@ -9,6 +10,8 @@ import {
   normalizeScreens,
 } from "../store/useProjectStore";
 import { layerStyleToCss } from "../components/canvas/renderers/styleUtils";
+import { TextRenderer } from "../components/canvas/renderers/TextRenderer";
+import { render } from "@testing-library/react";
 import { Layer, GroupLayer, TextLayer } from "../types/scene";
 
 describe("Canvas Interaction & State Matrix Tests", () => {
@@ -228,6 +231,59 @@ describe("Canvas Interaction & State Matrix Tests", () => {
       expect(useProjectStore.getState().editingLayerId).toBeNull();
       expect(useProjectStore.getState().activeTextSelection).toBeNull();
       expect(useProjectStore.getState().selectedLayerIds).toEqual([otherLayer.id]);
+    });
+
+    it("renders zero-shift contentEditable element without textarea scroll jumping or clipping in edit mode", () => {
+      const state = useProjectStore.getState();
+      const textId = "text_edit_render_test";
+      const textLayer: TextLayer = {
+        id: textId,
+        name: "Text Layer",
+        type: "text",
+        content: "Add text",
+        style: {
+          x: 658,
+          y: 260,
+          width: 240,
+          height: 70,
+          textSizing: "fixed",
+          fontSize: 54,
+          fontWeight: 800,
+          fontFamily: "Inter",
+          color: "#0F172A",
+          textAlign: "center",
+          verticalAlign: "middle",
+          rotation: 0,
+          opacity: 1,
+        },
+      };
+      state.addLayer(textLayer);
+      state.selectLayer(textId);
+      state.setEditingLayerId(textId);
+
+      const { container } = render(
+        React.createElement(TextRenderer, {
+          layer: textLayer,
+          isSelected: true,
+        })
+      );
+
+      // Verify no textarea is rendered
+      const textarea = container.querySelector("textarea");
+      expect(textarea).toBeNull();
+
+      // Verify contentEditable span is rendered with exact text
+      const editableSpan = container.querySelector('[contenteditable="true"]');
+      expect(editableSpan).not.toBeNull();
+      expect(editableSpan?.textContent).toBe("Add text");
+
+      // Verify outer container maintains visible overflow during editing to prevent browser scroll-into-view clipping
+      const outerDiv = container.querySelector(`#layer-${textId}`) as HTMLElement;
+      expect(outerDiv).not.toBeNull();
+      expect(outerDiv.style.overflow).toBe("visible");
+      expect(outerDiv.style.display).toBe("flex");
+      expect(outerDiv.style.alignItems).toBe("center");
+      expect(outerDiv.style.justifyContent).toBe("center");
     });
   });
 
