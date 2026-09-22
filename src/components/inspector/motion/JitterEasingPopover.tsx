@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { Plus, LayoutGrid, Spline, Sliders } from "lucide-react";
+import { LayoutGrid, Spline, Sliders } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EASING_FUNCTIONS } from "@/engine/easings";
 
@@ -64,12 +64,21 @@ export const JITTER_EASINGS: JitterEasingOption[] = [
   },
 ];
 
+export const OPTICAL_EASING_IDS = [
+  "smooth",
+  "natural",
+  "slowDown",
+  "accelerate",
+  "linear",
+] as const;
+
 interface JitterEasingPopoverProps {
   currentEasing: string;
   bezierPoints?: [number, number, number, number];
   springStiffness?: number;
   springDamping?: number;
   springMass?: number;
+  isOpticalOnly?: boolean;
   onSelectEasing: (
     easingId: string,
     bezier?: [number, number, number, number],
@@ -81,6 +90,7 @@ interface JitterEasingPopoverProps {
 export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
   currentEasing,
   bezierPoints = [0.25, 0.1, 0.25, 1.0],
+  isOpticalOnly = false,
   onSelectEasing,
   onClose,
 }) => {
@@ -88,6 +98,15 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
   const [activeTab, setActiveTab] = useState<"grid" | "curve">(
     currentEasing === "custom" ? "curve" : "grid"
   );
+
+  const availableEasings = useMemo(() => {
+    if (isOpticalOnly) {
+      return JITTER_EASINGS.filter((e) =>
+        ["smooth", "natural", "slowDown", "accelerate", "linear"].includes(e.id)
+      );
+    }
+    return JITTER_EASINGS;
+  }, [isOpticalOnly]);
 
   const normalizedCurrent =
     currentEasing === "linear" || currentEasing === "none"
@@ -267,24 +286,12 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
             <span>Curve</span>
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab("curve");
-            onSelectEasing("custom", [cp1.x, cp1.y, cp2.x, cp2.y]);
-          }}
-          className="h-6 w-6 rounded flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-[#27272a] transition-colors cursor-pointer"
-          title="Add Custom Curve"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
       </div>
 
-      {/* TAB 1: Grid of Presets (Default view - 8 items in comfortable 2-column grid) */}
+      {/* TAB 1: Grid of Presets (Filtered based on optical/transform property) */}
       {activeTab === "grid" ? (
         <div className="grid grid-cols-2 gap-2 max-h-[380px] overflow-y-auto pr-0.5">
-          {JITTER_EASINGS.map((item) => {
+          {availableEasings.map((item) => {
             const isSelected = normalizedCurrent === item.id;
 
             return (
@@ -498,73 +505,15 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
               )}
             </svg>
 
-            {/* Real Curve Type Status Badge */}
-            <div className="absolute top-2 left-2.5 px-2 py-0.5 rounded bg-black/50 border border-[#27272a] text-[10px] font-mono pointer-events-none flex items-center gap-1.5">
-              {isElastic ? (
-                <span className="text-[#60a5fa] font-medium">⚡ Elastic Damped Oscillation</span>
-              ) : isBounce ? (
-                <span className="text-[#60a5fa] font-medium">⚡ Gravitational Impact Bounce</span>
-              ) : (
-                <span className="text-[#a1a1aa]">
-                  Bézier: [{cp1.x.toFixed(2)}, {cp1.y.toFixed(2)}, {cp2.x.toFixed(2)}, {cp2.y.toFixed(2)}]
-                </span>
-              )}
+          </div>
+
+          {/* Clean Coordinate Indicator */}
+          {!isPhysics && (
+            <div className="flex items-center justify-between px-1 pt-1 text-[11px] text-[#a1a1aa] font-mono">
+              <span>P1: ({cp1.x.toFixed(2)}, {cp1.y.toFixed(2)})</span>
+              <span>P2: ({cp2.x.toFixed(2)}, {cp2.y.toFixed(2)})</span>
             </div>
-          </div>
-
-          {/* Quick Curve Preset Pills in 2 Columns (All 8 Presets including Elastic & Bounce!) */}
-          <div className="grid grid-cols-2 gap-1.5 pt-1">
-            {[
-              { id: "smooth", label: "Smooth", type: "bezier" as const, p: [0.16, 1.0, 0.3, 1.0] },
-              { id: "natural", label: "Natural", type: "bezier" as const, p: [0.25, 0.1, 0.25, 1.0] },
-              { id: "slowDown", label: "Slow down", type: "bezier" as const, p: [0.0, 0.0, 0.2, 1.0] },
-              { id: "accelerate", label: "Accelerate", type: "bezier" as const, p: [0.4, 0.0, 1.0, 1.0] },
-              { id: "elastic", label: "Elastic", type: "physics" as const },
-              { id: "bounce", label: "Bounce", type: "physics" as const },
-              { id: "overshoot", label: "Overshoot", type: "bezier" as const, p: [0.34, 1.0, 0.64, 1.0] },
-              { id: "linear", label: "Linear", type: "bezier" as const, p: [0.0, 0.0, 1.0, 1.0] },
-            ].map((preset) => {
-              const isMatch =
-                preset.type === "physics"
-                  ? normalizedCurrent === preset.id
-                  : !isPhysics &&
-                    preset.p &&
-                    Math.abs(cp1.x - preset.p[0]) < 0.05 &&
-                    Math.abs(cp1.y - preset.p[1]) < 0.05 &&
-                    Math.abs(cp2.x - preset.p[2]) < 0.05 &&
-                    Math.abs(cp2.y - preset.p[3]) < 0.05;
-
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => {
-                    if (preset.type === "physics") {
-                      onSelectEasing(
-                        preset.id,
-                        undefined,
-                        preset.id === "elastic"
-                          ? { stiffness: 320, damping: 0.45, mass: 1.0 }
-                          : { stiffness: 280, damping: 0.55, mass: 1.2 }
-                      );
-                    } else if (preset.p) {
-                      setCp1({ x: preset.p[0], y: preset.p[1] });
-                      setCp2({ x: preset.p[2], y: preset.p[3] });
-                      onSelectEasing(preset.id, preset.p as [number, number, number, number]);
-                    }
-                  }}
-                  className={cn(
-                    "h-7 px-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer flex items-center justify-center text-center whitespace-nowrap",
-                    isMatch
-                      ? "bg-[#3b82f6] text-white shadow-xs font-semibold"
-                      : "bg-[#27272a] hover:bg-[#3f3f46] text-[#d4d4d8] hover:text-white"
-                  )}
-                >
-                  {preset.label}
-                </button>
-              );
-            })}
-          </div>
+          )}
         </div>
       )}
     </div>

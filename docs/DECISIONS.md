@@ -776,3 +776,22 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Auto-Choreographed Staggered Creation Defaults**:
   * Adding elements on canvas automatically staggers start times sequentially ($N \times 0.5\text{s}$) rather than stacking all animations at $t = 0$.
   * Each tool assigns its element-tailored entrance preset (Text $\to$ `slideUp`, Rect/Frame $\to$ `grow`, Circle/Star $\to$ `pop`, Media $\to$ `fade`, Line/Arrow $\to$ `slideRight`).
+
+---
+
+### Decision 35: Universal Animation Roles (In | Action | Out), Element Visibility Lifecycle, & Precision Easing Popover Ergonomics
+* **Universal Role Switcher (`[ In | Action | Out ]`)**:
+  * Any animation (whether an out-of-the-box preset or a custom animation channel) can now be assigned to any of the three fundamental motion graphics roles:
+    1. **`In` (Entrance)**: Introduces the element. The element is guaranteed to be completely hidden (`opacity: 0`) before the animation start time ($t < t_{\text{in}}$). When $t \ge t_{\text{in}}$, it enters the canvas.
+    2. **`Action` (In-Place Transformation)**: Applies a transformation to an element already present on the canvas. The element is visible from $t = 0.0\text{s}$ at its resting properties, performs the action during the clip window, and maintains its resulting state.
+    3. **`Out` (Exit)**: Dismisses the element from canvas. After the exit animation finishes ($t \ge t_{\text{out}} + \text{duration}$), the element is guaranteed to remain permanently hidden (`opacity: 0`).
+* **Multi-Clip Compound Lifecycle Guarantees**:
+  * In `compoundLayerAnimations`, the pre-entrance check evaluates `Math.min(...inClips.map(c => c.start))` and the post-exit check evaluates `Math.max(...outClips.map(c => c.start + c.duration))`.
+  * This guarantees that a layer with an entrance starting late in the timeline (e.g. at $2.1\text{s}$) is never erroneously rendered at $t = 0\text{s}$.
+* **Precision Easing Popover Ergonomics**:
+  * **Header Alignment**: The easing popover portal position anchors directly below the top navigation header (`topLimit = sidebarRect.top + 6`), flush with the inspector panel rather than floating mid-canvas.
+  * **Zero Redundant Noise**: Removed the redundant `+` button in the header, removed duplicate 8 preset pills from under the interactive Bézier graph, and removed noisy status badge text overlaid on the curve canvas.
+  * **Context-Aware Optical Easing Filtering**:
+    * Optical and bounded properties (`opacity`, `color`, `blur`, `backdropBlur`, and `out` exits) reject non-monotonic physics easings (`elastic`, `bounce`, `overshoot`) that cause unnatural numerical clipping, presenting only monotonic curves (`Smooth`, `Natural`, `Slow down`, `Accelerate`, `Linear`).
+    * Spatial transforms (`move`, `scale`, `rotate`) retain all 8 full physical and curve presets.
+

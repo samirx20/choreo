@@ -182,6 +182,45 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
     selectedClip.type === "emphasis" ||
     ["pulse", "float", "wiggle", "spin", "heartbeat", "breathe", "shake"].includes(selectedClip.preset);
 
+  const isOpticalOnly =
+    isOpacityBased ||
+    isColorBased ||
+    isBlurBased ||
+    isBackdropBlurBased ||
+    selectedClip.type === "out";
+
+  const handleModeChange = (newType: "in" | "action" | "out") => {
+    const updates: Partial<AnimationClip> = { type: newType };
+
+    if (newType === "in") {
+      if (selectedClip.preset === "custom_scale") {
+        updates.from = { ...(selectedClip.from || {}), scale: selectedClip.from?.scale ?? 0 };
+        updates.params = { ...(selectedClip.params || {}), scaleAmount: selectedClip.params?.scaleAmount ?? 1 };
+      } else if (selectedClip.preset === "custom_opacity") {
+        updates.from = { ...(selectedClip.from || {}), opacity: selectedClip.from?.opacity ?? 0 };
+        updates.params = { ...(selectedClip.params || {}), opacity: selectedClip.params?.opacity ?? 1 };
+      }
+    } else if (newType === "out") {
+      if (selectedClip.preset === "custom_scale") {
+        updates.from = { ...(selectedClip.from || {}), scale: selectedClip.from?.scale ?? 1 };
+        updates.params = { ...(selectedClip.params || {}), scaleAmount: 0 };
+      } else if (selectedClip.preset === "custom_opacity") {
+        updates.from = { ...(selectedClip.from || {}), opacity: selectedClip.from?.opacity ?? 1 };
+        updates.params = { ...(selectedClip.params || {}), opacity: 0 };
+      }
+    } else if (newType === "action") {
+      if (selectedClip.preset === "custom_scale") {
+        updates.from = { ...(selectedClip.from || {}), scale: selectedClip.from?.scale ?? 1 };
+        updates.params = { ...(selectedClip.params || {}), scaleAmount: selectedClip.params?.scaleAmount ?? 1.2 };
+      } else if (selectedClip.preset === "custom_opacity") {
+        updates.from = { ...(selectedClip.from || {}), opacity: selectedClip.from?.opacity ?? 1 };
+        updates.params = { ...(selectedClip.params || {}), opacity: selectedClip.params?.opacity ?? 0.5 };
+      }
+    }
+
+    updateAnimationClip(clipLayer.id, selectedClip.id, updates);
+  };
+
   // Pick appropriate header icon
   const getHeaderIcon = () => {
     if (isBlurBased) return <Flame className="h-4 w-4 text-[#7c3aed]" />;
@@ -317,16 +356,14 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
         </div>
       </div>
 
-      {/* Mode [ In | Out ] - ONLY for standard In/Out entrance/exit presets, never on custom or looping */}
-      {!isCustom && (selectedClip.type === "in" || selectedClip.type === "out") && (
+      {/* Universal Mode [ In | Action | Out ] for all animations */}
+      {!selectedClip.loop && (
         <div className="py-3 flex items-center justify-between border-b border-border/60">
           <span className="text-[13px] text-muted-foreground font-medium">Mode</span>
           <div className="flex items-center bg-muted p-0.5 rounded-md">
             <button
               type="button"
-              onClick={() =>
-                updateAnimationClip(clipLayer.id, selectedClip.id, { type: "in" })
-              }
+              onClick={() => handleModeChange("in")}
               className={cn(
                 "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
                 selectedClip.type === "in"
@@ -338,9 +375,19 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
             </button>
             <button
               type="button"
-              onClick={() =>
-                updateAnimationClip(clipLayer.id, selectedClip.id, { type: "out" })
-              }
+              onClick={() => handleModeChange("action")}
+              className={cn(
+                "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
+                selectedClip.type === "action"
+                  ? "bg-card text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Action
+            </button>
+            <button
+              type="button"
+              onClick={() => handleModeChange("out")}
               className={cn(
                 "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
                 selectedClip.type === "out"
@@ -1515,7 +1562,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                 (sidebarRect ? sidebarRect.left : rect.left) - popoverWidth - gap
               );
 
-              const topLimit = (sidebarRect ? sidebarRect.top : 48) + gap;
+              const topLimit = (sidebarRect ? sidebarRect.top : 48) + 6;
               const timelineEl = document.querySelector('[data-testid="timeline-panel"]');
               const timelineTop = timelineEl
                 ? timelineEl.getBoundingClientRect().top
@@ -1523,14 +1570,10 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               const bottomLimit = Math.min(window.innerHeight, timelineTop) - gap;
 
               const popoverHeight = 420;
-              const buttonCenterY = rect.top + rect.height / 2;
-              let topPos = buttonCenterY - popoverHeight / 2;
-
+              // Hugged directly below the top header (Rule 9 high precision alignment)
+              let topPos = topLimit;
               if (topPos + popoverHeight > bottomLimit) {
-                topPos = bottomLimit - popoverHeight;
-              }
-              if (topPos < topLimit) {
-                topPos = topLimit;
+                topPos = Math.max(topLimit, bottomLimit - popoverHeight);
               }
 
               return (
@@ -1553,6 +1596,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                       springStiffness={selectedClip.springStiffness}
                       springDamping={selectedClip.springDamping}
                       springMass={selectedClip.springMass}
+                      isOpticalOnly={isOpticalOnly}
                       onSelectEasing={(easingId, bezier, spring) => {
                         updateAnimationClip(clipLayer.id, selectedClip.id, {
                           easing: easingId as any,

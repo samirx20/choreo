@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useProjectStore, findLayerInTree } from "../store/useProjectStore";
-import { Layer, GroupLayer, AnimationConfig } from "../types/scene";
+import { Layer, GroupLayer, AnimationConfig, AnimationClip } from "../types/scene";
 
 describe("Animate Inspector & Motion Matrix Tests", () => {
   beforeEach(() => {

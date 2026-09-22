@@ -55,6 +55,11 @@ export function evaluateClipDelta(
   // 1. PRE-WINDOW
   if (t < start) {
     if (type === "in") {
+      if (preset.startsWith("custom_")) {
+        const preDelta = applyCustomPresetDelta(clip, 0, d);
+        preDelta.opacity = 0;
+        return preDelta;
+      }
       const preIn = evaluateAnimationConfig({ ...clip, start }, t, "in", effectiveFps);
       return {
         x: preIn.transform.x,
@@ -77,8 +82,18 @@ export function evaluateClipDelta(
   // 2. POST-WINDOW
   if (t >= start + safeDur && !loop) {
     if (type === "out") {
+      if (preset.startsWith("custom_")) {
+        const postDelta = applyCustomPresetDelta(clip, 1, d);
+        postDelta.opacity = 0;
+        return postDelta;
+      }
       d.opacity = 0;
       return d;
+    }
+    if (type === "in" && preset.startsWith("custom_")) {
+      const postDelta = applyCustomPresetDelta(clip, 1, d);
+      postDelta.opacity = 1;
+      return postDelta;
     }
     if (type === "action" && clip.fillMode === "forwards") {
       const finalEval = evaluateAnimationConfig({ ...clip, start }, start + safeDur, "in", effectiveFps);
@@ -104,6 +119,20 @@ export function evaluateClipDelta(
     const rawProgress = Math.min(Math.max((t - start) / safeDur, 0), 1);
     const easeFn = getEasing(easing, bezierPoints, params.overshootAmount);
     progress = easeFn(rawProgress);
+  }
+
+  if (preset.startsWith("custom_")) {
+    const customDelta = applyCustomPresetDelta(clip, progress, d);
+    if (type === "in") {
+      if (clip.params?.opacity === undefined && clip.from?.opacity === undefined && clip.preset !== "custom_opacity") {
+        customDelta.opacity = progress;
+      }
+    } else if (type === "out") {
+      if (clip.params?.opacity === undefined && clip.from?.opacity === undefined && clip.preset !== "custom_opacity") {
+        customDelta.opacity = 1 - progress;
+      }
+    }
+    return customDelta;
   }
 
   if (type === "emphasis" || type === "action" || type === "custom") {
@@ -281,8 +310,10 @@ export function applyCustomPresetDelta(
       break;
     }
     case "custom_scale": {
-      const fromS = from.scale ?? params.fromScale ?? 1.0;
-      const toS = params.toScale ?? (scaleAmount ?? params.scaleAmount ?? 1.2);
+      const defaultFromS = clip.type === "in" ? 0 : 1.0;
+      const defaultToS = clip.type === "out" ? 0 : (scaleAmount ?? params.scaleAmount ?? 1.2);
+      const fromS = from.scale ?? params.fromScale ?? defaultFromS;
+      const toS = params.toScale ?? (scaleAmount ?? params.scaleAmount ?? defaultToS);
       const s = fromS + (toS - fromS) * factor;
       d.scaleX = s;
       d.scaleY = s;
@@ -295,8 +326,10 @@ export function applyCustomPresetDelta(
       break;
     }
     case "custom_opacity": {
-      const fromOp = from.opacity ?? params.fromOpacity ?? 1;
-      const toOp = params.toOpacity ?? (params.opacity ?? 0);
+      const defaultFromOp = clip.type === "in" ? 0 : 1;
+      const defaultToOp = clip.type === "out" ? 0 : 1;
+      const fromOp = from.opacity ?? params.fromOpacity ?? defaultFromOp;
+      const toOp = params.toOpacity ?? (params.opacity ?? defaultToOp);
       d.opacity = Math.max(0, Math.min(1, fromOp + (toOp - fromOp) * factor));
       break;
     }
@@ -403,6 +436,52 @@ export function compoundLayerAnimations(
   heightDelta?: number;
 } {
   const clips = getLayerClips(layer);
+
+  // 1. Pre-entrance rule: If layer has an In (Entrance) clip that has not started yet,
+  // the layer is completely invisible on screen!
+  const inClips = clips.filter((c) => c.type === "in");
+  if (inClips.length > 0) {
+    const minInStart = Math.min(...inClips.map((c) => c.start));
+    if (currentTime < minInStart + groupStartOffset) {
+      return {
+        transform: {
+          x: 0,
+          y: 0,
+          z: 0,
+          scaleX: layer.style.scaleX ?? 1,
+          scaleY: layer.style.scaleY ?? 1,
+          rotate: layer.style.rotation ?? 0,
+          rotateX: 0,
+          rotateY: 0,
+          perspective: 0,
+        },
+        opacity: 0,
+      };
+    }
+  }
+
+  // 2. Post-exit rule: If layer has an Out (Exit) clip that has already finished,
+  // the layer is completely invisible on screen!
+  const outClips = clips.filter((c) => c.type === "out");
+  if (outClips.length > 0) {
+    const maxOutEnd = Math.max(...outClips.map((c) => c.start + (c.duration || 0.6)));
+    if (currentTime >= maxOutEnd + groupStartOffset) {
+      return {
+        transform: {
+          x: 0,
+          y: 0,
+          z: 0,
+          scaleX: layer.style.scaleX ?? 1,
+          scaleY: layer.style.scaleY ?? 1,
+          rotate: layer.style.rotation ?? 0,
+          rotateX: 0,
+          rotateY: 0,
+          perspective: 0,
+        },
+        opacity: 0,
+      };
+    }
+  }
 
   const transform: TransformState = {
     x: 0,
