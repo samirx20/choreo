@@ -7,6 +7,7 @@ interface DistanceOverlayProps {
   canvasWidth: number;
   canvasHeight: number;
   altPressed: boolean;
+  screenOffset?: { x: number; y: number };
 }
 
 interface MeasurementLine {
@@ -24,6 +25,7 @@ export const DistanceOverlay: React.FC<DistanceOverlayProps> = ({
   canvasWidth,
   canvasHeight,
   altPressed,
+  screenOffset,
 }) => {
   if (!altPressed || !selectedLayer) return null;
 
@@ -85,7 +87,17 @@ export const DistanceOverlay: React.FC<DistanceOverlayProps> = ({
     }
 
     return (
-      <div className="absolute inset-0 pointer-events-none z-40">
+      <div
+        style={{
+          position: "absolute",
+          left: `${screenOffset?.x ?? 0}px`,
+          top: `${screenOffset?.y ?? 0}px`,
+          width: `${canvasWidth}px`,
+          height: `${canvasHeight}px`,
+          pointerEvents: "none",
+        }}
+        className="z-40"
+      >
         <svg className="w-full h-full absolute inset-0 overflow-visible pointer-events-none">
           {lines.map((line, idx) => (
             <React.Fragment key={idx}>
@@ -206,7 +218,17 @@ export const DistanceOverlay: React.FC<DistanceOverlayProps> = ({
   }
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-40">
+    <div
+      style={{
+        position: "absolute",
+        left: `${screenOffset?.x ?? 0}px`,
+        top: `${screenOffset?.y ?? 0}px`,
+        width: `${canvasWidth}px`,
+        height: `${canvasHeight}px`,
+        pointerEvents: "none",
+      }}
+      className="z-40"
+    >
       {/* Target Layer Highlight Box */}
       <div
         style={{

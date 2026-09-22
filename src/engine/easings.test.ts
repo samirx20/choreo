@@ -78,4 +78,68 @@ describe("Easing Curves Engine", () => {
     expect(delay5).toBeGreaterThan(delay1);
     expect(delay20).toBeLessThanOrEqual(0.65); // Clamped to max window
   });
+
+  it("evaluates elastic analytical waveform with damped sinusoidal oscillation and clean settling", () => {
+    const elastic = EASING_FUNCTIONS.elastic;
+    expect(elastic(0)).toBe(0);
+    expect(elastic(1)).toBe(1);
+
+    // Peak overshoot occurs near t=0.15 with value > 1.25
+    const peak = elastic(0.15);
+    expect(peak).toBeGreaterThan(1.25);
+
+    // Demonstrates oscillation: goes above 1, drops below/settles, then reaches 1
+    const valAt025 = elastic(0.25);
+    expect(valAt025).toBeLessThan(peak);
+
+    // Final settlement within 0.01 of 1.0 near t=0.9
+    expect(elastic(0.9)).toBeCloseTo(1.0, 1);
+  });
+
+  it("evaluates bounce analytical waveform with multiple parabolic rebounds", () => {
+    const bounce = EASING_FUNCTIONS.bounce;
+    expect(bounce(0)).toBe(0);
+    expect(bounce(1)).toBe(1);
+
+    // Rebound points: bounce is strictly bounded in [0, 1]
+    for (let t = 0; t <= 1; t += 0.02) {
+      const v = bounce(t);
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(1.0001);
+    }
+
+    // First impact occurs around t = 1/2.75 ≈ 0.3636, where v reaches 1.0
+    expect(bounce(0.3636)).toBeCloseTo(1.0, 1);
+  });
+
+  it("ensures physics easings (elastic and bounce) never fall back to stale bezier curves", () => {
+    const staleBezier: [number, number, number, number] = [0.1, 0.2, 0.3, 0.4];
+
+    // getEasing for elastic should return the true analytical waveform, NOT cubicBezier
+    const elasticFn = getEasing("elastic", staleBezier);
+    expect(elasticFn(0.15)).toBeGreaterThan(1.2); // Cubic bezier with [0.1, 0.2, 0.3, 0.4] cannot overshoot
+
+    // getEasing for bounce should return the true analytical bounce
+    const bounceFn = getEasing("bounce", staleBezier);
+    expect(bounceFn(0.3636)).toBeCloseTo(1.0, 1);
+  });
+
+  it("evaluates all 8 core presets correctly (Smooth, Natural, Slow down, Accelerate, Elastic, Bounce, Overshoot, Linear)", () => {
+    const presets = [
+      "smooth",
+      "natural",
+      "slowDown",
+      "accelerate",
+      "elastic",
+      "bounce",
+      "overshoot",
+      "linear",
+    ];
+
+    presets.forEach((p) => {
+      const fn = getEasing(p);
+      expect(fn(0)).toBeCloseTo(0, 2);
+      expect(fn(1)).toBeCloseTo(1, 2);
+    });
+  });
 });

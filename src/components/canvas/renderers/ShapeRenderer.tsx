@@ -1,6 +1,7 @@
 import React from "react";
 import { ShapeLayer } from "@/types/scene";
 import { layerStyleToCss } from "./styleUtils";
+import { getSquirclePath } from "@/engine/squircle";
 import { cn } from "@/lib/utils";
 
 interface ShapeRendererProps {
@@ -50,10 +51,11 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     (layer.strokeDashArray && layer.strokeDashArray.length > 0);
 
   const isSvgShape = ["star", "polygon", "triangle", "line", "arrow"].includes(layer.shapeType);
+  const isSquircle = layer.shapeType === "rectangle" && Boolean(layer.style.squircleFactor && layer.style.squircleFactor > 0);
   const baseCss = layerStyleToCss({
     ...layer.style,
     backgroundColor: isSvgShape ? "transparent" : layer.style.backgroundColor,
-    borderWidth: hasTrim ? 0 : layer.style.borderWidth, // Trim paths render via SVG overlay
+    borderWidth: (hasTrim || isSquircle) ? 0 : layer.style.borderWidth, // Trim paths and squircles render via SVG overlay
   }, isChildInFlex);
 
   // If circle or ellipse, ensure border-radius 50%
@@ -86,12 +88,28 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       onClick={onClick}
       className={cn(
         "cursor-pointer select-none transition-[outline] relative",
-        isSelected && "ring-1 ring-primary ring-offset-2 ring-offset-transparent",
         layer.style.tailwindClasses
       )}
     >
+      {/* G2 Continuous Squircle SVG Stroke Overlay */}
+      {isSquircle && strokeWidth > 0 && (
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+          viewBox={`0 0 ${widthNum} ${heightNum}`}
+        >
+          <path
+            d={getSquirclePath(widthNum, heightNum, layer.style.borderRadius ?? 0, layer.style.squircleFactor)}
+            fill="none"
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+            strokeDasharray={hasTrim ? trimDashArray : undefined}
+            strokeDashoffset={hasTrim ? trimDashOffset : undefined}
+          />
+        </svg>
+      )}
+
       {/* Vector Trim Paths SVG Stroke Overlay for Rectangles & Circles */}
-      {hasTrim && layer.shapeType === "rectangle" && (
+      {hasTrim && !isSquircle && layer.shapeType === "rectangle" && (
         <svg
           className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
           viewBox={`0 0 ${widthNum} ${heightNum}`}

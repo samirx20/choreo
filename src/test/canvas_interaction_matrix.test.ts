@@ -6,6 +6,7 @@ import {
   findTopmostParentGroupInTree,
   isLayerOnArtboard,
   isMotionMode,
+  normalizeScreens,
 } from "../store/useProjectStore";
 import { layerStyleToCss } from "../components/canvas/renderers/styleUtils";
 import { Layer, GroupLayer, TextLayer } from "../types/scene";
@@ -172,6 +173,61 @@ describe("Canvas Interaction & State Matrix Tests", () => {
       expect(useProjectStore.getState().selectedLayerIds).toContain(textId);
       const updated = useProjectStore.getState().document.screens[0].layers.find((l) => l.id === textId) as TextLayer;
       expect(updated.content).toBe("Initial こんにちは");
+    });
+
+    it("automatically clears editingLayerId and activeTextSelection when clicking screen, deselectAll, or switching layers", () => {
+      const state = useProjectStore.getState();
+      const textId = "text_deselect_test";
+      const textLayer: Layer = {
+        id: textId,
+        name: "Test Text",
+        type: "text",
+        content: "Add text",
+        style: { x: 50, y: 50, width: "auto", height: "auto", rotation: 0, opacity: 1 },
+      };
+      state.addLayer(textLayer);
+      state.selectLayer(textId);
+      state.setEditingLayerId(textId);
+      state.setActiveTextSelection({ layerId: textId, start: 0, end: 8, text: "Add text" });
+
+      expect(useProjectStore.getState().editingLayerId).toBe(textId);
+      expect(useProjectStore.getState().activeTextSelection).not.toBeNull();
+
+      // Case 1: Selecting screen (clicking artboard)
+      state.selectScreen(useProjectStore.getState().activeScreenId);
+      expect(useProjectStore.getState().editingLayerId).toBeNull();
+      expect(useProjectStore.getState().activeTextSelection).toBeNull();
+      expect(useProjectStore.getState().selectedLayerIds).toEqual([]);
+
+      // Re-enable editing and selection
+      state.selectLayer(textId);
+      state.setEditingLayerId(textId);
+      state.setActiveTextSelection({ layerId: textId, start: 0, end: 8, text: "Add text" });
+
+      // Case 2: deselectAll (clicking pasteboard)
+      state.deselectAll();
+      expect(useProjectStore.getState().editingLayerId).toBeNull();
+      expect(useProjectStore.getState().activeTextSelection).toBeNull();
+      expect(useProjectStore.getState().selectedLayerIds).toEqual([]);
+
+      // Re-enable editing and selection
+      state.selectLayer(textId);
+      state.setEditingLayerId(textId);
+      state.setActiveTextSelection({ layerId: textId, start: 0, end: 8, text: "Add text" });
+
+      // Case 3: Selecting another layer
+      const otherLayer: Layer = {
+        id: "other_layer_test",
+        name: "Box",
+        type: "shape",
+        shapeType: "rectangle",
+        style: { x: 200, y: 200, width: 100, height: 100, rotation: 0, opacity: 1 },
+      };
+      state.addLayer(otherLayer);
+      state.selectLayer(otherLayer.id, false);
+      expect(useProjectStore.getState().editingLayerId).toBeNull();
+      expect(useProjectStore.getState().activeTextSelection).toBeNull();
+      expect(useProjectStore.getState().selectedLayerIds).toEqual([otherLayer.id]);
     });
   });
 
@@ -870,6 +926,61 @@ describe("Canvas Interaction & State Matrix Tests", () => {
       expect(found?.animation?.in?.preset).toBe("pop");
       expect(found?.animation?.in?.start).toBe(0.5);
       expect(found?.animation?.in?.duration).toBe(0.8);
+    });
+  });
+
+  describe("Domain J: Multi-Artboard Positioning, Non-Overlap Guarantee & Collision Auto-Healing", () => {
+    it("auto-heals overlapping screens with 120px separation gap", () => {
+      const docWithOverlap = {
+        version: "1.0",
+        name: "Test Doc",
+        settings: { width: 1920, height: 1080, fps: 60, duration: 5.0, backgroundColor: "#000000", palette: [] },
+        screens: [
+          { id: "s1", name: "Screen 1", duration: 5, layers: [], x: 0, y: 0, width: 1920, height: 1080 },
+          { id: "s2", name: "Scene 2", duration: 5, layers: [], x: 51, y: 117, width: 1920, height: 1080 },
+        ],
+      };
+
+      const healed = normalizeScreens(docWithOverlap as any);
+      expect(healed.screens[0].x).toBe(0);
+      expect(healed.screens[1].x).toBe(1920 + 120); // 2040
+      expect(healed.screens[1].y).toBe(0);
+    });
+
+    it("addScreen automatically calculates rightmostX + 120 so new artboards never collide", () => {
+      const state = useProjectStore.getState();
+      state.loadDocument({
+        version: "1.0",
+        name: "Test Clean",
+        settings: { width: 1920, height: 1080, fps: 60, duration: 5.0, backgroundColor: "#000000", palette: [] },
+        screens: [
+          { id: "s_base", name: "Base Screen", duration: 5, layers: [], x: 0, y: 0, width: 1920, height: 1080 },
+        ],
+      });
+
+      state.addScreen();
+      let doc = useProjectStore.getState().document;
+      expect(doc.screens.length).toBe(2);
+      expect(doc.screens[1].x).toBe(1920 + 120);
+
+      state.addScreen();
+      doc = useProjectStore.getState().document;
+      expect(doc.screens.length).toBe(3);
+      expect(doc.screens[2].x).toBe(doc.screens[1].x! + (doc.screens[1].width || 1920) + 120);
+    });
+
+    it("duplicateScreen places copy at rightmostX + 120 without overlapping existing artboards", () => {
+      const state = useProjectStore.getState();
+      const currentScreens = state.document.screens;
+      const firstScreenId = currentScreens[0].id;
+
+      state.duplicateScreen(firstScreenId);
+      const doc = useProjectStore.getState().document;
+      const duplicated = doc.screens[doc.screens.length - 1];
+
+      const prevScreen = doc.screens[doc.screens.length - 2];
+      const prevRight = (prevScreen.x ?? 0) + (prevScreen.width ?? 1920);
+      expect(duplicated.x).toBeGreaterThanOrEqual(prevRight + 120);
     });
   });
 });

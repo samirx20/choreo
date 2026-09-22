@@ -27,3 +27,4 @@ dist-ssr
 # Motion studio temporary cache
 .motion-studio/
 tmp/
+*.exe

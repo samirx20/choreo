@@ -1,63 +1,52 @@
 import React, { useState, useEffect } from "react";
 import {
-  Plus,
-  Trash2,
-  Copy,
-  ChevronDown,
-  ChevronRight,
-  Eye,
-  EyeOff,
-  Lock,
-  Unlock,
   Type,
   Square,
   Circle,
   Folder,
+  BoxSelect,
+  Minus,
+  ArrowUpRight,
+  Triangle,
+  Hexagon,
+  Star,
   Image as ImageIcon,
-  Zap,
-  Search,
-  MoreVertical,
-  Monitor,
-  Package,
-  Layers as LayersIcon,
-  Clock,
+  Play,
+  Eye,
+  EyeOff,
+  Lock,
+  Unlock,
+  ChevronRight,
+  ChevronDown,
+  icons,
+  Smile,
 } from "lucide-react";
-import { Layer, Screen } from "@/types/scene";
+import { Layer } from "@/types/scene";
 import {
   useProjectStore,
   findLayerInTree,
   findParentGroupInTree,
-  isLayerOnArtboard,
 } from "@/store/useProjectStore";
+import { useContextMenuStore } from "@/store/useContextMenuStore";
+import { buildSceneContextMenu } from "@/components/contextmenu/contextMenuBuilders";
 import { CanvasContextMenu } from "../canvas/CanvasContextMenu";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 export const LeftSidebar: React.FC = () => {
   const {
     document: doc,
-    uiMode,
     activeScreenId,
     selectScreen,
-    addScreen,
-    updateScreen,
-    deleteScreen,
-    duplicateScreen,
     selectedLayerIds,
     selectLayer,
+    deselectAll,
     updateLayer,
+    updateScreen,
     reorderLayer,
-    groupSelection,
-    ungroup,
   } = useProjectStore();
 
-  const [layerSearch, setLayerSearch] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [collapsedScenes, setCollapsedScenes] = useState<Record<string, boolean>>({});
   const [draggingLayerId, setDraggingLayerId] = useState<string | null>(null);
   const [dragOverTarget, setDragOverTarget] = useState<{
     id: string;
@@ -70,8 +59,8 @@ export const LeftSidebar: React.FC = () => {
   } | null>(null);
   const [renamingLayerId, setRenamingLayerId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [renamingScreenId, setRenamingScreenId] = useState<string | null>(null);
-  const [screenRenameValue, setScreenRenameValue] = useState("");
+  const [renamingSceneId, setRenamingSceneId] = useState<string | null>(null);
+  const [renameSceneValue, setRenameSceneValue] = useState("");
 
   const activeScreen =
     doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
@@ -124,48 +113,63 @@ export const LeftSidebar: React.FC = () => {
 
   const getLayerIcon = (layer: Layer, isSelected: boolean) => {
     const iconClass = cn(
-      "h-3.5 w-3.5 shrink-0 transition-colors",
-      isSelected ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
+      "h-3.5 w-3.5 shrink-0",
+      isSelected ? "text-white" : "text-[#71717a]"
     );
 
     switch (layer.type) {
       case "text":
-        return <Type className={iconClass} />;
       case "chunk":
-        return <Zap className={iconClass} />;
+        return <Type className={iconClass} />;
       case "group":
         return <Folder className={iconClass} />;
-      case "shape":
-        return layer.shapeType === "circle" ? (
-          <Circle className={iconClass} />
+      case "frame":
+        return <BoxSelect className={iconClass} />;
+      case "line":
+        return (layer as any).arrowEnd === "arrow" ? (
+          <ArrowUpRight className={iconClass} />
         ) : (
-          <Square className={iconClass} />
+          <Minus className={iconClass} />
         );
+      case "polygon":
+        return (layer as any).sides === 3 ? (
+          <Triangle className={iconClass} />
+        ) : (
+          <Hexagon className={iconClass} />
+        );
+      case "shape":
+        if (layer.shapeType === "circle" || layer.shapeType === "ellipse") {
+          return <Circle className={iconClass} />;
+        }
+        if (layer.shapeType === "star") {
+          return <Star className={iconClass} />;
+        }
+        if (layer.shapeType === "triangle") {
+          return <Triangle className={iconClass} />;
+        }
+        if (layer.shapeType === "line") {
+          return <Minus className={iconClass} />;
+        }
+        if (layer.shapeType === "arrow") {
+          return <ArrowUpRight className={iconClass} />;
+        }
+        return <Square className={iconClass} />;
       case "image":
         return <ImageIcon className={iconClass} />;
+      case "icon": {
+        const IconComp =
+          (icons as Record<string, React.FC<any>>)[(layer as any).iconName] || Smile;
+        return <IconComp className={iconClass} />;
+      }
       default:
         return <Square className={iconClass} />;
     }
   };
 
-  // Render a single layer item in the tree recursively with drag-and-drop
-  const renderLayerNode = (layer: Layer, depth = 0) => {
-    if (
-      layerSearch &&
-      !layer.name.toLowerCase().includes(layerSearch.toLowerCase())
-    ) {
-      if (
-        layer.type !== "group" ||
-        !layer.children.some((c) =>
-          c.name.toLowerCase().includes(layerSearch.toLowerCase())
-        )
-      ) {
-        return null;
-      }
-    }
-
+  // Render a single layer item in the tree
+  const renderLayerNode = (layer: Layer, depth = 1, screenId?: string) => {
     const isSelected = selectedLayerIds.includes(layer.id);
-    const isGroup = layer.type === "group";
+    const isGroup = layer.type === "group" || layer.type === "frame";
     const isCollapsed = isGroup && collapsedGroups[layer.id];
     const isDragging = draggingLayerId === layer.id;
     const isDragTarget = dragOverTarget?.id === layer.id;
@@ -195,7 +199,7 @@ export const LeftSidebar: React.FC = () => {
             setDragOverTarget({ id: layer.id, position: pos });
           }
         }}
-        onDragLeave={(e) => {
+        onDragLeave={() => {
           if (dragOverTarget?.id === layer.id) {
             setDragOverTarget(null);
           }
@@ -212,10 +216,10 @@ export const LeftSidebar: React.FC = () => {
       >
         {/* Drop guideline */}
         {isDragTarget && dragOverTarget.position === "before" && (
-          <div className="absolute top-0 left-2 right-2 h-0.5 bg-primary rounded-full z-30 shadow-xs" />
+          <div className="absolute top-0 left-2 right-2 h-0.5 bg-[#6d28d9] rounded-full z-30" />
         )}
         {isDragTarget && dragOverTarget.position === "after" && (
-          <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full z-30 shadow-xs" />
+          <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#6d28d9] rounded-full z-30" />
         )}
 
         <div
@@ -229,6 +233,12 @@ export const LeftSidebar: React.FC = () => {
             setDragOverTarget(null);
           }}
           onClick={(e) => {
+            if (screenId && activeScreenId !== screenId) {
+              selectScreen(screenId);
+              window.dispatchEvent(
+                new CustomEvent("motion-focus-screen", { detail: { screenId } })
+              );
+            }
             selectLayer(layer.id, e.shiftKey || e.ctrlKey || e.metaKey);
           }}
           onContextMenu={(e) => {
@@ -237,21 +247,20 @@ export const LeftSidebar: React.FC = () => {
             selectLayer(layer.id, false);
             setContextMenu({ x: e.clientX, y: e.clientY, layerId: layer.id });
           }}
-          style={{ paddingLeft: `${depth * 12 + 8}px` }}
+          style={{ paddingLeft: `${depth * 16 + 12}px` }}
           className={cn(
-            "group flex items-center justify-between h-[28px] pr-1.5 text-xs rounded-[8px] transition-all cursor-pointer relative",
+            "group flex items-center justify-between h-8 pr-2 text-xs transition-colors cursor-pointer relative",
             isSelected
-              ? "bg-accent text-accent-foreground font-medium border border-border shadow-xs"
-              : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
-            isDragging && "opacity-40",
-            isDragTarget && dragOverTarget.position === "inside" && "bg-accent/80 border-primary ring-1 ring-primary text-accent-foreground"
+              ? "bg-[#6d28d9] text-white font-medium"
+              : "text-[#18181b] hover:bg-[#f4f4f6]",
+            isDragging && "opacity-40"
           )}
         >
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            {isGroup ? (
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            {isGroup && (
               <button
                 onClick={(e) => toggleGroupCollapse(layer.id, e)}
-                className="p-0.5 hover:text-foreground text-muted-foreground rounded"
+                className="p-0.5 -ml-1 text-[#71717a] hover:text-inherit"
               >
                 {isCollapsed ? (
                   <ChevronRight className="h-3 w-3" />
@@ -259,8 +268,6 @@ export const LeftSidebar: React.FC = () => {
                   <ChevronDown className="h-3 w-3" />
                 )}
               </button>
-            ) : (
-              <span className="w-2.5" />
             )}
 
             {getLayerIcon(layer, isSelected)}
@@ -288,27 +295,45 @@ export const LeftSidebar: React.FC = () => {
                   }
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="h-5 px-1 bg-muted border border-primary rounded-[4px] text-[11px] text-foreground outline-none w-full font-mono"
+                className="h-5 px-1 bg-white border border-[#6d28d9] rounded text-[11px] text-[#18181b] outline-none w-full"
               />
             ) : (
-              <span className="truncate text-[11px] font-sans">
+              <span
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  setRenamingLayerId(layer.id);
+                  setRenameValue(layer.name);
+                }}
+                className="truncate text-xs font-normal cursor-text hover:text-[#6d28d9] transition-colors"
+                title="Double-click, press F2, or right-click to rename"
+              >
                 {layer.name}
               </span>
             )}
           </div>
 
           {/* Quick Hover Actions: Visibility & Lock */}
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div
+            className={cn(
+              "flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity",
+              isSelected && "opacity-100"
+            )}
+          >
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 updateLayer(layer.id, { hidden: !layer.hidden });
               }}
               title={layer.hidden ? "Show layer" : "Hide layer"}
-              className="p-0.5 text-muted-foreground hover:text-foreground rounded"
+              className={cn(
+                "p-0.5 rounded transition-colors",
+                isSelected
+                  ? "text-white/80 hover:text-white"
+                  : "text-[#71717a] hover:text-[#18181b]"
+              )}
             >
               {layer.hidden ? (
-                <EyeOff className="h-3 w-3 text-destructive" />
+                <EyeOff className="h-3 w-3 text-red-400" />
               ) : (
                 <Eye className="h-3 w-3" />
               )}
@@ -320,55 +345,26 @@ export const LeftSidebar: React.FC = () => {
                 updateLayer(layer.id, { locked: !layer.locked });
               }}
               title={layer.locked ? "Unlock layer" : "Lock layer"}
-              className="p-0.5 text-muted-foreground hover:text-foreground rounded"
+              className={cn(
+                "p-0.5 rounded transition-colors",
+                isSelected
+                  ? "text-white/80 hover:text-white"
+                  : "text-[#71717a] hover:text-[#18181b]"
+              )}
             >
               {layer.locked ? (
-                <Lock className="h-3 w-3 text-amber-500" />
+                <Lock className="h-3 w-3 text-amber-400" />
               ) : (
                 <Unlock className="h-3 w-3" />
               )}
             </button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                <button className="p-0.5 text-muted-foreground hover:text-foreground rounded">
-                  <MoreVertical className="h-3 w-3" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="text-xs">
-                {isGroup ? (
-                  <DropdownMenuItem
-                    onClick={() => ungroup(layer.id)}
-                    className="gap-2"
-                  >
-                    <Folder className="h-3 w-3" /> Ungroup
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem
-                    onClick={() => groupSelection()}
-                    className="gap-2"
-                  >
-                    <Folder className="h-3 w-3" /> Group
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  onClick={() => {
-                    setRenamingLayerId(layer.id);
-                    setRenameValue(layer.name);
-                  }}
-                  className="gap-2"
-                >
-                  Rename (F2)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </div>
 
         {/* Group Children */}
         {isGroup && !isCollapsed && layer.children && layer.children.length > 0 && (
           <div className="flex flex-col">
-            {[...layer.children].reverse().map((child) => renderLayerNode(child, depth + 1))}
+            {[...layer.children].reverse().map((child) => renderLayerNode(child, depth + 1, screenId))}
           </div>
         )}
       </div>
@@ -376,210 +372,145 @@ export const LeftSidebar: React.FC = () => {
   };
 
   return (
-    <aside className="w-[240px] h-full bg-card border-r border-border flex flex-col z-20 select-none shrink-0 text-foreground">
-      {/* 1. SCREENS SECTION: Clear, Dedicated Scene Manager */}
-      <div className="p-2 border-b border-border space-y-1.5 shrink-0">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-            Screens ({doc.screens.length})
-          </span>
-          <button
-            onClick={() => addScreen()}
-            className="h-5 px-1.5 rounded-[6px] text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 flex items-center gap-1 transition-colors"
-            title="Add new scene screen"
-          >
-            <Plus className="h-3 w-3" />
-            <span>Add</span>
-          </button>
-        </div>
+    <aside className="w-[240px] h-full bg-white border-r border-[#e5e5e7] flex flex-col z-20 select-none shrink-0 text-[#18181b] overflow-y-auto">
+      {/* Unified Multi-Scene Outliner Tree (matching Jitter media_1789879347535.png) */}
+      <div className="flex-1 flex flex-col py-1 overflow-y-auto">
+        {doc.screens.map((screen) => {
+          const isScreenActive = activeScreenId === screen.id;
+          const isScreenSelected = isScreenActive && selectedLayerIds.length === 0;
+          const isCollapsed = Boolean(collapsedScenes[screen.id]);
 
-        {/* Screen List */}
-        <div className="space-y-1 max-h-[140px] overflow-y-auto pr-0.5">
-          {doc.screens.map((screen, idx) => {
-            const isActive = screen.id === activeScreenId;
-
-            return (
+          return (
+            <div key={screen.id} className="flex flex-col mb-1">
+              {/* Scene Header */}
               <div
-                key={screen.id}
-                onClick={() => selectScreen(screen.id)}
+                onClick={() => {
+                  selectScreen(screen.id);
+                  deselectAll(); // Selecting scene shows scene settings in inspector
+                  window.dispatchEvent(
+                    new CustomEvent("motion-focus-screen", { detail: { screenId: screen.id } })
+                  );
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  selectScreen(screen.id);
+                  deselectAll();
+                  const store = useProjectStore.getState();
+                  useContextMenuStore.getState().openContextMenu({
+                    x: e.clientX,
+                    y: e.clientY,
+                    zone: "scene",
+                    items: buildSceneContextMenu({
+                      screenId: screen.id,
+                      store,
+                      onRename: () => {
+                        setRenamingSceneId(screen.id);
+                        setRenameSceneValue(screen.name);
+                      },
+                    }),
+                  });
+                }}
                 className={cn(
-                  "group flex items-center justify-between h-7 px-2 rounded-[8px] text-xs cursor-pointer transition-all",
-                  isActive
-                    ? "bg-accent text-accent-foreground font-semibold border border-border shadow-xs"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                  "group flex items-center justify-between h-9 px-3 text-xs cursor-pointer transition-colors select-none",
+                  isScreenSelected
+                    ? "bg-[#6d28d9] text-white font-medium"
+                    : isScreenActive
+                    ? "bg-[#f4f4f6] text-[#18181b] font-medium"
+                    : "text-[#18181b] hover:bg-[#f4f4f6]"
                 )}
               >
-                <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                  <span className="text-[10px] text-muted-foreground font-mono">
-                    {idx + 1}.
-                  </span>
-
-                  {renamingScreenId === screen.id ? (
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCollapsedScenes((prev) => ({
+                        ...prev,
+                        [screen.id]: !prev[screen.id],
+                      }));
+                    }}
+                    className={cn(
+                      "p-0.5 -ml-1 rounded hover:bg-black/10 transition-colors",
+                      isScreenSelected
+                        ? "text-white hover:text-white"
+                        : "text-[#71717a] hover:text-[#18181b]"
+                    )}
+                    title={isCollapsed ? "Expand scene" : "Collapse scene"}
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight className="h-3 w-3" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3" />
+                    )}
+                  </button>
+                  <Play
+                    className={cn(
+                      "h-3.5 w-3.5 fill-current shrink-0",
+                      isScreenSelected ? "text-white" : "text-[#71717a]"
+                    )}
+                  />
+                  {renamingSceneId === screen.id ? (
                     <input
-                      autoFocus
                       type="text"
-                      value={screenRenameValue}
-                      onChange={(e) => setScreenRenameValue(e.target.value)}
+                      value={renameSceneValue}
+                      onChange={(e) => setRenameSceneValue(e.target.value)}
                       onBlur={() => {
-                        if (screenRenameValue.trim()) {
-                          updateScreen(screen.id, { name: screenRenameValue.trim() });
+                        if (renameSceneValue.trim()) {
+                          updateScreen(screen.id, { name: renameSceneValue.trim() });
                         }
-                        setRenamingScreenId(null);
+                        setRenamingSceneId(null);
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          if (screenRenameValue.trim()) {
-                            updateScreen(screen.id, { name: screenRenameValue.trim() });
+                          if (renameSceneValue.trim()) {
+                            updateScreen(screen.id, { name: renameSceneValue.trim() });
                           }
-                          setRenamingScreenId(null);
+                          setRenamingSceneId(null);
                         } else if (e.key === "Escape") {
-                          setRenamingScreenId(null);
+                          setRenamingSceneId(null);
                         }
                       }}
+                      autoFocus
                       onClick={(e) => e.stopPropagation()}
-                      className="h-5 px-1 bg-muted border border-primary rounded-[4px] text-[11px] text-foreground outline-none w-full font-mono"
+                      className="h-5 px-1 text-xs font-medium text-[#18181b] bg-white border border-[#6d28d9] rounded outline-none w-full"
                     />
                   ) : (
-                    <span className="truncate text-[11px]">
+                    <span
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setRenamingSceneId(screen.id);
+                        setRenameSceneValue(screen.name);
+                      }}
+                      className="truncate font-medium cursor-text hover:text-[#6d28d9] transition-colors"
+                      title="Double-click or right-click to rename"
+                    >
                       {screen.name}
                     </span>
                   )}
                 </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-0.5">
-                    <Clock className="h-2.5 w-2.5 opacity-60" />
-                    {screen.duration}s
-                  </span>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <button className="p-0.5 text-muted-foreground hover:text-foreground rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreVertical className="h-3 w-3" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="text-xs">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setRenamingScreenId(screen.id);
-                          setScreenRenameValue(screen.name);
-                        }}
-                        className="gap-2"
-                      >
-                        Rename
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => duplicateScreen(screen.id)}
-                        className="gap-2"
-                      >
-                        <Copy className="h-3 w-3" /> Duplicate
-                      </DropdownMenuItem>
-                      {doc.screens.length > 1 && (
-                        <DropdownMenuItem
-                          onClick={() => deleteScreen(screen.id)}
-                          className="gap-2 text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" /> Delete
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* 2. LAYERS SECTION HEADER & SEARCH */}
-      <div className="p-2 border-b border-border space-y-1.5 shrink-0">
-        <div className="flex items-center justify-between px-1">
-          <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-            <LayersIcon className="h-3 w-3" />
-            <span>Layers</span>
-          </span>
-
-          {selectedLayerIds.length >= 2 && (
-            <button
-              onClick={() => groupSelection()}
-              title="Group Selection (Cmd+G)"
-              className="flex items-center gap-1 text-[10px] text-foreground bg-muted hover:bg-accent px-1.5 py-0.5 rounded-[6px] border border-border font-medium transition-colors"
-            >
-              <Folder className="h-2.5 w-2.5" /> Group
-            </button>
-          )}
-        </div>
-
-        {/* Filter Input */}
-        <div className="relative flex items-center">
-          <Search className="absolute left-2 h-3 w-3 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Filter layers..."
-            value={layerSearch}
-            onChange={(e) => setLayerSearch(e.target.value)}
-            className="w-full h-6 pl-7 pr-2 bg-muted/50 border border-input rounded-[6px] text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors font-sans"
-          />
-        </div>
-      </div>
-
-      {/* 3. Hierarchical Layer Tree */}
-      <div className="flex-1 p-1.5 overflow-y-auto space-y-3">
-        {activeScreen && activeScreen.layers.length > 0 ? (
-          (() => {
-            const artboardLayers: Layer[] = [];
-            const pasteboardLayers: Layer[] = [];
-
-            activeScreen.layers.forEach((l) => {
-              if (isLayerOnArtboard(l, doc.settings.width, doc.settings.height)) {
-                artboardLayers.push(l);
-              } else {
-                pasteboardLayers.push(l);
-              }
-            });
-
-            return (
-              <>
-                {/* Artboard Layers Section */}
-                <div className="space-y-0.5">
-                  <div className="px-1.5 py-0.5 flex items-center justify-between text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                    <span className="flex items-center gap-1">
-                      <Monitor className="h-3 w-3" />
-                      <span>Artboard ({artboardLayers.length})</span>
-                    </span>
-                  </div>
-                  {artboardLayers.length > 0 ? (
-                    [...artboardLayers].reverse().map((layer) => renderLayerNode(layer))
+              {/* Scene Layers */}
+              {!isCollapsed && (
+                <div className="flex flex-col py-0.5">
+                  {screen.layers.length > 0 ? (
+                    [...screen.layers]
+                      .reverse()
+                      .map((layer) => renderLayerNode(layer, 1, screen.id))
                   ) : (
-                    <div className="px-2 py-1.5 text-[11px] text-muted-foreground italic">
-                      Empty artboard
+                    <div className="px-8 py-2 text-[11px] text-[#a1a1aa] italic">
+                      Empty scene
                     </div>
                   )}
                 </div>
-
-                {/* Pasteboard Assets Section */}
-                {pasteboardLayers.length > 0 && (
-                  <div className="space-y-0.5 pt-2 border-t border-border">
-                    <div className="px-1.5 py-0.5 flex items-center justify-between text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      <span className="flex items-center gap-1">
-                        <Package className="h-3 w-3" />
-                        <span>Pasteboard ({pasteboardLayers.length})</span>
-                      </span>
-                    </div>
-                    {[...pasteboardLayers].reverse().map((layer) => renderLayerNode(layer))}
-                  </div>
-                )}
-              </>
-            );
-          })()
-        ) : (
-          <div className="p-4 text-center text-xs text-muted-foreground">
-            No layers yet
-          </div>
-        )}
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Right-Click Context Menu for Layer Tree */}
+      {/* Context Menu */}
       {contextMenu && (
         <CanvasContextMenu
           x={contextMenu.x}

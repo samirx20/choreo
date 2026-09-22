@@ -31,9 +31,12 @@ export const ChunkRenderer: React.FC<ChunkRendererProps> = ({
     currentTime,
   } = useProjectStore();
 
-  const isEditing = editingLayerId === layer.id;
+  const isEditing = Boolean(editingLayerId === layer.id && isSelected);
   const [text, setText] = useState(layer.content);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const textRef = useRef(text);
+  textRef.current = text;
+  const isEditingRef = useRef(isEditing);
 
   useEffect(() => {
     setText(layer.content);
@@ -47,19 +50,60 @@ export const ChunkRenderer: React.FC<ChunkRendererProps> = ({
     }
   }, [isEditing]);
 
-  const commitEdit = () => {
+  const commitEdit = (reselect = true) => {
     setEditingLayerId(null);
     setActiveTextSelection(null);
-    const trimmed = text.trim();
+    if (typeof window !== "undefined" && window.getSelection) {
+      window.getSelection()?.removeAllRanges();
+    }
+    const currentText = textRef.current;
+    const trimmed = currentText.trim();
     if (trimmed.length === 0) {
       removeLayer(layer.id);
-    } else if (text !== layer.content) {
-      updateLayer(layer.id, { content: text });
-      selectLayer(layer.id, false);
+    } else if (currentText !== layer.content) {
+      updateLayer(layer.id, { content: currentText });
+      if (reselect) {
+        selectLayer(layer.id, false);
+      }
     } else {
-      selectLayer(layer.id, false);
+      if (reselect) {
+        selectLayer(layer.id, false);
+      }
     }
   };
+
+  // Sync edits if isEditing transitions to false externally
+  useEffect(() => {
+    if (isEditingRef.current && !isEditing) {
+      const currentText = textRef.current;
+      const trimmed = currentText.trim();
+      if (trimmed.length === 0) {
+        removeLayer(layer.id);
+      } else if (currentText !== layer.content) {
+        updateLayer(layer.id, { content: currentText });
+      }
+      setActiveTextSelection(null);
+      if (typeof window !== "undefined" && window.getSelection) {
+        window.getSelection()?.removeAllRanges();
+      }
+    }
+    isEditingRef.current = isEditing;
+  }, [isEditing, layer.id, layer.content, removeLayer, updateLayer, setActiveTextSelection]);
+
+  // Clean up on unmount if still editing
+  useEffect(() => {
+    return () => {
+      if (isEditingRef.current) {
+        const currentText = textRef.current;
+        const trimmed = currentText.trim();
+        if (trimmed.length === 0) {
+          removeLayer(layer.id);
+        } else if (currentText !== layer.content) {
+          updateLayer(layer.id, { content: currentText });
+        }
+      }
+    };
+  }, [layer.id, layer.content, removeLayer, updateLayer]);
 
   const handleSelect = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
     const target = e.currentTarget;
@@ -87,6 +131,7 @@ export const ChunkRenderer: React.FC<ChunkRendererProps> = ({
       onClick={onClick}
       onDoubleClick={(e) => {
         e.stopPropagation();
+        selectLayer(layer.id, false);
         setEditingLayerId(layer.id);
       }}
       className={cn(
@@ -116,18 +161,18 @@ export const ChunkRenderer: React.FC<ChunkRendererProps> = ({
             value={text}
             onChange={(e) => setText(e.target.value)}
             onSelect={handleSelect}
-            onBlur={commitEdit}
+            onBlur={() => commitEdit(false)}
             onKeyDown={(e) => {
               if (e.nativeEvent.isComposing || (e as any).isComposing) {
                 return;
               }
               if (e.key === "Escape") {
                 e.stopPropagation();
-                commitEdit();
+                commitEdit(true);
               } else if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 e.stopPropagation();
-                commitEdit();
+                commitEdit(true);
               } else if (e.key === "Enter" && e.shiftKey) {
                 // Shift+Enter: newline
                 e.stopPropagation();

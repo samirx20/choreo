@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { useProjectStore, isMotionMode } from "@/store/useProjectStore";
+import { useProjectRegistryStore } from "@/store/useProjectRegistryStore";
+import { ProjectsWorkspace } from "@/components/workspace/ProjectsWorkspace";
 import { TopNavBar } from "@/components/layout/TopNavBar";
 import { LeftSidebar } from "@/components/sidebar/LeftSidebar";
 import { CanvasViewport } from "@/components/canvas/CanvasViewport";
-import { DesignInspector } from "@/components/inspector/DesignInspector";
-import { MotionInspector } from "@/components/inspector/motion/MotionInspector";
+import { RightInspectorPanel } from "@/components/inspector/RightInspectorPanel";
 import { TimelinePanel } from "@/components/timeline/TimelinePanel";
 import { AICommandBar } from "@/components/ai/AICommandBar";
 import { ComponentsDrawer } from "@/components/components/ComponentsDrawer";
 import { ExportModal } from "@/components/export/ExportModal";
 import { ShortcutsModal } from "@/components/modals/ShortcutsModal";
-import { TheatreStudioHost } from "@/components/timeline/TheatreStudioHost";
 import { UniversalContextMenuPortal } from "@/components/common/UniversalContextMenuPortal";
 import { cn } from "@/lib/utils";
 
 const App: React.FC = () => {
   const {
+    document: doc,
+    activeScreenId,
     uiMode,
     setUiMode,
     undo,
@@ -24,7 +26,14 @@ const App: React.FC = () => {
     setIsPlaying,
     selectedLayerIds,
     duplicateLayer,
+    deleteScreen,
   } = useProjectStore();
+
+  const {
+    currentView,
+    loadRegistry,
+    closeProject,
+  } = useProjectRegistryStore();
 
   const [isAiBarOpen, setIsAiBarOpen] = useState(false);
   const [isComponentsDrawerOpen, setIsComponentsDrawerOpen] = useState(false);
@@ -36,7 +45,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     (window as any).__store = useProjectStore;
-  }, []);
+    (window as any).__registryStore = useProjectRegistryStore;
+    loadRegistry();
+  }, [loadRegistry]);
 
   // Synchronize document theme class
   useEffect(() => {
@@ -50,6 +61,9 @@ const App: React.FC = () => {
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // In workspace view, do not intercept editor keyboard shortcuts
+      if (currentView === "workspace") return;
+
       const isInput =
         ["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName) ||
         (e.target as HTMLElement).isContentEditable;
@@ -128,11 +142,36 @@ const App: React.FC = () => {
         );
         return;
       }
+
+      // 9. Delete Scene: Delete / Backspace when scene is selected and no layers are selected
+      if (
+        (e.key === "Delete" || e.key === "Backspace") &&
+        !isInput &&
+        selectedLayerIds.length === 0 &&
+        activeScreenId &&
+        doc.screens.length > 1
+      ) {
+        e.preventDefault();
+        deleteScreen(activeScreenId);
+        return;
+      }
+    };
+
+    // Suppress default browser context menu globally for a native desktop application experience
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("contextmenu", handleContextMenu);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("contextmenu", handleContextMenu);
+    };
   }, [
+    doc.screens.length,
+    activeScreenId,
+    deleteScreen,
     uiMode,
     setUiMode,
     undo,
@@ -142,8 +181,15 @@ const App: React.FC = () => {
     selectedLayerIds,
     duplicateLayer,
     isZenMode,
+    currentView,
   ]);
 
+  // 1. Projects Management Workspace (Dashboard / Home View)
+  if (currentView === "workspace") {
+    return <ProjectsWorkspace />;
+  }
+
+  // 2. Motion Studio Canvas Editor View
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans select-none relative">
       {/* 1. Global Tool Header */}
@@ -152,6 +198,7 @@ const App: React.FC = () => {
           onOpenAiBar={() => setIsAiBarOpen(true)}
           onOpenExportModal={() => setIsExportModalOpen(true)}
           onToggleZenMode={() => setIsZenMode((prev) => !prev)}
+          onBackToWorkspace={closeProject}
         />
       )}
 
@@ -163,10 +210,11 @@ const App: React.FC = () => {
         {/* Center: Studio Viewport */}
         <CanvasViewport
           onOpenComponentsDrawer={() => setIsComponentsDrawerOpen(true)}
+          onOpenAiBar={() => setIsAiBarOpen(true)}
         />
 
-        {/* Right Sidebar Inspector */}
-        {!isZenMode && (uiMode === "design" ? <DesignInspector /> : <MotionInspector />)}
+        {/* Right Sidebar Inspector (Jitter Design & Animate Switcher) */}
+        {!isZenMode && <RightInspectorPanel />}
       </div>
 
       {/* 3. Bottom Multi-Track Sequencer & Timeline (Motion Mode) */}
@@ -206,9 +254,6 @@ const App: React.FC = () => {
         isOpen={isShortcutsModalOpen}
         onClose={() => setIsShortcutsModalOpen(false)}
       />
-
-      {/* Theatre.js Studio Host */}
-      <TheatreStudioHost />
 
       {/* Universal Context Menu Portal (Zones A-G) */}
       <UniversalContextMenuPortal />

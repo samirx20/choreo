@@ -2,37 +2,29 @@ import React, { useRef, useEffect, useState, useMemo, useCallback } from "react"
 import {
   Play,
   Pause,
-  ChevronLeft,
-  ChevronRight,
   Repeat,
-  Scissors,
-  Magnet,
-  Maximize2,
   Type,
   Square,
   Circle,
   Folder,
-  Video,
+  Image as ImageIcon,
   Eye,
   EyeOff,
-  Layers,
-  Clock,
+  icons,
+  Smile,
 } from "lucide-react";
 import {
   useProjectStore,
   flattenLayers,
   isLayerOnArtboard,
+  getScreenTimings,
+  getTotalDuration,
 } from "@/store/useProjectStore";
 import { Layer, AnimationClip, getLayerClips } from "@/types/scene";
-import { formatTime } from "@/lib/utils";
 import { DraggableClip } from "./DraggableClip";
 import { animationClock } from "@/engine/clock/AnimationClock";
 import { useContextMenuStore } from "@/store/useContextMenuStore";
-import {
-  buildTimelineTrackMenu,
-  buildTimelineEmptyMenu,
-  buildTimelineRulerMenu,
-} from "@/components/contextmenu/contextMenuBuilders";
+import { buildTimelineTrackMenu } from "@/components/contextmenu/contextMenuBuilders";
 
 // Greedy sub-lane collision algorithm: assigns overlapping clips on a single layer to stacked sub-lanes
 function calculateSubLanes(clips: AnimationClip[]): {
@@ -70,39 +62,73 @@ export const TimelinePanel: React.FC = () => {
     document: doc,
     activeScreenId,
     selectedLayerIds,
+    selectedClipIds,
+    setSelectedClips,
     selectLayer,
+    selectScreen,
+    updateScreen,
     currentTime,
     setCurrentTime,
     isPlaying,
     setIsPlaying,
-    workArea,
-    setWorkArea,
-    setWorkAreaStart,
-    setWorkAreaEnd,
-    motionLayerIds,
+    isLooping,
+    setIsLooping,
+    loopMode,
+    setLoopMode,
     updateLayerStyle,
-    razorSplitLayer,
+    updateLayer,
   } = useProjectStore();
+
+  const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
+  const [editingSceneName, setEditingSceneName] = useState("");
+  const [editingTrackLayerId, setEditingTrackLayerId] = useState<string | null>(null);
+  const [editingTrackLayerName, setEditingTrackLayerName] = useState("");
 
   const activeScreen =
     doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
 
-  const duration = activeScreen?.duration || 5.0;
-  const fps = doc.settings.fps || 60;
-  const totalFrames = Math.round(duration * fps);
+  const screenTimings = useMemo(() => getScreenTimings(doc.screens), [doc.screens]);
+  const totalDuration = useMemo(() => getTotalDuration(doc.screens), [doc.screens]);
 
-  // Timecode vs SMPTE frames display toggle
-  const [isSmpte, setIsSmpte] = useState(false);
-  // Magnetic Snapping toggle
-  const [isSnapEnabled, setIsSnapEnabled] = useState(true);
-  // Timeline zoom level (1 = 100% fit, up to 3x)
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const activeTiming = useMemo(
+    () =>
+      screenTimings.find((t) => t.screen.id === activeScreenId) ||
+      screenTimings[0] || {
+        screen: activeScreen,
+        startTime: 0,
+        endTime: 5.0,
+        duration: 5.0,
+      },
+    [screenTimings, activeScreenId, activeScreen]
+  );
+
+  const screenStartTime = activeTiming.startTime;
+  const screenEndTime = activeTiming.endTime;
+
+  const allScreenClips = useMemo(
+    () =>
+      doc.screens.flatMap((s) => {
+        const timing = screenTimings.find((t) => t.screen.id === s.id);
+        const sStart = timing ? timing.startTime : 0;
+        return s.layers.flatMap((l) =>
+          getLayerClips(l).map((c) => sStart + c.start + c.duration)
+        );
+      }),
+    [doc.screens, screenTimings]
+  );
+  const maxGlobalClipEnd = useMemo(
+    () => allScreenClips.reduce((max, end) => Math.max(max, end), 0),
+    [allScreenClips]
+  );
+
+  const duration = Math.max(totalDuration, maxGlobalClipEnd);
+  const maxSec = Math.max(8, Math.ceil(duration));
+  const fps = doc.settings.fps || 60;
 
   const tracksContainerRef = useRef<HTMLDivElement>(null);
   const rulerRef = useRef<HTMLDivElement>(null);
   const playheadLineRef = useRef<HTMLDivElement>(null);
   const playheadBadgeRef = useRef<HTMLDivElement>(null);
-  const timeDisplayRef = useRef<HTMLButtonElement>(null);
   const isScrubbingRef = useRef(false);
 
   // Sync clock time
@@ -110,48 +136,25 @@ export const TimelinePanel: React.FC = () => {
     animationClock.setTime(currentTime);
   }, [currentTime]);
 
-  // Decoupled 60fps pub/sub for playhead rendering without React re-render thrashing
+  // Decoupled 60fps pub/sub for playhead rendering
   useEffect(() => {
     return animationClock.subscribe((t) => {
-      const pct = Math.max(0, Math.min(100, (t / duration) * 100));
+      const pct = Math.max(0, Math.min(100, (t / maxSec) * 100));
       if (playheadLineRef.current) {
         playheadLineRef.current.style.left = `${pct}%`;
       }
       if (playheadBadgeRef.current) {
         playheadBadgeRef.current.style.left = `${pct}%`;
-      }
-      if (timeDisplayRef.current) {
-        if (isSmpte) {
-          const f = Math.round(t * fps);
-          timeDisplayRef.current.innerText = `F${f} / ${totalFrames}`;
-        } else {
-          timeDisplayRef.current.innerText = formatTime(t);
-        }
+        playheadBadgeRef.current.style.transform = `translateX(-${pct}%)`;
+        playheadBadgeRef.current.innerText = t.toFixed(2);
       }
     });
-  }, [duration, fps, isSmpte, totalFrames]);
+  }, [maxSec]);
 
-  // Magnetic snap points collector
-  const snapPoints = useMemo(() => {
-    if (!isSnapEnabled) return [];
-    const pts = new Set<number>([0, duration]);
-    if (workArea) {
-      pts.add(workArea.start);
-      pts.add(workArea.end);
-    }
-    activeScreen?.layers.forEach((layer) => {
-      const clips = getLayerClips(layer);
-      clips.forEach((c) => {
-        pts.add(c.start);
-        pts.add(Math.round((c.start + c.duration) * 100) / 100);
-      });
-    });
-    return Array.from(pts);
-  }, [isSnapEnabled, activeScreen, duration, workArea]);
-
-  // Keyboard shortcuts: Space (play/pause), S (razor split), B (work area start), N (work area end)
+  // Keyboard shortcuts: Space (play/pause)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
       const target = e.target as HTMLElement;
       if (
         target instanceof HTMLInputElement ||
@@ -163,57 +166,35 @@ export const TimelinePanel: React.FC = () => {
 
       if (e.code === "Space") {
         e.preventDefault();
-        setIsPlaying(!isPlaying);
-      } else if (e.key === "s" || e.key === "S") {
-        if (!e.ctrlKey && !e.metaKey && selectedLayerIds.length > 0) {
-          e.preventDefault();
-          razorSplitLayer(selectedLayerIds[0], currentTime);
-        }
-      } else if (e.key === "b" || e.key === "B") {
-        if (e.shiftKey) {
-          setWorkArea(null);
-        } else {
-          setWorkAreaStart(currentTime);
-        }
-      } else if (e.key === "n" || e.key === "N") {
-        setWorkAreaEnd(currentTime);
-      } else if (e.key === "l" || e.key === "L") {
-        // Toggle loop
+        const currentPlaying = useProjectStore.getState().isPlaying;
+        useProjectStore.getState().setIsPlaying(!currentPlaying);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isPlaying, setIsPlaying, currentTime, selectedLayerIds, razorSplitLayer, setWorkArea, setWorkAreaStart, setWorkAreaEnd]);
+  }, []);
 
-  // Decoupled 60fps scrub handler
+  // Decoupled 60fps scrub handler: immediately updates store currentTime and animationClock
   const handleScrub = useCallback(
     (clientX: number) => {
       if (!rulerRef.current) return;
       const rect = rulerRef.current.getBoundingClientRect();
+      if (rect.width <= 0) return;
       const x = clientX - rect.left;
       const pct = Math.max(0, Math.min(1, x / rect.width));
-      let targetTime = pct * duration;
-
-      if (isSnapEnabled) {
-        const snapThresholdSec = (6 / rect.width) * duration;
-        for (const pt of snapPoints) {
-          if (Math.abs(targetTime - pt) <= snapThresholdSec) {
-            targetTime = pt;
-            break;
-          }
-        }
-      }
-
-      targetTime = Math.max(0, Math.min(duration, Math.round(targetTime * 100) / 100));
+      const targetTime = Math.max(0, Math.min(maxSec, Math.round(pct * maxSec * 100) / 100));
       animationClock.setTime(targetTime);
+      setCurrentTime(targetTime);
     },
-    [duration, isSnapEnabled, snapPoints]
+    [maxSec, setCurrentTime]
   );
 
   const startScrubbing = (e: React.PointerEvent) => {
     e.preventDefault();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    if (useProjectStore.getState().isPlaying) {
+      setIsPlaying(false);
+    }
     isScrubbingRef.current = true;
     handleScrub(e.clientX);
 
@@ -227,252 +208,265 @@ export const TimelinePanel: React.FC = () => {
       isScrubbingRef.current = false;
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
-      setCurrentTime(animationClock.getTime());
+      window.removeEventListener("pointercancel", onPointerUp);
+      try {
+        if ((e.target as HTMLElement).hasPointerCapture?.(e.pointerId)) {
+          (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+        }
+      } catch {}
+      handleScrub(ev.clientX);
     };
 
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
   };
 
-  // Layers list filtered for artboard / motion
+  // Layers list filtered for artboard
   const visibleLayers = useMemo(() => {
     const all = flattenLayers(activeScreen?.layers || []);
-    if (!motionLayerIds || motionLayerIds.length === 0) {
-      return all.filter((l) => isLayerOnArtboard(l, doc.settings.width, doc.settings.height));
-    }
-    return all.filter((l) => motionLayerIds.includes(l.id));
-  }, [activeScreen, motionLayerIds, doc.settings.width, doc.settings.height]);
+    return all.filter((l) => isLayerOnArtboard(l, doc.settings.width, doc.settings.height));
+  }, [activeScreen, doc.settings.width, doc.settings.height]);
 
-  // Ruler tick generator based on zoom LOD
+  // Ruler tick generator for Jitter (1s, 2s, 3s, 4s, 5s, 6s, 7s, 8s)
   const rulerTicks = useMemo(() => {
-    const ticks: { time: number; major: boolean; label?: string }[] = [];
-    const step = zoomLevel > 1.8 ? 0.25 : zoomLevel > 1.2 ? 0.5 : 1.0;
-    const subStep = step / 5;
+    const ticks: { time: number; label?: string }[] = [];
 
-    for (let t = 0; t <= duration + 0.001; t += subStep) {
-      const isMajor = Math.abs(t % step) < 0.001 || Math.abs((t % step) - step) < 0.001;
+    for (let t = 0; t <= maxSec; t += 0.5) {
+      const isWhole = t % 1 === 0 && t > 0;
       ticks.push({
         time: t,
-        major: isMajor,
-        label: isMajor ? `${t.toFixed(t % 1 === 0 ? 0 : 1)}s` : undefined,
+        label: isWhole ? `${t}s` : undefined,
       });
     }
     return ticks;
-  }, [duration, zoomLevel]);
+  }, [maxSec]);
 
   return (
     <div
-      className="flex flex-col w-full h-[260px] bg-card border-t border-border select-none text-xs"
+      className="flex flex-col w-full h-[240px] bg-white border-t border-[#e5e5e7] select-none text-xs text-[#18181b]"
       data-testid="timeline-panel"
     >
-      {/* 1. 36px Modern Transport Control Bar */}
-      <div className="h-9 px-3 flex items-center justify-between border-b border-border bg-card/95 backdrop-blur-sm z-30">
-        {/* Left: Timecode / SMPTE Toggle & Split Button */}
-        <div className="flex items-center gap-2">
-          <button
-            ref={timeDisplayRef}
-            type="button"
-            onClick={() => setIsSmpte(!isSmpte)}
-            className="px-2 py-0.5 rounded-[6px] font-mono font-semibold text-xs bg-muted text-foreground hover:bg-muted/80 transition-colors"
-            title="Toggle SMPTE Frames / Timecode"
-          >
-            {isSmpte ? `F${Math.round(currentTime * fps)} / ${totalFrames}` : formatTime(currentTime)}
-          </button>
-
-          {/* Razor Split Tool Button (Hotkey S) */}
-          <button
-            type="button"
-            onClick={() => {
-              if (selectedLayerIds.length > 0) {
-                razorSplitLayer(selectedLayerIds[0], currentTime);
-              }
-            }}
-            disabled={selectedLayerIds.length === 0}
-            className={`flex items-center gap-1 px-2 py-1 rounded-[6px] text-xs font-medium border transition-colors ${
-              selectedLayerIds.length > 0
-                ? "bg-card text-foreground border-border hover:bg-muted"
-                : "opacity-40 cursor-not-allowed border-transparent text-muted-foreground"
-            }`}
-            title="Razor Cut at Playhead (S)"
-          >
-            <Scissors className="w-3.5 h-3.5 text-muted-foreground" />
-            <span>Split (S)</span>
-          </button>
-        </div>
-
-        {/* Center: Transport Cluster */}
-        <div className="flex items-center gap-1 bg-muted p-0.5 rounded-[8px] border border-border">
-          <button
-            type="button"
-            onClick={() => setCurrentTime(Math.max(0, currentTime - 1 / fps))}
-            className="p-1 rounded-[6px] text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
-            title="Step Back 1 Frame"
-          >
-            <ChevronLeft className="w-3.5 h-3.5" />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="px-2.5 py-1 rounded-[6px] bg-primary text-primary-foreground shadow-xs font-semibold flex items-center gap-1 transition-all"
-            title="Play / Pause (Space)"
-          >
-            {isPlaying ? (
-              <Pause className="w-3.5 h-3.5 fill-current" />
-            ) : (
-              <Play className="w-3.5 h-3.5 fill-current" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCurrentTime(Math.min(duration, currentTime + 1 / fps))}
-            className="p-1 rounded-[6px] text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
-            title="Step Forward 1 Frame"
-          >
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Right: Snap Toggle, Work Area, & Zoom Fit */}
-        <div className="flex items-center gap-2">
-          {/* Magnetic Snap Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsSnapEnabled(!isSnapEnabled)}
-            className={`p-1.5 rounded-[6px] border transition-colors ${
-              isSnapEnabled
-                ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted"
-            }`}
-            title="Toggle Magnetic Snapping"
-          >
-            <Magnet className="w-3.5 h-3.5" />
-          </button>
-
-          {/* Work Area Status */}
-          {workArea && (
-            <div className="flex items-center gap-1 px-2 py-0.5 rounded-[6px] bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 font-mono text-[10px]">
-              <span>
-                [{workArea.start.toFixed(1)}s - {workArea.end.toFixed(1)}s]
-              </span>
-              <button
-                type="button"
-                onClick={() => setWorkArea(null)}
-                className="hover:text-amber-700 font-bold ml-1"
-                title="Clear Work Area (Shift+B)"
-              >
-                ×
-              </button>
-            </div>
-          )}
-
-          {/* Zoom to Fit */}
-          <button
-            type="button"
-            onClick={() => setZoomLevel(1)}
-            className={`flex items-center gap-1 px-2 py-1 rounded-[6px] border text-xs font-medium transition-colors ${
-              zoomLevel === 1
-                ? "bg-muted text-foreground border-border font-semibold"
-                : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted"
-            }`}
-            title="Fit to Timeline Viewport"
-          >
-            <Maximize2 className="w-3 h-3" />
-            <span>Fit</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Unified Master Scroll Container (Tracks Outliner + Lanes in 1 shared scroll view) */}
       <div
         ref={tracksContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden relative"
+        className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col"
       >
-        {/* Sticky 28px Time Ruler Row */}
-        <div className="sticky top-0 z-20 flex h-7 bg-card border-b border-border shadow-xs">
-          {/* Header Column Label */}
-          <div className="w-56 shrink-0 sticky left-0 z-30 px-3 flex items-center justify-between border-r border-border bg-card/95 backdrop-blur-sm text-[11px] font-semibold text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-muted-foreground" />
-              Layers & Tracks
-            </span>
-            <span className="text-[10px] font-mono text-muted-foreground">
-              {visibleLayers.length}
-            </span>
+        {/* Sticky Scene Blocks Row */}
+        <div className="sticky top-0 z-20 flex h-7 bg-[#fbfbfa] border-b border-[#e5e5e7]">
+          {/* Left Label */}
+          <div className="w-56 shrink-0 sticky left-0 z-30 px-3 flex items-center justify-between border-r border-[#e5e5e7] bg-[#fbfbfa] text-[11px] font-medium text-[#71717a]">
+            <span>Scenes ({doc.screens.length})</span>
+            <span className="text-[10px] text-[#a1a1aa] font-mono">{totalDuration.toFixed(1)}s total</span>
           </div>
 
-          {/* Ruler Lane (Zone D Right-Click Context Menu) */}
+          {/* Scene Blocks Lane */}
+          <div className="relative flex-1 overflow-hidden bg-[#fbfbfa]">
+            {screenTimings.map((st) => {
+              const isScreenActive = st.screen.id === activeScreenId;
+              const leftPct = (st.startTime / maxSec) * 100;
+              const widthPct = (st.duration / maxSec) * 100;
+              return (
+                <div
+                  key={st.screen.id}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    selectScreen(st.screen.id);
+                    setCurrentTime(st.startTime);
+                  }}
+                  style={{
+                    left: `${leftPct}%`,
+                    width: `${widthPct}%`,
+                  }}
+                  className={`absolute top-0.5 bottom-0.5 rounded border flex items-center justify-between px-2 cursor-pointer transition-all select-none ${
+                    isScreenActive
+                      ? "bg-[#7c3aed] text-white border-[#6d28d9] shadow-xs font-semibold z-10"
+                      : "bg-white text-[#52525b] border-[#e4e4e7] hover:border-[#a1a1aa] hover:bg-[#f4f4f6]"
+                  }`}
+                  title={`${st.screen.name}: ${st.duration}s (click to focus scene)`}
+                >
+                  {editingSceneId === st.screen.id ? (
+                    <input
+                      type="text"
+                      value={editingSceneName}
+                      onChange={(e) => setEditingSceneName(e.target.value)}
+                      onBlur={() => {
+                        if (editingSceneName.trim()) {
+                          updateScreen(st.screen.id, { name: editingSceneName.trim() });
+                        }
+                        setEditingSceneId(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          if (editingSceneName.trim()) {
+                            updateScreen(st.screen.id, { name: editingSceneName.trim() });
+                          }
+                          setEditingSceneId(null);
+                        } else if (e.key === "Escape") {
+                          setEditingSceneId(null);
+                        }
+                      }}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                      className="h-4 px-1 bg-white text-[#18181b] border border-[#6d28d9] rounded text-[10px] outline-none min-w-[60px]"
+                    />
+                  ) : (
+                    <span
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setEditingSceneId(st.screen.id);
+                        setEditingSceneName(st.screen.name);
+                      }}
+                      className="truncate text-[10px] cursor-text hover:underline"
+                      title="Double-click to rename scene"
+                    >
+                      {st.screen.name}
+                    </span>
+                  )}
+                  <span
+                    className={`text-[9px] font-mono shrink-0 ml-1 ${
+                      isScreenActive ? "text-white/80" : "text-[#a1a1aa]"
+                    }`}
+                  >
+                    {st.duration}s
+                  </span>
+
+                  {/* Drag handle on right edge to resize scene duration */}
+                  <div
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      const startX = e.clientX;
+                      const initialDuration = st.duration;
+                      if (!rulerRef.current) return;
+                      const rulerWidth = rulerRef.current.clientWidth;
+                      const secPerPx = maxSec / (rulerWidth || 1);
+
+                      const onPointerMove = (ev: PointerEvent) => {
+                        const deltaPx = ev.clientX - startX;
+                        const newDuration = Math.max(
+                          0.5,
+                          Math.round((initialDuration + deltaPx * secPerPx) * 10) / 10
+                        );
+                        updateScreen(st.screen.id, { duration: newDuration });
+                      };
+
+                      const onPointerUp = () => {
+                        window.removeEventListener("pointermove", onPointerMove);
+                        window.removeEventListener("pointerup", onPointerUp);
+                      };
+
+                      window.addEventListener("pointermove", onPointerMove);
+                      window.addEventListener("pointerup", onPointerUp);
+                    }}
+                    className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-black/20 rounded-r transition-colors"
+                    title="Drag to resize scene duration"
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Sticky Ruler Row */}
+        <div className="sticky top-7 z-20 flex h-8 bg-white border-b border-[#e5e5e7]">
+          {/* Left Transport Controls: Play & Loop */}
+          <div className="w-56 shrink-0 sticky left-0 z-30 px-3 flex items-center gap-2 border-r border-[#e5e5e7] bg-white">
+            {/* Play / Pause button */}
+            <button
+              type="button"
+              onClick={() => setIsPlaying(!isPlaying)}
+              className="h-6 w-6 rounded flex items-center justify-center text-[#18181b] hover:bg-[#f4f4f6] transition-colors"
+              title="Play / Pause (Space)"
+            >
+              {isPlaying ? (
+                <Pause className="h-4 w-4 fill-current" />
+              ) : (
+                <Play className="h-4 w-4 fill-current ml-0.5" />
+              )}
+            </button>
+
+            {/* Loop button with Mode (All vs Scene) */}
+            <button
+              type="button"
+              onClick={() => {
+                if (!isLooping) {
+                  setIsLooping(true);
+                  setLoopMode("all");
+                } else if (loopMode === "all") {
+                  setLoopMode("scene");
+                } else {
+                  setIsLooping(false);
+                }
+              }}
+              data-testid="timeline-loop-toggle"
+              className={`h-6 px-1.5 gap-1 rounded flex items-center justify-center transition-colors text-[10px] font-medium ${
+                isLooping
+                  ? "bg-[#f4f4f6] text-[#7c3aed]"
+                  : "text-[#a1a1aa] hover:text-[#18181b]"
+              }`}
+              title={
+                !isLooping
+                  ? "Looping Disabled (click to enable Loop All)"
+                  : loopMode === "all"
+                  ? "Looping All Scenes (click to loop active scene only)"
+                  : "Looping Active Scene (click to disable loop)"
+              }
+            >
+              <Repeat className="h-3 w-3" />
+              {isLooping && (
+                <span className="text-[9px] uppercase tracking-wider font-semibold">
+                  {loopMode === "scene" ? "Scene" : "All"}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Ruler Lane */}
           <div
             ref={rulerRef}
             data-testid="timeline-ruler"
             onPointerDown={startScrubbing}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              const rect = e.currentTarget.getBoundingClientRect();
-              const clickTime = Math.max(
-                0,
-                Math.min(duration, ((e.clientX - rect.left) / rect.width) * duration)
-              );
-              useContextMenuStore.getState().openContextMenu({
-                x: e.clientX,
-                y: e.clientY,
-                zone: "timeline-ruler",
-                items: buildTimelineRulerMenu({
-                  time: clickTime,
-                  isSmpte,
-                  toggleSmpte: () => setIsSmpte(!isSmpte),
-                  store: useProjectStore.getState(),
-                }),
-              });
-            }}
-            className="relative flex-1 cursor-ew-resize overflow-hidden"
+            className="relative flex-1 cursor-ew-resize overflow-hidden bg-white"
           >
-            {/* Work Area Bracket Shading */}
-            {workArea && (
-              <>
-                {/* Pre-In Scrim */}
-                <div
-                  className="absolute top-0 bottom-0 left-0 bg-primary/10 pointer-events-none"
-                  style={{ width: `${(workArea.start / duration) * 100}%` }}
-                />
-                {/* Active Work Area Bracket Span */}
-                <div
-                  className="absolute top-0 bottom-0 border-b-2 border-amber-500/80 pointer-events-none"
-                  style={{
-                    left: `${(workArea.start / duration) * 100}%`,
-                    width: `${((workArea.end - workArea.start) / duration) * 100}%`,
-                  }}
-                />
-                {/* Post-Out Scrim */}
-                <div
-                  className="absolute top-0 bottom-0 right-0 bg-primary/10 pointer-events-none"
-                  style={{
-                    left: `${(workArea.end / duration) * 100}%`,
-                    width: `${100 - (workArea.end / duration) * 100}%`,
-                  }}
-                />
-              </>
-            )}
+            {/* Shaded Active Scene Duration Span */}
+            <div
+              className="absolute top-0 bottom-0 bg-[#7c3aed]/8 border-x border-[#7c3aed]/25 pointer-events-none"
+              style={{
+                left: `${(screenStartTime / maxSec) * 100}%`,
+                width: `${(activeTiming.duration / maxSec) * 100}%`,
+              }}
+            />
 
-            {/* Ticks and Sub-ticks */}
+            {/* Ticks and Seconds Markers */}
             {rulerTicks.map((tick, idx) => {
-              const pct = (tick.time / duration) * 100;
+              const pct = (tick.time / maxSec) * 100;
+              if (pct > 100) return null;
+
+              const isEndTick = tick.time === maxSec;
+              const isStartTick = tick.time === 0;
+
               return (
                 <div
                   key={`tick-${idx}`}
-                  className="absolute top-0 flex flex-col items-center pointer-events-none"
+                  className="absolute top-0 bottom-0 flex flex-col items-center pointer-events-none"
                   style={{ left: `${pct}%` }}
                 >
                   <div
                     className={`w-px ${
-                      tick.major
-                        ? "h-3 bg-muted-foreground/60"
-                        : "h-1.5 bg-border"
+                      tick.label ? "h-2 bg-[#d4d4d8]" : "h-1 bg-[#e4e4e7]"
                     }`}
                   />
                   {tick.label && (
-                    <span className="text-[9px] font-mono text-muted-foreground -translate-x-1/2 mt-0.5">
+                    <span
+                      className={`text-[10px] text-[#71717a] font-sans mt-1 ${
+                        isEndTick
+                          ? "-translate-x-full pr-0.5"
+                          : isStartTick
+                          ? "translate-x-0 pl-0.5"
+                          : "-translate-x-1/2"
+                      }`}
+                    >
                       {tick.label}
                     </span>
                   )}
@@ -480,173 +474,218 @@ export const TimelinePanel: React.FC = () => {
               );
             })}
 
-            {/* Playhead Badge on Ruler */}
+            {/* Jitter Red Playhead Pill */}
             <div
               ref={playheadBadgeRef}
-              className="absolute top-0 -translate-x-1/2 pointer-events-none z-40 transition-none"
-              style={{ left: `${(currentTime / duration) * 100}%` }}
+              data-testid="timeline-playhead-badge"
+              className="absolute top-1 pointer-events-none z-40 bg-[#ef4444] text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shadow-sm"
+              style={{
+                left: `${(currentTime / maxSec) * 100}%`,
+                transform: `translateX(-${Math.max(
+                  0,
+                  Math.min(100, (currentTime / maxSec) * 100)
+                )}%)`,
+              }}
             >
-              <div className="w-2.5 h-3 bg-primary rounded-b-sm shadow-md" />
+              {currentTime.toFixed(2)}
             </div>
           </div>
         </div>
 
-        {/* Global Vertical Playhead Line across all tracks - correctly offset by w-56 (14rem) */}
-        <div className="absolute left-56 right-0 top-7 bottom-0 pointer-events-none overflow-hidden z-30">
+        {/* Global Vertical Red Playhead Line across all tracks */}
+        <div className="absolute left-56 right-0 top-[60px] bottom-0 pointer-events-none overflow-hidden z-30">
           <div
             ref={playheadLineRef}
-            className="absolute top-0 bottom-0 w-px bg-primary pointer-events-none transition-none shadow-[0_0_8px_rgba(0,0,0,0.4)]"
-            style={{ left: `${(currentTime / duration) * 100}%` }}
+            data-testid="timeline-playhead-line"
+            className="absolute top-0 bottom-0 w-px bg-[#ef4444] pointer-events-none transition-none shadow-xs"
+            style={{ left: `${(currentTime / maxSec) * 100}%` }}
           />
         </div>
 
         {/* Track Rows (Left Header + Right Lane) */}
-        {visibleLayers.length > 0 ? (
-          visibleLayers.map((layer) => {
-            const isSelected = selectedLayerIds.includes(layer.id);
-            const clips = getLayerClips(layer);
-            const { clipLanes, totalSubLanes } = calculateSubLanes(clips);
-            const trackHeight = Math.max(34, totalSubLanes * 24 + 10);
+        <div className="flex-1 divide-y divide-[#f4f4f6]">
+          {visibleLayers.length > 0 ? (
+            visibleLayers.map((layer) => {
+              const isLayerSelected = selectedLayerIds.includes(layer.id);
+              const clips = getLayerClips(layer);
+              const selectedClip = clips.find((c) => selectedClipIds.includes(c.id));
+              const isClipSelectedOnTrack = Boolean(selectedClip);
+              const { clipLanes, totalSubLanes } = calculateSubLanes(clips);
+              const trackHeight = Math.max(32, totalSubLanes * 24 + 8);
 
-            let LayerIcon = Type;
-            if (layer.type === "shape") {
-              LayerIcon = (layer as any).shapeType === "circle" ? Circle : Square;
-            } else if (layer.type === "group") {
-              LayerIcon = Folder;
-            } else if (layer.type === "video") {
-              LayerIcon = Video;
-            }
+              let LayerIcon = Type;
+              if (layer.type === "shape") {
+                LayerIcon = (layer as any).shapeType === "circle" ? Circle : Square;
+              } else if (layer.type === "group") {
+                LayerIcon = Folder;
+              } else if (layer.type === "image") {
+                LayerIcon = ImageIcon;
+              } else if (layer.type === "icon") {
+                LayerIcon = ((icons as any)[(layer as any).iconName]) || Smile;
+              }
 
-            return (
-              <div
-                key={layer.id}
-                style={{ height: trackHeight }}
-                className={`flex border-b border-border/60 transition-colors ${
-                  isSelected
-                    ? "bg-muted/70"
-                    : "hover:bg-muted/30"
-                }`}
-              >
-                {/* Sticky Left Track Header (Zone B Context Menu) */}
+              return (
                 <div
-                  data-testid={`timeline-track-header-${layer.id}`}
-                  onClick={() => selectLayer(layer.id)}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    selectLayer(layer.id);
-                    useContextMenuStore.getState().openContextMenu({
-                      x: e.clientX,
-                      y: e.clientY,
-                      zone: "timeline-track",
-                      items: buildTimelineTrackMenu({
-                        layer,
-                        store: useProjectStore.getState(),
-                      }),
-                    });
-                  }}
-                  className={`w-56 shrink-0 sticky left-0 z-10 px-3 flex items-center justify-between border-r border-border cursor-pointer transition-colors ${
-                    isSelected
-                      ? "bg-muted font-semibold text-foreground"
-                      : "bg-card text-foreground"
+                  key={layer.id}
+                  data-testid={`timeline-track-row-${layer.id}`}
+                  style={{ height: trackHeight }}
+                  className={`flex transition-colors ${
+                    isClipSelectedOnTrack
+                      ? "bg-[#f5f3ff]"
+                      : isLayerSelected
+                      ? "bg-[#f8f8fa]"
+                      : "hover:bg-[#fafafa]"
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate">
-                    <LayerIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                    <span className="truncate text-xs">{layer.name}</span>
-                  </div>
-
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        updateLayerStyle(layer.id, {
-                          opacity: layer.style.opacity === 0 ? 1 : 0,
-                        });
-                      }}
-                      className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded"
-                      title={layer.style.opacity === 0 ? "Show Layer" : "Hide Layer"}
-                    >
-                      {layer.style.opacity === 0 ? (
-                        <EyeOff className="w-3 h-3 text-slate-400" />
+                  {/* Left Track Header: Turns purple when animation clip is selected */}
+                  <div
+                    onClick={() => {
+                      selectLayer(layer.id);
+                      setSelectedClips([]);
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      selectLayer(layer.id);
+                      setSelectedClips([]);
+                      const store = useProjectStore.getState();
+                      const menuItems = buildTimelineTrackMenu({ layer, store });
+                      useContextMenuStore.getState().openContextMenu({
+                        x: e.clientX,
+                        y: e.clientY,
+                        zone: "timeline-track",
+                        items: menuItems,
+                      });
+                    }}
+                    data-testid={`timeline-track-header-${layer.id}`}
+                    className={`w-56 shrink-0 sticky left-0 z-10 px-3 flex items-center justify-between border-r cursor-pointer transition-colors ${
+                      isClipSelectedOnTrack
+                        ? "bg-[#6d28d9] text-white border-[#5b21b6] font-semibold"
+                        : isLayerSelected
+                        ? "bg-[#f8f8fa] font-medium text-[#18181b] border-[#e5e5e7]"
+                        : "bg-white text-[#18181b] border-[#e5e5e7]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 truncate min-w-0 flex-1 mr-1">
+                      {isClipSelectedOnTrack ? (
+                        <span className="truncate text-xs text-white">
+                          ⚡ {layer.name} · {selectedClip?.name || selectedClip?.preset}
+                        </span>
+                      ) : editingTrackLayerId === layer.id ? (
+                        <input
+                          type="text"
+                          value={editingTrackLayerName}
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => setEditingTrackLayerName(e.target.value)}
+                          onBlur={() => {
+                            if (editingTrackLayerName.trim()) {
+                              updateLayer(layer.id, { name: editingTrackLayerName.trim() });
+                            }
+                            setEditingTrackLayerId(null);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              if (editingTrackLayerName.trim()) {
+                                updateLayer(layer.id, { name: editingTrackLayerName.trim() });
+                              }
+                              setEditingTrackLayerId(null);
+                            } else if (e.key === "Escape") {
+                              setEditingTrackLayerId(null);
+                            }
+                          }}
+                          className="w-full text-xs font-medium px-1 py-0.5 border border-[#6d28d9] rounded outline-none bg-white text-[#18181b]"
+                        />
                       ) : (
-                        <Eye className="w-3 h-3 text-slate-400" />
+                        <>
+                          <LayerIcon className="w-3.5 h-3.5 text-[#71717a] shrink-0" />
+                          <span
+                            onDoubleClick={(e) => {
+                              e.stopPropagation();
+                              setEditingTrackLayerId(layer.id);
+                              setEditingTrackLayerName(layer.name);
+                            }}
+                            className="truncate text-xs hover:underline cursor-text"
+                            title="Double-click to rename layer"
+                          >
+                            {layer.name}
+                          </span>
+                        </>
                       )}
-                    </button>
-                  </div>
-                </div>
+                    </div>
 
-                {/* Right Track Lane (Zone C Context Menu on Empty Area) */}
-                <div
-                  onClick={() => selectLayer(layer.id)}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const clickTime = Math.max(
-                      0,
-                      Math.min(duration, ((e.clientX - rect.left) / rect.width) * duration)
-                    );
-                    selectLayer(layer.id);
-                    useContextMenuStore.getState().openContextMenu({
-                      x: e.clientX,
-                      y: e.clientY,
-                      zone: "timeline-empty",
-                      items: buildTimelineEmptyMenu({
-                        time: clickTime,
-                        store: useProjectStore.getState(),
-                      }),
-                    });
-                  }}
-                  className="relative flex-1 timeline-track-lane overflow-hidden"
-                >
-                  {/* Subtle Layer Presence Lifespan Bar */}
-                  {clips.length > 0 && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateLayerStyle(layer.id, {
+                            opacity: layer.style.opacity === 0 ? 1 : 0,
+                          });
+                        }}
+                        className={`p-1 rounded ${
+                          isClipSelectedOnTrack
+                            ? "text-white/80 hover:text-white"
+                            : "text-[#a1a1aa] hover:text-[#18181b]"
+                        }`}
+                        title={layer.style.opacity === 0 ? "Show Layer" : "Hide Layer"}
+                      >
+                        {layer.style.opacity === 0 ? (
+                          <EyeOff className="w-3 h-3 text-red-500" />
+                        ) : (
+                          <Eye className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Right Track Lane */}
+                  <div
+                    onClick={(e) => {
+                      if (e.target === e.currentTarget) {
+                        selectLayer(layer.id);
+                        setSelectedClips([]);
+                      }
+                    }}
+                    className="relative flex-1 timeline-track-lane overflow-hidden"
+                  >
+                    {/* Active Scene Window Highlight in Track */}
                     <div
-                      className="absolute top-1/2 -translate-y-1/2 h-2 rounded-full bg-slate-200/50 dark:bg-slate-800/50 pointer-events-none"
+                      className="absolute top-0 bottom-0 bg-[#7c3aed]/4 pointer-events-none border-x border-[#7c3aed]/10"
                       style={{
-                        left: `${(Math.min(...clips.map((c) => c.start)) / duration) * 100}%`,
-                        width: `${
-                          ((Math.max(...clips.map((c) => c.start + c.duration)) -
-                            Math.min(...clips.map((c) => c.start))) /
-                            duration) *
-                          100
-                        }%`,
+                        left: `${(screenStartTime / maxSec) * 100}%`,
+                        width: `${(activeTiming.duration / maxSec) * 100}%`,
                       }}
                     />
-                  )}
 
-                  {/* Multi-Clip Pills Stacked in Sub-Lanes */}
-                  {clips.map((clip) => {
-                    const subLane = clipLanes.get(clip.id) || 0;
-                    return (
-                      <DraggableClip
-                        key={clip.id}
-                        layer={layer}
-                        clip={clip}
-                        duration={duration}
-                        subLaneIndex={subLane}
-                        totalSubLanes={totalSubLanes}
-                        snapPoints={snapPoints}
-                      />
-                    );
-                  })}
+                    {/* Sub-lane Animation Clip Pills */}
+                    {clips.map((clip) => {
+                      const subLane = clipLanes.get(clip.id) || 0;
+                      return (
+                        <DraggableClip
+                          key={clip.id}
+                          layer={layer}
+                          clip={clip}
+                          duration={maxSec}
+                          timeOffset={screenStartTime}
+                          subLaneIndex={subLane}
+                          totalSubLanes={totalSubLanes}
+                          snapPoints={[screenStartTime, screenEndTime, currentTime]}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="flex flex-col items-center justify-center py-12 text-slate-400 text-xs">
-            <Layers className="w-6 h-6 mb-2 opacity-40" />
-            <span>No animated layers in this scene.</span>
-            <span className="text-[11px] text-slate-400/80 mt-0.5">
-              Select an element on canvas to stage motion.
-            </span>
-          </div>
-        )}
+              );
+            })
+          ) : (
+            <div className="p-8 text-center text-xs text-[#a1a1aa]">
+              No layers in scene.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
-export default TimelinePanel;

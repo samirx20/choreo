@@ -5,11 +5,13 @@ import { Layer } from '@/types/scene';
 interface BindingConnectionOverlayProps {
   canvasWidth: number;
   canvasHeight: number;
+  screenOffset?: { x: number; y: number };
 }
 
 export const BindingConnectionOverlay: React.FC<BindingConnectionOverlayProps> = ({
   canvasWidth,
   canvasHeight,
+  screenOffset,
 }) => {
   const { document: doc, activeScreenId, selectedLayerIds } = useProjectStore();
 
@@ -57,8 +59,14 @@ export const BindingConnectionOverlay: React.FC<BindingConnectionOverlayProps> =
 
   return (
     <svg
-      className="absolute inset-0 pointer-events-none z-40 overflow-visible"
-      style={{ width: `${canvasWidth}px`, height: `${canvasHeight}px` }}
+      className="pointer-events-none z-40 overflow-visible"
+      style={{
+        position: 'absolute',
+        left: `${screenOffset?.x ?? 0}px`,
+        top: `${screenOffset?.y ?? 0}px`,
+        width: `${canvasWidth}px`,
+        height: `${canvasHeight}px`,
+      }}
       viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
     >
       <defs>
@@ -92,7 +100,7 @@ export const BindingConnectionOverlay: React.FC<BindingConnectionOverlayProps> =
         let tW = typeof conn.target.style.width === 'number' ? conn.target.style.width : 160;
         let tH = typeof conn.target.style.height === 'number' ? conn.target.style.height : 60;
 
-        const screenContainer = typeof document !== 'undefined' ? document.querySelector('[id^="screen-"]') : null;
+        const screenContainer = typeof document !== 'undefined' ? document.getElementById(`screen-${activeScreen.id}`) : null;
         if (screenContainer) {
           const screenRect = screenContainer.getBoundingClientRect();
           const domScale = screenRect.width > 0 ? screenRect.width / canvasWidth : 1;

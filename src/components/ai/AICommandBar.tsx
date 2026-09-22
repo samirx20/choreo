@@ -3,6 +3,7 @@ import { Sparkles, ArrowRight, CornerDownLeft, X, Undo, Check } from "lucide-rea
 import { useProjectStore, findLayerInTree } from "@/store/useProjectStore";
 import { splitTextIntoChunks } from "@/engine/textSplitter";
 import { TextLayer, GroupLayer, Layer } from "@/types/scene";
+import { executeTwoStagePipeline } from "@/tools/orchestrator";
 
 interface AICommandBarProps {
   isOpen: boolean;
@@ -51,8 +52,28 @@ export const AICommandBar: React.FC<AICommandBarProps> = ({ isOpen, onClose }) =
     startTransaction();
     let appliedDescription = "";
 
+    // 0. Storyboard / Showcase Generation (Two-Stage Pipeline)
+    const isGenerationIntent =
+      !selectedLayer ||
+      query.includes("teaser") ||
+      query.includes("showcase") ||
+      query.includes("video") ||
+      query.startsWith("create") ||
+      query.startsWith("generate") ||
+      query.startsWith("build") ||
+      query.startsWith("make");
+
+    if (isGenerationIntent && (query.includes("teaser") || query.includes("showcase") || query.includes("video") || query.includes("promo") || !selectedLayer)) {
+      const orchResult = executeTwoStagePipeline(text);
+      if (orchResult.success && orchResult.data) {
+        appliedDescription = `Generated ${orchResult.data.plan.beats.length}-beat "${orchResult.data.plan.title}" (${orchResult.data.totalDuration}s, Lint: ${orchResult.data.lintReport.score}/100)`;
+      } else {
+        appliedDescription = `Choreographed showcase with warnings: ${orchResult.notices.slice(0, 2).join("; ")}`;
+      }
+    }
     // 1. Stagger / Pop in instruction
-    if (query.includes("stagger") || query.includes("pop")) {
+    else if (query.includes("stagger") || query.includes("pop")) {
+
       if (selectedLayer && selectedLayer.type === "group") {
         const group = selectedLayer as GroupLayer;
         const stagger = 0.15;

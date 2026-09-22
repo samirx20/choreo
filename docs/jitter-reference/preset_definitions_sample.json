@@ -1,0 +1,33 @@
+{
+  "growIn": [
+    "In:!0,blurOut:!0,blurScaleIn:!0,blurScaleOut:!0,blurSlideIn:!0,blurSlideOut:!0,fadeIn:!0,fadeOut:!0,growIn:!0,growOut:!0,maskCenterIn:!0,maskCenterOut:!0,maskSizeIn:!0,maskSizeOut:!0,maskResizeIn:!0,maskResizeOut:!0,maskRevealIn:!0,maskRevealOut:!0,maskSlideIn:!0,maskSlideOut:!0,moveThenScaleIn:!0,m",
+    "In:!0,blurOut:!0,blurScaleIn:!0,blurScaleOut:!0,blurSlideIn:!0,blurSlideOut:!0,fadeIn:!0,fadeOut:!0,growIn:!0,growOut:!0,maskCenterIn:!0,maskCenterOut:!0,maskSizeIn:!0,maskSizeOut:!0,maskResizeIn:!0,maskResizeOut:!0,maskRevealIn:!0,maskRevealOut:!0,maskSlideIn:!0,maskSlideOut:!0,moveThenScaleIn:!0,m",
+    "blurSlideIn:!0,blurSlideOut:!0,fadeIn:!0,fadeOut:!0,slideIn:!0,slideOut:!0,shrinkIn:!0,shrinkOut:!0,growIn:!0,growOut:!0,spinIn:!0,spinOut:!0,twistIn:!0,twistOut:!0,moveThenScaleIn:!0,moveThenScaleOut:!0,maskRevealIn:!0,maskRevealOut:!0,maskResizeIn:!0,maskResizeOut:!0,maskSizeIn:!0,maskSizeOut:!0,m"
+  ],
+  "scaleIn": [],
+  "slideIn": [
+    "t:!0,maskSlideIn:!0,maskSlideOut:!0,moveThenScaleIn:!0,moveThenScaleOut:!0,shrinkIn:!0,shrinkOut:!0,slideIn:!0,slideOut:!0,spinIn:!0,spinOut:!0,twistIn:!0,twistOut:!0};function Nee(e){return Mee[e]===!0}function Io(e){return e!==void 0&&Nee(e.type)}function Lo(e){return e?.item.type===`emptySelectio",
+    "t:!0,maskSlideIn:!0,maskSlideOut:!0,moveThenScaleIn:!0,moveThenScaleOut:!0,shrinkIn:!0,shrinkOut:!0,slideIn:!0,slideOut:!0,spinIn:!0,spinOut:!0,twistIn:!0,twistOut:!0,opGrp:!0,operationsTree:!0,multiOpSelection:!0};function fs(e){return ds[e]===!0}function ps(e){return e!==void 0&&fs(e.type)}functio",
+    "In:!0,blurOut:!0,blurScaleIn:!0,blurScaleOut:!0,blurSlideIn:!0,blurSlideOut:!0,fadeIn:!0,fadeOut:!0,slideIn:!0,slideOut:!0,shrinkIn:!0,shrinkOut:!0,growIn:!0,growOut:!0,spinIn:!0,spinOut:!0,twistIn:!0,twistOut:!0,moveThenScaleIn:!0,moveThenScaleOut:!0,maskRevealIn:!0,maskRevealOut:!0,maskResizeIn:!0"
+  ],
+  "fadeIn": [
+    "In:!0,textOut:!0,blurIn:!0,blurOut:!0,blurScaleIn:!0,blurScaleOut:!0,blurSlideIn:!0,blurSlideOut:!0,fadeIn:!0,fadeOut:!0,growIn:!0,growOut:!0,maskCenterIn:!0,maskCenterOut:!0,maskSizeIn:!0,maskSizeOut:!0,maskResizeIn:!0,maskResizeOut:!0,maskRevealIn:!0,maskRevealOut:!0,maskSlideIn:!0,maskSlideOut:!0",
+    "In:!0,textOut:!0,blurIn:!0,blurOut:!0,blurScaleIn:!0,blurScaleOut:!0,blurSlideIn:!0,blurSlideOut:!0,fadeIn:!0,fadeOut:!0,growIn:!0,growOut:!0,maskCenterIn:!0,maskCenterOut:!0,maskSizeIn:!0,maskSizeOut:!0,maskResizeIn:!0,maskResizeOut:!0,maskRevealIn:!0,maskRevealOut:!0,maskSlideIn:!0,maskSlideOut:!0",
+    "In:!0,textOut:!0,blurIn:!0,blurOut:!0,blurScaleIn:!0,blurScaleOut:!0,blurSlideIn:!0,blurSlideOut:!0,fadeIn:!0,fadeOut:!0,slideIn:!0,slideOut:!0,shrinkIn:!0,shrinkOut:!0,growIn:!0,growOut:!0,spinIn:!0,spinOut:!0,twistIn:!0,twistOut:!0,moveThenScaleIn:!0,moveThenScaleOut:!0,maskRevealIn:!0,maskRevealO"
+  ],
+  "shrinkOut": [
+    ",maskRevealOut:!0,maskSlideIn:!0,maskSlideOut:!0,moveThenScaleIn:!0,moveThenScaleOut:!0,shrinkIn:!0,shrinkOut:!0,slideIn:!0,slideOut:!0,spinIn:!0,spinOut:!0,twistIn:!0,twistOut:!0};function Nee(e){return Mee[e]===!0}function Io(e){return e!==void 0&&Nee(e.type)}function Lo(e){return e?.item.type===`",
+    ",maskRevealOut:!0,maskSlideIn:!0,maskSlideOut:!0,moveThenScaleIn:!0,moveThenScaleOut:!0,shrinkIn:!0,shrinkOut:!0,slideIn:!0,slideOut:!0,spinIn:!0,spinOut:!0,twistIn:!0,twistOut:!0,opGrp:!0,operationsTree:!0,multiOpSelection:!0};function fs(e){return ds[e]===!0}function ps(e){return e!==void 0&&fs(e.",
+    "rScaleOut:!0,blurSlideIn:!0,blurSlideOut:!0,fadeIn:!0,fadeOut:!0,slideIn:!0,slideOut:!0,shrinkIn:!0,shrinkOut:!0,growIn:!0,growOut:!0,spinIn:!0,spinOut:!0,twistIn:!0,twistOut:!0,moveThenScaleIn:!0,moveThenScaleOut:!0,maskRevealIn:!0,maskRevealOut:!0,maskResizeIn:!0,maskResizeOut:!0,maskSizeIn:!0,mas"
+  ],
+  "slideOut": [
+    "ideIn:!0,maskSlideOut:!0,moveThenScaleIn:!0,moveThenScaleOut:!0,shrinkIn:!0,shrinkOut:!0,slideIn:!0,slideOut:!0,spinIn:!0,spinOut:!0,twistIn:!0,twistOut:!0};function Nee(e){return Mee[e]===!0}function Io(e){return e!==void 0&&Nee(e.type)}function Lo(e){return e?.item.type===`emptySelection`?!1:Io(e?",
+    "ideIn:!0,maskSlideOut:!0,moveThenScaleIn:!0,moveThenScaleOut:!0,shrinkIn:!0,shrinkOut:!0,slideIn:!0,slideOut:!0,spinIn:!0,spinOut:!0,twistIn:!0,twistOut:!0,opGrp:!0,operationsTree:!0,multiOpSelection:!0};function fs(e){return ds[e]===!0}function ps(e){return e!==void 0&&fs(e.type)}function ms(e){ret",
+    "ut:!0,blurScaleIn:!0,blurScaleOut:!0,blurSlideIn:!0,blurSlideOut:!0,fadeIn:!0,fadeOut:!0,slideIn:!0,slideOut:!0,shrinkIn:!0,shrinkOut:!0,growIn:!0,growOut:!0,spinIn:!0,spinOut:!0,twistIn:!0,twistOut:!0,moveThenScaleIn:!0,moveThenScaleOut:!0,maskRevealIn:!0,maskRevealOut:!0,maskResizeIn:!0,maskResize"
+  ],
+  "fadeOut": [
+    "Out:!0,blurIn:!0,blurOut:!0,blurScaleIn:!0,blurScaleOut:!0,blurSlideIn:!0,blurSlideOut:!0,fadeIn:!0,fadeOut:!0,growIn:!0,growOut:!0,maskCenterIn:!0,maskCenterOut:!0,maskSizeIn:!0,maskSizeOut:!0,maskResizeIn:!0,maskResizeOut:!0,maskRevealIn:!0,maskRevealOut:!0,maskSlideIn:!0,maskSlideOut:!0,moveThenS",
+    "Out:!0,blurIn:!0,blurOut:!0,blurScaleIn:!0,blurScaleOut:!0,blurSlideIn:!0,blurSlideOut:!0,fadeIn:!0,fadeOut:!0,growIn:!0,growOut:!0,maskCenterIn:!0,maskCenterOut:!0,maskSizeIn:!0,maskSizeOut:!0,maskResizeIn:!0,maskResizeOut:!0,maskRevealIn:!0,maskRevealOut:!0,maskSlideIn:!0,maskSlideOut:!0,moveThenS",
+    "Out:!0,blurIn:!0,blurOut:!0,blurScaleIn:!0,blurScaleOut:!0,blurSlideIn:!0,blurSlideOut:!0,fadeIn:!0,fadeOut:!0,slideIn:!0,slideOut:!0,shrinkIn:!0,shrinkOut:!0,growIn:!0,growOut:!0,spinIn:!0,spinOut:!0,twistIn:!0,twistOut:!0,moveThenScaleIn:!0,moveThenScaleOut:!0,maskRevealIn:!0,maskRevealOut:!0,mask"
+  ]
+}

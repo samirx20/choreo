@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
 export interface ScrubbableInputProps {
-  label: string | React.ReactNode;
+  label?: string | React.ReactNode;
   value: number | string;
   onChange: (val: number) => void;
   onCommit?: (val: number) => void;
@@ -27,31 +27,35 @@ function evaluateMathExpression(input: string, currentValue: number): number | n
   const trimmed = input.trim();
   if (!trimmed) return null;
 
+  // Strip trailing unit suffixes like px, deg, s, ms, %, x
+  const cleaned = trimmed.replace(/(px|deg|s|ms|%|x)$/i, "").trim();
+  if (!cleaned) return null;
+
   // Relative operators: +20, -10, *2, /2
-  if (trimmed.startsWith("+") && !isNaN(Number(trimmed.slice(1)))) {
-    return currentValue + Number(trimmed.slice(1));
+  if (cleaned.startsWith("+") && !isNaN(Number(cleaned.slice(1)))) {
+    return currentValue + Number(cleaned.slice(1));
   }
-  if (trimmed.startsWith("-") && !isNaN(Number(trimmed.slice(1)))) {
-    return currentValue - Number(trimmed.slice(1));
+  if (cleaned.startsWith("-") && !isNaN(Number(cleaned.slice(1)))) {
+    return currentValue - Number(cleaned.slice(1));
   }
-  if (trimmed.startsWith("*") && !isNaN(Number(trimmed.slice(1)))) {
-    return currentValue * Number(trimmed.slice(1));
+  if (cleaned.startsWith("*") && !isNaN(Number(cleaned.slice(1)))) {
+    return currentValue * Number(cleaned.slice(1));
   }
-  if (trimmed.startsWith("/") && !isNaN(Number(trimmed.slice(1)))) {
-    const divisor = Number(trimmed.slice(1));
+  if (cleaned.startsWith("/") && !isNaN(Number(cleaned.slice(1)))) {
+    const divisor = Number(cleaned.slice(1));
     return divisor !== 0 ? currentValue / divisor : currentValue;
   }
 
   // Pure number
-  if (!isNaN(Number(trimmed))) {
-    return Number(trimmed);
+  if (!isNaN(Number(cleaned))) {
+    return Number(cleaned);
   }
 
   // Safe basic arithmetic: only digits, +, -, *, /, ., (, ), spaces
-  if (/^[0-9+\-*/.()\s]+$/.test(trimmed)) {
+  if (/^[0-9+\-*/.()\s]+$/.test(cleaned)) {
     try {
       // eslint-disable-next-line no-new-func
-      const result = Function(`"use strict"; return (${trimmed})`)();
+      const result = Function(`"use strict"; return (${cleaned})`)();
       if (typeof result === "number" && !isNaN(result) && isFinite(result)) {
         return result;
       }
@@ -81,18 +85,14 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
   defaultValue,
 }) => {
   const displaySuffix = suffix || unit || "";
-  const displayPrecision = decimals !== undefined ? decimals : precision;
+  const stepDecimals = step.toString().includes(".") ? step.toString().split(".")[1].length : 0;
+  const displayPrecision =
+    decimals !== undefined ? decimals : precision !== undefined && precision > 0 ? precision : stepDecimals;
   const [isEditing, setIsEditing] = useState(false);
   const [textValue, setTextValue] = useState(String(value));
   const [isDragging, setIsDragging] = useState(false);
 
-  const dragRef = useRef<{
-    startX: number;
-    startVal: number;
-    accumulatedDelta: number;
-  }>({ startX: 0, startVal: 0, accumulatedDelta: 0 });
-
-  const numVal = typeof value === "number" ? value : parseFloat(value) || 0;
+  const numVal = typeof value === "number" ? value : parseFloat(String(value)) || 0;
 
   // Sync internal text state when value prop updates externally
   useEffect(() => {
@@ -118,52 +118,56 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
     [min, max, displayPrecision]
   );
 
-  // Pointer lock / Drag scrubbing mechanics
-  const handlePointerDown = (e: React.PointerEvent<HTMLSpanElement>) => {
+  // Pointer lock / Drag scrubbing mechanics on whole input
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (disabled || isEditing) return;
     if (e.button !== 0) return; // Left click only
 
     e.preventDefault();
-    setIsDragging(true);
-
-    dragRef.current = {
-      startX: e.clientX,
-      startVal: numVal,
-      accumulatedDelta: 0,
-    };
+    const startX = e.clientX;
+    const startVal = numVal;
+    let hasDragged = false;
+    let currentVal = startVal;
 
     const target = e.currentTarget;
-    target.setPointerCapture(e.pointerId);
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch {}
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
-      const deltaX = moveEvent.clientX - dragRef.current.startX;
-      dragRef.current.startX = moveEvent.clientX;
+      const deltaX = moveEvent.clientX - startX;
+      if (!hasDragged && Math.abs(deltaX) > 2) {
+        hasDragged = true;
+        setIsDragging(true);
+      }
 
-      // Modifier multipliers: Shift = 10x, Alt = 0.1x
-      let multiplier = 1;
-      if (moveEvent.shiftKey) multiplier = 10;
-      if (moveEvent.altKey) multiplier = 0.1;
+      if (hasDragged) {
+        // Modifier multipliers: Shift = 10x, Alt = 0.1x
+        let multiplier = 1;
+        if (moveEvent.shiftKey) multiplier = 10;
+        if (moveEvent.altKey) multiplier = 0.1;
 
-      // Velocity acceleration
-      const accel = 1 + Math.min(Math.abs(deltaX) * 0.03, 3);
-      const stepDelta = deltaX * step * multiplier * accel;
+        // Linear and predictable scrubbing proportional to step
+        const stepDelta = deltaX * step * multiplier;
 
-      dragRef.current.accumulatedDelta += stepDelta;
-      const nextVal = clampAndRound(dragRef.current.startVal + dragRef.current.accumulatedDelta);
-      onChange(nextVal);
+        currentVal = clampAndRound(startVal + stepDelta);
+        onChange(currentVal);
+      }
     };
 
     const handlePointerUp = (upEvent: PointerEvent) => {
-      setIsDragging(false);
       try {
         target.releasePointerCapture(upEvent.pointerId);
-      } catch {
-        // Ignore if pointer capture already lost
-      }
+      } catch {}
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
-      if (onCommit) {
-        onCommit(clampAndRound(dragRef.current.startVal + dragRef.current.accumulatedDelta));
+
+      if (hasDragged) {
+        setIsDragging(false);
+        if (onCommit) onCommit(currentVal);
+      } else {
+        // Simple click without dragging: Enter inline edit mode
+        setIsEditing(true);
       }
     };
 
@@ -171,7 +175,7 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
     window.addEventListener("pointerup", handlePointerUp);
   };
 
-  // Double click label to reset to default
+  // Double click to reset to default
   const handleDoubleClick = (e: React.MouseEvent) => {
     if (defaultValue !== undefined && !disabled) {
       e.stopPropagation();
@@ -188,10 +192,10 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
       const finalVal = clampAndRound(parsed);
       onChange(finalVal);
       if (onCommit) onCommit(finalVal);
-      setTextValue(precision > 0 ? finalVal.toFixed(precision) : String(finalVal));
+      setTextValue(displayPrecision > 0 ? finalVal.toFixed(displayPrecision) : String(finalVal));
     } else {
       // Revert if invalid
-      setTextValue(precision > 0 ? numVal.toFixed(precision) : String(numVal));
+      setTextValue(displayPrecision > 0 ? numVal.toFixed(displayPrecision) : String(numVal));
     }
   };
 
@@ -201,7 +205,7 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
       handleCommit();
     } else if (e.key === "Escape") {
       setIsEditing(false);
-      setTextValue(precision > 0 ? numVal.toFixed(precision) : String(numVal));
+      setTextValue(displayPrecision > 0 ? numVal.toFixed(displayPrecision) : String(numVal));
     } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
       e.preventDefault();
       let mult = 1;
@@ -212,36 +216,37 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
       const current = evaluateMathExpression(textValue, numVal) ?? numVal;
       const nextVal = clampAndRound(current + dir * step * mult);
       onChange(nextVal);
-      setTextValue(precision > 0 ? nextVal.toFixed(precision) : String(nextVal));
+      setTextValue(displayPrecision > 0 ? nextVal.toFixed(displayPrecision) : String(nextVal));
     }
   };
 
   return (
     <div
+      onPointerDown={handlePointerDown}
+      onDoubleClick={handleDoubleClick}
       className={cn(
-        "group relative flex items-center h-6 px-1.5 rounded-[8px] bg-muted/60 border border-input",
-        "hover:border-border hover:bg-muted focus-within:border-primary focus-within:ring-1 focus-within:ring-primary/20",
-        "transition-all select-none text-xs font-mono",
-        isDragging && "border-primary bg-accent/60",
+        "group relative flex items-center h-7 px-2 rounded bg-[#f4f4f6] hover:bg-[#ececee]",
+        "border border-transparent hover:border-[#e5e5e7] focus-within:border-[#6d28d9] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#6d28d9]/20",
+        "transition-all select-none text-xs font-mono cursor-ew-resize",
+        isDragging && "border-[#6d28d9] bg-[#6d28d9]/10 cursor-ew-resize",
         disabled && "opacity-40 pointer-events-none",
         className
       )}
-      title={tooltip}
+      title={tooltip || "Drag horizontally to adjust. Shift=10x, Alt=0.1x. Click to edit."}
     >
-      {/* Scrubbable Drag Label */}
-      <span
-        onPointerDown={handlePointerDown}
-        onDoubleClick={handleDoubleClick}
-        className={cn(
-          "text-[10px] font-sans font-medium text-muted-foreground hover:text-foreground transition-colors mr-1 cursor-ew-resize select-none shrink-0",
-          isDragging && "text-foreground font-bold"
-        )}
-        title="Drag horizontally to scrub value. Shift=10x, Alt=0.1x. Double-click to reset."
-      >
-        {label}
-      </span>
+      {/* Optional Label */}
+      {label && (
+        <span
+          className={cn(
+            "text-[10px] font-sans font-medium text-[#71717a] group-hover:text-[#18181b] transition-colors mr-1 shrink-0 select-none",
+            isDragging && "text-[#6d28d9] font-bold"
+          )}
+        >
+          {label}
+        </span>
+      )}
 
-      {/* Editable Number Input */}
+      {/* Editable Number Input or Text View */}
       {isEditing ? (
         <input
           type="text"
@@ -250,20 +255,16 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
           onBlur={handleCommit}
           onKeyDown={handleKeyDown}
           autoFocus
-          className="w-full h-full bg-transparent text-foreground text-[11px] font-mono outline-none text-right px-0"
+          onFocus={(e) => e.target.select()}
+          className="w-full h-full bg-transparent text-[#18181b] text-xs font-mono outline-none text-center px-0 cursor-text"
         />
       ) : (
-        <span
-          onClick={() => {
-            if (!disabled) setIsEditing(true);
-          }}
-          className="w-full text-right text-[11px] text-foreground cursor-text truncate tabular-nums"
-        >
-          {displayPrecision > 0 ? numVal.toFixed(displayPrecision) : numVal}
+        <div className="w-full flex items-center justify-center text-xs text-[#18181b] tabular-nums truncate">
+          <span>{displayPrecision > 0 ? numVal.toFixed(displayPrecision) : numVal}</span>
           {displaySuffix && (
-            <span className="text-muted-foreground text-[10px] ml-0.5">{displaySuffix}</span>
+            <span className="text-[#71717a] text-[10px] ml-0.5">{displaySuffix}</span>
           )}
-        </span>
+        </div>
       )}
     </div>
   );

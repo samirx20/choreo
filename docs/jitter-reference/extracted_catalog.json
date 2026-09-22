@@ -1,0 +1,26 @@
+{
+  "animationTypes": [],
+  "easings": [],
+  "actionTypes": [],
+  "foundKeywords": {
+    "growIn": 6,
+    "scaleIn": 12,
+    "fadeIn": 18,
+    "slideIn": 20,
+    "fadeOut": 22,
+    "scaleOut": 14,
+    "shrinkOut": 6,
+    "slideOut": 20,
+    "move": 304,
+    "scale": 513,
+    "rotate": 121,
+    "opacity": 245,
+    "color": 608,
+    "shadow": 179,
+    "backgroundBlur": 59
+  },
+  "schemaBlocksSample": [
+    "{index:Ot(),action_id:z(),action:kt(`upd`),node_id:z(),properties:Gt(z(),bn())}",
+    "{node_id:z(),properties:Gt(z(),bn()),edits_count:Ot()}"
+  ]
+}

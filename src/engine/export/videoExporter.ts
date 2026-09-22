@@ -1,5 +1,4 @@
 import { PixiStage } from "@/engine/pixi/PixiStage";
-import { theatreController } from "@/engine/theatre/TheatreController";
 import { Screen, ProjectSettings } from "@/types/scene";
 
 export interface VideoExportOptions {
@@ -57,7 +56,6 @@ export class VideoExporter {
         if (this.cancelRequested) break;
 
         const time = frame / fps;
-        theatreController.seek(time);
         pixiStage.seek(time, screen);
 
         // Async pixel extraction
@@ -100,7 +98,6 @@ export class VideoExporter {
       for (let frame = 0; frame < totalFrames; frame++) {
         if (this.cancelRequested) break;
         const time = frame / fps;
-        theatreController.seek(time);
         pixiStage?.seek?.(time, screen);
         onProgress?.({
           currentFrame: frame + 1,
@@ -132,7 +129,6 @@ export class VideoExporter {
       if (this.cancelRequested) break;
 
       const time = frame / fps;
-      theatreController.seek(time);
       pixiStage.seek(time, screen);
 
       // Force render & capture frame

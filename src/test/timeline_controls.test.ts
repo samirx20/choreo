@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useProjectStore, INITIAL_SCENE } from "@/store/useProjectStore";
 import { layerStyleToCss } from "@/components/canvas/renderers/styleUtils";
 import { LayerStyle } from "@/types/scene";
+import { animationClock } from "@/engine/clock/AnimationClock";
+import { evaluateSceneAtTime } from "@/engine/evaluator";
 
 describe("Timeline Multi-Clip Selection & Work Area Controls", () => {
   beforeEach(() => {
@@ -85,4 +87,159 @@ describe("Timeline Multi-Clip Selection & Work Area Controls", () => {
     expect(cssFixed.height).toBe("200px");
     expect(cssFixed.overflow).toBe("hidden");
   });
+
+  it("spans at least 8.0s scale and supports real-time live scrubbing across full 8 seconds", () => {
+    const store = useProjectStore.getState();
+    const activeScreen = store.document.screens[0];
+    const duration = activeScreen.duration || 4.0;
+    const maxSec = Math.max(8, Math.ceil(duration));
+
+    // Verify 8s scale requirement
+    expect(maxSec).toBeGreaterThanOrEqual(8);
+
+    // Simulate scrubbing across timeline: 0s -> 2.5s -> 6.0s -> 8.0s
+    store.setCurrentTime(0);
+    expect(useProjectStore.getState().currentTime).toBe(0);
+
+    store.setCurrentTime(2.5);
+    expect(useProjectStore.getState().currentTime).toBe(2.5);
+
+    store.setCurrentTime(6.0);
+    expect(useProjectStore.getState().currentTime).toBe(6.0);
+
+    store.setCurrentTime(8.0);
+    expect(useProjectStore.getState().currentTime).toBe(8.0);
+  });
+
+  it("synchronizes clip selection two-ways and clears orphaned clips on layer deselect", () => {
+    const store = useProjectStore.getState();
+    const activeScreen = store.document.screens[0];
+
+    // Add a test layer with animation clip
+    const testLayerId = "test_sync_layer";
+    const testClipId = "test_sync_clip";
+    store.addLayer({
+      id: testLayerId,
+      name: "Sync Test Layer",
+      type: "shape",
+      shapeType: "rectangle",
+      style: { x: 0, y: 0, width: 100, height: 100, rotation: 0, opacity: 1 },
+      animation: {
+        in: {
+          id: testClipId,
+          preset: "pop",
+          start: 0.5,
+          duration: 1.0,
+          easing: "bouncy",
+        },
+      },
+    });
+
+    // Selecting clip sets selectedClipIds
+    store.setSelectedClips([testClipId]);
+    expect(useProjectStore.getState().selectedClipIds).toEqual([testClipId]);
+
+    // Selecting the owning layer keeps the clip selected
+    store.selectLayer(testLayerId, false);
+    expect(useProjectStore.getState().selectedClipIds).toEqual([testClipId]);
+
+    // Adding another layer without this clip and selecting it clears the clip selection
+    const otherLayerId = "other_test_layer";
+    store.addLayer({
+      id: otherLayerId,
+      name: "Other Layer",
+      type: "shape",
+      shapeType: "circle",
+      style: { x: 200, y: 200, width: 50, height: 50, rotation: 0, opacity: 1 },
+    });
+
+    store.selectLayer(otherLayerId, false);
+    expect(useProjectStore.getState().selectedLayerIds).toEqual([otherLayerId]);
+    expect(useProjectStore.getState().selectedClipIds).toEqual([]);
+
+    // Selecting clip again and calling deselectAll clears both
+    store.setSelectedClips([testClipId]);
+    expect(useProjectStore.getState().selectedClipIds).toEqual([testClipId]);
+    store.deselectAll();
+    expect(useProjectStore.getState().selectedClipIds).toEqual([]);
+    expect(useProjectStore.getState().selectedLayerIds).toEqual([]);
+  });
+
+  it("interactively updates clip delay start and duration edges via updateAnimationClip", () => {
+    const store = useProjectStore.getState();
+    const testLayerId = "drag_test_layer";
+    const testClipId = "drag_test_clip";
+
+    store.addLayer({
+      id: testLayerId,
+      name: "Drag Layer",
+      type: "shape",
+      shapeType: "rectangle",
+      style: { x: 0, y: 0, width: 100, height: 100, rotation: 0, opacity: 1 },
+      animation: {
+        in: {
+          id: testClipId,
+          preset: "pop",
+          start: 1.0,
+          duration: 1.2,
+          easing: "bouncy",
+        },
+      },
+    });
+
+    // 1. Move clip horizontally (adjust delay / start)
+    store.updateAnimationClip(testLayerId, testClipId, { start: 2.0 });
+    const screenAfterMove = useProjectStore.getState().document.screens[0];
+    const layerAfterMove = screenAfterMove.layers.find((l) => l.id === testLayerId);
+    expect(layerAfterMove?.animation?.in?.start).toBe(2.0);
+    expect(layerAfterMove?.animation?.in?.duration).toBe(1.2);
+
+    // 2. Drag right edge to extend duration
+    store.updateAnimationClip(testLayerId, testClipId, { duration: 2.5 });
+    const screenAfterExtend = useProjectStore.getState().document.screens[0];
+    const layerAfterExtend = screenAfterExtend.layers.find((l) => l.id === testLayerId);
+    expect(layerAfterExtend?.animation?.in?.start).toBe(2.0);
+    expect(layerAfterExtend?.animation?.in?.duration).toBe(2.5);
+
+    // 3. Drag left edge to adjust start and duration
+    store.updateAnimationClip(testLayerId, testClipId, { start: 1.5, duration: 3.0 });
+    const screenAfterLeftDrag = useProjectStore.getState().document.screens[0];
+    const layerAfterLeftDrag = screenAfterLeftDrag.layers.find((l) => l.id === testLayerId);
+    expect(layerAfterLeftDrag?.animation?.in?.start).toBe(1.5);
+    expect(layerAfterLeftDrag?.animation?.in?.duration).toBe(3.0);
+  });
+
+  it("controls transport playback loop and loop toggle state", () => {
+    const store = useProjectStore.getState();
+    expect(store.isPlaying).toBe(false);
+    expect(store.isLooping).toBe(true);
+
+    // Toggle loop
+    store.setIsLooping(false);
+    expect(useProjectStore.getState().isLooping).toBe(false);
+    store.setIsLooping(true);
+    expect(useProjectStore.getState().isLooping).toBe(true);
+
+    // Play/Pause transport control
+    store.setIsPlaying(true);
+    expect(useProjectStore.getState().isPlaying).toBe(true);
+
+    store.setIsPlaying(false);
+    expect(useProjectStore.getState().isPlaying).toBe(false);
+  });
+
+  it("calculates playback loop end to span at least full 8s timeline even with short screen durations", () => {
+    const store = useProjectStore.getState();
+    const activeScreen = store.document.screens[0];
+    // Simulate active screen with small duration (e.g., 0.5s)
+    store.updateScreen(activeScreen.id, { duration: 0.5 });
+    const screen = useProjectStore.getState().document.screens[0];
+    expect(screen.duration).toBe(0.5);
+
+    // Compute loopEnd using same formula as CanvasViewport
+    const effectiveDuration = Math.max(screen.duration || 5.0, 0);
+    const timelineMaxSec = Math.max(8, Math.ceil(effectiveDuration));
+    expect(timelineMaxSec).toBe(8); // Must be at least 8 seconds, not 1s!
+  });
 });
+

@@ -1,7 +1,76 @@
-import { TextLayer, GroupLayer, ChunkLayer, Layer } from "@/types/scene";
+import { TextLayer, GroupLayer, ChunkLayer } from "@/types/scene";
+
+export interface MetricLineBox {
+  ascent: number;
+  descent: number;
+  halfLeading: number;
+  clipHeight: number;
+  baselineOffset: number;
+}
 
 /**
- * Splits a text layer into semantic sentence chunks with 0px visual shift.
+ * Measures the exact advance width of the space character ('U+0020') for a font.
+ * Uses OffscreenCanvas or DOM Canvas when available, with a precision fallback table.
+ */
+export function measureSpaceWidth(
+  fontFamily: string = "Inter",
+  fontSize: number = 48,
+  fontWeight: string | number = 400
+): number {
+  if (typeof document !== "undefined") {
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}, sans-serif`;
+        const metrics = ctx.measureText(" ");
+        if (metrics && metrics.width > 0) {
+          return Math.round(metrics.width * 100) / 100;
+        }
+      }
+    } catch {
+      // Fallback below
+    }
+  }
+
+  // Precision proportional fallback:
+  // Most modern neo-grotesque fonts (Inter, SF Pro, Roboto) have a space advance width of ~0.26em to 0.28em
+  const weightNum = typeof fontWeight === "number" ? fontWeight : parseInt(String(fontWeight), 10) || 400;
+  const ratio = weightNum >= 700 ? 0.28 : 0.26;
+  return Math.round(fontSize * ratio * 100) / 100;
+}
+
+/**
+ * Calculates metric-aligned line-box clipping dimensions to guarantee descenders
+ * ("g", "y", "p", "q", "j") are never chopped off during baseline reveals.
+ *
+ * Formula:
+ * ClipHeight = ascent + |descent| + 2 * halfLeading
+ */
+export function calculateMetricLineBox(
+  fontSize: number,
+  lineHeight: number = 1.2,
+  ascentRatio: number = 0.8,
+  descentRatio: number = 0.2
+): MetricLineBox {
+  const ascent = fontSize * ascentRatio;
+  const descent = fontSize * descentRatio;
+  const totalLineHeight = fontSize * lineHeight;
+  const halfLeading = Math.max(0, (totalLineHeight - (ascent + descent)) / 2);
+  const clipHeight = ascent + descent + 2 * halfLeading;
+  const baselineOffset = ascent + halfLeading;
+
+  return {
+    ascent: Math.round(ascent * 100) / 100,
+    descent: Math.round(descent * 100) / 100,
+    halfLeading: Math.round(halfLeading * 100) / 100,
+    clipHeight: Math.round(clipHeight * 100) / 100,
+    baselineOffset: Math.round(baselineOffset * 100) / 100,
+  };
+}
+
+/**
+ * Splits a text layer into semantic sentence chunks with 0.0px visual shift guarantee.
  */
 export function splitTextIntoChunks(layer: TextLayer): GroupLayer {
   const rawText = layer.content;
@@ -26,6 +95,9 @@ export function splitTextIntoChunks(layer: TextLayer): GroupLayer {
   }
 
   const finalSegments = segments.length > 1 ? segments : [rawText];
+  const fontSize = typeof layer.style.fontSize === "number" ? layer.style.fontSize : 48;
+  const lineHeight = typeof layer.style.lineHeight === "number" ? layer.style.lineHeight : 1.2;
+  const metricBox = calculateMetricLineBox(fontSize, lineHeight);
 
   const chunks: ChunkLayer[] = finalSegments.map(
     (chunkText, idx) => ({
@@ -65,7 +137,7 @@ export function splitTextIntoChunks(layer: TextLayer): GroupLayer {
     layout: {
       display: "flex",
       flexDirection: "column",
-      gap: 12,
+      gap: metricBox.halfLeading * 2 || 12,
       align:
         layer.style.textAlign === "left"
           ? "start"
@@ -75,8 +147,6 @@ export function splitTextIntoChunks(layer: TextLayer): GroupLayer {
       justifyContent: "center",
     },
     autoFit: true,
-    autoLink: true,
-    staggerDelay: 0.15,
     style: {
       ...layer.style,
       width: layer.style.width || "auto",
@@ -93,32 +163,19 @@ export function splitTextIntoChunks(layer: TextLayer): GroupLayer {
 }
 
 /**
- * Splits a text layer into individual words in a flex-row wrap container.
+ * Splits a text layer into individual words with exact space advance widths and punctuation binding.
  */
 export function splitTextIntoWords(layer: TextLayer): GroupLayer {
-  let words: string[] = [];
-
-  if (typeof Intl !== "undefined" && (Intl as any).Segmenter) {
-    try {
-      const segmenter = new (Intl as any).Segmenter(undefined, { granularity: "word" });
-      for (const item of segmenter.segment(layer.content)) {
-        if (item.isWordLike) {
-          words.push(item.segment);
-        }
-      }
-    } catch {
-      // Ignore and fallback
-    }
-  }
-
-  if (words.length === 0) {
-    words = layer.content.split(/\s+/).filter(Boolean);
-  }
+  const rawText = layer.content;
+  // Match words preserving attached trailing punctuation (e.g. "news," or "out!")
+  const wordTokens = rawText.match(/\S+/g) || [rawText];
 
   const fontSize = typeof layer.style.fontSize === "number" ? layer.style.fontSize : 48;
-  const wordGap = Math.max(6, Math.round(fontSize * 0.28));
+  const fontFamily = layer.style.fontFamily || "Inter";
+  const fontWeight = layer.style.fontWeight || 400;
+  const spaceWidth = measureSpaceWidth(fontFamily, fontSize, fontWeight);
 
-  const chunks: ChunkLayer[] = words.map((word, idx) => ({
+  const chunks: ChunkLayer[] = wordTokens.map((word, idx) => ({
     id: `word_${Date.now()}_${idx}`,
     name: word,
     type: "chunk",
@@ -135,13 +192,14 @@ export function splitTextIntoWords(layer: TextLayer): GroupLayer {
       fontFamily: layer.style.fontFamily,
       color: layer.style.color || "#FFFFFF",
       lineHeight: layer.style.lineHeight || 1.2,
+      verticalAlign: "bottom",
     },
     animation: {
       in: {
         preset: "pop",
-        start: idx * 0.1,
+        start: idx * 0.08,
         duration: 0.4,
-        easing: "bouncy",
+        easing: "snappy",
       },
     },
   }));
@@ -154,7 +212,7 @@ export function splitTextIntoWords(layer: TextLayer): GroupLayer {
       display: "flex",
       flexDirection: "row",
       flexWrap: "wrap",
-      gap: wordGap,
+      gap: spaceWidth,
       align: "center",
       justifyContent:
         layer.style.textAlign === "left"
@@ -164,8 +222,6 @@ export function splitTextIntoWords(layer: TextLayer): GroupLayer {
           : "center",
     },
     autoFit: true,
-    autoLink: true,
-    staggerDelay: 0.08,
     style: {
       ...layer.style,
       width: layer.style.width || 600,
@@ -180,4 +236,3 @@ export function splitTextIntoWords(layer: TextLayer): GroupLayer {
 
   return group;
 }
-

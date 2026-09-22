@@ -94,6 +94,50 @@ export const EASING_FUNCTIONS: Record<EasingType, (t: number) => number> = {
   // Linear
   linear: (t: number) => Math.min(Math.max(t, 0), 1),
 
+  // Jitter-specific presets
+  natural: cubicBezier(0.4, 0.0, 0.2, 1.0),
+  slowDown: cubicBezier(0.0, 0.0, 0.2, 1.0),
+  accelerate: cubicBezier(0.4, 0.0, 1.0, 1.0),
+  elastic: (t: number) => {
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+    const p = 0.3;
+    const s = p / 4;
+    return Math.pow(2, -10 * t) * Math.sin(((t - s) * (2 * Math.PI)) / p) + 1;
+  },
+  bounce: (t: number) => {
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+    const n1 = 7.5625;
+    const d1 = 2.75;
+    let x = t;
+    if (x < 1 / d1) {
+      return n1 * x * x;
+    } else if (x < 2 / d1) {
+      x -= 1.5 / d1;
+      return n1 * x * x + 0.75;
+    } else if (x < 2.5 / d1) {
+      x -= 2.25 / d1;
+      return n1 * x * x + 0.9375;
+    } else {
+      x -= 2.625 / d1;
+      return n1 * x * x + 0.984375;
+    }
+  },
+  none: (t: number) => Math.min(Math.max(t, 0), 1),
+
+  // Heavy, Spring and Standard CSS Easings
+  heavy: cubicBezier(0.25, 1, 0.5, 1),
+  spring: (t: number) => {
+    if (t <= 0) return 0;
+    if (t >= 1) return 1;
+    const decay = Math.exp(-6 * t);
+    return 1 - decay * Math.cos(t * Math.PI * 3.5);
+  },
+  easeIn: cubicBezier(0.42, 0, 1, 1),
+  easeOut: cubicBezier(0, 0, 0.58, 1),
+  easeInOut: cubicBezier(0.42, 0, 0.58, 1),
+
   // Default custom fallback
   custom: cubicBezier(0.25, 0.1, 0.25, 1),
 };

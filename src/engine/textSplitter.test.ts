@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { splitTextIntoChunks, splitTextIntoWords } from "./textSplitter";
+import {
+  splitTextIntoChunks,
+  splitTextIntoWords,
+  measureSpaceWidth,
+  calculateMetricLineBox,
+} from "./textSplitter";
 import { TextLayer } from "@/types/scene";
 
 describe("Text Splitter Engine (0px Visual Shift Guarantee)", () => {
@@ -24,7 +29,22 @@ describe("Text Splitter Engine (0px Visual Shift Guarantee)", () => {
     },
   };
 
-  it("splits text into semantic chunks and maintains exact x, y coordinates", () => {
+  it("measures font space width accurately without hardcoded guesswork", () => {
+    const spaceWidth = measureSpaceWidth("Inter", 54, 800);
+    expect(spaceWidth).toBeGreaterThan(10);
+    expect(spaceWidth).toBeLessThan(25);
+  });
+
+  it("calculates metric line-box clipping to prevent chopping descenders", () => {
+    const metricBox = calculateMetricLineBox(54, 1.2);
+    // ascent + descent + 2 * halfLeading = clipHeight
+    expect(metricBox.clipHeight).toBeCloseTo(54 * 1.2, 1);
+    expect(metricBox.ascent).toBeCloseTo(54 * 0.8, 1);
+    expect(metricBox.descent).toBeCloseTo(54 * 0.2, 1);
+    expect(metricBox.descent).toBeGreaterThan(0); // Descenders explicitly protected
+  });
+
+  it("splits text into semantic chunks and maintains exact x, y coordinates (0px shift)", () => {
     const group = splitTextIntoChunks(baseTextLayer);
 
     expect(group.type).toBe("group");
@@ -45,14 +65,21 @@ describe("Text Splitter Engine (0px Visual Shift Guarantee)", () => {
     expect(group.children[0].style.fontFamily).toBe("Inter");
   });
 
-  it("splits text into individual words in a flex-row wrap group", () => {
+  it("splits text into individual words preserving punctuation binding", () => {
     const wordGroup = splitTextIntoWords(baseTextLayer);
 
     expect(wordGroup.type).toBe("group");
     expect(wordGroup.layout?.flexDirection).toBe("row");
     expect(wordGroup.layout?.flexWrap).toBe("wrap");
     expect(wordGroup.autoFit).toBe(true);
-    expect(wordGroup.children.length).toBe(10);
-    expect((wordGroup.children[0] as any).content).toBe("Hey");
+    expect(wordGroup.children.length).toBe(10); // "Hey", "Team,", "I", "have", "got", "big", "news,", "check", "this", "out!"
+    
+    // Punctuation is bound to the token: "Team,", "news,", "out!"
+    const words = wordGroup.children.map((c: any) => c.content);
+    expect(words).toContain("Team,");
+    expect(words).toContain("news,");
+    expect(words).toContain("out!");
+    expect(words).not.toContain(",");
+    expect(words).not.toContain("!");
   });
 });

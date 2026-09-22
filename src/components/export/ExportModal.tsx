@@ -15,6 +15,13 @@ import { videoExporter } from "@/engine/export/videoExporter";
 import { HeadlessRenderStage } from "@/engine/export/HeadlessRenderStage";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -171,15 +178,21 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose }) => 
         <div className="space-y-3 bg-secondary/40 p-3 rounded-xl border border-border">
           <div className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">Resolution</span>
-            <select
-              value={resolution}
-              onChange={(e) => setResolution(e.target.value as any)}
-              className="bg-muted text-xs text-foreground rounded px-2 py-1 focus:outline-none border border-border"
-            >
-              <option value="1080p">1080p (1920 × 1080 • 16:9)</option>
-              <option value="9:16">Story / Reel (1080 × 1920 • 9:16)</option>
-              <option value="1:1">Square (1080 × 1080 • 1:1)</option>
-            </select>
+            <div className="w-56">
+              <Select
+                value={resolution}
+                onValueChange={(val) => setResolution(val as any)}
+              >
+                <SelectTrigger className="w-56 h-7 bg-muted text-xs border border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="1080p">1080p (1920 × 1080 • 16:9)</SelectItem>
+                  <SelectItem value="9:16">Story / Reel (1080 × 1920 • 9:16)</SelectItem>
+                  <SelectItem value="1:1">Square (1080 × 1080 • 1:1)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex items-center justify-between text-xs">

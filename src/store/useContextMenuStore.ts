@@ -8,7 +8,8 @@ export type ContextMenuZone =
   | "timeline-ruler"
   | "canvas-element"
   | "canvas-pasteboard"
-  | "sidebar-card";
+  | "sidebar-card"
+  | "scene";
 
 export interface ContextMenuItem {
   id: string;

@@ -19,6 +19,7 @@ import {
   Square,
   Circle,
   RotateCcw,
+  Pencil,
 } from "lucide-react";
 
 export function buildTimelineClipMenu(params: {
@@ -78,6 +79,18 @@ export function buildTimelineClipMenu(params: {
           action: () => store.updateAnimationClip(layerId, clip.id, { preset: "slideDown", type: "out" }),
         },
       ],
+    },
+    {
+      id: "rename-clip",
+      label: "Rename Clip",
+      icon: <Pencil className="w-3.5 h-3.5" />,
+      shortcut: "F2",
+      action: () => {
+        const newName = window.prompt("Rename animation clip:", clip.name || clip.preset);
+        if (newName && newName.trim()) {
+          store.updateAnimationClip(layerId, clip.id, { name: newName.trim() });
+        }
+      },
     },
     {
       id: "split-clip",
@@ -187,6 +200,18 @@ export function buildTimelineTrackMenu(params: {
       icon: <Copy className="w-3.5 h-3.5" />,
       shortcut: "Ctrl+D",
       action: () => store.duplicateLayer(layer.id),
+    },
+    {
+      id: "rename-track-layer",
+      label: "Rename Layer",
+      icon: <Pencil className="w-3.5 h-3.5" />,
+      shortcut: "F2",
+      action: () => {
+        const newName = window.prompt("Rename layer:", layer.name);
+        if (newName && newName.trim()) {
+          store.updateLayer(layer.id, { name: newName.trim() });
+        }
+      },
     },
     {
       id: "toggle-visibility",
@@ -441,6 +466,18 @@ export function buildCanvasElementMenu(params: {
       action: () => store.duplicateLayer(layer.id),
     },
     {
+      id: "rename-canvas-layer",
+      label: "Rename Layer",
+      icon: <Pencil className="w-3.5 h-3.5" />,
+      shortcut: "F2",
+      action: () => {
+        const newName = window.prompt("Rename layer:", layer.name);
+        if (newName && newName.trim()) {
+          store.updateLayer(layer.id, { name: newName.trim() });
+        }
+      },
+    },
+    {
       id: "delete-elem",
       label: "Delete",
       icon: <Trash2 className="w-3.5 h-3.5" />,
@@ -585,6 +622,18 @@ export function buildSidebarCardMenu(params: {
       action: () => store.duplicateAnimationClip(layerId, clip.id),
     },
     {
+      id: "card-rename",
+      label: "Rename Animation",
+      icon: <Pencil className="w-3.5 h-3.5" />,
+      shortcut: "F2",
+      action: () => {
+        const newName = window.prompt("Rename animation clip:", clip.name || clip.preset);
+        if (newName && newName.trim()) {
+          store.updateAnimationClip(layerId, clip.id, { name: newName.trim() });
+        }
+      },
+    },
+    {
       id: "card-reset",
       label: "Reset to Standard Defaults",
       icon: <RotateCcw className="w-3.5 h-3.5" />,
@@ -609,6 +658,74 @@ export function buildSidebarCardMenu(params: {
       shortcut: "Del",
       danger: true,
       action: () => store.removeAnimationClip(layerId, clip.id),
+    },
+  ];
+}
+
+export function buildSceneContextMenu(params: {
+  screenId: string;
+  store: ProjectStoreState;
+  onRename?: () => void;
+}): ContextMenuItem[] {
+  const { screenId, store, onRename } = params;
+  const canDelete = store.document.screens.length > 1;
+
+  return [
+    {
+      id: "scene-focus",
+      label: "Fit Scene in Viewport",
+      icon: <Maximize2 className="w-3.5 h-3.5" />,
+      action: () => {
+        store.selectScreen(screenId);
+        store.deselectAll();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("motion-focus-screen", { detail: { screenId } })
+          );
+        }
+      },
+    },
+    {
+      id: "scene-duplicate",
+      label: "Duplicate Scene",
+      icon: <Copy className="w-3.5 h-3.5" />,
+      shortcut: "Ctrl+D",
+      action: () => store.duplicateScreen(screenId),
+    },
+    {
+      id: "scene-rename",
+      label: "Rename Scene",
+      icon: <Pencil className="w-3.5 h-3.5" />,
+      shortcut: "F2",
+      action: () => {
+        if (onRename) {
+          onRename();
+        } else {
+          const currentScreen = store.document.screens.find((s) => s.id === screenId);
+          const newName = window.prompt("Rename scene:", currentScreen?.name || "Scene");
+          if (newName && newName.trim()) {
+            store.updateScreen(screenId, { name: newName.trim() });
+          }
+        }
+      },
+    },
+    {
+      id: "divider-scene",
+      label: "",
+      divider: true,
+    },
+    {
+      id: "scene-delete",
+      label: "Delete Scene",
+      icon: <Trash2 className="w-3.5 h-3.5" />,
+      shortcut: "Del",
+      danger: true,
+      disabled: !canDelete,
+      action: () => {
+        if (canDelete) {
+          store.deleteScreen(screenId);
+        }
+      },
     },
   ];
 }

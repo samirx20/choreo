@@ -1,103 +1,98 @@
-/**
- * Contact Sheet Packing & Geometry Engine
- * Formulates optimal multi-frame contact sheet layouts (planSheet, planSheetSizes)
- * tailored to multimodal vision model patch token geometries (max 2576x1456, 92x52 patches).
- */
+import { SceneDocument, Screen, TextLayer } from "@/types/scene";
 
-export const SHEET_MAX_WIDTH = 2576;
-export const SHEET_MAX_HEIGHT = 1456;
-const MAX_FRAMES_PER_SHEET = 12;
-const MARGIN = 4;
-const GUTTER = 8;
-const BACKGROUND_COLOR = '#09090b'; // Zinc-950
+export interface BeatSnapshot {
+  sceneId: string;
+  index: number;
+  name: string;
+  duration: number;
+  timeWindow: [number, number]; // [startSec, endSec]
+  mood?: string;
+  stepFps?: string | number;
+  layerCount: number;
+  headlines: string[];
+  keyElements: string[];
+  cameraFraming: string;
+  transitions: string[];
+}
 
-export interface SheetPlan {
-  columns: number;
-  rows: number;
-  cellWidth: number;
-  cellHeight: number;
-  width: number;
-  height: number;
+export interface StoryboardContactSheet {
+  projectTitle: string;
+  totalDuration: number;
+  resolution: { width: number; height: number };
+  fps: number;
+  beatCount: number;
+  beats: BeatSnapshot[];
 }
 
 /**
- * Calculates optimal grid columns, rows, cell dimensions, and total sheet size
- * for N preview frames within vision token limits (SHEET_MAX_WIDTH x SHEET_MAX_HEIGHT).
+ * Generates a structured Contact Sheet representation of the storyboard scenes.
+ * Allows AI agents to visually inspect composition, narrative pacing, and layout in $O(1)$ time.
  */
-export function planSheet(
-  count: number,
-  source: { width: number; height: number }
-): SheetPlan {
-  const cells = Math.max(1, Math.min(count, MAX_FRAMES_PER_SHEET));
-  const srcW = Math.max(1, source.width);
-  const srcH = Math.max(1, source.height);
+export function generateContactSheet(doc: SceneDocument): StoryboardContactSheet {
+  let currentTime = 0;
 
-  let best: SheetPlan | undefined;
+  const beats: BeatSnapshot[] = doc.screens.map((screen: Screen, index: number) => {
+    const duration = screen.duration || 3.0;
+    const timeWindow: [number, number] = [
+      Math.round(currentTime * 100) / 100,
+      Math.round((currentTime + duration) * 100) / 100,
+    ];
+    currentTime += duration;
 
-  for (let columns = 1; columns <= cells; columns++) {
-    const rows = Math.ceil(cells / columns);
-    const availableWidth = SHEET_MAX_WIDTH - 2 * MARGIN - GUTTER * (columns - 1);
-    const availableHeight = SHEET_MAX_HEIGHT - 2 * MARGIN - GUTTER * (rows - 1);
-    if (availableWidth < columns || availableHeight < rows) continue;
+    // Extract key text headlines
+    const headlines: string[] = [];
+    const keyElements: string[] = [];
+    const transitions: string[] = [];
 
-    const scale = Math.min(
-      availableWidth / (columns * srcW),
-      availableHeight / (rows * srcH),
-      1.0
-    );
-    const cellWidth = Math.max(1, Math.floor(srcW * scale));
-    const cellHeight = Math.max(1, Math.floor(srcH * scale));
+    screen.layers.forEach((layer) => {
+      if (layer.type === "text") {
+        const textLayer = layer as TextLayer;
+        if (textLayer.content && (textLayer.style?.fontSize ?? 0) >= 32) {
+          headlines.push(`"${textLayer.content.slice(0, 40)}${textLayer.content.length > 40 ? "…" : ""}"`);
+        }
+      } else if (layer.type === "mockup3d" || (layer.type as string) === "mockup-3d") {
+        keyElements.push(`3D Mockup (${layer.name})`);
+      } else if (layer.type === "icon") {
+        keyElements.push(`Icon (${layer.name})`);
+      } else if (layer.type === "counter") {
+        keyElements.push(`Kinetic Counter (${layer.name})`);
+      } else if (layer.type === "frame") {
+        keyElements.push(`Frame Container (${layer.name})`);
+      } else if (layer.type === "image" || layer.type === "video") {
+        keyElements.push(`${layer.type.toUpperCase()} (${layer.name})`);
+      }
 
-    const candidate: SheetPlan = {
-      columns,
-      rows,
-      cellWidth,
-      cellHeight,
-      width: 2 * MARGIN + columns * cellWidth + GUTTER * (columns - 1),
-      height: 2 * MARGIN + rows * cellHeight + GUTTER * (rows - 1),
+      if (layer.animation?.in?.preset) {
+        transitions.push(`${layer.name}: ${layer.animation.in.preset} (${layer.animation.in.easing || "spring"})`);
+      }
+    });
+
+    const cameraFraming = screen.layers.some((l) => l.type === "mockup3d" || (l.type as string) === "mockup-3d")
+      ? "Telephoto 35mm 3D Stage"
+      : "2D Modular Grid Stage";
+
+    return {
+      sceneId: screen.id,
+      index,
+      name: screen.name,
+      duration,
+      timeWindow,
+      mood: screen.mood || "product-showcase",
+      stepFps: screen.stepFps || "smooth",
+      layerCount: screen.layers.length,
+      headlines: headlines.slice(0, 3),
+      keyElements: keyElements.slice(0, 5),
+      cameraFraming,
+      transitions: transitions.slice(0, 4),
     };
+  });
 
-    if (best === undefined || isBetterPlan(candidate, best, cells)) {
-      best = candidate;
-    }
-  }
-
-  return (
-    best ?? {
-      columns: 1,
-      rows: 1,
-      cellWidth: Math.min(srcW, SHEET_MAX_WIDTH - 2 * MARGIN),
-      cellHeight: Math.min(srcH, SHEET_MAX_HEIGHT - 2 * MARGIN),
-      width: Math.min(srcW + 2 * MARGIN, SHEET_MAX_WIDTH),
-      height: Math.min(srcH + 2 * MARGIN, SHEET_MAX_HEIGHT),
-    }
-  );
-}
-
-function isBetterPlan(candidate: SheetPlan, best: SheetPlan, cells: number): boolean {
-  const candidateArea = candidate.cellWidth * candidate.cellHeight;
-  const bestArea = best.cellWidth * best.cellHeight;
-  if (candidateArea !== bestArea) return candidateArea > bestArea;
-
-  const candidateBlanks = candidate.columns * candidate.rows - cells;
-  const bestBlanks = best.columns * best.rows - cells;
-  if (candidateBlanks !== bestBlanks) return candidateBlanks < bestBlanks;
-
-  return candidate.columns > best.columns;
-}
-
-/**
- * Splits arbitrary frame count across multiple balanced sheets
- * so sheets have even distributions (e.g. 13 frames -> 7 + 6, 25 frames -> 9 + 8 + 8).
- */
-export function planSheetSizes(
-  total: number,
-  perSheet = MAX_FRAMES_PER_SHEET
-): number[] {
-  if (total <= 0) return [];
-  const max = Math.max(1, Math.min(Math.round(perSheet), MAX_FRAMES_PER_SHEET));
-  const sheets = Math.max(1, Math.ceil(total / max));
-  const base = Math.floor(total / sheets);
-  const extra = total % sheets;
-  return Array.from({ length: sheets }, (_, i) => base + (i < extra ? 1 : 0));
+  return {
+    projectTitle: doc.name,
+    totalDuration: Math.round(currentTime * 100) / 100,
+    resolution: { width: doc.settings.width, height: doc.settings.height },
+    fps: doc.settings.fps,
+    beatCount: beats.length,
+    beats,
+  };
 }

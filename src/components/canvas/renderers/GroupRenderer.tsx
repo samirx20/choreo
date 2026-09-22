@@ -204,8 +204,6 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
       }}
       className={cn(
         "cursor-pointer select-none box-border",
-        isSelected &&
-          "ring-1 ring-primary ring-offset-2 ring-offset-transparent",
         isEmpty &&
           "border border-dashed border-zinc-600 bg-zinc-900/40 flex items-center justify-center",
         layer.style.tailwindClasses

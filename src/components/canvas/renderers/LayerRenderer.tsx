@@ -1,11 +1,15 @@
 import React from "react";
 import { Layer } from "@/types/scene";
 import { GroupRenderer } from "./GroupRenderer";
+import { FrameRenderer } from "./FrameRenderer";
 import { TextRenderer } from "./TextRenderer";
 import { ChunkRenderer } from "./ChunkRenderer";
 import { ShapeRenderer } from "./ShapeRenderer";
+import { LineRenderer } from "./LineRenderer";
+import { PolygonRenderer } from "./PolygonRenderer";
 import { ImageRenderer } from "./ImageRenderer";
 import { VideoRenderer } from "./VideoRenderer";
+import { IconRenderer } from "./IconRenderer";
 
 interface LayerRendererProps {
   layer: Layer;
@@ -53,6 +57,51 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({
               onSelectLayer={onSelectLayer}
             />
           )}
+        />
+      );
+
+    case "frame":
+      return (
+        <FrameRenderer
+          layer={layer}
+          selectedLayerIds={selectedLayerIds}
+          isChildInFlex={isChildInFlex}
+          computedStyle={computedStyle}
+          computedLayerStyles={computedLayerStyles}
+          onSelectLayer={onSelectLayer}
+          renderChild={(child, childInFlex) => (
+            <LayerRenderer
+              key={child.id}
+              layer={child}
+              selectedLayerIds={selectedLayerIds}
+              isChildInFlex={childInFlex}
+              computedStyle={computedLayerStyles[child.id]}
+              computedLayerStyles={computedLayerStyles}
+              onSelectLayer={onSelectLayer}
+            />
+          )}
+        />
+      );
+
+    case "line":
+      return (
+        <LineRenderer
+          layer={layer}
+          isSelected={isSelected}
+          isChildInFlex={isChildInFlex}
+          computedStyle={computedStyle}
+          onClick={handleClick}
+        />
+      );
+
+    case "polygon":
+      return (
+        <PolygonRenderer
+          layer={layer}
+          isSelected={isSelected}
+          isChildInFlex={isChildInFlex}
+          computedStyle={computedStyle}
+          onClick={handleClick}
         />
       );
 
@@ -118,6 +167,17 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({
     case "video":
       return (
         <VideoRenderer
+          layer={layer}
+          isSelected={isSelected}
+          isChildInFlex={isChildInFlex}
+          computedStyle={computedStyle}
+          onClick={handleClick}
+        />
+      );
+
+    case "icon":
+      return (
+        <IconRenderer
           layer={layer}
           isSelected={isSelected}
           isChildInFlex={isChildInFlex}

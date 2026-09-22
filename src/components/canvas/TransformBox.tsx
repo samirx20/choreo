@@ -29,6 +29,8 @@ interface TransformBoxProps {
   bounds?: { x: number; y: number; width: number; height: number } | null;
   selectedLayers?: Layer[];
   isAnimateMode?: boolean;
+  screenOffset?: { x: number; y: number };
+  isPanMode?: boolean;
 }
 
 type HandleType =
@@ -98,6 +100,8 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
   bounds,
   selectedLayers,
   isAnimateMode = false,
+  screenOffset,
+  isPanMode = false,
 }) => {
   const {
     updateLayerStyle,
@@ -183,6 +187,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
   );
 
   const handlePointerDown = (handle: HandleType, e: React.PointerEvent) => {
+    if (isPanMode) return;
     if (e.button !== 0) return;
     e.stopPropagation();
     e.preventDefault();
@@ -399,20 +404,17 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         if (layer.type === "text" || layer.type === "chunk") {
           const isCorner = ["nw", "ne", "se", "sw"].includes(session.handle);
           if (isCorner) {
-            // Proportional font scaling
-            const scaleRatio = newW / Math.max(1, session.initialWidth);
-            const scaledFontSize = Math.max(8, Math.round(session.initialFontSize * scaleRatio));
-            updates.fontSize = scaledFontSize;
             updates.width = Math.round(newW);
-            updates.height = "auto";
+            updates.height = Math.round(newH);
           } else if (session.handle.includes("e") || session.handle.includes("w")) {
-            // Horizontal reflow only
             updates.width = Math.round(newW);
-            updates.height = "auto";
+            updates.height = Math.round(session.initialHeight);
           } else {
-            // Vertical handles lock height
+            updates.width = Math.round(session.initialWidth);
             updates.height = Math.round(newH);
           }
+          updates.textSizing = "fixed";
+          updates.boxMode = "area";
         } else {
           updates.height = Math.round(newH);
         }
@@ -456,19 +458,22 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
   const pivotOriginX = isMulti ? "center" : `${(layer.style.pivotX ?? 0.5) * 100}%`;
   const pivotOriginY = isMulti ? "center" : `${(layer.style.pivotY ?? 0.5) * 100}%`;
 
+  const renderX = visualX + (screenOffset?.x ?? 0);
+  const renderY = visualY + (screenOffset?.y ?? 0);
+
   return (
     <div
       style={{
         position: "absolute",
-        left: `${visualX}px`,
-        top: `${visualY}px`,
+        left: `${renderX}px`,
+        top: `${renderY}px`,
         width: `${curVisualW}px`,
         height: `${curVisualH}px`,
         transform: rotation ? `rotate(${rotation}deg)` : undefined,
         transformOrigin: `${pivotOriginX} ${pivotOriginY}`,
         pointerEvents: "none",
       }}
-      className="z-40 ring-1 ring-primary select-none group pointer-events-none"
+      className="z-40 ring-1 ring-[#7c3aed] select-none group pointer-events-none"
     >
       {/* Pivot / Anchor Point Indicator */}
       {!isMulti && (
@@ -477,16 +482,18 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
             left: `${(layer.style.pivotX ?? 0.5) * 100}%`,
             top: `${(layer.style.pivotY ?? 0.5) * 100}%`,
           }}
-          className="absolute -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-primary/90 flex items-center justify-center pointer-events-none z-30 shadow-xs"
+          className="absolute -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-[#7c3aed] flex items-center justify-center pointer-events-none z-30 shadow-xs"
           title="Anchor / Pivot Point"
         >
-          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+          <div className="w-1.5 h-1.5 rounded-full bg-[#7c3aed]" />
         </div>
       )}
       {/* Center Drag Body: Clicking and dragging anywhere inside the selection box moves the layer */}
       {!isEditing && (
         <div
-          className="absolute inset-0 cursor-move pointer-events-auto"
+          className={`absolute inset-0 ${
+            isPanMode ? "pointer-events-none" : "cursor-move pointer-events-auto"
+          }`}
           onPointerDown={(e) => handlePointerDown("move", e)}
           onDoubleClick={(e) => {
             e.stopPropagation();
@@ -511,84 +518,100 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         />
       )}
 
-      {/* 4 Border Grab Edges */}
-      <div
-        className="absolute top-0 left-0 right-0 h-2 -translate-y-1 cursor-move pointer-events-auto"
-        onPointerDown={(e) => handlePointerDown("move", e)}
-      />
-      <div
-        className="absolute bottom-0 left-0 right-0 h-2 translate-y-1 cursor-move pointer-events-auto"
-        onPointerDown={(e) => handlePointerDown("move", e)}
-      />
-      <div
-        className="absolute top-0 bottom-0 left-0 w-2 -translate-x-1 cursor-move pointer-events-auto"
-        onPointerDown={(e) => handlePointerDown("move", e)}
-      />
-      <div
-        className="absolute top-0 bottom-0 right-0 w-2 translate-x-1 cursor-move pointer-events-auto"
-        onPointerDown={(e) => handlePointerDown("move", e)}
-      />
-
-      {/* Rotation Lever & Handles */}
-      {!isMulti && (
+      {/* 4 Border Grab Edges, Rotation Controls & Handles (Only when NOT editing text!) */}
+      {!isEditing && (
         <>
           <div
-            style={{ left: "50%", top: "-24px" }}
-            className="absolute -translate-x-1/2 flex flex-col items-center cursor-grab active:cursor-grabbing pointer-events-auto"
-            onPointerDown={(e) => handlePointerDown("rotate", e)}
-          >
-            <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-background shadow" />
-            <div className="w-0.5 h-3.5 bg-primary" />
-          </div>
+            className={`absolute top-0 left-0 right-0 h-2 -translate-y-1 ${
+              isPanMode ? "pointer-events-none" : "cursor-move pointer-events-auto"
+            }`}
+            onPointerDown={(e) => handlePointerDown("move", e)}
+          />
+          <div
+            className={`absolute bottom-0 left-0 right-0 h-2 translate-y-1 ${
+              isPanMode ? "pointer-events-none" : "cursor-move pointer-events-auto"
+            }`}
+            onPointerDown={(e) => handlePointerDown("move", e)}
+          />
+          <div
+            className={`absolute top-0 bottom-0 left-0 w-2 -translate-x-1 ${
+              isPanMode ? "pointer-events-none" : "cursor-move pointer-events-auto"
+            }`}
+            onPointerDown={(e) => handlePointerDown("move", e)}
+          />
+          <div
+            className={`absolute top-0 bottom-0 right-0 w-2 translate-x-1 ${
+              isPanMode ? "pointer-events-none" : "cursor-move pointer-events-auto"
+            }`}
+            onPointerDown={(e) => handlePointerDown("move", e)}
+          />
 
-          {/* 4 Outer Corner Rotation Hit Areas (Figma Style) */}
-          {[
-            { id: "rot-nw", style: { top: -20, left: -20 } },
-            { id: "rot-ne", style: { top: -20, right: -20 } },
-            { id: "rot-se", style: { bottom: -20, right: -20 } },
-            { id: "rot-sw", style: { bottom: -20, left: -20 } },
-          ].map((rz) => (
-            <div
-              key={rz.id}
-              style={{
-                ...rz.style,
-                width: 20,
-                height: 20,
-                cursor: ROTATE_CURSOR,
-              }}
-              className="absolute pointer-events-auto z-10"
-              onPointerDown={(e) => handlePointerDown("rotate", e)}
-              title="Click and drag to rotate (Hold Shift for 15° snap)"
-            />
-          ))}
+          {/* Rotation Lever & Handles */}
+          {!isMulti && (
+            <>
+              <div
+                style={{ left: "50%", top: "-24px" }}
+                className={`absolute -translate-x-1/2 flex flex-col items-center ${
+                  isPanMode ? "pointer-events-none" : "cursor-grab active:cursor-grabbing pointer-events-auto"
+                }`}
+                onPointerDown={(e) => handlePointerDown("rotate", e)}
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-[#7c3aed] border-2 border-background shadow" />
+                <div className="w-0.5 h-3.5 bg-[#7c3aed]" />
+              </div>
 
-          {[
-            { pos: "nw", style: { top: -4, left: -4 } },
-            { pos: "n", style: { top: -4, left: "50%", transform: "translateX(-50%)" } },
-            { pos: "ne", style: { top: -4, right: -4 } },
-            { pos: "e", style: { top: "50%", right: -4, transform: "translateY(-50%)" } },
-            { pos: "se", style: { bottom: -4, right: -4 } },
-            { pos: "s", style: { bottom: -4, left: "50%", transform: "translateX(-50%)" } },
-            { pos: "sw", style: { bottom: -4, left: -4 } },
-            { pos: "w", style: { top: "50%", left: -4, transform: "translateY(-50%)" } },
-          ].map((h) => (
-            <div
-              key={h.pos}
-              style={{ ...h.style, cursor: getRotatedCursor(h.pos, rotation) }}
-              className="absolute w-2 h-2 bg-white border border-black/80 rounded-xs shadow-xs hover:scale-125 transition-transform pointer-events-auto z-20"
-              onPointerDown={(e) => handlePointerDown(h.pos as HandleType, e)}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                if (layer.type === "text" || layer.type === "chunk") {
-                  const currentMode = layer.style.boxMode ?? "point";
-                  const nextMode = currentMode === "point" ? "area" : "point";
-                  updateLayerStyle(layer.id, {
-                    boxMode: nextMode,
-                  });
-                }
-              }}
-            />
-          ))}
+              {/* 4 Outer Corner Rotation Hit Areas (Figma Style) */}
+              {[
+                { id: "rot-nw", style: { top: -20, left: -20 } },
+                { id: "rot-ne", style: { top: -20, right: -20 } },
+                { id: "rot-se", style: { bottom: -20, right: -20 } },
+                { id: "rot-sw", style: { bottom: -20, left: -20 } },
+              ].map((rz) => (
+                <div
+                  key={rz.id}
+                  style={{
+                    ...rz.style,
+                    width: 20,
+                    height: 20,
+                    cursor: ROTATE_CURSOR,
+                  }}
+                  className={`absolute z-10 ${isPanMode ? "pointer-events-none" : "pointer-events-auto"}`}
+                  onPointerDown={(e) => handlePointerDown("rotate", e)}
+                  title="Click and drag to rotate (Hold Shift for 15° snap)"
+                />
+              ))}
+
+              {[
+                { pos: "nw", style: { top: -4, left: -4 } },
+                { pos: "n", style: { top: -4, left: "50%", transform: "translateX(-50%)" } },
+                { pos: "ne", style: { top: -4, right: -4 } },
+                { pos: "e", style: { top: "50%", right: -4, transform: "translateY(-50%)" } },
+                { pos: "se", style: { bottom: -4, right: -4 } },
+                { pos: "s", style: { bottom: -4, left: "50%", transform: "translateX(-50%)" } },
+                { pos: "sw", style: { bottom: -4, left: -4 } },
+                { pos: "w", style: { top: "50%", left: -4, transform: "translateY(-50%)" } },
+              ].map((h) => (
+                <div
+                  key={h.pos}
+                  style={{ ...h.style, cursor: getRotatedCursor(h.pos, rotation) }}
+                  className={`absolute w-2 h-2 bg-white border border-[#7c3aed] rounded-xs shadow-xs hover:scale-125 transition-transform z-20 ${
+                    isPanMode ? "pointer-events-none" : "pointer-events-auto"
+                  }`}
+                  onPointerDown={(e) => handlePointerDown(h.pos as HandleType, e)}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    if (layer.type === "text" || layer.type === "chunk") {
+                      const currentMode = layer.style.boxMode ?? "point";
+                      const nextMode = currentMode === "point" ? "area" : "point";
+                      updateLayerStyle(layer.id, {
+                        boxMode: nextMode,
+                      });
+                    }
+                  }}
+                />
+              ))}
+            </>
+          )}
         </>
       )}
 

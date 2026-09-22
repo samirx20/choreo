@@ -1,206 +1,346 @@
-# Motion Studio: Next Session Handoff Briefing
+# Motion Studio Handoff — Primitives & Component Architecture Roadmap
 
-**Session Target**: Achieving Top-Tier Showcase Motion Graphics (Apple, Linear, Stripe Caliber)  
-**Current Baseline**: 4-Suite Architecture Live (`DESIGN`, `MOTION`, `3D Soon`, `EDITOR Soon`) • **112/112 Vitest Tests Passing (18 Suites)** • **Production Build 100% Clean** • Universal Reactive Dependency Engine (5 Modes) • Precision 2-Element Split Paradigm • Artboard vs. Infinite Pasteboard Isolation Active with "Send to Motion 🎬"  
-**Primary Briefing Rules**: Adhere strictly to [AGENTS.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/AGENTS.md), [docs/IMPLEMENTATION_PLAN.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/IMPLEMENTATION_PLAN.md), and [docs/WORKFLOWS_AND_INTERACTIONS_MAP.md](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/docs/WORKFLOWS_AND_INTERACTIONS_MAP.md).
-
----
-
-## 1. Executive Summary & Where We Stand
-
-In today's session, we completed major foundational milestones:
-1. **Pipeline Restructuring into 4 Operational Suites**:
-   - Replaced the generic "Animate" toggle with the 4-stage pipeline: **DESIGN** (staging & visual layout), **MOTION** (temporal sequencing & camera viewport), **3D** (badge: Soon), and **EDITOR** (badge: Soon).
-2. **Universal Reactive State Dependency & Linking Engine**:
-   - Built a comprehensive cross-element dependency solver (`dependencyEngine.ts`) supporting all 5 atomic linking modes across all element types (`text`, `shape`, `group`, `image`, `chunk`):
-     - 📍 **`pin`**: 9-point spatial anchor locking with $[dx, dy]$ offset.
-     - 📐 **`hug`**: Dynamic bounding-box hugging with 2D padding $[padX, padY]$ (e.g. chat bubbles expanding as text reveals).
-     - 🔗 **`match`**: Direct linear property proportionality ($v_{\text{target}} = v_{\text{driver}} \times M + O$).
-     - 🎚️ **`remap`**: Source $[s_{\min}, s_{\max}] \to$ target $[t_{\min}, t_{\max}]$ range remapping with easing.
-     - 🌊 **`lag`**: Temporal follower tracking driver motion with delay or spring inertia.
-   - Deterministic topological sort with cycle breaking via Kahn's algorithm; integrated at root of `evaluator.ts` for 100% deterministic 60fps playback and headless export.
-   - Dedicated **LINKED DEPENDENCIES** inspector panel (`BindingsSection.tsx`) and on-canvas glowing cyan dashed Bézier curve overlay with mode badge (`BindingConnectionOverlay.tsx`).
-3. **Precision 2-Element Selection Splitting & 1-Click Removal**:
-   - Removed artificial "Split Chunks" and "Split Words" 1-click buttons from Inspector and context menus.
-   - Implemented strict 2-element split: selecting text $\to$ right-click $\to$ Split (`Ctrl+Shift+S`) creates a `<Group>` containing exactly (1) the selected text chunk and (2) the unselected remainder chunk.
-4. **Infinite Pasteboard vs. Camera Artboard Separation**:
-   - The infinite canvas is an unrestricted staging ground outside the camera boundaries ($x < 0$, $y < 0$, $x > W$, $y > H$).
-   - Explicit **"Send to Motion 🎬"** action tests geometric intersection via `isLayerOnArtboard` and populates `motionLayerIds`.
-   - In MOTION mode, a 75% dark camera matte overlay (`boxShadow: 0 0 0 9999px rgba(9, 9, 11, 0.75)`) frames the artboard 1:1.
-5. **Rock-Solid Stability & Verification**:
-   - **112 / 112 unit tests passing** across 18 Vitest test suites.
-   - Production build `tsc -b && vite build` transforms 2,457 modules in 12.48s with 0 errors.
+> **Session Context**: This handoff document captures the architectural decisions, current system state, and exact implementation specifications for the next session.
+> **Date**: September 21, 2026
 
 ---
 
-## 2. Tomorrow's Mission: World-Class Motion Graphics & Component Library
+## 1. Current System Baseline & Verification
 
-Tomorrow's core goal is to elevate Motion Studio from a tool that *can* animate elements to an engine that effortlessly outputs **billion-dollar product showcase animations** (the signature aesthetic of Apple keynotes, Linear release videos, Stripe Sessions showcases, and CashApp promos).
-
-Modern motion design does not rely on arbitrary constant-speed movement or generic slide-ins. It is defined by two foundational pillars:
-1. **The Signature Kinetic Dynamics ("The Apple / Linear Snappy Curve")**:
-   - Non-linear velocity profiles where elements launch with high speed, cover ~75% of the distance in the first 40–50% of the duration, and coast with luxurious deceleration into resting position.
-2. **Pre-Cooked Reusable UI Motion Components**:
-   - A library of production-ready components that modern tech showcases use constantly (e.g. asymmetric Chat Bubbles with typing indicators, macOS/Browser App Windows, Dynamic Island notification pills, KPI count-up metric cards, morphing segmented controls, and animated code terminals).
+The codebase is in a verified, pristine state:
+* **Automated Unit Tests**: All **30 test suites (230 tests)** passing via Vitest (`npx vitest run`).
+* **Production Build**: Compiles cleanly with **0 errors in 10.21s** (`npm run build`).
+* **Architecture**:
+  * **Dual-Mode Studio**: Design Mode (infinite staging board, side-by-side scenes, zoom 20%–400%) vs. Animate Mode (fixed 100% video theater monitor at origin `(0, 0)`, non-active scenes hidden).
+  * **Sequential Multi-Scene Timeline**: Sticky Scene Blocks Bar with proportional drag-to-resize duration handles, full-duration timeline ruler with active scene window shading, and playhead scene auto-sync.
+  * **Layout**: Segmented switcher in Top Header Center, Project Title in Top Header Left, floating glassmorphism design toolbar at bottom-center of canvas (Design Mode only), full-height inspector.
+  * **State Preservation**: Independent camera position (`pan`, `zoom`), active artboard, selected layers, selected clips, and playhead position when toggling between Design and Animate modes.
+  * **Omnipresent Renaming**: Zero dead buttons. In-place double-click renaming across scenes, layers, timeline tracks, and animation clips, plus full context menus.
 
 ---
 
-## 3. Kinetic Easing Curves & Default Motion Dynamics
+## 2. Next Session Task: The Primitives & Component Architecture
 
-### A. The "75% Distance in 50% Time" Curve: The Snappy Quintic Ease-Out
-The curve the user highlighted ("instead of moving at constant speed, it goes fast like cover the 75 percent distance in first 50 percent of time and 25 percent in last 50, most used") is the undisputed gold standard of modern motion UI:
-* **Industry Standard Names**: **"Snappy Ease-Out"**, **"Quintic Out" (`ease-out-quint`)**, **"Apple / Linear Motion Curve"**, or **"Fast-Start Decelerate"**.
-* **Cubic-Bézier Formula**: `cubic-bezier(0.16, 1, 0.3, 1)`
-  * $P_1 = (0.16, 1.0)$: Extremely steep initial slope $\to$ initial velocity $v_0$ is high. The element covers $75\%\text{--}80\%$ of its displacement within the first $40\%\text{--}50\%$ of time elapsed.
-  * $P_2 = (0.30, 1.0)$: Flat landing trajectory $\to$ the remaining $20\%\text{--}25\%$ of distance is spent smoothly decelerating to a whisper-quiet stop with $C^1$ velocity continuity ($v \to 0$).
-* **Why it works**:
-  * Linear motion ($v = \text{const}$) feels robotic, cheap, and amateurish.
-  * Standard `ease-in-out` is sluggish because it starts too slowly, making UI feel laggy.
-  * `cubic-bezier(0.16, 1, 0.3, 1)` feels instantly responsive to the human eye, commanding attention immediately, while the long-tail deceleration conveys premium luxury and weight.
+### The Core Architectural Concept
+Maintain a strict distinction between **Fundamental Building Blocks (Primitives)** and **Composed Modules (Component & Icon Libraries)**:
+* **Primitives** live directly on the canvas and in the shape creation palette.
+* **Component Library & Icon Picker** live in searchable overlays / sheets that stamp pre-composed elements onto the canvas.
 
-### B. The Quintessential Showcase Easing Suite
-Tomorrow we will codify these 5 core kinetic profiles into first-class presets and defaults:
+---
+
+## 3. Detailed Specifications for Next Session
+
+### Phase 1: Missing Core Primitives (Canvas Building Blocks)
+
+#### 1. Line & Arrow (`Line` / `Arrow`)
+* **Purpose**: Dividers, callouts, pointers, section rules, and flowchart connectors.
+* **Type Definition (`src/types/scene.ts`)**:
+  ```ts
+  export interface LineLayer extends BaseLayer {
+    type: "line";
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+    arrowStart?: "none" | "arrow" | "circle";
+    arrowEnd?: "none" | "arrow" | "circle";
+    strokeWidth: number;
+    strokeColor: string;
+    strokeDashArray?: number[]; // dashed/dotted lines
+  }
+  ```
+* **Renderer**: `src/components/canvas/renderers/LineRenderer.tsx` (SVG `<line>` with marker definitions for arrowheads).
+* **Inspector**: Controls for length, angle, stroke weight, color, start/end arrowhead styles, and dash pattern.
+
+#### 2. Polygon & Triangle (`Polygon`)
+* **Purpose**: Play button triangles (media player), metric trend indicators ($\blacktriangle$ / $\blacktriangledown$), hexagon/octagon badges.
+* **Type Definition**:
+  ```ts
+  export interface PolygonLayer extends BaseLayer {
+    type: "shape";
+    shapeType: "polygon" | "triangle";
+    sides: number; // 3 for triangle, 5 for pentagon, 6 for hexagon, etc.
+  }
+  ```
+* **Renderer**: SVG `<polygon points="..." />` calculating equilateral vertices centered within the layer's `width` and `height`.
+
+#### 3. Frame / Container (`Frame`)
+* **Purpose**: Sub-containers, cards, and clipping windows inside a Scene (distinct from Scenes!).
+* **Crucial Distinction**:
+  * **Scene**: Top-level root stage. Has timeline duration (e.g. 3.0s). The Animate Mode camera locks onto it. Cannot be nested.
+  * **Frame**: Spatial container *inside* a Scene. No independent duration. Clips child elements (`overflow: hidden`), provides auto-layout / hugging, and moves children in relative coordinates.
+* **Type Definition**:
+  ```ts
+  export interface FrameLayer extends BaseLayer {
+    type: "frame";
+    clipContent: boolean; // overflow: hidden
+    layout?: {
+      display: "flex";
+      flexDirection: "row" | "column";
+      gap: number;
+      padding: number;
+      align: "start" | "center" | "end";
+      justify: "start" | "center" | "end" | "space-between";
+    };
+    children: Layer[];
+  }
+  ```
+
+#### 4. Native Video Primitive (`Video`)
+* **Purpose**: Screen recordings, product demos, and background footage playing inside the motion graphic.
+* **Type Definition**:
+  ```ts
+  export interface VideoLayer extends BaseLayer {
+    type: "video";
+    src: string;
+    playbackRate: number;
+    loop: boolean;
+    muted: boolean;
+    volume: number;
+    timeOffset: number; // Playhead sync
+  }
+  ```
+* **Renderer**: Hooked into `CanvasViewport`'s `currentTime` so the video frame scrub matches the timeline playhead.
+
+#### 5. Vector Path / Pen (`Path`)
+* **Purpose**: Custom bezier curves, hand-drawn emphasis squiggles under text, speech bubbles, and custom SVG paths.
+* **Type Definition**:
+  ```ts
+  export interface PathLayer extends BaseLayer {
+    type: "path";
+    d: string; // SVG path data string
+    strokeWidth: number;
+    strokeColor: string;
+    fillColor?: string;
+  }
+  ```
+
+---
+
+### Phase 2: Composed Libraries (Sheets & Overlays)
+
+#### 1. Icon Library Drawer (`Icon`)
+* **Architecture & Packaging**:
+  * **Shipped Locally (Zero External CDN / API)**: Uses `lucide-react` (already installed in `node_modules`). Does **not** query external networks, ensuring 100% offline functionality, zero flickering, and resilience against CDN downtime.
+  * **Code-Split / Lazy-Loaded**: Packaged as a separate dynamic chunk via `React.lazy(() => import('./IconPickerSheet'))`. Adds 0KB to initial app bundle startup time and only loads when the user clicks `[ ✦ Icons ]`.
+  * **Instant In-Memory Search (< 1ms)**: Queries the local `icons` dictionary (all 1,555 vector icons) in memory for instant, 60fps search-as-you-type with zero loading spinners.
+* **Data Contract (`IconLayer`)**:
+  ```ts
+  export interface IconLayer extends BaseLayer {
+    type: "icon";
+    iconName: string; // e.g. "Sparkles", "ArrowRight", "Zap"
+    style: {
+      color: string;
+      size: number;
+      strokeWidth: number;
+    } & BaseLayerStyle;
+  }
+  ```
+* **Canvas Rendering**: `IconRenderer.tsx` retrieves the component from `icons[layer.iconName]` and renders scalable SVG, exporting cleanly to MP4/WebM.
+
+#### 2. Component Library Drawer (`Component`)
+* **UI**: Clicking `[ ⊞ Components ]` opens a visual drawer with pre-made showcase modules:
+  1. **Browser Window Frame**: Safari / Chrome chrome with macOS traffic lights (red, yellow, green) and URL pill.
+  2. **3D Device Mockups**: iPhone 16 Pro, MacBook Pro, and iPad using the existing Three.js PBR engine (`src/engine/three/`).
+  3. **Kinetic Counter**: Odometer digit roll with prefix (`$`), suffix (`%`, `ms`), and spring interpolation.
+  4. **Code Block Window**: Syntax-highlighted code snippet box with typing reveal.
+
+---
+
+### Phase 3: Toolbar Reorganization
+
+Update `src/components/canvas/FloatingDesignToolbar.tsx` to group shapes under a clean dropdown while keeping high-frequency tools immediate:
 
 ```
-┌─────────────────┬──────────────────────────────────┬────────────────────────────────────────────────────────┐
-│ CURVE NAME      │ BÉZIER / SPRING FORMULA          │ KINETIC INTENT & USE CASE                              │
-├─────────────────┼──────────────────────────────────┼────────────────────────────────────────────────────────┤
-│ 1. Snappy Out   │ cubic-bezier(0.16, 1, 0.3, 1)    │ Apple/Linear default. Covers 75% in 50% time. Slides,  │
-│    (Primary)    │                                  │ card entrances, dialog pops, drawer expansions.        │
-├─────────────────┼──────────────────────────────────┼────────────────────────────────────────────────────────┤
-│ 2. Damped Spring│ f_spring(t) with ζ=0.72, ω=14    │ Organic physical feel. Slight 5-8% overshoot before    │
-│    (Bouncy)     │                                  │ settling. Ideal for buttons, badge pops, icons.        │
-├─────────────────┼──────────────────────────────────┼────────────────────────────────────────────────────────┤
-│ 3. Anticipation │ cubic-bezier(0.34, 1.56, 0.64, 1)│ "Pull back & whip forward". Anticipates slightly (-5%) │
-│    Whip         │                                  │ before accelerating forward with dynamic snap.         │
-├─────────────────┼──────────────────────────────────┼────────────────────────────────────────────────────────┤
-│ 4. Cinematic S  │ cubic-bezier(0.65, 0, 0.35, 1)   │ Elegant S-curve. Perfect for camera pans, smooth       │
-│    (Smooth)     │                                  │ background morphs, and long ambient transitions.       │
-├─────────────────┼──────────────────────────────────┼────────────────────────────────────────────────────────┤
-│ 5. Elastic Jelly│ Volume-preserving oscillation    │ Scale X stretches (1.15) while Scale Y squashes (0.85) │
-│    Squash       │ scaleX/scaleY out-of-phase       │ on landing impact. Perfect for playful UI & stickers.  │
-└─────────────────┴──────────────────────────────────┴────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ [ ↖ Select ] │ [ ⊞ Scene ] [ ⊡ Frame ] │ [ T Text ] [ 🖼 Media ▾ ] [ ▢ Shapes ▾ ] │ [ ✦ Icons ] [ ⊞ Components ] │ [ 🪄 AI ] │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+                                                              │
+                                       ┌──────────────────────┴──────────────────────┐
+                                       │ ▢ Rectangle                                 │
+                                       │ ○ Ellipse                                   │
+                                       │ △ Triangle / Polygon                        │
+                                       │ ☆ Star                                      │
+                                       │ ─ Line                                      │
+                                       │ ↗ Arrow                                     │
+                                       └─────────────────────────────────────────────┘
 ```
 
 ---
 
-## 4. Reusable UI Motion Components Library ("Showcase Primitives")
+### Phase 4: Multi-Style Aesthetic Engine (6–12 FPS Stop-Motion, Collage & Tactile Art Styles)
 
-To make billion-dollar showcase videos effortless for both humans and AI agents, we will create a dedicated collection of pre-built, production-ready components in `src/components/components/` (accessible via the Components Drawer `ComponentsDrawer.tsx` and the AI Command Bar):
+Motion Studio is not exclusively for 60 FPS ultra-smooth corporate tech UI. It is equally architected for **collage animations, paper cutouts, 6–12 FPS stop-motion ("on twos"), retro zine, mixed media, and handcrafted indie art styles**.
 
-### 1. The Chat / Message Bubble Card
-* **Visual Blueprint**:
-  * Asymmetric corner radii: Sent bubble (`[18, 18, 4, 18]`), Received bubble (`[18, 18, 18, 4]`).
-  * Subtle 1px translucent border (`rgba(255, 255, 255, 0.1)`), deep background drop shadow.
-  * Avatar icon + sender handle badge.
-* **Kinetic Choreography**:
-  * **Phase 1: Typing Indicator**: 3 animated bouncing dots (`● ● ●`) oscillating with 0.15s sinusoidal phase offsets inside an auto-fitting pill container.
-  * **Phase 2: Bubble Entrance**: The typing pill morphs via FLIP into the message bubble using `cubic-bezier(0.16, 1, 0.3, 1)` scale & slide-up ($+24\text{px} \to 0\text{px}$).
-  * **Phase 3: Kinetic Text Reveal**: Words or semantic chunks stagger in with the Snappy curve and 0.08s cascade delay.
+#### 1. Frame Rate Stepping / Time Posterization (`stepFps` / `posterizeTime`)
+* **How it works mathematically**:
+  * Continuous spring physics evaluate time as $t$.
+  * For collage / stop-motion style, time is discretized into stepped frames:
+    $$t_{\text{stepped}} = \frac{\lfloor t \times \text{fps} \rfloor}{\text{fps}}$$
+  * Supported frame rates:
+    * `60 fps`: Fluid modern Apple / Google showcase motion.
+    * `24 fps`: Standard cinematic film motion.
+    * `12 fps` ("On Twos"): Traditional hand-drawn anime and cel animation.
+    * `8 fps` / `6 fps`: Tactile stop-motion, scrapbook collage, and zine animation.
+* **Scope**: Configurable at **Project level**, **Scene level**, or **Clip level** (`stepFps: "smooth" | 60 | 24 | 12 | 8 | 6`).
+* **Implementation in Evaluator (`src/engine/evaluator.ts`)**:
+  ```ts
+  const effectiveFps = clip.stepFps || screen.stepFps || doc.settings.fps;
+  const evalTime = effectiveFps ? Math.floor(t * effectiveFps) / effectiveFps : t;
+  ```
 
-### 2. The Dynamic Island / Notification Toast Pill
-* **Visual Blueprint**:
-  * Compact pill shape (`borderRadius: 9999px`, height `36px`, dark obsidian glass `#09090b` with `backdrop-filter: blur(20px)`).
-  * Left: Pulsing status indicator dot (Emerald green `#34d399` or Electric Blue `#60a5fa`).
-  * Center: Clean typography (`Inter SemiBold 13px`).
-  * Right: Micro action badge or chevron.
-* **Kinetic Choreography**:
-  * Morphs dynamically from compact icon pill to expanded interactive banner (`width: 140px \to 380px`, `height: 36px \to 72px`) with spring overshoot.
-
-### 3. macOS & Browser App Window Chrome
-* **Visual Blueprint**:
-  * Framed app card with macOS traffic light buttons (Close `#ff5f56`, Minimize `#ffbd2e`, Zoom `#27c93f`).
-  * Centered subtle URL bar / search pill.
-  * Inner content area with `clipContent: true` (overflow masked).
-* **Kinetic Choreography**:
-  * Window expands smoothly with 3D tilt perspective entrance (`rotationX: 12deg \to 0deg`, `scale: 0.92 \to 1.0`).
-  * Inner child layers slide up with staggered depth parallax.
-
-### 4. Interactive KPI Metric & Stat Count-Up Card
-* **Visual Blueprint**:
-  * Gradient dark background, subtle Stamp Gold border highlight.
-  * Stat label ("Monthly Recurring Revenue"), huge numerical display (`$124,500`), trend badge (`+34.2% ↑`).
-* **Kinetic Choreography**:
-  * Numerical counter ticks up smoothly from $0 to target value using logarithmic easing.
-  * Sparkline path draws itself with SVG `stroke-dashoffset` wipe.
-
-### 5. Interactive Segmented Switch / Tab Slider
-* **Visual Blueprint**:
-  * Container pill (`#18181b`, padding `4px`).
-  * Floating active indicator pill (`#27272a` with subtle glow) sliding behind text options.
-* **Kinetic Choreography**:
-  * Indicator pill morphs $X$-position and width smoothly between tabs with organic spring inertia.
-
-### 6. Terminal & Code Editor Window
-* **Visual Blueprint**:
-  * Dark monokai theme, line numbers, syntax-highlighted code chunks.
-* **Kinetic Choreography**:
-  * Line-by-line typewriter entrance with authentic blinking vertical bar caret (`opacity: 0 \leftrightarrow 1`).
+#### 2. Collage & Tactile Visual Primitives
+* **Die-Cut / Sticker Border**: Configurable outer sticker stroke (e.g. 4px solid white border with hard edge) around cutout photos, PNGs, and typography.
+* **Hard Shadow (No Blur)**: Retro/zine/brutalist offset shadows (`box-shadow: 6px 6px 0px #000`) instead of soft diffuse blurs.
+* **Paper Grain & Noise Overlay**: Global or per-scene SVG noise filter / texture layer (`feTurbulence` / canvas noise) providing tactile paper or film grain feel.
+* **Stop-Motion Line Boil / Wiggle Effect**:
+  * An ambient animation preset (`preset: "wiggle"` / `preset: "boil"`) that applies a subtle pseudo-random rotation ($\pm 1.5^\circ$) and offset ($\pm 2\text{px}$) that steps at 6–8 FPS, making collages and cutouts feel alive and hand-crafted.
 
 ---
 
-## 5. Smart Default Animation Choreography
+### Phase 5: One-Click Aesthetic Preset Profiles (The "Mood" Selector)
 
-When a user or AI drops a component or splits text, Motion Studio must never leave elements dead or statically appearing all at once. It must automatically assign **tasteful, cinematic defaults**:
+Instead of forcing users to manually tweak 40 tiny switches to get a specific visual style, Motion Studio provides **One-Click Aesthetic Profiles** that configure the baseline levers for the project or scene:
 
-1. **Directional Coherence & Parallax Depth**:
-   - Parent container enters with a subtle $+20\text{px}$ slide-up.
-   - Child elements enter with $+10\text{px}$ slide-up and $0.1\text{s}$ stagger delay, creating instantaneous depth.
-2. **Dynamic Duration Proportionality**:
-   - Small micro-elements (badges, icons, pills) default to **0.4s – 0.5s** duration.
-   - Medium cards, chat bubbles, and modal frames default to **0.6s – 0.7s** duration.
-   - Full-screen scene wipes and backdrop transitions default to **0.8s – 1.0s** duration.
-3. **The 3-Phase Lifecycle Architecture**:
-   - **In (Entrance)**: How the element arrives on screen (`Pop In`, `Snappy Slide Up`, `Blur Reveal`, `3D Flip`).
-   - **Emphasis (Idle Attention)**: Subtle living loops during rest (`Pulse`, `Float Wave`, `Glow Shimmer`, `Heartbeat`).
-   - **Out (Exit)**: Clean, purposeful dismissal (`Snappy Slide Down`, `Fade Shrink`, `Blur Out`).
+| Aesthetic Profile | Frame Rate | Easing & Physics | Surface Medium | Camera / Staging |
+| :--- | :--- | :--- | :--- | :--- |
+| 🍏 **Product Showcase** | 60 FPS (Continuous) | Critically Damped Springs ($k=280, \zeta=0.82$) | G2 Squircles, Soft Elevation Blurs, Glassmorphism | Telephoto 3D Lens |
+| ✂️ **Paper Collage** | 8 FPS (Stepped) | Stepped / Quantized Motion | White Sticker Outlines, Hard 0px Blur Shadows, Paper Grain | Flat 2D + Ambient Wiggle |
+| 📰 **Kinetic Editorial** | 24 FPS (Cinematic) | Snappy Linear Ramps (0 $\to$ 100% in 3 frames) | High-Contrast Typography, Monochrome Accents, Hard Dividers | Flat 2D Poster Layout |
+| 📼 **Analog Retro** | 12 FPS ("On Twos") | Elastic / Bouncy Settle | Halftone Dot Raster, CRT Scanline Overlay, Chromatic Split | 2.5D Parallax Depth |
+
+* **Location in Studio**: Exposed as a clean segmented dropdown in Project Settings or Canvas Header pill: `[ Mood: Product Showcase ▾ ]`. Selecting a mood sets default framerate, shadow mode, and ambient filters.
 
 ---
 
-## 6. Actionable Implementation Checklist for Tomorrow
+### Phase 6: The AI Agent Generation Pipeline & Tool Bridge (`src/tools/`)
 
-```mermaid
-flowchart TD
-    A["1. Easing Engine Upgrades: Snappy (0.16, 1, 0.3, 1) & Spring Presets"] --> B["2. Component Templates Engine: chatBubble, appWindow, dynamicIsland, statCard"]
-    B --> C["3. Components Drawer UI & 1-Click Drop on Artboard"]
-    C --> D["4. Kinetic Text & Typing Indicator Orchestrator"]
-    D --> E["5. AI Command Bar Quick Prompts for Showcase Primitives"]
-    E --> F["6. Automated Vitest Matrix & High-Res Visual Verification"]
+#### 1. Why AI Succeeds Here (The Aesthetic Compiler Principle)
+In raw code tools (Remotion, CSS, keyframes), AI generates amateurish, broken results because it is forced to hallucinate pixel numbers (`left: 421px, top: 218px, spring(120, 14)`), resulting in colliding text, broken descenders, and chaotic pacing.
+In Motion Studio, **the engine acts as an Aesthetic Compiler and Guardian**:
+* **Zero Pixel Hallucinations**: Elements use modular grid coordinates (`col: 2, row: 2, colSpan: 12`) or hugging Frame containers.
+* **Auto-Fit Typography**: Text auto-scales and auto-wraps; descenders never clip.
+* **Curated Physics & Aesthetic Profiles**: AI selects presets (`mood: "paper-collage"`, `stepFps: 8`, `preset: "pop"`), and the engine guarantees G2 continuous curvature, physical momentum, and safe margins.
+* **Magic Move by ID**: AI simply declares Scene 1 and Scene 2 with matching element IDs. The engine automatically computes continuous spring interpolation.
+
+#### 2. The Two-Stage AI Pipeline
+```
+[ User Natural Language Prompt ]
+  │ e.g. "Create a 15-second retro collage teaser for my design podcast"
+  ▼
+[ Stage 1: Director AI ]
+  • Analyzes prompt, establishes narrative beat sheet, copy, and visual style.
+  • Selects Aesthetic Profile: `mood: "paper-collage"`, `stepFps: 8`.
+  • Outlines Scene 1 (Hook), Scene 2 (Value/Guest), Scene 3 (Outro CTA).
+  ▼
+[ Stage 2: Choreographer AI ]
+  • Step-by-step tool calling via `src/tools/`:
+    1. `create_scene({ id: "scene_1", name: "Hook", duration: 3.5, mood: "paper-collage" })`
+    2. `place_element({ sceneId: "scene_1", id: "hero_cutout", type: "image", style: { stickerBorder: true } })`
+    3. `place_element({ sceneId: "scene_1", id: "headline", type: "text", content: "The Future of Design" })`
+    4. `create_scene({ id: "scene_2", name: "Guest", duration: 4.0 })`
+    5. `apply_magic_move({ fromSceneId: "scene_1", toSceneId: "scene_2" })`
 ```
 
-### Specific Steps:
-1. **Engine Updates (`src/engine/easings.ts`, `src/engine/evaluator.ts`)**:
-   - Make `snappy` (`cubic-bezier(0.16, 1, 0.3, 1)`) the default curve for all slide and scale presets.
-   - Expose explicit `snappy` easing pill in `AnimateInspector.tsx`.
-2. **Component Templates Data Model (`src/types/components.ts` / `src/store/componentTemplates.ts`)**:
-   - Define declarative JSON recipes for:
-     - `chatBubbleSent` & `chatBubbleReceived`
-     - `typingIndicator`
-     - `appWindow`
-     - `dynamicIslandPill`
-     - `kpiMetricCard`
-     - `codeTerminal`
-3. **Components Drawer (`src/components/components/ComponentsDrawer.tsx`)**:
-   - Populate visual preview cards for each showcase primitive.
-   - Clicking a component inserts it directly onto the active Artboard with resting styles and pre-wired kinetic animations.
-4. **Typing Indicator & Text Stagger Enhancements**:
-   - Add pulsating dots animation recipe in `evaluator.ts`.
-   - Ensure typing indicator seamlessly connects to the chat bubble appearance.
-5. **AI Assistant Integration (`AICommandBar.tsx`)**:
-   - Enable commands like *"Add chat message saying 'Welcome to Motion Studio!' with typing indicator"* to auto-compose the full component and timeline tracks.
-6. **Full Test & Visual Verification**:
-   - Maintain 100% test pass rate across all Vitest test suites.
-   - Capture high-resolution Playwright screenshots of each new showcase primitive in motion.
+#### 3. The Tool Calling API (`src/tools/`)
+The tool bridge wraps `useProjectStore` actions with strict **Zod schemas** and **constructive self-healing**:
+* `create_scene(schema)`: Auto-clamps durations between 0.5s and 60s.
+* `place_element(schema)`: Auto-clamps grid positions within screen bounds.
+* `apply_animation(schema)`: Validates presets against token registries.
+* `get_storyboard_state()`: Returns compact AST of the scenes for the AI to inspect.
+* `lint_storyboard()`: AST pre-flight linter checking for zero text overflows, zero black frames, and valid aspect ratios.
 
 ---
 
-## 7. Quick Context & Commands Cheat Sheet
+## 4. Universal Motion Graphics Audit & Current Progress Tracker
 
-* **Run Dev Server**: `npm run dev`
-* **Run Vitest Test Suite**: `npm test`
-* **Run Production Build**: `npm run build`
-* **Run Playwright Verification**: `node src/test/verify_architecture_ui.js`
-* **Key Store Actions**:
-  - `sendScreenToMotion(screenId)`: registers artboard layers and enters MOTION mode.
-  - `setUiMode("design" | "motion")`: switches operational suite.
-  - `updateLayerStyle(layerId, { borderRadius, clipContent, ... })`: updates design styles with live two-way sync.
+```
+Architecture Progress: [████████████████████] 100% Complete
+  ✓ Completed:
+    • Deterministic O(1) mathematical evaluator & analytical harmonic springs
+    • Fixed 100% video theater monitor with timeline sync
+    • Sequential multi-scene hybrid timeline with proportional scene blocks
+    • Mode-aware layout (Header switcher, floating toolbar, full-height inspector)
+    • Independent mode state preservation (camera, selections, playhead)
+    • Omnipresent in-place renaming & zero-dead-button action parity
+    • WebCodecs / FFmpeg frame-accurate video export pipeline
+    • Three.js PBR 3D mockup infrastructure
+    • Stepped Time Quantizer in evaluator.ts (8–12 FPS stop-motion engine)
+    • Missing primitives (Line, Arrow, Frame clipping container, Polygon/Triangle)
+    • Lazy-loaded local Lucide icon picker (1,555 icons, 100% offline, <1ms search)
+    • Tactile collage styling (Sticker outline, 0px hard shadow, paper grain, line boil)
+    • Pre-composed Component Library (Browser Window, 3D devices, kinetic counter, code block)
+    • One-click Aesthetic Profiles dropdown (Product Showcase, Paper Collage, Kinetic Editorial, Analog Retro)
+    • AI Agent Tool Calling Bridge (createScene, placeElement, applyAnimation, getStoryboardState)
+    • Perception Engine & AST Pre-Flight Linter (Rule 8 anti-pattern auditing, zero black frames)
+    • Two-Stage AI Director & Choreographer Orchestrator
+```
+
+---
+
+## 5. Execution Roadmap & Ordered Milestones for Next Sessions
+
+### Milestone 1: The Stepped Time Engine & Missing Primitives (Completed)
+- [x] Add `stepFps` property to `Screen` and `AnimationClip` in `src/types/scene.ts`.
+- [x] In `src/engine/evaluator.ts`, implement stepped time quantization:
+  $$t_{\text{stepped}} = \frac{\lfloor t \times \text{stepFps} \rfloor}{\text{stepFps}}$$
+- [x] Add `LineLayer`, `FrameLayer`, `PolygonLayer` to `src/types/scene.ts`.
+- [x] Implement `LineRenderer.tsx` and `PolygonRenderer.tsx`.
+- [x] Implement `FrameRenderer.tsx` with `overflow: hidden` clipping and relative child coordinates.
+- [x] Update `FloatingDesignToolbar.tsx` with the `Shapes ▾` dropdown (Rect, Circle, Triangle, Star, Polygon, Line, Arrow) and Frame tool.
+
+### Milestone 2: The Local Lucide Icon Picker & Tactile Collage Pack (Completed)
+- [x] Create `IconPickerPopover.tsx` lazy-loading the local `lucide-react` dictionary (all 1,555 vector icons, 100% offline, <1ms in-memory search).
+- [x] Add **Sticker / Die-Cut Border** toggle in Inspector (`stickerBorder: { width: 4, color: "#ffffff" }`).
+- [x] Add **Hard Shadow** option in Inspector (`shadowMode: "soft" | "hard"`).
+- [x] Add **Ambient Stop-Motion Wiggle / Boil** preset (`preset: "boil"`).
+
+### Milestone 3: Component Library & Aesthetic Profiles (Completed)
+- [x] Connect `Components` drawer with Browser Window frame and 3D Device frames (iPhone/MacBook).
+- [x] Implement **Kinetic Counter** primitive (mechanical rolling odometer numbers).
+- [x] Add **Aesthetic Profiles** dropdown in Project Settings & Scene Inspector (`Product Showcase`, `Paper Collage`, `Kinetic Editorial`, `Analog Retro`).
+
+### Milestone 4: The AI Agent Tool Calling Bridge & Orchestrator (Completed)
+- [x] Implement `src/tools/createScene.ts`, `src/tools/placeElement.ts`, `src/tools/applyAnimation.ts` with Zod validation.
+- [x] Implement constructive auto-clamping (self-healing parameters) & modular grid solver (`src/engine/grid/gridSolver.ts`).
+- [x] Implement AST pre-flight linter (`src/engine/perception/linter.ts`) checking for zero black frames, no ghost cards, no eyebrows/badges.
+- [x] Build the Two-Stage Director $\to$ Choreographer prompt orchestrator (`src/tools/orchestrator.ts`).
+- [x] Run `npx vitest run` and `npm run build` to guarantee 100% test and build pass rate across all layers.
+
+---
+
+## 6. Next Session Focus: Bug Fixing, User QA & Export Overhaul
+
+> **Mission for Next Sessions**: The foundational milestones (1–4), full modularity decomposition, and canonical shadcn UI migrations are 100% complete and verified green. The next sessions are dedicated to **systematic bug fixing, addressing all user-identified issues and workflow changes, and overhauling the export engine**.
+
+### 1. Multi-Studio & Project File Architecture Decisions
+* **Three Distinct Applications/Workflows**:
+  * **Motion Studio** (current app), **3D Studio**, and **Video Editor** are separate applications/workflows chosen at project inception, rather than hot-swappable modes within one open document.
+* **Rendered Video Interchange (Transparent Alpha Bridge)**:
+  * We reject the heavy live-nested dynamic link trap (which causes timeline stutter and crashes in video editors).
+  * Motion graphics are rendered to video with **alpha transparency** (WebM VP9 with alpha, ProRes 4444, PNG sequences) and imported into the Video Editor / 3D Studio as lightweight, buttery-smooth 60fps video clips.
+* **Project File Format**:
+  * Motion Studio project save files use the extension **`.motion`**.
+
+### 2. Immediate Workstreams for Next Sessions
+
+#### Workstream A: User-Identified Bug Fixing & Quality of Life
+* Address all functional bugs, layout shifts, or interaction quirks uncovered during user testing across:
+  - Canvas interactions (dragging, resizing, snapping, multi-selection bounding boxes).
+  - Inspector controls (numeric scrub inputs, color pickers, font changes, corner radii).
+  - Timeline scrubbing and playback synchronization.
+  - Text editing lifecycle (enter/exit, word splitting, caret position).
+
+#### Workstream B: Export Engine Overhaul (`videoExporter.ts` & `ExportModal.tsx`)
+* **Transparent Alpha Video Export**:
+  - Add option to export with a transparent background (discarding solid canvas fills) using WebM VP9 with alpha and PNG image sequences.
+* **Resolution & Format Presets**:
+  - 1080p Full HD (1920x1080), 4K UHD (3840x2160), 9:16 Vertical (1080x1920 for Shorts/Reels/TikTok), 1:1 Square (1080x1080).
+* **Deterministic Frame Stepping**:
+  - Guarantee zero dropped frames or desyncs during headless and background renders.
+
+#### Workstream C: Desktop (Tauri) Readiness
+* Ensure all file export and save operations seamlessly bridge between browser blob downloads and native desktop file system APIs (`dialog.save`, `fs.writeFile`).
+
+
+

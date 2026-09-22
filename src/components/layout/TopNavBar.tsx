@@ -1,48 +1,46 @@
 import React, { useState } from "react";
 import {
-  Undo2,
-  Redo2,
-  Sparkles,
+  ArrowLeft,
   Download,
-  ZoomIn,
-  Maximize2,
-  Sun,
-  Moon,
+  ChevronDown,
 } from "lucide-react";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore, isMotionMode } from "@/store/useProjectStore";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { CompactSegmentedControl } from "@/components/ui/compact-segmented-control";
+import { cn } from "@/lib/utils";
+
+import { useProjectRegistryStore } from "@/store/useProjectRegistryStore";
 
 interface TopNavBarProps {
-  onOpenAiBar: () => void;
+  onOpenAiBar?: () => void;
   onOpenExportModal: () => void;
   onToggleZenMode?: () => void;
+  onBackToWorkspace?: () => void;
 }
 
 export const TopNavBar: React.FC<TopNavBarProps> = ({
   onOpenAiBar,
   onOpenExportModal,
   onToggleZenMode,
+  onBackToWorkspace,
 }) => {
   const {
     document: doc,
     setProjectName,
-    uiMode,
-    setUiMode,
-    canUndo,
-    canRedo,
-    undo,
-    redo,
     zoom,
     setZoom,
-    theme,
-    toggleTheme,
+    uiMode,
+    setUiMode,
   } = useProjectStore();
+
+  const syncCurrentProjectName = useProjectRegistryStore(
+    (s) => s.syncCurrentProjectName
+  );
+  const closeProject = useProjectRegistryStore((s) => s.closeProject);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(doc.name);
@@ -50,31 +48,38 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   const handleTitleSubmit = () => {
     if (titleInput.trim()) {
       setProjectName(titleInput.trim());
+      syncCurrentProjectName(titleInput.trim());
     } else {
       setTitleInput(doc.name);
     }
     setIsEditingTitle(false);
   };
 
+  const handleBack = () => {
+    if (onBackToWorkspace) {
+      onBackToWorkspace();
+    } else {
+      closeProject();
+    }
+  };
+
   return (
-    <header className="h-10 w-full bg-card border-b border-border px-3.5 flex items-center justify-between z-[9999] relative select-none shrink-0 text-foreground">
-      {/* Left: App Wordmark, Breadcrumb Title & History */}
-      <div className="flex items-center gap-2.5">
-        {/* Minimal Wordmark */}
-        <div className="flex items-center gap-1.5">
-          <span className="font-bold text-xs tracking-tight text-foreground flex items-center gap-1.5">
-            CHOREO
-          </span>
-          {/* Subtle Saved Indicator Dot */}
-          <span
-            className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]"
-            title="All changes saved to project"
-          />
-        </div>
+    <header className="h-12 w-full bg-[#111113] border-b border-[#222226] px-3 flex items-center justify-between z-30 relative select-none shrink-0 text-white">
+      {/* Left: Back button & File Name Dropdown */}
+      <div className="flex items-center gap-2">
+        {/* Back Arrow */}
+        <button
+          type="button"
+          onClick={handleBack}
+          className="h-8 w-8 rounded flex items-center justify-center text-[#9ca3af] hover:text-white hover:bg-white/10 transition-colors"
+          title="Back to Projects"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </button>
 
-        <div className="h-3.5 w-px bg-border" />
+        <div className="h-4 w-px bg-[#27272a]" />
 
-        {/* Inline Editable Project Title */}
+        {/* File Name */}
         {isEditingTitle ? (
           <input
             type="text"
@@ -89,120 +94,81 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               }
             }}
             autoFocus
-            className="h-6 px-1.5 text-xs font-medium text-foreground bg-muted/60 rounded-[6px] border border-primary outline-none w-44 font-mono"
+            className="h-7 px-2 text-xs font-medium text-white bg-[#1f1f23] rounded border border-purple-500 outline-none w-44 text-left"
           />
         ) : (
-          <div
+          <button
             onClick={() => {
               setTitleInput(doc.name);
               setIsEditingTitle(true);
             }}
-            className="h-6 px-1.5 flex items-center text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-[6px] cursor-pointer transition-colors max-w-[180px] truncate"
-            title="Click to rename project"
+            className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-[#e4e4e7] hover:text-white hover:bg-white/5 rounded transition-colors"
+            title="Click to rename"
           >
-            {doc.name}
-          </div>
+            <span className="max-w-[180px] truncate">{doc.name || "New file"}</span>
+            <ChevronDown className="h-3 w-3 text-[#71717a] shrink-0" />
+          </button>
         )}
+      </div>
 
-        <div className="h-3.5 w-px bg-border" />
-
-        {/* History: Undo / Redo */}
-        <div className="flex items-center gap-0.5">
+      {/* Center: Design vs Animate Mode Switcher */}
+      <div className="absolute left-1/2 -translate-x-1/2 flex items-center">
+        <div className="bg-[#1f1f23] p-0.5 rounded-lg flex items-center border border-[#27272a] shadow-inner">
           <button
-            disabled={!canUndo}
-            onClick={undo}
-            title="Undo (Cmd+Z)"
-            className="h-6 w-6 rounded-[6px] flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-20 transition-colors"
+            type="button"
+            onClick={() => setUiMode("design")}
+            className={cn(
+              "px-3.5 py-1 text-xs font-semibold rounded-md transition-all",
+              !isMotionMode(uiMode)
+                ? "bg-[#7c3aed] text-white shadow-xs"
+                : "text-[#a1a1aa] hover:text-white hover:bg-white/5"
+            )}
           >
-            <Undo2 className="h-3.5 w-3.5" />
+            Design
           </button>
           <button
-            disabled={!canRedo}
-            onClick={redo}
-            title="Redo (Cmd+Shift+Z)"
-            className="h-6 w-6 rounded-[6px] flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 disabled:opacity-20 transition-colors"
+            type="button"
+            onClick={() => setUiMode("animate")}
+            className={cn(
+              "px-3.5 py-1 text-xs font-semibold rounded-md transition-all",
+              isMotionMode(uiMode)
+                ? "bg-[#7c3aed] text-white shadow-xs"
+                : "text-[#a1a1aa] hover:text-white hover:bg-white/5"
+            )}
           >
-            <Redo2 className="h-3.5 w-3.5" />
+            Animate
           </button>
         </div>
       </div>
 
-      {/* Center: Studio Switcher [ DESIGN | MOTION ] */}
-      <div className="w-52">
-        <CompactSegmentedControl
-          value={uiMode === "motion" || uiMode === "animate" ? "motion" : "design"}
-          onChange={(val) => setUiMode(val as "design" | "motion")}
-          options={[
-            { value: "design", label: "DESIGN", tooltip: "Static Vector & Kinetic Staging" },
-            { value: "motion", label: "MOTION", tooltip: "Motion Choreography & Timeline" },
-          ]}
-          size="sm"
-        />
-      </div>
-
-      {/* Right: Zoom, Theme, AI, Zen Mode & Export */}
+      {/* Right: Zoom & Purple Export Button */}
       <div className="flex items-center gap-2">
-        {/* Canvas Zoom */}
+        {/* Zoom Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="h-7 text-[11px] font-mono px-2 gap-1 text-muted-foreground hover:text-foreground border border-border bg-muted/40 hover:bg-muted rounded-[8px] flex items-center transition-colors">
-              <ZoomIn className="h-3 w-3 text-muted-foreground" />
+            <button className="h-8 text-xs px-2.5 gap-1 text-[#d4d4d8] hover:text-white hover:bg-white/5 rounded flex items-center transition-colors">
               <span>{Math.round(zoom * 100)}%</span>
+              <ChevronDown className="h-3 w-3 text-[#71717a]" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="text-xs">
-            <DropdownMenuItem onClick={() => setZoom(0.5)}>50%</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setZoom(0.75)}>75%</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setZoom(1)}>100% (Fit)</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setZoom(1.25)}>125%</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setZoom(1.5)}>150%</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setZoom(2)}>200%</DropdownMenuItem>
+          <DropdownMenuContent align="end" className="bg-[#18181b] border-[#27272a] text-xs text-white">
+            {!isMotionMode(uiMode) && (
+              <>
+                <DropdownMenuItem onClick={() => setZoom(0.5)} className="hover:bg-white/10">50%</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setZoom(0.75)} className="hover:bg-white/10">75%</DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuItem onClick={() => setZoom(1)} className="hover:bg-white/10">100% (Fit)</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setZoom(1.25)} className="hover:bg-white/10">125%</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setZoom(1.5)} className="hover:bg-white/10">150%</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setZoom(2)} className="hover:bg-white/10">200%</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Theme Toggle (Light / Dark) */}
-        <button
-          onClick={toggleTheme}
-          className="h-7 w-7 rounded-[8px] border border-border bg-muted/40 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-          title={`Switch to ${theme === "dark" ? "Light" : "Dark"} Mode`}
-        >
-          {theme === "dark" ? (
-            <Sun className="h-3.5 w-3.5" />
-          ) : (
-            <Moon className="h-3.5 w-3.5" />
-          )}
-        </button>
-
-        {/* AI Command Bar Trigger */}
-        <button
-          onClick={onOpenAiBar}
-          className="h-7 text-[11px] px-2 gap-1.5 border border-border bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground rounded-[8px] flex items-center transition-colors"
-          title="Open AI Command Palette (Cmd+K)"
-        >
-          <Sparkles className="h-3 w-3 text-muted-foreground" />
-          <span>AI</span>
-          <kbd className="text-[9px] bg-background/80 px-1 py-0.2 rounded border border-border/60 text-muted-foreground font-mono">
-            ⌘K
-          </kbd>
-        </button>
-
-        {/* Zen Presentation Mode Toggle */}
-        {onToggleZenMode && (
-          <button
-            onClick={onToggleZenMode}
-            className="h-7 w-7 rounded-[8px] border border-border bg-muted/40 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            title="Toggle Zen Presentation Mode (Cmd+\)"
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-          </button>
-        )}
-
-        <div className="h-3.5 w-px bg-border" />
-
-        {/* Neutral Export Action */}
+        {/* Purple Export Pill Button */}
         <button
           onClick={onOpenExportModal}
-          className="h-7 text-xs font-medium px-3 bg-primary text-primary-foreground hover:bg-primary/90 rounded-[8px] flex items-center gap-1.5 transition-colors shadow-xs"
+          className="h-8 text-xs font-medium px-4 bg-[#7c3aed] hover:bg-[#6d28d9] text-white rounded-md flex items-center gap-1.5 transition-colors shadow-sm"
           title="Export video"
         >
           <Download className="h-3.5 w-3.5" />

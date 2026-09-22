@@ -1,13 +1,21 @@
-import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from "react";
-import { useProjectStore, findLayerInTree, findParentGroupInTree, findTopmostParentGroupInTree, CanvasTool } from "@/store/useProjectStore";
-import { Layer } from "@/types/scene";
+import React, { useRef, useState, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
+import {
+  useProjectStore,
+  findLayerInTree,
+  findParentGroupInTree,
+  findTopmostParentGroupInTree,
+  CanvasTool,
+  isMotionMode,
+  getScreenAtTime,
+  getTotalDuration,
+  getScreenTimings,
+} from "@/store/useProjectStore";
+import { Layer, getLayerClips } from "@/types/scene";
 import { THEME_TOKENS } from "@/theme/tokens";
 import { ScreenRenderer } from "./renderers/ScreenRenderer";
-import { FloatingToolbar } from "./FloatingToolbar";
 import { evaluateSceneAtTime } from "@/engine/evaluator";
 import { TransformBox } from "./TransformBox";
 import { SnapGuide } from "./snapping";
-import { CanvasContextMenu } from "./CanvasContextMenu";
 import { DistanceOverlay } from "./DistanceOverlay";
 import { BindingConnectionOverlay } from "./BindingConnectionOverlay";
 import { useContextMenuStore } from "@/store/useContextMenuStore";
@@ -22,36 +30,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-function getLayerBounds(
-  layer: Layer,
-  screenRect: DOMRect,
-  domScale: number
-): { x: number; y: number; width: number; height: number } {
-  const el = document.getElementById(`layer-${layer.id}`);
-  if (el) {
-    const r = el.getBoundingClientRect();
-    return {
-      x: (r.left - screenRect.left) / domScale,
-      y: (r.top - screenRect.top) / domScale,
-      width: r.width / domScale,
-      height: r.height / domScale,
-    };
-  }
-  return {
-    x: layer.style.x || 0,
-    y: layer.style.y || 0,
-    width: typeof layer.style.width === "number" ? layer.style.width : 200,
-    height: typeof layer.style.height === "number" ? layer.style.height : 100,
-  };
-}
+import { FloatingDesignToolbar } from "./FloatingDesignToolbar";
+import { getLayerBounds } from "./helpers/canvasMath";
+import { createLayerForTool } from "./helpers/toolCreationHelpers";
+import { usePlaybackLoop } from "./hooks/usePlaybackLoop";
+import { useSelectionBounds } from "./hooks/useSelectionBounds";
+import { useCanvasHotkeys } from "./hooks/useCanvasHotkeys";
 
 interface CanvasViewportProps {
   onOpenComponentsDrawer: () => void;
+  onOpenAiBar?: () => void;
 }
 
 export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   onOpenComponentsDrawer,
+  onOpenAiBar,
 }) => {
   const {
     document: doc,
@@ -59,6 +52,9 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     selectedLayerIds,
     selectLayer,
     deselectAll,
+    selectScreen,
+    addScreen,
+    updateScreen,
     editingLayerId,
     setEditingLayerId,
     activeTool,
@@ -78,22 +74,27 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     commitTransaction,
     alignSelectedLayers,
     distributeSpacing,
+    pan,
+    setPan,
   } = useProjectStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
   const [guides, setGuides] = useState<SnapGuide[]>([]);
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    layerId: string | null;
-  } | null>(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
 
-  const activeScreen =
-    doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
+  const isAnimate = isMotionMode(uiMode);
+
+  // Active screen and timing resolution
+  const screenMatch = useMemo(
+    () => getScreenAtTime(doc.screens, currentTime),
+    [doc.screens, currentTime]
+  );
+
+  const activeScreen = isAnimate
+    ? screenMatch.screen
+    : (doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0]);
 
   // Selected layers
   const selectedLayers = selectedLayerIds
@@ -121,17 +122,102 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
 
   // Fit scale calculation relative to viewport window
   const [viewportScale, setViewportScale] = useState(0.45);
+  const isInitialMountRef = useRef(true);
+
+  // Focus / center a screen in the viewport at 100% scale with symmetric padding
+  const focusScreen = useCallback(
+    (screenId: string) => {
+      const targetScreenIdx = doc.screens.findIndex((s) => s.id === screenId);
+      if (targetScreenIdx === -1) return;
+      const targetScreen = doc.screens[targetScreenIdx];
+      const sWidth = targetScreen.width ?? doc.settings.width;
+      const sHeight = targetScreen.height ?? doc.settings.height;
+      const isAnimateMode = isMotionMode(uiMode);
+      const screenX = isAnimateMode ? 0 : (targetScreen.x ?? (targetScreenIdx * (sWidth + 120)));
+      const screenY = isAnimateMode ? 0 : (targetScreen.y ?? 0);
+
+      if (!containerRef.current) return;
+      const { clientWidth, clientHeight } = containerRef.current;
+      if (clientWidth <= 0 || clientHeight <= 0) return;
+
+      const margin = 80;
+      const scaleX = (clientWidth - margin) / sWidth;
+      const scaleY = (clientHeight - margin) / sHeight;
+      const fit = Math.min(scaleX, scaleY, 1);
+      const newScale = Math.max(0.1, Math.round(fit * 1000) / 1000);
+
+      setViewportScale(newScale);
+      setZoom(1);
+
+      // Center the target screen exactly at the center of the viewport
+      const centerX = screenX + sWidth / 2;
+      const centerY = screenY + sHeight / 2;
+
+      setPan({
+        x: Math.round(-centerX * newScale),
+        y: Math.round(-centerY * newScale),
+      });
+    },
+    [doc.screens, doc.settings.width, doc.settings.height, setZoom, uiMode]
+  );
 
   const updateAutoFit = useCallback(() => {
     if (!containerRef.current) return;
     const { clientWidth, clientHeight } = containerRef.current;
     if (clientWidth <= 0 || clientHeight <= 0) return;
-    const margin = 64;
-    const scaleX = (clientWidth - margin) / doc.settings.width;
-    const scaleY = (clientHeight - margin) / doc.settings.height;
+    const margin = 80;
+    const active = doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
+    const sWidth = active.width ?? doc.settings.width;
+    const sHeight = active.height ?? doc.settings.height;
+    const scaleX = (clientWidth - margin) / sWidth;
+    const scaleY = (clientHeight - margin) / sHeight;
     const fit = Math.min(scaleX, scaleY, 1);
-    setViewportScale(Math.max(0.1, Math.round(fit * 1000) / 1000));
-  }, [doc.settings.width, doc.settings.height]);
+    const newScale = Math.max(0.1, Math.round(fit * 1000) / 1000);
+    setViewportScale(newScale);
+
+    const isAnimateMode = isMotionMode(uiMode);
+    if (isAnimateMode) {
+      if (useProjectStore.getState().zoom < 1.0) {
+        setZoom(1.0);
+      }
+      const storeState = useProjectStore.getState();
+      if (!storeState.animateModeState && storeState.zoom <= 1.0) {
+        const centerX = sWidth / 2;
+        const centerY = sHeight / 2;
+        setPan({
+          x: Math.round(-centerX * newScale),
+          y: Math.round(-centerY * newScale),
+        });
+      }
+      return;
+    }
+
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      const targetIdx = Math.max(0, doc.screens.findIndex((s) => s.id === active.id));
+      const screenX = active.x ?? (targetIdx * (sWidth + 120));
+      const screenY = active.y ?? 0;
+      const currentZoom = useProjectStore.getState().zoom;
+      const centerX = screenX + sWidth / 2;
+      const centerY = screenY + sHeight / 2;
+      const initialPan = {
+        x: Math.round(-centerX * newScale * currentZoom),
+        y: Math.round(-centerY * newScale * currentZoom),
+      };
+      setPan(initialPan);
+      if (!useProjectStore.getState().designModeState) {
+        useProjectStore.setState({
+          designModeState: {
+            pan: initialPan,
+            zoom: currentZoom,
+            activeScreenId: active.id,
+            selectedLayerIds: useProjectStore.getState().selectedLayerIds,
+            activeTool: useProjectStore.getState().activeTool,
+          },
+        });
+      }
+    }
+  }, [doc.screens, doc.settings.width, doc.settings.height, activeScreenId, uiMode, setZoom, setPan]);
 
   useLayoutEffect(() => {
     updateAutoFit();
@@ -154,6 +240,17 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
 
   const effectiveScale = viewportScale * zoom;
 
+  useEffect(() => {
+    const handleFocusScreen = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.screenId) {
+        focusScreen(detail.screenId);
+      }
+    };
+    window.addEventListener("motion-focus-screen", handleFocusScreen);
+    return () => window.removeEventListener("motion-focus-screen", handleFocusScreen);
+  }, [focusScreen]);
+
   const siblingBoxes = activeScreen.layers
     .filter((l) => !selectedLayerIds.includes(l.id))
     .map((l) => ({
@@ -164,208 +261,23 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     }));
 
   // Global keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const isInput =
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        (e.target as HTMLElement)?.isContentEditable;
-
-      if (e.altKey && !isInput) {
-        setAltPressed(true);
-      }
-
-      if (e.code === "Space" && !spacePressed && !isInput) {
-        e.preventDefault();
-        setSpacePressed(true);
-      } else if (e.shiftKey && (e.key === "!" || e.code === "Digit1") && !isInput) {
-        // Shift + 1: Zoom to Fit
-        setZoom(1);
-        setPan({ x: 0, y: 0 });
-      } else if (e.shiftKey && (e.key === "@" || e.code === "Digit2") && !isInput) {
-        // Shift + 2: Zoom to Selection
-        if (selectedLayerIds.length > 0 && containerRef.current) {
-          const screenEl = document.getElementById(`screen-${activeScreen.id}`);
-          if (screenEl) {
-            const screenRect = screenEl.getBoundingClientRect();
-            const domScale = screenRect.width > 0 ? screenRect.width / doc.settings.width : effectiveScale;
-            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-            for (const id of selectedLayerIds) {
-              const layer = findLayerInTree(activeScreen.layers, id);
-              if (layer) {
-                const b = getLayerBounds(layer, screenRect, domScale);
-                minX = Math.min(minX, b.x);
-                minY = Math.min(minY, b.y);
-                maxX = Math.max(maxX, b.x + b.width);
-                maxY = Math.max(maxY, b.y + b.height);
-              }
-            }
-            if (minX !== Infinity && maxX > minX && maxY > minY) {
-              const selW = maxX - minX;
-              const selH = maxY - minY;
-              const cW = containerRef.current.clientWidth - 100;
-              const cH = containerRef.current.clientHeight - 100;
-              const targetScale = Math.min(cW / selW, cH / selH, 4.0);
-              const targetZoom = targetScale / (screenRect.width / (doc.settings.width * zoom));
-              const selCenterX = minX + selW / 2;
-              const selCenterY = minY + selH / 2;
-              setZoom(targetZoom);
-              setPan({
-                x: -(selCenterX - doc.settings.width / 2) * targetScale,
-                y: -(selCenterY - doc.settings.height / 2) * targetScale,
-              });
-            }
-          }
-        }
-      } else if ((e.ctrlKey || e.metaKey) && e.key === "0" && !isInput) {
-        // Ctrl + 0: Zoom 100%
-        setZoom(1);
-        setPan({ x: 0, y: 0 });
-      } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key === "g" || e.key === "G") && !isInput) {
-        // Ctrl + G: Group
-        e.preventDefault();
-        groupSelection();
-      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "g" || e.key === "G") && !isInput) {
-        // Ctrl + Shift + G: Ungroup
-        e.preventDefault();
-        if (selectedLayerIds[0]) {
-          ungroup(selectedLayerIds[0]);
-        }
-      } else if (e.shiftKey && e.key === "Enter" && !isInput) {
-        // Shift + Enter: Ascend hierarchy to parent group
-        if (selectedLayerIds[0]) {
-          const parent = findParentGroupInTree(activeScreen.layers, selectedLayerIds[0]);
-          if (parent) {
-            e.preventDefault();
-            selectLayer(parent.id, false);
-          }
-        }
-      } else if (e.key === "Enter" && !isInput && !editingLayerId) {
-        if (selectedLayerIds[0]) {
-          const layer = findLayerInTree(activeScreen.layers, selectedLayerIds[0]);
-          if (layer) {
-            if (layer.type === "text" || layer.type === "chunk") {
-              // Two-step lifecycle: selecting text layer and pressing Enter mounts inline textarea
-              e.preventDefault();
-              setEditingLayerId(layer.id);
-            } else if (layer.type === "group" && layer.children.length > 0) {
-              e.preventDefault();
-              selectLayer(layer.children[0].id, false);
-            }
-          }
-        }
-      } else if (e.key === "Escape") {
-        if (editingLayerId) {
-          setEditingLayerId(null);
-        } else if (selectedLayerIds.length > 0) {
-          // Bubbles selection back up to parent card or deselects when at top level
-          const parent = findParentGroupInTree(activeScreen.layers, selectedLayerIds[0]);
-          if (parent) {
-            selectLayer(parent.id, false);
-          } else {
-            deselectAll();
-          }
-        }
-      } else if ((e.key === "Delete" || e.key === "Backspace") && !isInput) {
-        if (selectedLayerIds.length > 0) {
-          e.preventDefault();
-          startTransaction();
-          selectedLayerIds.forEach((id) => removeLayer(id));
-          commitTransaction();
-          deselectAll();
-        }
-      } else if ((e.ctrlKey || e.metaKey) && (e.key === "d" || e.key === "D") && !isInput) {
-        // Ctrl + D: Duplicate
-        if (selectedLayerIds.length > 0) {
-          e.preventDefault();
-          startTransaction();
-          selectedLayerIds.forEach((id) => duplicateLayer(id));
-          commitTransaction();
-        }
-      } else if ((e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A") && !isInput) {
-        // Ctrl + A: Select All Root Layers
-        e.preventDefault();
-        const allIds = activeScreen.layers.map((l) => l.id);
-        useProjectStore.setState({ selectedLayerIds: allIds });
-      } else if (e.altKey && !isInput && selectedLayerIds.length > 0) {
-        // Alt-based Figma Alignment & Distribution hotkeys
-        const rel = selectedLayerIds.length === 1 ? "canvas" : "selection";
-        if (e.key === "a" || e.key === "A") {
-          e.preventDefault();
-          alignSelectedLayers("left", rel);
-        } else if (e.key === "d" || e.key === "D") {
-          e.preventDefault();
-          alignSelectedLayers("right", rel);
-        } else if (e.key === "w" || e.key === "W") {
-          e.preventDefault();
-          alignSelectedLayers("top", rel);
-        } else if (e.key === "s" || e.key === "S") {
-          e.preventDefault();
-          alignSelectedLayers("bottom", rel);
-        } else if (e.key === "h" || e.key === "H") {
-          e.preventDefault();
-          if (e.shiftKey) {
-            distributeSpacing("horizontal");
-          } else {
-            alignSelectedLayers("center", rel);
-          }
-        } else if (e.key === "v" || e.key === "V") {
-          e.preventDefault();
-          if (e.shiftKey) {
-            distributeSpacing("vertical");
-          } else {
-            alignSelectedLayers("middle", rel);
-          }
-        }
-      } else if (!isInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        // Creative Tool Hotkeys
-        if (e.key === "v" || e.key === "V") {
-          setTool("select");
-        } else if (e.key === "h" || e.key === "H") {
-          setTool("hand");
-        } else if (e.key === "t" || e.key === "T") {
-          setTool("text");
-        } else if (e.key === "r" || e.key === "R") {
-          setTool("rectangle");
-        } else if (e.key === "o" || e.key === "O") {
-          setTool("circle");
-        }
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (!e.altKey) {
-        setAltPressed(false);
-        setHoveredLayerId(null);
-      }
-      if (e.code === "Space") {
-        setSpacePressed(false);
-        setIsPanning(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, [
-    spacePressed,
-    setZoom,
-    groupSelection,
-    ungroup,
+  useCanvasHotkeys({
+    activeScreen,
+    doc,
     selectedLayerIds,
-    activeScreen.layers,
     editingLayerId,
     setEditingLayerId,
-    deselectAll,
-    selectLayer,
-    removeLayer,
-    duplicateLayer,
-    startTransaction,
-    commitTransaction,
-  ]);
+    spacePressed,
+    setSpacePressed,
+    setIsPanning,
+    setAltPressed,
+    setHoveredLayerId,
+    containerRef,
+    viewportScale,
+    effectiveScale,
+    focusScreen,
+    uiMode,
+  });
 
   // Native non-passive wheel listener for smooth cursor-centered zoom and panning
   useEffect(() => {
@@ -381,7 +293,8 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
 
         const currentZoom = useProjectStore.getState().zoom;
         const factor = e.deltaY < 0 ? 1.08 : 0.92;
-        const nextZoom = Math.min(Math.max(currentZoom * factor, 0.2), 4.0);
+        const minZoom = isMotionMode(uiMode) ? 1.0 : 0.2;
+        const nextZoom = Math.min(Math.max(currentZoom * factor, minZoom), 4.0);
 
         setPan((prevPan) => ({
           x: mouseX - (mouseX - prevPan.x) * (nextZoom / currentZoom),
@@ -400,7 +313,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
 
     container.addEventListener("wheel", onWheelNative, { passive: false });
     return () => container.removeEventListener("wheel", onWheelNative);
-  }, [setZoom]);
+  }, [setZoom, uiMode]);
 
   // Window pan listener so fast movement or leaving canvas boundary never drops pan
   useEffect(() => {
@@ -549,8 +462,10 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     };
   }, [marquee !== null, activeScreen.id, doc.settings.width, effectiveScale, deselectAll]);
 
+  const isPanMode = spacePressed || activeTool === "hand";
+
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (spacePressed || e.button === 1 || (activeTool === "hand" && uiMode === "design")) {
+    if (isPanMode || e.button === 1) {
       // Pan mode
       e.preventDefault();
       setIsPanning(true);
@@ -559,92 +474,63 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     }
 
     if (e.button === 0) {
-      const screenEl = document.getElementById(`screen-${activeScreen.id}`);
-      if (!screenEl) return;
-      const screenRect = screenEl.getBoundingClientRect();
-      const domScale =
-        screenRect.width > 0 ? screenRect.width / doc.settings.width : effectiveScale;
-
-      const canvasX = (e.clientX - screenRect.left) / domScale;
-      const canvasY = (e.clientY - screenRect.top) / domScale;
-
-      // 1. Text Tool click-to-place
-      if (activeTool === "text") {
-        const newId = `text_${Date.now()}`;
-        const newLayer: Layer = {
-          id: newId,
-          name: "Text Layer",
-          type: "text",
-          content: "Add text",
-          style: {
-            x: Math.round(canvasX),
-            y: Math.round(canvasY),
-            width: 400,
-            height: 80,
-            boxMode: "point",
-            scaleX: 1,
-            scaleY: 1,
-            pivotX: 0.5,
-            pivotY: 0.5,
-            rotation: 0,
-            opacity: 1,
-            fontSize: 54,
-            fontWeight: 800,
-            fontFamily: "Inter",
-            color: THEME_TOKENS.typography.headingColor,
-            textAlign: "left",
-          },
-          animation: {
-            in: {
-              preset: "pop",
-              start: 0,
-              duration: 0.6,
-              easing: "bouncy",
-            },
-          },
-        };
-        addLayer(newLayer);
-        setEditingLayerId(newId);
+      // 0. Artboard Tool click-to-place
+      if (activeTool === "artboard") {
+        addScreen();
         setTool("select");
         return;
       }
 
-      // 2. Shape Tools click-to-place
-      if (["rectangle", "circle", "star", "triangle"].includes(activeTool)) {
-        const shapeType = activeTool as "rectangle" | "circle" | "star" | "triangle";
-        const newId = `shape_${Date.now()}`;
-        const newLayer: Layer = {
-          id: newId,
-          name: `${shapeType.charAt(0).toUpperCase() + shapeType.slice(1)}`,
-          type: "shape",
-          shapeType,
-          style: {
-            x: Math.round(canvasX - 100),
-            y: Math.round(canvasY - 100),
-            width: 200,
-            height: 200,
-            scaleX: 1,
-            scaleY: 1,
-            pivotX: 0.5,
-            pivotY: 0.5,
-            rotation: 0,
-            opacity: 1,
-            backgroundColor:
-              shapeType === "circle"
-                ? THEME_TOKENS.accent.highlight
-                : THEME_TOKENS.accent.primary,
-            borderRadius: shapeType === "circle" ? 9999 : 16,
-          },
-          animation: {
-            in: {
-              preset: "pop",
-              start: 0,
-              duration: 0.6,
-              easing: "bouncy",
-            },
-          },
-        };
-        addLayer(newLayer);
+      // Hit-test which screen is under the cursor
+      let hitScreen = activeScreen;
+      let hitScreenRect: DOMRect | null = null;
+
+      for (const s of doc.screens) {
+        const el = document.getElementById(`screen-${s.id}`);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (
+            e.clientX >= rect.left &&
+            e.clientX <= rect.right &&
+            e.clientY >= rect.top &&
+            e.clientY <= rect.bottom
+          ) {
+            hitScreen = s;
+            hitScreenRect = rect;
+            break;
+          }
+        }
+      }
+
+      if (!hitScreenRect) {
+        const activeEl = document.getElementById(`screen-${activeScreen.id}`);
+        if (activeEl) hitScreenRect = activeEl.getBoundingClientRect();
+      }
+
+      if (hitScreen.id !== activeScreen.id) {
+        selectScreen(hitScreen.id);
+      }
+
+      const screenWidth = hitScreen.width ?? doc.settings.width;
+      const domScale =
+        hitScreenRect && hitScreenRect.width > 0
+          ? hitScreenRect.width / screenWidth
+          : effectiveScale;
+
+      const canvasX = hitScreenRect
+        ? (e.clientX - hitScreenRect.left) / domScale
+        : 100;
+      const canvasY = hitScreenRect
+        ? (e.clientY - hitScreenRect.top) / domScale
+        : 100;
+
+      // Click-to-place elements via active tool
+      const createdLayer = createLayerForTool(activeTool, canvasX, canvasY);
+      if (createdLayer) {
+        addLayer(createdLayer);
+        if (activeTool === "text") {
+          setEditingLayerId(createdLayer.id);
+        }
         setTool("select");
         return;
       }
@@ -690,10 +576,10 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   };
 
   const handleSelectLayer = (layerId: string, e: React.MouseEvent) => {
-    if (justMarquedRef.current) {
+    if (justMarquedRef.current || isPanMode) {
       return;
     }
-    if (activeTool !== "select" && activeTool !== "hand") {
+    if (activeTool !== "select") {
       handleMouseDown(e);
       return;
     }
@@ -717,7 +603,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       const isParentSelected = parentGroup ? selectedLayerIds.includes(parentGroup.id) : false;
       const isSiblingSelected = parentGroup
         ? selectedLayerIds.some((id) =>
-            parentGroup.children.some((child) => child.id === id)
+            parentGroup.children.some((child: Layer) => child.id === id)
           )
         : false;
 
@@ -737,120 +623,36 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
 
   // Compute animated styles at timestamp t
   // In Design mode, evaluate at resting state (end of duration) so static composition is fully visible
-  const evalTime = uiMode === "design" ? activeScreen.duration : currentTime;
+  const evalTime = isAnimate ? screenMatch.localTime : activeScreen.duration;
   const computedLayerStyles = evaluateSceneAtTime(
     activeScreen.layers,
-    evalTime
+    evalTime,
+    0,
+    activeScreen.stepFps || doc.settings.stepFps
   );
 
   // Playback loop via requestAnimationFrame when isPlaying is true
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    let animFrame: number;
-    let lastTimestamp = performance.now();
-
-    const loop = (now: number) => {
-      const deltaSec = (now - lastTimestamp) / 1000;
-      lastTimestamp = now;
-
-      const current = useProjectStore.getState().currentTime;
-      const screenDuration = activeScreen.duration;
-      const workArea = useProjectStore.getState().workArea;
-      const loopStart = workArea ? workArea.start : 0;
-      const loopEnd = workArea ? workArea.end : screenDuration;
-
-      let nextTime = current + deltaSec;
-
-      if (nextTime >= loopEnd) {
-        nextTime = loopStart; // Loop back to work area start
-      } else if (nextTime < loopStart) {
-        nextTime = loopStart;
-      }
-
-      setCurrentTime(nextTime);
-      animFrame = requestAnimationFrame(loop);
-    };
-
-    animFrame = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(animFrame);
-  }, [isPlaying, activeScreen.duration, setCurrentTime]);
+  usePlaybackLoop();
 
   // Track visual DOM bounding box of active layer (handles single layer or multi-selection union)
-  const [selectedBounds, setSelectedBounds] = useState<{
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } | null>(null);
-
-  useEffect(() => {
-    if (selectedLayerIds.length === 0) {
-      setSelectedBounds(null);
-      return;
-    }
-
-    const measure = () => {
-      const screenEl = document.getElementById(`screen-${activeScreen.id}`);
-      if (!screenEl) return;
-      const screenRect = screenEl.getBoundingClientRect();
-      const domScale =
-        screenRect.width > 0
-          ? screenRect.width / doc.settings.width
-          : effectiveScale;
-
-      // Multi-layer selection bounding box (AABB enclosing all selected layers)
-      if (selectedLayerIds.length > 1) {
-        let minLeft = Infinity;
-        let minTop = Infinity;
-        let maxRight = -Infinity;
-        let maxBottom = -Infinity;
-        let foundAny = false;
-
-        for (const id of selectedLayerIds) {
-          const el = document.getElementById(`layer-${id}`);
-          if (el) {
-            foundAny = true;
-            const r = el.getBoundingClientRect();
-            if (r.left < minLeft) minLeft = r.left;
-            if (r.top < minTop) minTop = r.top;
-            if (r.right > maxRight) maxRight = r.right;
-            if (r.bottom > maxBottom) maxBottom = r.bottom;
-          }
-        }
-
-        if (foundAny) {
-          setSelectedBounds({
-            x: (minLeft - screenRect.left) / domScale,
-            y: (minTop - screenRect.top) / domScale,
-            width: (maxRight - minLeft) / domScale,
-            height: (maxBottom - minTop) / domScale,
-          });
-        } else {
-          setSelectedBounds(null);
-        }
-      } else {
-        // Single selection is managed directly by TransformBox using canonical layer coordinates
-        setSelectedBounds(null);
-      }
-    };
-
-    measure();
-    const frame = requestAnimationFrame(measure);
-    window.addEventListener("resize", measure);
-    return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("resize", measure);
-    };
-  }, [selectedLayerIds, activeScreen.id, effectiveScale, doc]);
+  const selectedBounds = useSelectionBounds(
+    selectedLayerIds,
+    activeScreen,
+    effectiveScale,
+    doc
+  );
 
   const getCanvasCursor = () => {
     if (spacePressed || isPanning) return isPanning ? "cursor-grabbing" : "cursor-grab";
     if (activeTool === "hand") return isPanning ? "cursor-grabbing" : "cursor-grab";
     if (activeTool === "text") return "cursor-text";
-    if (["rectangle", "circle", "star", "triangle"].includes(activeTool)) return "cursor-crosshair";
+    if (["rectangle", "circle", "star", "triangle", "polygon", "line", "arrow", "frame"].includes(activeTool)) return "cursor-crosshair";
     return "cursor-default";
   };
+
+  const activeScreenIdx = Math.max(0, doc.screens.indexOf(activeScreen));
+  const activeScreenX = isAnimate ? 0 : (activeScreen.x ?? (activeScreenIdx * ((activeScreen.width ?? doc.settings.width) + 120)));
+  const activeScreenY = isAnimate ? 0 : (activeScreen.y ?? 0);
 
   return (
     <main
@@ -860,6 +662,18 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       onMouseUp={handleMouseUp}
       onClick={(e) => {
         if (e.target === containerRef.current) {
+          if (
+            typeof document !== "undefined" &&
+            document.activeElement &&
+            document.activeElement instanceof HTMLElement &&
+            (document.activeElement.tagName === "INPUT" ||
+              document.activeElement.tagName === "TEXTAREA")
+          ) {
+            document.activeElement.blur();
+          }
+          if (typeof window !== "undefined" && window.getSelection) {
+            window.getSelection()?.removeAllRanges();
+          }
           if (justMarquedRef.current) {
             justMarquedRef.current = false;
             return;
@@ -960,41 +774,91 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           items: buildCanvasPasteboardMenu({ store }),
         });
       }}
-      className={`flex-1 relative bg-muted/30 overflow-hidden flex items-center justify-center select-none ${getCanvasCursor()}`}
-      style={{
-        backgroundImage:
-          "radial-gradient(circle at 1px 1px, var(--canvas-dot, rgba(0, 0, 0, 0.08)) 1px, transparent 0)",
-        backgroundSize: "24px 24px",
-      }}
+      className={`flex-1 min-w-0 relative bg-[#f3f3f5] overflow-hidden select-none ${getCanvasCursor()}`}
     >
-      {/* Canvas Frame */}
+      {/* Canvas Frame / World Transform Container */}
       <div
         style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          width: 0,
+          height: 0,
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${effectiveScale})`,
-          transformOrigin: "center center",
+          transformOrigin: "0 0",
           transition: "none",
         }}
-        className="relative"
       >
-        <ScreenRenderer
-          screen={activeScreen}
-          settings={doc.settings}
-          selectedLayerIds={selectedLayerIds}
-          computedLayerStyles={computedLayerStyles}
-          onSelectLayer={handleSelectLayer}
-          onCanvasClick={() => {
-            if (justMarquedRef.current) {
-              justMarquedRef.current = false;
-              return;
-            }
-            deselectAll();
-          }}
-        />
+        {/* Render Artboards / Screens */}
+        {(isAnimate ? [activeScreen] : doc.screens).map((screen, idx) => {
+          const actualIdx = doc.screens.indexOf(screen);
+          const screenX = isAnimate ? 0 : (screen.x ?? (idx * ((screen.width ?? doc.settings.width) + 120)));
+          const screenY = isAnimate ? 0 : (screen.y ?? 0);
+          const isActive = screen.id === activeScreen.id;
+          return (
+            <div
+              key={screen.id}
+              style={{
+                position: "absolute",
+                left: `${screenX}px`,
+                top: `${screenY}px`,
+              }}
+            >
+              <ScreenRenderer
+                screen={screen}
+                screenIndex={actualIdx >= 0 ? actualIdx : idx}
+                settings={{
+                  ...doc.settings,
+                  width: screen.width ?? doc.settings.width,
+                  height: screen.height ?? doc.settings.height,
+                  backgroundColor: screen.backgroundColor ?? doc.settings.backgroundColor,
+                }}
+                isSelected={isActive && selectedLayerIds.length === 0}
+                selectedLayerIds={isActive ? selectedLayerIds : []}
+                computedLayerStyles={isActive ? computedLayerStyles : {}}
+                domScale={effectiveScale}
+                onSelectLayer={(layerId, e) => {
+                  if (!isActive) {
+                    selectScreen(screen.id);
+                  }
+                  handleSelectLayer(layerId, e);
+                }}
+                onSelectScreen={() => {
+                  selectScreen(screen.id);
+                }}
+                onCanvasClick={() => {
+                  if (
+                    typeof document !== "undefined" &&
+                    document.activeElement &&
+                    document.activeElement instanceof HTMLElement &&
+                    (document.activeElement.tagName === "INPUT" ||
+                      document.activeElement.tagName === "TEXTAREA")
+                  ) {
+                    document.activeElement.blur();
+                  }
+                  if (typeof window !== "undefined" && window.getSelection) {
+                    window.getSelection()?.removeAllRanges();
+                  }
+                  selectScreen(screen.id);
+                  if (justMarquedRef.current) {
+                    justMarquedRef.current = false;
+                    return;
+                  }
+                  deselectAll();
+                }}
+              />
+            </div>
+          );
+        })}
 
         {/* Reactive Element Binding Connection Curves */}
         <BindingConnectionOverlay
           canvasWidth={doc.settings.width}
           canvasHeight={doc.settings.height}
+          screenOffset={{
+            x: activeScreenX,
+            y: activeScreenY,
+          }}
         />
 
         {/* Marquee Selection Rectangle */}
@@ -1004,33 +868,48 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
             <div
               style={{
                 position: "absolute",
-                left: `${Math.min(marquee.startX, marquee.currentX)}px`,
-                top: `${Math.min(marquee.startY, marquee.currentY)}px`,
+                left: `${activeScreenX + Math.min(marquee.startX, marquee.currentX)}px`,
+                top: `${activeScreenY + Math.min(marquee.startY, marquee.currentY)}px`,
                 width: `${Math.abs(marquee.currentX - marquee.startX)}px`,
                 height: `${Math.abs(marquee.currentY - marquee.startY)}px`,
               }}
-              className="border border-primary/80 bg-primary/15 pointer-events-none z-50 rounded-[2px]"
+              className="border border-[#7c3aed] bg-[#7c3aed]/15 pointer-events-none z-50 rounded-[2px]"
             />
           )}
 
         {/* Magnetic Snap Guides (Red magnetic lines) */}
-        {guides.map((guide, idx) => (
-          <div
-            key={idx}
-            style={
-              guide.type === "vertical"
-                ? { left: `${guide.position}px`, top: 0, bottom: 0, width: "1px" }
-                : { top: `${guide.position}px`, left: 0, right: 0, height: "1px" }
-            }
-            className="absolute bg-red-500 z-50 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.9)]"
-          >
-            {guide.label && (
-              <span className="absolute top-2 left-2 bg-red-600 text-white text-[9px] px-1 py-0.2 rounded font-mono">
-                {guide.label}
-              </span>
-            )}
-          </div>
-        ))}
+        {guides.map((guide, idx) => {
+          const sWidth = activeScreen.width ?? doc.settings.width;
+          const sHeight = activeScreen.height ?? doc.settings.height;
+
+          return (
+            <div
+              key={idx}
+              style={
+                guide.type === "vertical"
+                  ? {
+                      left: `${guide.position + activeScreenX}px`,
+                      top: `${activeScreenY}px`,
+                      height: `${sHeight}px`,
+                      width: "1px",
+                    }
+                  : {
+                      top: `${guide.position + activeScreenY}px`,
+                      left: `${activeScreenX}px`,
+                      width: `${sWidth}px`,
+                      height: "1px",
+                    }
+              }
+              className="absolute bg-red-500 z-50 pointer-events-none shadow-[0_0_8px_rgba(239,68,68,0.9)]"
+            >
+              {guide.label && (
+                <span className="absolute top-2 left-2 bg-red-600 text-white text-[9px] px-1 py-0.2 rounded font-mono">
+                  {guide.label}
+                </span>
+              )}
+            </div>
+          );
+        })}
 
         {/* Smart Distance Guides Overlay (Alt Key in Design Mode) */}
         {selectedRootLayer && uiMode === "design" && (
@@ -1041,93 +920,41 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
                 ? findLayerInTree(activeScreen.layers, hoveredLayerId)
                 : null
             }
-            canvasWidth={doc.settings.width}
-            canvasHeight={doc.settings.height}
+            canvasWidth={activeScreen.width ?? doc.settings.width}
+            canvasHeight={activeScreen.height ?? doc.settings.height}
             altPressed={altPressed}
+            screenOffset={{
+              x: activeScreenX,
+              y: activeScreenY,
+            }}
           />
         )}
 
-        {/* Interactive Transform Bounding Box (Design Mode for full layout, Animate Mode for destination pose) */}
+        {/* Interactive Transform Bounding Box */}
         {selectedRootLayer && (
           <TransformBox
             layer={selectedRootLayer}
-            canvasWidth={doc.settings.width}
-            canvasHeight={doc.settings.height}
+            canvasWidth={activeScreen.width ?? doc.settings.width}
+            canvasHeight={activeScreen.height ?? doc.settings.height}
             siblingBoxes={siblingBoxes}
             effectiveScale={effectiveScale}
             onGuidesChange={setGuides}
             bounds={selectedBounds}
             selectedLayers={selectedLayers}
             isAnimateMode={uiMode === "animate"}
+            screenOffset={{
+              x: activeScreenX,
+              y: activeScreenY,
+            }}
           />
         )}
       </div>
 
-      {/* Floating Toolbar (Design Mode only) */}
-      {uiMode === "design" && (
-        <FloatingToolbar onOpenComponentsDrawer={onOpenComponentsDrawer} />
-      )}
-
-      {/* Floating Canvas Navigation & Zoom Widget (Bottom Right) */}
-      <div className="absolute bottom-6 right-6 z-30 flex items-center gap-1 bg-card/95 backdrop-blur-md px-2.5 py-1 rounded-[20px] border border-border shadow-xl text-xs text-foreground">
-        <button
-          onClick={() => setZoom(Math.max(zoom - 0.1, 0.2))}
-          title="Zoom Out"
-          className="p-1 hover:bg-muted rounded-[8px] text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Minus className="h-3 w-3" />
-        </button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="px-1.5 py-0.5 font-mono text-[11px] text-foreground/80 hover:text-foreground transition-colors">
-              {Math.round(zoom * 100)}%
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-popover border-border text-xs text-popover-foreground">
-            {[50, 75, 100, 150, 200, 300].map((pct) => (
-              <DropdownMenuItem
-                key={pct}
-                onClick={() => setZoom(pct / 100)}
-                className="text-popover-foreground hover:bg-accent hover:text-accent-foreground"
-              >
-                {pct}%
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <button
-          onClick={() => setZoom(Math.min(zoom + 0.1, 4.0))}
-          title="Zoom In"
-          className="p-1 hover:bg-muted rounded-[8px] text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Plus className="h-3 w-3" />
-        </button>
-        <div className="w-[1px] h-3.5 bg-border mx-0.5" />
-        <button
-          onClick={() => {
-            setZoom(1);
-            setPan({ x: 0, y: 0 });
-          }}
-          title="Fit to Screen (Shift+1)"
-          className="px-2 py-0.5 text-[11px] font-medium text-primary hover:bg-primary/10 rounded-[8px] transition-colors"
-        >
-          Fit
-        </button>
-      </div>
-
-      {/* Right-Click Context Menu */}
-      {contextMenu && (
-        <CanvasContextMenu
-          x={contextMenu.x}
-          y={contextMenu.y}
-          layerId={contextMenu.layerId}
-          onClose={() => setContextMenu(null)}
+      {/* Floating Design Toolbar in Design Mode */}
+      {!isMotionMode(uiMode) && (
+        <FloatingDesignToolbar
+          onOpenAiBar={onOpenAiBar}
           onOpenComponentsDrawer={onOpenComponentsDrawer}
-          onRename={(id) =>
-            window.dispatchEvent(
-              new CustomEvent("motion-rename-layer", { detail: { layerId: id } })
-            )
-          }
         />
       )}
     </main>

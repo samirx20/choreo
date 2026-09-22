@@ -1,0 +1,160 @@
+import { Layer, GroupLayer, FrameLayer } from "@/types/scene";
+
+// Helper: Recursively search and mutate a layer in a layer tree
+export function mutateLayerInTree(
+  layers: Layer[],
+  layerId: string,
+  mutator: (layer: Layer) => Layer | null
+): Layer[] {
+  const result: Layer[] = [];
+
+  for (const layer of layers) {
+    if (layer.id === layerId) {
+      const mutated = mutator(layer);
+      if (mutated !== null) {
+        result.push(mutated);
+      }
+    } else if (layer.type === "group" || layer.type === "frame") {
+      const updatedChildren = mutateLayerInTree(layer.children, layerId, mutator);
+      result.push({
+        ...layer,
+        children: updatedChildren,
+      });
+    } else {
+      result.push(layer);
+    }
+  }
+
+  return result;
+}
+
+// Helper: Find a layer by ID in a layer tree
+export function findLayerInTree(layers: Layer[], layerId: string): Layer | null {
+  for (const layer of layers) {
+    if (layer.id === layerId) return layer;
+    if (layer.type === "group" || layer.type === "frame") {
+      const found = findLayerInTree(layer.children, layerId);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// Helper: Find parent group of a layer in tree
+export function findParentGroupInTree(
+  layers: Layer[],
+  targetId: string
+): (GroupLayer | FrameLayer) | null {
+  for (const layer of layers) {
+    if (layer.type === "group" || layer.type === "frame") {
+      if (layer.children.some((c: Layer) => c.id === targetId)) {
+        return layer;
+      }
+      const deeper = findParentGroupInTree(layer.children, targetId);
+      if (deeper) return deeper;
+    }
+  }
+  return null;
+}
+
+// Helper: Find topmost ancestor group of a layer in tree (returns null if layer is directly at root)
+export function findTopmostParentGroupInTree(
+  layers: Layer[],
+  targetId: string
+): (GroupLayer | FrameLayer) | null {
+  for (const layer of layers) {
+    if (layer.type === "group" || layer.type === "frame") {
+      if (layer.id === targetId) return null;
+      const contains = (g: GroupLayer | FrameLayer): boolean => {
+        return g.children.some(
+          (c: Layer) =>
+            c.id === targetId ||
+            ((c.type === "group" || c.type === "frame") && contains(c))
+        );
+      };
+      if (contains(layer)) {
+        return layer;
+      }
+    }
+  }
+  return null;
+}
+
+// Helper: Insert a layer relative to targetId in tree
+export function insertLayerRelativeInTree(
+  layers: Layer[],
+  targetId: string,
+  layerToInsert: Layer,
+  position: "before" | "after" | "inside"
+): { updated: Layer[]; inserted: boolean } {
+  const targetIndex = layers.findIndex((l) => l.id === targetId);
+  if (targetIndex !== -1) {
+    if (position === "inside") {
+      const target = layers[targetIndex];
+      if (target.type === "group" || target.type === "frame") {
+        const nextTarget: Layer = {
+          ...target,
+          children: [...target.children, layerToInsert],
+        };
+        const nextLayers = [...layers];
+        nextLayers[targetIndex] = nextTarget;
+        return { updated: nextLayers, inserted: true };
+      }
+    } else {
+      const nextLayers = [...layers];
+      const insertAt = position === "before" ? targetIndex : targetIndex + 1;
+      nextLayers.splice(insertAt, 0, layerToInsert);
+      return { updated: nextLayers, inserted: true };
+    }
+  }
+
+  let inserted = false;
+  const updated = layers.map((layer) => {
+    if (inserted || (layer.type !== "group" && layer.type !== "frame")) return layer;
+    const res = insertLayerRelativeInTree(
+      layer.children,
+      targetId,
+      layerToInsert,
+      position
+    );
+    if (res.inserted) {
+      inserted = true;
+      return { ...layer, children: res.updated };
+    }
+    return layer;
+  });
+
+  return { updated, inserted };
+}
+
+// Helper: Flatten all layers into a single array
+export function flattenLayers(layers: Layer[]): Layer[] {
+  const flat: Layer[] = [];
+  for (const layer of layers) {
+    flat.push(layer);
+    if (layer.type === "group" || layer.type === "frame") {
+      flat.push(...flattenLayers(layer.children));
+    }
+  }
+  return flat;
+}
+
+// Helper: Check if layer intersects or is placed on the artboard [0, 0, width, height]
+export function isLayerOnArtboard(
+  layer: Layer,
+  screenWidth: number,
+  screenHeight: number
+): boolean {
+  const lx = layer.style.x ?? 0;
+  const ly = layer.style.y ?? 0;
+  const lw = typeof layer.style.width === "number" ? layer.style.width : 100;
+  const lh = typeof layer.style.height === "number" ? layer.style.height : 100;
+
+  // Layer intersects artboard rectangle [0, 0, screenWidth, screenHeight]
+  return (
+    lx < screenWidth &&
+    lx + lw > 0 &&
+    ly < screenHeight &&
+    ly + lh > 0
+  );
+}

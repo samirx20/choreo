@@ -181,6 +181,18 @@ describe("useProjectStore Layer Tree Operations", () => {
   it("handles Z-index stacking operations (bringToFront, sendToBack, bringForward, sendBackward)", () => {
     const store = useProjectStore.getState();
 
+    useProjectStore.setState((state) => ({
+      document: {
+        ...state.document,
+        screens: [
+          {
+            ...state.document.screens[0],
+            layers: [],
+          },
+        ],
+      },
+    }));
+
     const layerA: Layer = { id: "layer_a", name: "A", type: "shape", shapeType: "rectangle", style: { x: 0, y: 0, width: 100, height: 100, rotation: 0, opacity: 1 } };
     const layerB: Layer = { id: "layer_b", name: "B", type: "shape", shapeType: "rectangle", style: { x: 10, y: 10, width: 100, height: 100, rotation: 0, opacity: 1 } };
     const layerC: Layer = { id: "layer_c", name: "C", type: "shape", shapeType: "rectangle", style: { x: 20, y: 20, width: 100, height: 100, rotation: 0, opacity: 1 } };

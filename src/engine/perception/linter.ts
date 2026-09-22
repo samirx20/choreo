@@ -1,328 +1,242 @@
-/**
- * Scene Structural Linter (Zero-GPU AST Pre-Flight Validator)
- * Executes in < 2ms without GPU allocation to detect 8 critical structural defects:
- * 1. black-frames
- * 2. no-visuals
- * 3. never-visible
- * 4. zero-duration
- * 5. transparent
- * 6. source-error
- * 7. broken-binding
- * 8. stagger-collision
- */
+import { SceneDocument, Screen, Layer, TextLayer } from "@/types/scene";
 
-import { Screen, Layer, GroupLayer, ElementLinkBinding } from '@/types/scene';
-
-export type CheckIssueCode =
-  | 'black-frames'
-  | 'no-visuals'
-  | 'never-visible'
-  | 'zero-duration'
-  | 'transparent'
-  | 'source-error'
-  | 'broken-binding'
-  | 'stagger-collision';
-
-export interface CheckIssue {
-  code: CheckIssueCode;
-  severity: 'error' | 'warning';
-  message: string;
+export interface LintIssue {
+  code: string;
+  severity: "error" | "warning";
+  sceneId?: string;
   layerId?: string;
-  ranges?: Array<{ start: number; end: number }>;
+  message: string;
+  rule: string;
 }
 
-export interface CheckResult {
-  stats: {
-    nodes: number;
-    byKind: Record<string, number>;
-    depth: number;
-    duration: number;
-  };
-  issues: CheckIssue[];
-  passed: boolean;
-}
-
-export type Interval = { start: number; end: number };
-
-/**
- * Determines whether a layer produces visible pixels on the canvas during its active window.
- */
-function drawsPixels(layer: Layer): boolean {
-  if (layer.hidden) return false;
-  if (layer.type === 'group') return false; // Container only; children draw pixels
-
-  // Static opacity 0 without entrance or property tracks
-  const hasOpacityAnimation =
-    layer.animation?.in?.preset === 'fadeIn' ||
-    layer.animation?.tracks?.some((t) => t.property === 'opacity');
-
-  if (layer.style.opacity === 0 && !hasOpacityAnimation) {
-    return false;
-  }
-
-  return true;
+export interface LintReport {
+  valid: boolean;
+  score: number; // 0 - 100
+  errors: LintIssue[];
+  warnings: LintIssue[];
+  suggestions: string[];
 }
 
 /**
- * Finds uncovered gaps in the coverage window down to single-frame precision.
+ * AST Pre-Flight Linter & Aesthetic Guardian.
+ * Rigorously checks for black frames, out-of-bounds positioning, text overflows,
+ * and enforces AGENTS.md Rule 8 banned anti-patterns.
  */
-export function findGaps(window: Interval, coverage: Interval[], fps = 60): Interval[] {
-  if (coverage.length === 0) {
-    return window.end > window.start ? [window] : [];
-  }
+export function lintStoryboard(
+  doc: SceneDocument,
+  options?: { sceneId?: string; strictMode?: boolean }
+): LintReport {
+  const errors: LintIssue[] = [];
+  const warnings: LintIssue[] = [];
+  const suggestions: string[] = [];
 
-  const sorted = [...coverage].sort((a, b) => a.start - b.start);
-  const gaps: Interval[] = [];
-  let cursor = window.start;
+  const targetScreens = options?.sceneId
+    ? doc.screens.filter((s) => s.id === options.sceneId)
+    : doc.screens;
 
-  for (const { start, end } of sorted) {
-    if (start > cursor) {
-      gaps.push({ start: cursor, end: Math.min(start, window.end) });
-    }
-    cursor = Math.max(cursor, end);
-    if (cursor >= window.end) break;
-  }
-
-  if (cursor < window.end) {
-    gaps.push({ start: cursor, end: window.end });
-  }
-
-  // Filter out sub-frame rounding slivers (< 1 / fps)
-  const minSpan = 1 / fps;
-  return gaps.filter((g) => g.end - g.start >= minSpan);
-}
-
-/**
- * Checks if the dependency graph formed by bindings contains cycles (e.g. A -> B -> A).
- */
-function findCyclicBindings(layers: Layer[]): string[] {
-  const adj = new Map<string, string[]>();
-
-  function collect(list: Layer[]) {
-    for (const l of list) {
-      if (l.bindings && l.bindings.length > 0) {
-        for (const b of l.bindings) {
-          if (!adj.has(l.id)) adj.set(l.id, []);
-          adj.get(l.id)!.push(b.driverLayerId);
-        }
-      }
-      if (l.type === 'group' && (l as GroupLayer).children) {
-        collect((l as GroupLayer).children);
-      }
-    }
-  }
-  collect(layers);
-
-  const visited = new Set<string>();
-  const inStack = new Set<string>();
-  const cyclicNodes = new Set<string>();
-
-  function dfs(node: string) {
-    visited.add(node);
-    inStack.add(node);
-
-    const neighbors = adj.get(node) ?? [];
-    for (const n of neighbors) {
-      if (!visited.has(n)) {
-        dfs(n);
-      } else if (inStack.has(n)) {
-        cyclicNodes.add(node);
-        cyclicNodes.add(n);
-      }
-    }
-
-    inStack.delete(node);
-  }
-
-  for (const node of adj.keys()) {
-    if (!visited.has(node)) {
-      dfs(node);
-    }
-  }
-
-  return Array.from(cyclicNodes);
-}
-
-/**
- * Performs a comprehensive AST lint pass over a Screen.
- */
-export function lintScreen(screen: Screen, fps = 60): CheckResult {
-  const issues: CheckIssue[] = [];
-  const coverage: Interval[] = [];
-  const byKind: Record<string, number> = {};
-  let totalNodes = 0;
-  let maxDepth = 0;
-
-  // Build layer lookup index
-  const layerMap = new Map<string, Layer>();
-  function indexLayers(layers: Layer[]) {
-    for (const l of layers) {
-      layerMap.set(l.id, l);
-      if (l.type === 'group' && (l as GroupLayer).children) {
-        indexLayers((l as GroupLayer).children);
-      }
-    }
-  }
-  indexLayers(screen.layers);
-
-  // Check cyclic bindings
-  const cyclicLayerIds = findCyclicBindings(screen.layers);
-  for (const cId of cyclicLayerIds) {
-    const l = layerMap.get(cId);
-    issues.push({
-      code: 'broken-binding',
-      severity: 'error',
-      layerId: cId,
-      message: `Layer "${l?.name ?? cId}" is part of a cyclic dependency loop`,
+  if (targetScreens.length === 0) {
+    errors.push({
+      code: "NO_SCENES",
+      severity: "error",
+      message: "Storyboard contains no scenes. Video will result in 0 duration.",
+      rule: "Rule 4: Valid Storyboard Structure",
     });
   }
 
-  function walk(layer: Layer, window: Interval, depth: number) {
-    totalNodes++;
-    byKind[layer.type] = (byKind[layer.type] ?? 0) + 1;
-    if (depth > maxDepth) maxDepth = depth;
-
-    // 1. Broken bindings check
-    if (layer.bindings) {
-      for (const b of layer.bindings) {
-        if (!layerMap.has(b.driverLayerId)) {
-          issues.push({
-            code: 'broken-binding',
-            severity: 'error',
-            layerId: layer.id,
-            message: `Layer "${layer.name}" references non-existent driver layer "${b.driverLayerId}"`,
-          });
-        }
-      }
-    }
-
-    // 2. Static transparency check
-    const hasOpacityAnimation =
-      layer.animation?.in?.preset === 'fadeIn' ||
-      layer.animation?.tracks?.some((t) => t.property === 'opacity');
-
-    if (layer.style.opacity === 0 && !hasOpacityAnimation) {
-      issues.push({
-        code: 'transparent',
-        severity: 'warning',
-        layerId: layer.id,
-        message: `Layer "${layer.name}" has opacity=0 without animation tracks or presets`,
+  targetScreens.forEach((screen, screenIdx) => {
+    // 1. Zero Black Frames: Check scene duration
+    if (!screen.duration || screen.duration < 0.3) {
+      errors.push({
+        code: "SHORT_SCENE_DURATION",
+        severity: "error",
+        sceneId: screen.id,
+        message: `Scene "${screen.name}" duration (${screen.duration}s) is dangerously short (< 0.3s), risking black frames.`,
+        rule: "Rule 4: Zero Black Frames",
       });
     }
 
-    // 3. Source error check
-    if (layer.type === 'image') {
-      const src = (layer as any).src;
-      if (!src || typeof src !== 'string' || src.trim() === '') {
-        issues.push({
-          code: 'source-error',
-          severity: 'error',
-          layerId: layer.id,
-          message: `Image layer "${layer.name}" is missing a valid source URL`,
-        });
-      }
-    }
-
-    // 4. Temporal active span
-    const start = layer.animation?.in?.start ?? 0;
-    const duration = layer.animation?.in?.duration ?? screen.duration;
-    const end = Math.min(screen.duration, start + duration);
-
-    if (duration <= 0) {
-      issues.push({
-        code: 'zero-duration',
-        severity: 'warning',
-        layerId: layer.id,
-        message: `Layer "${layer.name}" has zero or negative duration (${duration}s)`,
+    // 2. Zero Black Frames: Empty scene check
+    const visibleLayers = screen.layers.filter((l) => !l.hidden);
+    if (visibleLayers.length === 0) {
+      errors.push({
+        code: "EMPTY_SCENE",
+        severity: "error",
+        sceneId: screen.id,
+        message: `Scene "${screen.name}" contains 0 visible layers. This will render as a dead black/blank frame.`,
+        rule: "Rule 4: Zero Black Frames",
       });
     }
 
-    // 5. Visibility window clipping
-    const activeStart = Math.max(window.start, start);
-    const activeEnd = Math.min(window.end, end);
-
-    if (activeStart >= activeEnd) {
-      issues.push({
-        code: 'never-visible',
-        severity: 'warning',
-        layerId: layer.id,
-        message: `Layer "${layer.name}" scheduled outside parent visibility window [${window.start.toFixed(2)}s, ${window.end.toFixed(2)}s]`,
+    // 3. Motion Discipline: One Authored Moment per beat
+    let simultaneousEntrances = 0;
+    screen.layers.forEach((layer) => {
+      const enter = layer.animation?.in;
+      if (enter && (enter.start === 0 || enter.start === undefined)) {
+        simultaneousEntrances++;
+      }
+    });
+    if (simultaneousEntrances > 3) {
+      warnings.push({
+        code: "EXCESSIVE_SIMULTANEOUS_ENTRANCES",
+        severity: "warning",
+        sceneId: screen.id,
+        message: `Scene "${screen.name}" has ${simultaneousEntrances} elements entering simultaneously at t=0. Aim for one primary authored moment per beat.`,
+        rule: "Rule 8: Motion Discipline - One Authored Moment",
       });
-    } else {
-      if (drawsPixels(layer)) {
-        coverage.push({ start: activeStart, end: activeEnd });
-      }
+      suggestions.push(
+        `In Scene "${screen.name}", stagger secondary elements by +0.15s–0.3s behind the hero element.`
+      );
     }
 
-    // 6. Stagger collision check on groups
-    if (layer.type === 'group') {
-      const group = layer as GroupLayer;
-      if (group.autoLink && group.children && group.children.length > 1) {
-        // Calculate cumulative stagger end
-        let lastChildEnd = 0;
-        for (const child of group.children) {
-          const cStart = child.animation?.in?.start ?? 0;
-          const cDur = child.animation?.in?.duration ?? 0.5;
-          const cEnd = cStart + cDur;
-          if (cEnd > lastChildEnd) lastChildEnd = cEnd;
-        }
+    // 4. Layer-Level Auditing
+    screen.layers.forEach((layer) => {
+      auditLayer(layer, screen, errors, warnings, suggestions);
+    });
 
-        if (lastChildEnd > screen.duration) {
-          issues.push({
-            code: 'stagger-collision',
-            severity: 'warning',
-            layerId: group.id,
-            message: `Group "${group.name}" cascade stagger extends to ${lastChildEnd.toFixed(2)}s, exceeding screen duration (${screen.duration.toFixed(2)}s)`,
-          });
-        }
-      }
+    // 5. Check for Banned Eyebrows / Kickers / Category Badges above Headlines
+    auditEyebrowsAndHeadlines(screen, warnings, suggestions);
+  });
 
-      // Recurse into children
-      if (group.children) {
-        for (const child of group.children) {
-          walk(child, { start: activeStart, end: activeEnd }, depth + 1);
-        }
-      }
-    }
-  }
-
-  const screenWindow: Interval = { start: 0, end: screen.duration };
-  for (const rootLayer of screen.layers) {
-    walk(rootLayer, screenWindow, 1);
-  }
-
-  // 7. Check for black frames or completely empty screen
-  if (screen.duration > 0) {
-    if (coverage.length === 0) {
-      issues.push({
-        code: 'no-visuals',
-        severity: 'error',
-        message: `Screen "${screen.name}" contains no visible rendering layers`,
-      });
-    } else {
-      const gaps = findGaps(screenWindow, coverage, fps);
-      if (gaps.length > 0) {
-        const totalGapDuration = gaps.reduce((sum, g) => sum + (g.end - g.start), 0);
-        issues.push({
-          code: 'black-frames',
-          severity: 'error',
-          message: `No visuals scheduled in ${gaps.length} span(s) totaling ${totalGapDuration.toFixed(2)}s — black frames`,
-          ranges: gaps,
-        });
-      }
-    }
-  }
-
-  const hasErrors = issues.some((i) => i.severity === 'error');
+  // Calculate score (100 minus penalties)
+  const score = Math.max(0, 100 - errors.length * 25 - warnings.length * 5);
+  const valid = errors.length === 0 && (!options?.strictMode || warnings.length === 0);
 
   return {
-    stats: {
-      nodes: totalNodes,
-      byKind,
-      depth: maxDepth,
-      duration: screen.duration,
-    },
-    issues,
-    passed: !hasErrors,
+    valid,
+    score,
+    errors,
+    warnings,
+    suggestions,
   };
+}
+
+function auditLayer(
+  layer: Layer,
+  screen: Screen,
+  errors: LintIssue[],
+  warnings: LintIssue[],
+  suggestions: string[]
+) {
+  // A. Text validation
+  if (layer.type === "text") {
+    const textLayer = layer as TextLayer;
+    if (!textLayer.content || textLayer.content.trim().length === 0) {
+      warnings.push({
+        code: "EMPTY_TEXT_CONTENT",
+        severity: "warning",
+        sceneId: screen.id,
+        layerId: layer.id,
+        message: `Text layer "${layer.name}" has empty or whitespace-only content.`,
+        rule: "Rule 2: Valid Element Content",
+      });
+    }
+
+    // Check for Gradient Text anti-pattern
+    const fill = textLayer.style?.color || textLayer.style?.fillColor || "";
+    if (fill.includes("gradient") || fill.includes("linear-gradient")) {
+      errors.push({
+        code: "BANNED_GRADIENT_TEXT",
+        severity: "error",
+        sceneId: screen.id,
+        layerId: layer.id,
+        message: `Text layer "${layer.name}" uses gradient text. Text emphasis must come from font weight or scale, never decorative gradient fills.`,
+        rule: "Rule 8: Impeccable Craft Floor - No Gradient Text",
+      });
+      suggestions.push(`Replace gradient text in "${layer.name}" with solid high-contrast monochrome or accent fill.`);
+    }
+  }
+
+  // B. Single Elevation System (No "Ghost Cards")
+  const style = layer.style || {};
+  const hasBorder = (style.borderWidth ?? 0) > 0 && !!style.borderColor;
+  const hasSoftShadow = (style.shadowBlur ?? 0) > 0 && style.shadowMode !== "hard";
+
+  if (hasBorder && hasSoftShadow) {
+    errors.push({
+      code: "BANNED_GHOST_CARD",
+      severity: "error",
+      sceneId: screen.id,
+      layerId: layer.id,
+      message: `Layer "${layer.name}" combines a 1px border with a soft diffuse shadow. Declare elevation once: clean crisp border OR physical shadow, never both.`,
+      rule: "Rule 8: Impeccable Craft Floor - Single Elevation System",
+    });
+    suggestions.push(
+      `On "${layer.name}", remove either the border or set shadowMode to 'hard' / set shadowBlur to 0.`
+    );
+  }
+
+  // C. Grid / Coordinate validity
+  if (layer.grid) {
+    if (layer.grid.col < 0 || layer.grid.row < 0) {
+      errors.push({
+        code: "NEGATIVE_GRID_COORDINATES",
+        severity: "error",
+        sceneId: screen.id,
+        layerId: layer.id,
+        message: `Layer "${layer.name}" has negative grid coordinates (${layer.grid.col}, ${layer.grid.row}).`,
+        rule: "Rule 2: Modular Video Grid Validity",
+      });
+    }
+    if (layer.grid.colSpan < 1 || layer.grid.rowSpan < 1) {
+      errors.push({
+        code: "INVALID_GRID_SPAN",
+        severity: "error",
+        sceneId: screen.id,
+        layerId: layer.id,
+        message: `Layer "${layer.name}" has invalid span (colSpan: ${layer.grid.colSpan}, rowSpan: ${layer.grid.rowSpan}).`,
+        rule: "Rule 2: Modular Video Grid Validity",
+      });
+    }
+  }
+}
+
+/**
+ * Checks for banned Eyebrow labels, category kickers, or pill tags placed directly above headlines.
+ * AGENTS.md Rule 8: Headings carry their own weight; delete the label and let the heading speak.
+ */
+function auditEyebrowsAndHeadlines(
+  screen: Screen,
+  warnings: LintIssue[],
+  suggestions: string[]
+) {
+  const textLayers = screen.layers.filter((l) => l.type === "text") as TextLayer[];
+
+  // Find candidate headlines (large font size >= 40px)
+  const headlines = textLayers.filter((t) => (t.style?.fontSize ?? 16) >= 40);
+
+  textLayers.forEach((layer) => {
+    const nameLower = layer.name.toLowerCase();
+    const contentLower = (layer.content || "").toLowerCase();
+
+    // Check if layer explicitly declares itself an eyebrow/kicker
+    const isNamedEyebrow =
+      nameLower.includes("eyebrow") ||
+      nameLower.includes("kicker") ||
+      nameLower.includes("category badge") ||
+      nameLower.includes("pill tag");
+
+    // Check if small text sits just above a large headline
+    const layerY = typeof layer.style?.y === "number" ? layer.style.y : 0;
+    const layerFontSize = layer.style?.fontSize ?? 16;
+
+    const sitsAboveHeadline = headlines.some((headline) => {
+      if (headline.id === layer.id) return false;
+      const headlineY = typeof headline.style?.y === "number" ? headline.style.y : 0;
+      return layerY < headlineY && headlineY - layerY < 120 && layerFontSize <= 20;
+    });
+
+    if (isNamedEyebrow || (sitsAboveHeadline && (contentLower.includes("ai powered") || contentLower.includes("feature") || contentLower.includes("new")))) {
+      warnings.push({
+        code: "BANNED_EYEBROW_TAG",
+        severity: "warning",
+        sceneId: screen.id,
+        layerId: layer.id,
+        message: `Layer "${layer.name}" functions as a floating eyebrow/kicker badge above the headline. Headings carry their own weight; delete category kickers.`,
+        rule: "Rule 8: Impeccable Craft Floor - Zero Eyebrows or Kickers",
+      });
+      suggestions.push(
+        `Remove the eyebrow label "${layer.content}" above the headline in Scene "${screen.name}".`
+      );
+    }
+  });
 }

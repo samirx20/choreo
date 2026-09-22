@@ -24,6 +24,7 @@ export const VideoRenderer: React.FC<VideoRendererProps> = ({
 
   return (
     <div
+      id={`layer-${layer.id}`}
       data-layer-id={layer.id}
       style={{
         ...combinedStyle,
