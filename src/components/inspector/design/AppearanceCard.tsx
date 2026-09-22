@@ -24,6 +24,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
     ? Boolean(style.color && style.color !== "transparent")
     : Boolean(style.backgroundColor !== undefined && style.backgroundColor !== "transparent");
 
+  const hasBgFill = Boolean(style.backgroundColor && style.backgroundColor !== "transparent");
   const hasStroke = Boolean(style.borderWidth && style.borderWidth > 0);
   const hasShadow = Boolean(
     (style.shadowBlur !== undefined && style.shadowBlur > 0) ||
@@ -53,7 +54,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
           }}
           className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
         >
-          <span className="text-xs font-semibold text-foreground">Fill</span>
+          <span className="text-xs font-semibold text-foreground">{isText ? "Text Color" : "Fill"}</span>
           <Checkbox checked={hasFill} className="pointer-events-none" />
         </div>
 
@@ -85,6 +86,47 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
           </div>
         )}
       </div>
+
+      {/* 1b. Background Fill for Text / Chunks / Badges */}
+      {isText && (
+        <div className="space-y-2 pt-2 border-t border-border/50">
+          <div
+            onClick={() => {
+              updateLayerStyle(selectedLayer.id, {
+                backgroundColor: hasBgFill ? "transparent" : (style.backgroundColor && style.backgroundColor !== "transparent" ? style.backgroundColor : "#f4f4f5"),
+              });
+            }}
+            className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
+          >
+            <span className="text-xs font-semibold text-foreground">Background</span>
+            <Checkbox checked={hasBgFill} className="pointer-events-none" />
+          </div>
+
+          {hasBgFill && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Color</span>
+              <div className="flex items-center gap-1.5 w-36 justify-end">
+                <Input
+                  type="text"
+                  value={(style.backgroundColor || "#f4f4f5").replace("#", "").toUpperCase()}
+                  onChange={(e) => {
+                    updateLayerStyle(selectedLayer.id, { backgroundColor: `#${e.target.value}` });
+                  }}
+                  className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
+                />
+                <input
+                  type="color"
+                  value={style.backgroundColor || "#f4f4f5"}
+                  onChange={(e) => {
+                    updateLayerStyle(selectedLayer.id, { backgroundColor: e.target.value });
+                  }}
+                  className="h-7 w-7 rounded border border-border cursor-pointer p-0.5 bg-transparent"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 2. Stroke Checkbox */}
       <div className="space-y-2 pt-2 border-t border-border/50">

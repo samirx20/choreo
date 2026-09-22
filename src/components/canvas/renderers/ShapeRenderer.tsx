@@ -53,7 +53,7 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   const baseCss = layerStyleToCss({
     ...layer.style,
     backgroundColor: isSvgShape ? "transparent" : layer.style.backgroundColor,
-    borderWidth: hasTrim ? 0 : layer.style.borderWidth, // Trim paths render via SVG overlay
+    borderWidth: (hasTrim || isSvgShape) ? 0 : layer.style.borderWidth, // Trim paths & SVG shapes render stroke via SVG, not CSS box-border
   }, isChildInFlex);
 
   // If circle or ellipse, ensure border-radius 50%
@@ -65,6 +65,7 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   const fill = (combinedStyle.backgroundColor as string) || (combinedStyle.color as string) || layer.style.backgroundColor || "#3b82f6";
   const strokeColor = (combinedStyle.borderColor as string) || layer.style.borderColor || fill;
   const strokeWidth = typeof combinedStyle.borderWidth === "number" ? combinedStyle.borderWidth : (typeof combinedStyle.borderWidth === "string" ? parseFloat(combinedStyle.borderWidth) || (layer.style.borderWidth || 2) : (layer.style.borderWidth || 2));
+  const hasStroke = (typeof layer.style.borderWidth === "number" && layer.style.borderWidth > 0) || (typeof combinedStyle.borderWidth === "number" && combinedStyle.borderWidth > 0);
   const widthNum = typeof layer.style.width === "number" ? layer.style.width : 100;
   const heightNum = typeof layer.style.height === "number" ? layer.style.height : 100;
 
@@ -134,19 +135,31 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       {layer.shapeType === "star" && (
         <svg
           viewBox="0 0 100 100"
-          className="w-full h-full"
-          fill={fill}
+          className="w-full h-full overflow-visible"
         >
-          <polygon points={generateStarPoints(layer.points || 5, layer.innerRadiusRatio || 0.382)} />
+          <polygon
+            points={generateStarPoints(layer.points || 5, layer.innerRadiusRatio || 0.382)}
+            fill={fill}
+            stroke={hasStroke ? strokeColor : "none"}
+            strokeWidth={hasStroke ? strokeWidth : 0}
+            strokeLinejoin={(layer.strokeJoin as any) || "round"}
+            strokeLinecap={(layer.strokeCap as any) || "round"}
+          />
         </svg>
       )}
       {(layer.shapeType === "triangle" || layer.shapeType === "polygon") && (
         <svg
           viewBox="0 0 100 100"
-          className="w-full h-full"
-          fill={fill}
+          className="w-full h-full overflow-visible"
         >
-          <polygon points={generatePolygonPoints(layer.shapeType === "triangle" ? 3 : (layer.sides || 5))} />
+          <polygon
+            points={generatePolygonPoints(layer.shapeType === "triangle" ? 3 : (layer.sides || 5))}
+            fill={fill}
+            stroke={hasStroke ? strokeColor : "none"}
+            strokeWidth={hasStroke ? strokeWidth : 0}
+            strokeLinejoin={(layer.strokeJoin as any) || "round"}
+            strokeLinecap={(layer.strokeCap as any) || "round"}
+          />
         </svg>
       )}
       {(layer.shapeType === "line" || layer.shapeType === "arrow") && (

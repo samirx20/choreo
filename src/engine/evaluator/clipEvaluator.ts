@@ -352,20 +352,25 @@ export function applyCustomPresetDelta(
     case "custom_color": {
       const fromCol = from.color ?? params.fromColor ?? null;
       const toCol = params.toColor ?? params.color ?? "#6d28d9";
-      const finalColor = fromCol ? lerpColor(fromCol, toCol, factor) : toCol;
+      const finalColor = fromCol ? (factor >= 1 ? toCol : lerpColor(fromCol, toCol, factor)) : toCol;
       d.color = finalColor;
       d.backgroundColor = finalColor;
       break;
     }
     case "custom_shadow": {
-      const fromBlur = from.shadowBlur ?? params.fromShadowBlur ?? 0;
-      const toBlur = params.toShadowBlur ?? params.shadowBlur ?? 16;
-      const fromDist = from.shadowDistance ?? params.fromShadowDistance ?? 0;
-      const toDist = params.toShadowDistance ?? params.shadowDistance ?? 8;
-      const blur = fromBlur + (toBlur - fromBlur) * factor;
-      const shadowDist = fromDist + (toDist - fromDist) * factor;
-      const col = params.shadowColor ?? "rgba(0,0,0,0.5)";
-      d.boxShadow = `0px ${shadowDist.toFixed(1)}px ${blur.toFixed(1)}px ${col}`;
+      const fromSb = from.shadowBlur ?? params.fromShadowBlur ?? 0;
+      const toSb = params.toShadowBlur ?? params.shadowBlur ?? 16;
+      const fromSd = from.shadowDistance ?? params.fromShadowDistance ?? 0;
+      const toSd = params.toShadowDistance ?? params.shadowDistance ?? 8;
+      const fromSa = from.shadowAngle ?? params.fromShadowAngle ?? 90;
+      const toSa = params.toShadowAngle ?? params.shadowAngle ?? 90;
+      const blur = fromSb + (toSb - fromSb) * factor;
+      const dist = fromSd + (toSd - fromSd) * factor;
+      const angle = fromSa + (toSa - fromSa) * factor;
+      const rad = (angle * Math.PI) / 180;
+      const dx = (Math.cos(rad) * dist).toFixed(1);
+      const dy = (Math.sin(rad) * dist).toFixed(1);
+      d.boxShadow = `${dx}px ${dy}px ${blur.toFixed(1)}px rgba(0,0,0,0.35)`;
       break;
     }
     case "custom_blur": {
@@ -375,8 +380,8 @@ export function applyCustomPresetDelta(
       break;
     }
     case "custom_backdrop_blur": {
-      const fromBb = from.backdropBlur ?? params.fromBackdropBlur ?? 0;
-      const toBb = params.toBackdropBlur ?? params.backdropBlur ?? 16;
+      const fromBb = from.backdropBlur ?? from.blur ?? params.fromBackdropBlur ?? params.fromBlur ?? 0;
+      const toBb = params.toBackdropBlur ?? params.toBlur ?? params.backdropBlur ?? params.blur ?? 16;
       const bb = fromBb + (toBb - fromBb) * factor;
       d.backdropFilter = `blur(${bb.toFixed(1)}px)`;
       break;
@@ -397,12 +402,15 @@ export function applyCustomPresetDelta(
       break;
     }
     case "custom_resize": {
-      const fromW = from.widthDelta ?? params.fromWidthDelta ?? 0;
-      const toW = params.toWidthDelta ?? params.widthDelta ?? 50;
-      const fromH = from.heightDelta ?? params.fromHeightDelta ?? 0;
-      const toH = params.toHeightDelta ?? params.heightDelta ?? 50;
-      d.widthDelta = fromW + (toW - fromW) * factor;
-      d.heightDelta = fromH + (toH - fromH) * factor;
+      const hasAbsoluteW = params.toWidth !== undefined && from.width !== undefined;
+      const hasAbsoluteH = params.toHeight !== undefined && from.height !== undefined;
+      const targetWDelta = hasAbsoluteW ? params.toWidth - from.width : (params.toWidthDelta ?? params.widthDelta ?? 50);
+      const startWDelta = hasAbsoluteW ? 0 : (from.widthDelta ?? params.fromWidthDelta ?? 0);
+      const targetHDelta = hasAbsoluteH ? params.toHeight - from.height : (params.toHeightDelta ?? params.heightDelta ?? 50);
+      const startHDelta = hasAbsoluteH ? 0 : (from.heightDelta ?? params.fromHeightDelta ?? 0);
+
+      d.widthDelta = startWDelta + (targetWDelta - startWDelta) * factor;
+      d.heightDelta = startHDelta + (targetHDelta - startHDelta) * factor;
       break;
     }
     case "custom_morph": {
@@ -419,12 +427,12 @@ export function applyCustomPresetDelta(
       break;
     }
     case "custom_stroke": {
-      const fromSw = from.strokeWidth ?? params.fromStrokeWidth ?? 0;
-      const toSw = params.toStrokeWidth ?? params.strokeWidth ?? 4;
-      const fromSc = from.strokeColor ?? params.fromStrokeColor ?? null;
-      const toSc = params.toStrokeColor ?? params.strokeColor ?? "#6d28d9";
+      const fromSw = from.strokeWidth ?? from.borderWidth ?? params.fromStrokeWidth ?? params.fromBorderWidth ?? 0;
+      const toSw = params.toStrokeWidth ?? params.toBorderWidth ?? params.strokeWidth ?? params.borderWidth ?? 4;
+      const fromSc = from.strokeColor ?? from.borderColor ?? params.fromStrokeColor ?? params.fromBorderColor ?? null;
+      const toSc = params.toStrokeColor ?? params.toBorderColor ?? params.strokeColor ?? params.borderColor ?? "#6d28d9";
       d.borderWidth = fromSw + (toSw - fromSw) * factor;
-      d.borderColor = fromSc ? lerpColor(fromSc, toSc, factor) : toSc;
+      d.borderColor = fromSc ? (factor >= 1 ? toSc : lerpColor(fromSc, toSc, factor)) : toSc;
       break;
     }
   }

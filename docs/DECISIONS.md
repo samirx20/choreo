@@ -818,4 +818,25 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Spring Parameter Propagation**:
   * Enhanced `getEasing` to accept physical `spring?: { stiffness?: number; damping?: number; mass?: number }` parameters, dynamically mapping them into normalized analytical spring trajectories for custom spring tuning.
 
+---
+
+### Decision 37: Design & Motion Truth Matrix — Autonomous Property Parity & Renderer Invariants
+* **The Problem**:
+  * In a professional motion design tool with dozens of style inputs (X, Y, W, H, rotation, opacity, fill, stroke, radii, polar shadows, blurs, typography, and specialized shape attributes), manual clicking is too slow and error-prone to catch silent rendering disconnects.
+  * Discovered several silent bugs in the renderer layer:
+    1. *SVG Shape Strokes*: When adding a stroke to a Star, Polygon, or Triangle, `ShapeRenderer` did not pass `stroke` or `strokeWidth` to the SVG `<polygon>`. Instead, CSS `borderWidth` was applied to the outer `div`, drawing an unwanted rectangular bounding box around the shape!
+    2. *Icon Stroke Box*: Changing an icon's stroke width applied CSS `borderWidth` to the icon's outer container `div`, framing the icon with a square box border rather than cleanly styling the Lucide SVG icon stroke.
+    3. *Text Background Fill*: Text layers in `AppearanceCard` only exposed `style.color` (text font color), leaving no way to set a background fill (`style.backgroundColor`) for cards, badges, and pill tags.
+    4. *Custom Animation Parameter Aliases*: In `clipEvaluator`, certain parameter names (`toBlur` vs `toBackdropBlur`, `toWidth` vs `toWidthDelta`, `toBorderWidth` vs `toStrokeWidth`) were inconsistently resolved across custom channels.
+* **The Solution**:
+  * **Shape SVG Stroke Fix**: `ShapeRenderer` now forwards `stroke={strokeColor}`, `strokeWidth={strokeWidth}`, `strokeLinejoin`, and `strokeLinecap` directly to SVG `<polygon>` elements, and explicitly suppresses CSS `borderWidth: 0` on the outer container `div`.
+  * **Icon Wrapper Neutrality**: `IconRenderer` sets `borderWidth: 0` on its outer wrapper `div` while feeding the stroke width directly into the Lucide SVG component.
+  * **Dual Fill & Background for Text**: `AppearanceCard` now provides both **Text Color** (fill for glyphs) and an independent **Background** toggle with color picker for pills, badges, and text containers.
+  * **Autonomous Truth Matrix Test Suite (`src/test/design_and_motion_truth_matrix.test.ts`)**:
+    * Tests 100% of typography properties into rendered CSS (`x`, `y`, `width`, `height`, `rotation`, `opacity`, `color`, `backgroundColor`, `fontSize`, `fontWeight`, `fontFamily`, `letterSpacing`, `lineHeight`, `textAlign`, `textTransform`, `textDecoration`, `borderRadius`, `padding`).
+    * Tests rectangle geometry, independent 4-corner radii (`[tl, tr, br, bl]`), and polar drop shadow math (`shadowAngle`, `shadowDistance`, `shadowBlur`, `shadowSpread`, `shadowColor`).
+    * Tests all 14 custom animation channels with parameter sweeps across mid-transit and final duration states.
+    * Tests lifecycle state invariants (`In` pre-window invisibility, `Action` in-place continuity, `Out` post-exit permanence).
+
+
 
