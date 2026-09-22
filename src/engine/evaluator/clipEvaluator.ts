@@ -17,6 +17,15 @@ export interface EvaluatedDelta {
   opacity: number;
   blur: number;
   clipPath?: string;
+  color?: string;
+  backgroundColor?: string;
+  borderRadius?: number;
+  borderWidth?: number;
+  borderColor?: string;
+  boxShadow?: string;
+  backdropFilter?: string;
+  widthDelta?: number;
+  heightDelta?: number;
 }
 
 export function evaluateClipDelta(
@@ -79,6 +88,9 @@ export function evaluateClipDelta(
       d.scaleY = finalEval.transform.scaleY;
       d.rotate = finalEval.transform.rotate;
       return d;
+    }
+    if (preset.startsWith("custom_")) {
+      return applyCustomPresetDelta(clip, 1, d);
     }
     return d;
   }
@@ -174,37 +186,21 @@ export function evaluateClipDelta(
         break;
       }
       case "custom_move":
-      case "move": {
-        const dist = (clip.distance ?? params.distance ?? 50) * intensity;
-        const dir = clip.direction || "up";
-        if (dir === "up") d.y = -dist * pingPong;
-        else if (dir === "down") d.y = dist * pingPong;
-        else if (dir === "left") d.x = -dist * pingPong;
-        else d.x = dist * pingPong;
-        break;
-      }
       case "custom_scale":
-      case "scale": {
-        const deltaS = scaleDeltaVal * pingPong;
-        d.scaleX = 1 + deltaS;
-        d.scaleY = 1 + deltaS;
-        break;
-      }
       case "custom_rotate":
-      case "rotate": {
-        d.rotate = (clip.rotationDegrees ?? params.rotationDegrees ?? 90) * pingPong * intensity;
-        break;
-      }
       case "custom_opacity":
-      case "opacity": {
-        d.opacity = Math.max(0, 1 - 0.7 * pingPong);
-        break;
-      }
       case "custom_color":
-      case "color":
+      case "custom_shadow":
+      case "custom_blur":
+      case "custom_backdrop_blur":
+      case "custom_glass":
+      case "custom_visibility":
+      case "custom_resize":
+      case "custom_morph":
       case "custom_radius":
-      case "radius": {
-        break;
+      case "custom_stroke": {
+        const factor = loop ? pingPong : progress;
+        return applyCustomPresetDelta(clip, factor, d);
       }
       default: {
         const deltaS = scaleDeltaVal * pingPong;
@@ -234,6 +230,106 @@ export function evaluateClipDelta(
   };
 }
 
+export function applyCustomPresetDelta(
+  clip: AnimationClip,
+  factor: number,
+  d: EvaluatedDelta
+): EvaluatedDelta {
+  const {
+    preset,
+    params = {},
+    scaleAmount,
+    rotationDegrees,
+    distance,
+    direction,
+    intensity = 1,
+  } = clip;
+  const dist = (distance ?? params.distance ?? 60) * intensity;
+  const dir = direction || params.direction || "up";
+  const rot = (rotationDegrees ?? params.rotationDegrees ?? 90) * intensity;
+  const scaleBase = scaleAmount ?? params.scaleAmount ?? 1.3;
+  const scaleDelta = (scaleBase - 1) * intensity;
+
+  switch (preset) {
+    case "custom_move": {
+      if (dir === "up") d.y = -dist * factor;
+      else if (dir === "down") d.y = dist * factor;
+      else if (dir === "left") d.x = -dist * factor;
+      else d.x = dist * factor;
+      break;
+    }
+    case "custom_scale": {
+      const s = 1 + scaleDelta * factor;
+      d.scaleX = s;
+      d.scaleY = s;
+      break;
+    }
+    case "custom_rotate": {
+      d.rotate = rot * factor;
+      break;
+    }
+    case "custom_opacity": {
+      const targetOp = params.opacity ?? 0;
+      d.opacity = Math.max(0, Math.min(1, 1 - (1 - targetOp) * factor));
+      break;
+    }
+    case "custom_color": {
+      const col = params.color || "#6d28d9";
+      d.color = col;
+      d.backgroundColor = col;
+      break;
+    }
+    case "custom_shadow": {
+      const blur = (params.shadowBlur ?? 16) * factor;
+      const shadowDist = (params.shadowDistance ?? 8) * factor;
+      const col = params.shadowColor ?? "rgba(0,0,0,0.5)";
+      d.boxShadow = `0px ${shadowDist.toFixed(1)}px ${blur.toFixed(1)}px ${col}`;
+      break;
+    }
+    case "custom_blur": {
+      d.blur = (params.blur ?? 12) * factor;
+      break;
+    }
+    case "custom_backdrop_blur": {
+      const bb = (params.backdropBlur ?? 16) * factor;
+      d.backdropFilter = `blur(${bb.toFixed(1)}px)`;
+      break;
+    }
+    case "custom_glass": {
+      const bb = (params.backdropBlur ?? 20) * factor;
+      d.backdropFilter = `blur(${bb.toFixed(1)}px)`;
+      const targetOp = params.opacity ?? 0.8;
+      d.opacity = Math.max(0, Math.min(1, 1 - (1 - targetOp) * factor));
+      break;
+    }
+    case "custom_visibility": {
+      const isHide = (params.visibility ?? "hide") === "hide";
+      d.opacity = isHide ? (factor >= 1 ? 0 : 1 - factor) : factor;
+      break;
+    }
+    case "custom_resize": {
+      d.widthDelta = (params.widthDelta ?? 50) * factor;
+      d.heightDelta = (params.heightDelta ?? 50) * factor;
+      break;
+    }
+    case "custom_morph": {
+      const m = (params.morphAmount ?? 1) * factor;
+      d.borderRadius = 50 * m;
+      break;
+    }
+    case "custom_radius": {
+      d.borderRadius = (params.radius ?? 24) * factor;
+      break;
+    }
+    case "custom_stroke": {
+      d.borderWidth = (params.strokeWidth ?? 4) * factor;
+      d.borderColor = params.strokeColor || "#6d28d9";
+      break;
+    }
+  }
+  return d;
+}
+
 export function compoundLayerAnimations(
   layer: Layer,
   currentTime: number,
@@ -244,6 +340,15 @@ export function compoundLayerAnimations(
   opacity: number;
   filter?: string;
   clipPath?: string;
+  backgroundColor?: string;
+  color?: string;
+  borderRadius?: string;
+  borderWidth?: string;
+  borderColor?: string;
+  boxShadow?: string;
+  backdropFilter?: string;
+  widthDelta?: number;
+  heightDelta?: number;
 } {
   const clips = getLayerClips(layer);
 
@@ -261,6 +366,15 @@ export function compoundLayerAnimations(
   let opacity = layer.style.opacity ?? 1;
   let totalBlur = layer.style.filterBlur ?? 0;
   let activeClipPath: string | undefined;
+  let activeBackgroundColor: string | undefined;
+  let activeColor: string | undefined;
+  let activeBorderRadius: string | undefined;
+  let activeBorderWidth: string | undefined;
+  let activeBorderColor: string | undefined;
+  let activeBoxShadow: string | undefined;
+  let activeBackdropFilter: string | undefined;
+  let totalWidthDelta = 0;
+  let totalHeightDelta = 0;
 
   for (const clip of clips) {
     const adjustedClip = { ...clip, start: clip.start + groupStartOffset };
@@ -282,6 +396,15 @@ export function compoundLayerAnimations(
     if (delta.clipPath) {
       activeClipPath = delta.clipPath;
     }
+    if (delta.backgroundColor) activeBackgroundColor = delta.backgroundColor;
+    if (delta.color) activeColor = delta.color;
+    if (delta.borderRadius !== undefined) activeBorderRadius = `${delta.borderRadius}px`;
+    if (delta.borderWidth !== undefined) activeBorderWidth = `${delta.borderWidth}px`;
+    if (delta.borderColor) activeBorderColor = delta.borderColor;
+    if (delta.boxShadow) activeBoxShadow = delta.boxShadow;
+    if (delta.backdropFilter) activeBackdropFilter = delta.backdropFilter;
+    if (delta.widthDelta !== undefined) totalWidthDelta += delta.widthDelta;
+    if (delta.heightDelta !== undefined) totalHeightDelta += delta.heightDelta;
   }
 
   opacity = Math.max(0, Math.min(1, opacity));
@@ -291,5 +414,14 @@ export function compoundLayerAnimations(
     opacity,
     filter: totalBlur > 0.1 ? `blur(${totalBlur.toFixed(1)}px)` : undefined,
     clipPath: activeClipPath,
+    backgroundColor: activeBackgroundColor,
+    color: activeColor,
+    borderRadius: activeBorderRadius,
+    borderWidth: activeBorderWidth,
+    borderColor: activeBorderColor,
+    boxShadow: activeBoxShadow,
+    backdropFilter: activeBackdropFilter,
+    widthDelta: totalWidthDelta !== 0 ? totalWidthDelta : undefined,
+    heightDelta: totalHeightDelta !== 0 ? totalHeightDelta : undefined,
   };
 }

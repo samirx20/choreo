@@ -60,6 +60,35 @@ export function evaluateSceneAtTime(
         if (compounded.clipPath) {
           css.clipPath = compounded.clipPath;
         }
+        if (compounded.backgroundColor) {
+          css.backgroundColor = compounded.backgroundColor;
+        }
+        if (compounded.color) {
+          css.color = compounded.color;
+        }
+        if (compounded.borderRadius) {
+          css.borderRadius = compounded.borderRadius;
+        }
+        if (compounded.borderWidth) {
+          css.borderWidth = compounded.borderWidth;
+          css.borderStyle = "solid";
+        }
+        if (compounded.borderColor) {
+          css.borderColor = compounded.borderColor;
+        }
+        if (compounded.boxShadow) {
+          css.boxShadow = compounded.boxShadow;
+        }
+        if (compounded.backdropFilter) {
+          css.backdropFilter = compounded.backdropFilter;
+          css.WebkitBackdropFilter = compounded.backdropFilter;
+        }
+        if (compounded.widthDelta !== undefined && typeof layer.style.width === "number") {
+          css.width = `${Math.max(0, layer.style.width + compounded.widthDelta)}px`;
+        }
+        if (compounded.heightDelta !== undefined && typeof layer.style.height === "number") {
+          css.height = `${Math.max(0, layer.style.height + compounded.heightDelta)}px`;
+        }
       } else {
         // Legacy single-slot In animation
         if (layer.animation.in) {

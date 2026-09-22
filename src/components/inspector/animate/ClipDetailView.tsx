@@ -87,6 +87,42 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
     selectedClip.preset.toLowerCase().includes("radius") ||
     selectedClip.params?.radius !== undefined;
 
+  const isColorBased =
+    selectedClip.preset.toLowerCase().includes("color") ||
+    selectedClip.params?.color !== undefined;
+
+  const isShadowBased =
+    selectedClip.preset.toLowerCase().includes("shadow") ||
+    selectedClip.params?.shadowBlur !== undefined ||
+    selectedClip.params?.shadowDistance !== undefined;
+
+  const isBlurBased =
+    selectedClip.preset === "custom_blur" ||
+    (selectedClip.params?.blur !== undefined && !selectedClip.preset.includes("backdrop"));
+
+  const isBackdropBlurBased =
+    selectedClip.preset === "custom_backdrop_blur" ||
+    (selectedClip.params?.backdropBlur !== undefined && selectedClip.preset !== "custom_glass");
+
+  const isGlassBased = selectedClip.preset === "custom_glass";
+
+  const isVisibilityBased =
+    selectedClip.preset === "custom_visibility" ||
+    selectedClip.params?.visibility !== undefined;
+
+  const isResizeBased =
+    selectedClip.preset === "custom_resize" ||
+    selectedClip.params?.widthDelta !== undefined ||
+    selectedClip.params?.heightDelta !== undefined;
+
+  const isMorphBased =
+    selectedClip.preset === "custom_morph" ||
+    selectedClip.params?.morphAmount !== undefined;
+
+  const isStrokeBased =
+    selectedClip.preset === "custom_stroke" ||
+    selectedClip.params?.strokeWidth !== undefined;
+
   return (
     <div className="p-4 space-y-3.5 text-foreground select-none relative min-h-full">
       {/* Navigation Breadcrumb back to Element view */}
@@ -422,6 +458,362 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                 onChange={(val) =>
                   updateAnimationClip(clipLayer.id, selectedClip.id, {
                     params: { ...selectedClip.params, radius: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Color Parameter */}
+      {isColorBased && (
+        <div className="py-1 space-y-2 border-b border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Target Color</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={selectedClip.params?.color || "#6d28d9"}
+                onChange={(e) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, color: e.target.value },
+                  })
+                }
+                className="w-6 h-6 rounded cursor-pointer border border-border p-0 bg-transparent"
+              />
+              <input
+                type="text"
+                value={selectedClip.params?.color || "#6d28d9"}
+                onChange={(e) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, color: e.target.value },
+                  })
+                }
+                className="w-20 text-xs px-2 py-1 rounded bg-muted text-foreground border border-border font-mono uppercase"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Shadow Parameters */}
+      {isShadowBased && (
+        <div className="py-1 space-y-2 border-b border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Blur</span>
+            <div className="w-28">
+              <ScrubbableInput
+                label=""
+                unit="px"
+                value={selectedClip.params?.shadowBlur ?? 16}
+                min={0}
+                max={100}
+                step={1}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, shadowBlur: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Distance</span>
+            <div className="w-28">
+              <ScrubbableInput
+                label=""
+                unit="px"
+                value={selectedClip.params?.shadowDistance ?? 8}
+                min={0}
+                max={100}
+                step={1}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, shadowDistance: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Color</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={selectedClip.params?.shadowColor || "#000000"}
+                onChange={(e) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, shadowColor: e.target.value },
+                  })
+                }
+                className="w-6 h-6 rounded cursor-pointer border border-border p-0 bg-transparent"
+              />
+              <input
+                type="text"
+                value={selectedClip.params?.shadowColor || "#000000"}
+                onChange={(e) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, shadowColor: e.target.value },
+                  })
+                }
+                className="w-20 text-xs px-2 py-1 rounded bg-muted text-foreground border border-border font-mono uppercase"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Layer Blur Parameter */}
+      {isBlurBased && (
+        <div className="py-1 border-b border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Blur</span>
+            <div className="w-28">
+              <ScrubbableInput
+                label=""
+                unit="px"
+                value={selectedClip.params?.blur ?? 12}
+                min={0}
+                max={100}
+                step={1}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, blur: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Background Blur Parameter */}
+      {isBackdropBlurBased && (
+        <div className="py-1 border-b border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Backdrop Blur</span>
+            <div className="w-28">
+              <ScrubbableInput
+                label=""
+                unit="px"
+                value={selectedClip.params?.backdropBlur ?? 16}
+                min={0}
+                max={100}
+                step={1}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, backdropBlur: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Glass Parameters */}
+      {isGlassBased && (
+        <div className="py-1 space-y-2 border-b border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Glass Blur</span>
+            <div className="w-28">
+              <ScrubbableInput
+                label=""
+                unit="px"
+                value={selectedClip.params?.backdropBlur ?? 20}
+                min={0}
+                max={100}
+                step={1}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, backdropBlur: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Glass Opacity</span>
+            <div className="w-28">
+              <ScrubbableInput
+                label=""
+                unit="%"
+                value={Math.round((selectedClip.params?.opacity ?? 0.8) * 100)}
+                min={0}
+                max={100}
+                step={5}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, opacity: val / 100 },
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Stroke Parameters */}
+      {isStrokeBased && (
+        <div className="py-1 space-y-2 border-b border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Stroke Width</span>
+            <div className="w-28">
+              <ScrubbableInput
+                label=""
+                unit="px"
+                value={selectedClip.params?.strokeWidth ?? 4}
+                min={0}
+                max={50}
+                step={1}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, strokeWidth: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Stroke Color</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={selectedClip.params?.strokeColor || "#6d28d9"}
+                onChange={(e) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, strokeColor: e.target.value },
+                  })
+                }
+                className="w-6 h-6 rounded cursor-pointer border border-border p-0 bg-transparent"
+              />
+              <input
+                type="text"
+                value={selectedClip.params?.strokeColor || "#6d28d9"}
+                onChange={(e) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, strokeColor: e.target.value },
+                  })
+                }
+                className="w-20 text-xs px-2 py-1 rounded bg-muted text-foreground border border-border font-mono uppercase"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Resize Parameters */}
+      {isResizeBased && (
+        <div className="py-1 space-y-2 border-b border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Width Delta</span>
+            <div className="w-28">
+              <ScrubbableInput
+                label=""
+                unit="px"
+                value={selectedClip.params?.widthDelta ?? 50}
+                min={-1000}
+                max={1000}
+                step={10}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, widthDelta: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Height Delta</span>
+            <div className="w-28">
+              <ScrubbableInput
+                label=""
+                unit="px"
+                value={selectedClip.params?.heightDelta ?? 50}
+                min={-1000}
+                max={1000}
+                step={10}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, heightDelta: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Visibility Parameter */}
+      {isVisibilityBased && (
+        <div className="py-1 border-b border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Visibility</span>
+            <div className="flex items-center bg-muted p-0.5 rounded-md">
+              <button
+                type="button"
+                onClick={() =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, visibility: "hide" },
+                  })
+                }
+                className={cn(
+                  "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
+                  (selectedClip.params?.visibility ?? "hide") === "hide"
+                    ? "bg-card text-foreground shadow-2xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Hide
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, visibility: "show" },
+                  })
+                }
+                className={cn(
+                  "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
+                  selectedClip.params?.visibility === "show"
+                    ? "bg-card text-foreground shadow-2xs font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Show
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Morph Parameter */}
+      {isMorphBased && (
+        <div className="py-1 border-b border-border">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-medium">Morph Amount</span>
+            <div className="w-28">
+              <ScrubbableInput
+                label=""
+                unit="%"
+                value={Math.round((selectedClip.params?.morphAmount ?? 1) * 100)}
+                min={0}
+                max={100}
+                step={5}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, morphAmount: val / 100 },
                   })
                 }
               />

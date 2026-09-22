@@ -12,6 +12,15 @@ import {
   Type,
   Zap,
   Check,
+  SunMedium,
+  BoxSelect,
+  Flame,
+  CircleDot,
+  Shield,
+  EyeOff,
+  ArrowLeftRight,
+  Shapes,
+  CornerUpRight,
 } from "lucide-react";
 import { Layer, AnimationClipType, getLayerClips } from "@/types/scene";
 import { cn } from "@/lib/utils";
@@ -89,50 +98,124 @@ const ACTION_PRESETS: AnimationCatalogPreset[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// CUSTOM CHANNELS (Move, Scale, Rotate, Opacity, Color, Corner Radius)
+// CUSTOM CATEGORIES: Categorized Property List (Jitter-Style, Zero Preview Boxes)
 // ---------------------------------------------------------------------------
-const CUSTOM_CHANNELS: { id: string; name: string; desc: string; icon: any; preset: AnimationCatalogPreset }[] = [
+export interface CustomCategoryItem {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  preset: AnimationCatalogPreset;
+}
+
+export interface CustomCategoryGroup {
+  category: string;
+  items: CustomCategoryItem[];
+}
+
+export const CUSTOM_CATEGORIES: CustomCategoryGroup[] = [
   {
-    id: "custom_move",
-    name: "Move",
-    desc: "Animate Position (X, Y)",
-    icon: Move,
-    preset: { id: "custom_move", name: "Custom Move", type: "action", duration: 0.8, easing: "snappy", params: { distance: 60 } },
+    category: "Transform",
+    items: [
+      {
+        id: "custom_scale",
+        name: "Scale",
+        icon: Maximize2,
+        preset: { id: "custom_scale", name: "Scale", type: "action", duration: 0.8, easing: "bouncy", params: { scaleAmount: 1.3 } },
+      },
+      {
+        id: "custom_rotate",
+        name: "Rotate",
+        icon: RotateCw,
+        preset: { id: "custom_rotate", name: "Rotate", type: "action", duration: 0.8, easing: "snappy", params: { rotationDegrees: 90 } },
+      },
+      {
+        id: "custom_move",
+        name: "Move",
+        icon: Move,
+        preset: { id: "custom_move", name: "Move", type: "action", duration: 0.8, easing: "snappy", params: { distance: 60, direction: "up" } },
+      },
+    ],
   },
   {
-    id: "custom_scale",
-    name: "Scale",
-    desc: "Animate Width & Height",
-    icon: Maximize2,
-    preset: { id: "custom_scale", name: "Custom Scale", type: "action", duration: 0.8, easing: "bouncy", params: { scaleAmount: 1.5 } },
+    category: "Style",
+    items: [
+      {
+        id: "custom_opacity",
+        name: "Opacity",
+        icon: SunMedium,
+        preset: { id: "custom_opacity", name: "Opacity", type: "action", duration: 0.8, easing: "smooth", params: { opacity: 0 } },
+      },
+      {
+        id: "custom_color",
+        name: "Color",
+        icon: Palette,
+        preset: { id: "custom_color", name: "Color", type: "action", duration: 0.8, easing: "smooth", params: { color: "#6d28d9" } },
+      },
+      {
+        id: "custom_shadow",
+        name: "Shadow",
+        icon: BoxSelect,
+        preset: { id: "custom_shadow", name: "Shadow", type: "action", duration: 0.8, easing: "smooth", params: { shadowBlur: 16, shadowDistance: 8, shadowColor: "#000000" } },
+      },
+    ],
   },
   {
-    id: "custom_rotate",
-    name: "Rotate",
-    desc: "Animate Angle Rotation",
-    icon: RotateCw,
-    preset: { id: "custom_rotate", name: "Custom Rotate", type: "action", duration: 1.0, easing: "snappy", params: { rotationDegrees: 90 } },
+    category: "Effects",
+    items: [
+      {
+        id: "custom_blur",
+        name: "Layer Blur",
+        icon: Flame,
+        preset: { id: "custom_blur", name: "Layer Blur", type: "action", duration: 0.8, easing: "smooth", params: { blur: 12 } },
+      },
+      {
+        id: "custom_backdrop_blur",
+        name: "Background Blur",
+        icon: CircleDot,
+        preset: { id: "custom_backdrop_blur", name: "Background Blur", type: "action", duration: 0.8, easing: "smooth", params: { backdropBlur: 16 } },
+      },
+      {
+        id: "custom_glass",
+        name: "Glass",
+        icon: Shield,
+        preset: { id: "custom_glass", name: "Glass", type: "action", duration: 0.8, easing: "smooth", params: { backdropBlur: 20, opacity: 0.8 } },
+      },
+    ],
   },
   {
-    id: "custom_opacity",
-    name: "Opacity",
-    desc: "Animate Fade & Transparency",
-    icon: Sparkles,
-    preset: { id: "custom_opacity", name: "Custom Opacity", type: "action", duration: 0.8, easing: "smooth" },
-  },
-  {
-    id: "custom_color",
-    name: "Color",
-    desc: "Animate Fill / Palette Shift",
-    icon: Palette,
-    preset: { id: "custom_color", name: "Custom Color", type: "action", duration: 0.8, easing: "smooth" },
-  },
-  {
-    id: "custom_radius",
-    name: "Corner Radius",
-    desc: "Morph Corner Rounding",
-    icon: Square,
-    preset: { id: "custom_radius", name: "Custom Radius", type: "action", duration: 0.8, easing: "snappy" },
+    category: "Other",
+    items: [
+      {
+        id: "custom_visibility",
+        name: "Hide / Show",
+        icon: EyeOff,
+        preset: { id: "custom_visibility", name: "Hide / Show", type: "action", duration: 0.4, easing: "linear", params: { visibility: "hide" } },
+      },
+      {
+        id: "custom_resize",
+        name: "Resize",
+        icon: ArrowLeftRight,
+        preset: { id: "custom_resize", name: "Resize", type: "action", duration: 0.8, easing: "snappy", params: { widthDelta: 50, heightDelta: 50 } },
+      },
+      {
+        id: "custom_morph",
+        name: "Morph",
+        icon: Shapes,
+        preset: { id: "custom_morph", name: "Morph", type: "action", duration: 0.8, easing: "smooth", params: { morphAmount: 1 } },
+      },
+      {
+        id: "custom_radius",
+        name: "Corner Radius",
+        icon: CornerUpRight,
+        preset: { id: "custom_radius", name: "Corner Radius", type: "action", duration: 0.8, easing: "snappy", params: { radius: 24 } },
+      },
+      {
+        id: "custom_stroke",
+        name: "Stroke",
+        icon: Square,
+        preset: { id: "custom_stroke", name: "Stroke", type: "action", duration: 0.8, easing: "snappy", params: { strokeWidth: 4, strokeColor: "#6d28d9" } },
+      },
+    ],
   },
 ];
 
@@ -322,7 +405,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
       setActiveTab("EFFECTS");
     } else if (
       currentClip.preset.startsWith("custom_") ||
-      ["custom_move", "custom_scale", "custom_rotate", "custom_opacity", "custom_color", "custom_radius"].includes(currentClip.preset)
+      CUSTOM_CATEGORIES.some((g) => g.items.some((i) => i.id === currentClip.preset))
     ) {
       setActiveTab("CUSTOM");
     } else {
@@ -541,24 +624,50 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
         </div>
       )}
 
-      {/* TAB 2: CUSTOM CHANNELS */}
+      {/* TAB 2: CUSTOM CHANNELS (Clean Jitter Categorized List, ZERO Preview Cards) */}
       {activeTab === "CUSTOM" && (
-        <div className="flex-1 overflow-y-auto p-3 space-y-3">
-          <div className="text-[11px] text-[#71717a] pb-0.5 leading-snug">
-            Choose a visual channel to animate independently:
-          </div>
-
-          <div className="grid grid-cols-2 gap-2.5">
-            {CUSTOM_CHANNELS.map((item) => (
-              <AnimationCard
-                key={item.id}
-                preset={item.preset}
-                isText={isText}
-                isSelected={isPresetSelected(item.preset)}
-                onApply={onApplyPreset}
-              />
-            ))}
-          </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-4">
+          {CUSTOM_CATEGORIES.map((section, sIdx) => (
+            <div key={section.category} className={cn(sIdx > 0 && "border-t border-[#e5e5e7] pt-3")}>
+              <h3 className="text-[13px] font-bold text-[#18181b] tracking-tight px-2 pb-1.5">
+                {section.category}
+              </h3>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const isSelected = isPresetSelected(item.preset);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => onApplyPreset(item.preset)}
+                      className={cn(
+                        "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer group",
+                        isSelected
+                          ? "bg-[#ede9fe]/60 text-[#6d28d9]"
+                          : "hover:bg-[#f4f4f6] text-[#18181b]"
+                      )}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Icon className="w-4 h-4 text-[#7c3aed] shrink-0" />
+                        <span
+                          className={cn(
+                            "text-[13px] truncate",
+                            isSelected ? "font-bold text-[#6d28d9]" : "font-medium text-[#18181b]"
+                          )}
+                        >
+                          {item.name}
+                        </span>
+                      </div>
+                      {isSelected && (
+                        <Check className="w-3.5 h-3.5 text-[#6d28d9] shrink-0 stroke-[2.5]" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

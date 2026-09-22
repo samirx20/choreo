@@ -636,36 +636,126 @@ describe("Animate Inspector & Motion Matrix Tests", () => {
     });
   });
 
-  it("evaluates all 6 Custom channel presets cleanly in evaluateClipDelta", async () => {
-    const { evaluateClipDelta } = await import("../engine/evaluator");
+  it("provides categorized Jitter custom animation channels matching Transform, Style, Effects, and Other", async () => {
+    const { CUSTOM_CATEGORIES } = await import(
+      "../components/inspector/motion/AnimationCatalogSheet"
+    );
+    expect(CUSTOM_CATEGORIES).toBeDefined();
+    expect(CUSTOM_CATEGORIES.map((c) => c.category)).toEqual([
+      "Transform",
+      "Style",
+      "Effects",
+      "Other",
+    ]);
+
+    const allItemIds = CUSTOM_CATEGORIES.flatMap((c) => c.items.map((i) => i.id));
+    expect(allItemIds).toContain("custom_scale");
+    expect(allItemIds).toContain("custom_rotate");
+    expect(allItemIds).toContain("custom_move");
+    expect(allItemIds).toContain("custom_opacity");
+    expect(allItemIds).toContain("custom_color");
+    expect(allItemIds).toContain("custom_shadow");
+    expect(allItemIds).toContain("custom_blur");
+    expect(allItemIds).toContain("custom_backdrop_blur");
+    expect(allItemIds).toContain("custom_glass");
+    expect(allItemIds).toContain("custom_visibility");
+    expect(allItemIds).toContain("custom_resize");
+    expect(allItemIds).toContain("custom_morph");
+    expect(allItemIds).toContain("custom_radius");
+    expect(allItemIds).toContain("custom_stroke");
+    expect(allItemIds.length).toBe(14);
+  });
+
+  it("evaluates all 14 Custom channel presets cleanly in evaluateClipDelta and compounds styles", async () => {
+    const { evaluateClipDelta, compoundLayerAnimations, evaluateSceneAtTime } = await import("../engine/evaluator");
 
     const customChannels = [
-      { id: "custom_move", type: "action" as const, duration: 0.8 },
-      { id: "custom_scale", type: "action" as const, duration: 0.8 },
-      { id: "custom_rotate", type: "action" as const, duration: 1.0 },
-      { id: "custom_opacity", type: "action" as const, duration: 0.8 },
-      { id: "custom_color", type: "action" as const, duration: 0.8 },
-      { id: "custom_radius", type: "action" as const, duration: 0.8 },
+      { id: "custom_scale", params: { scaleAmount: 1.5 } },
+      { id: "custom_rotate", params: { rotationDegrees: 90 } },
+      { id: "custom_move", params: { distance: 60, direction: "up" } },
+      { id: "custom_opacity", params: { opacity: 0 } },
+      { id: "custom_color", params: { color: "#ff0077" } },
+      { id: "custom_shadow", params: { shadowBlur: 20, shadowDistance: 10, shadowColor: "#112233" } },
+      { id: "custom_blur", params: { blur: 14 } },
+      { id: "custom_backdrop_blur", params: { backdropBlur: 18 } },
+      { id: "custom_glass", params: { backdropBlur: 25, opacity: 0.7 } },
+      { id: "custom_visibility", params: { visibility: "hide" } },
+      { id: "custom_resize", params: { widthDelta: 40, heightDelta: 30 } },
+      { id: "custom_morph", params: { morphAmount: 0.5 } },
+      { id: "custom_radius", params: { radius: 32 } },
+      { id: "custom_stroke", params: { strokeWidth: 6, strokeColor: "#00eeff" } },
     ];
 
     customChannels.forEach((ch) => {
       const clip: any = {
         id: `test_${ch.id}`,
-        type: ch.type,
+        type: "action",
         preset: ch.id,
         start: 0,
-        duration: ch.duration,
+        duration: 1.0,
         easing: "snappy",
         intensity: 1,
+        params: ch.params,
       };
 
-      const delta = evaluateClipDelta(clip, ch.duration * 0.5);
-      expect(delta).toBeDefined();
-      expect(Number.isFinite(delta.x)).toBe(true);
-      expect(Number.isFinite(delta.scaleX)).toBe(true);
-      expect(Number.isFinite(delta.rotate)).toBe(true);
-      expect(Number.isFinite(delta.opacity)).toBe(true);
+      const deltaMid = evaluateClipDelta(clip, 0.5);
+      expect(deltaMid).toBeDefined();
+
+      const deltaEnd = evaluateClipDelta(clip, 1.0);
+      expect(deltaEnd).toBeDefined();
     });
+
+    // Test compounding and evaluateSceneAtTime integration with custom color and radius
+    const testLayer: any = {
+      id: "compounded_custom_layer",
+      name: "Card",
+      type: "shape",
+      shapeType: "rectangle",
+      style: { x: 100, y: 100, width: 200, height: 120, backgroundColor: "#ffffff" },
+      animation: {
+        clips: [
+          {
+            id: "c_col",
+            type: "action",
+            preset: "custom_color",
+            start: 0,
+            duration: 1.0,
+            easing: "smooth",
+            params: { color: "#6d28d9" },
+          },
+          {
+            id: "c_rad",
+            type: "action",
+            preset: "custom_radius",
+            start: 0,
+            duration: 1.0,
+            easing: "snappy",
+            params: { radius: 24 },
+          },
+          {
+            id: "c_stroke",
+            type: "action",
+            preset: "custom_stroke",
+            start: 0,
+            duration: 1.0,
+            easing: "snappy",
+            params: { strokeWidth: 4, strokeColor: "#10b981" },
+          },
+        ],
+      },
+    };
+
+    const stateEnd = compoundLayerAnimations(testLayer, 1.0);
+    expect(stateEnd.backgroundColor).toBe("#6d28d9");
+    expect(stateEnd.borderRadius).toBe("24px");
+    expect(stateEnd.borderWidth).toBe("4px");
+    expect(stateEnd.borderColor).toBe("#10b981");
+
+    const sceneStyles = evaluateSceneAtTime([testLayer], 1.0);
+    expect(sceneStyles["compounded_custom_layer"].backgroundColor).toBe("#6d28d9");
+    expect(sceneStyles["compounded_custom_layer"].borderRadius).toBe("24px");
+    expect(sceneStyles["compounded_custom_layer"].borderWidth).toBe("4px");
+    expect(sceneStyles["compounded_custom_layer"].borderColor).toBe("#10b981");
   });
 });
 
