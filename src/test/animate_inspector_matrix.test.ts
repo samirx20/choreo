@@ -757,6 +757,85 @@ describe("Animate Inspector & Motion Matrix Tests", () => {
     expect(sceneStyles["compounded_custom_layer"].borderWidth).toBe("4px");
     expect(sceneStyles["compounded_custom_layer"].borderColor).toBe("#10b981");
   });
+
+  it("evaluates Jitter From -> To initial values and target transitions accurately", async () => {
+    const { evaluateClipDelta } = await import("../engine/evaluator");
+
+    // 1. Layer Blur with Initial value 0 -> To 20
+    const blurClip: AnimationClip = {
+      id: "blur_test",
+      type: "action",
+      preset: "custom_blur",
+      start: 0,
+      duration: 1.0,
+      easing: "linear",
+      from: { blur: 0 },
+      params: { blur: 20 },
+    };
+    expect(evaluateClipDelta(blurClip, 0.0).blur).toBeCloseTo(0, 1);
+    expect(evaluateClipDelta(blurClip, 0.5).blur).toBeCloseTo(10, 1);
+    expect(evaluateClipDelta(blurClip, 1.0).blur).toBeCloseTo(20, 1);
+
+    // 2. Scale with Initial value 0.5 -> To 1.5
+    const scaleClip: AnimationClip = {
+      id: "scale_test",
+      type: "action",
+      preset: "custom_scale",
+      start: 0,
+      duration: 1.0,
+      easing: "linear",
+      from: { scale: 0.5 },
+      params: { scaleAmount: 1.5 },
+    };
+    expect(evaluateClipDelta(scaleClip, 0.0).scaleX).toBeCloseTo(0.5, 2);
+    expect(evaluateClipDelta(scaleClip, 0.5).scaleX).toBeCloseTo(1.0, 2);
+    expect(evaluateClipDelta(scaleClip, 1.0).scaleX).toBeCloseTo(1.5, 2);
+
+    // 3. Move with Initial value and direction
+    const moveClip: AnimationClip = {
+      id: "move_test",
+      type: "action",
+      preset: "custom_move",
+      direction: "up",
+      distance: 100,
+      start: 0,
+      duration: 1.0,
+      easing: "linear",
+      from: { distance: 0 },
+      params: { distance: 100 },
+    };
+    expect(evaluateClipDelta(moveClip, 0.0).y).toBeCloseTo(0, 1);
+    expect(evaluateClipDelta(moveClip, 0.5).y).toBeCloseTo(-50, 1);
+    expect(evaluateClipDelta(moveClip, 1.0).y).toBeCloseTo(-100, 1);
+  });
+
+  it("auto-choreographs staggered creation start times and element-tailored entrance presets", async () => {
+    const { createLayerForTool } = await import("../components/canvas/helpers/toolCreationHelpers");
+
+    // 1st element (index 0) -> start: 0.0s
+    const textLayer = createLayerForTool("text", 100, 100, 0);
+    expect(textLayer).toBeDefined();
+    expect(textLayer?.animation?.in?.start).toBe(0);
+    expect(textLayer?.animation?.in?.preset).toBe("slideUp");
+
+    // 2nd element (index 1) -> start: 0.5s
+    const shapeLayer = createLayerForTool("rectangle", 200, 200, 1);
+    expect(shapeLayer).toBeDefined();
+    expect(shapeLayer?.animation?.in?.start).toBe(0.5);
+    expect(shapeLayer?.animation?.in?.preset).toBe("grow");
+
+    // 3rd element (index 2) -> start: 1.0s
+    const circleLayer = createLayerForTool("circle", 300, 300, 2);
+    expect(circleLayer).toBeDefined();
+    expect(circleLayer?.animation?.in?.start).toBe(1.0);
+    expect(circleLayer?.animation?.in?.preset).toBe("pop");
+
+    // 4th element (index 3) -> start: 1.5s
+    const lineLayer = createLayerForTool("line", 400, 400, 3);
+    expect(lineLayer).toBeDefined();
+    expect(lineLayer?.animation?.in?.start).toBe(1.5);
+    expect(lineLayer?.animation?.in?.preset).toBe("slideRight");
+  });
 });
 
 

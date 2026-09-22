@@ -215,12 +215,13 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
           {layer.content}
         </span>
       ) : (() => {
-        const inPreset = layer.animation?.in?.preset;
-        const outPreset = layer.animation?.out?.preset;
-
-        if (inPreset === "typewriter" || outPreset === "typewriter") {
-          const isOut = outPreset === "typewriter" && currentTime >= (layer.animation?.out?.start ?? Infinity);
-          const anim = isOut ? layer.animation!.out! : layer.animation!.in!;
+        const clips = layer.animation?.clips ? layer.animation.clips : (layer.animation?.in ? [layer.animation.in as any] : []);
+        
+        // Find typewriter clip if any
+        const typewriterClip = clips.find((c) => c.preset === "typewriter" || (c as any).id?.includes("typewriter"));
+        if (typewriterClip) {
+          const anim = typewriterClip;
+          const isOut = anim.type === "out";
           const chars = Array.from(layer.content);
           if (currentTime < anim.start) {
             return isOut ? layer.content : null;
@@ -241,25 +242,35 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
           );
         }
 
-        const activeAnim =
-          layer.animation?.out &&
-          (layer.animation.out.animateBy === "word" ||
-            layer.animation.out.animateBy === "character")
-            ? { config: layer.animation.out, mode: "out" as const }
-            : layer.animation?.in &&
-              (layer.animation.in.animateBy === "word" ||
-                layer.animation.in.animateBy === "character")
-            ? { config: layer.animation.in, mode: "in" as const }
-            : null;
+        // Find active split/stagger clip (e.g. Letters, Words, Lines, baselineReveal)
+        const splitClip = clips.find(
+          (c) =>
+            c.splitBy === "character" ||
+            c.splitBy === "word" ||
+            c.splitBy === "line" ||
+            (c as any).animateBy === "character" ||
+            (c as any).animateBy === "word" ||
+            c.preset === "baselineReveal"
+        );
 
-        if (activeAnim) {
-          const anim = activeAnim.config;
-          const mode = activeAnim.mode;
-          if (anim.animateBy === "character") {
+        if (splitClip) {
+          const anim = splitClip;
+          const mode = anim.type === "out" ? ("out" as const) : ("in" as const);
+          const splitBy = anim.splitBy || (anim as any).animateBy || (anim.preset === "baselineReveal" ? "word" : "character");
+          const stagger = anim.staggerDelay ?? (anim as any).stagger ?? (splitBy === "character" ? 0.04 : 0.08);
+          const order = anim.params?.order || "Forward";
+
+          if (splitBy === "character") {
             const chars = Array.from(layer.content);
-            const stagger = anim.stagger ?? 0.03;
+            const total = chars.length;
             return chars.map((char, i) => {
-              const charStart = anim.start + i * stagger;
+              let orderIdx = i;
+              if (order === "Backward") orderIdx = total - 1 - i;
+              else if (order === "From center") orderIdx = Math.abs(i - Math.floor(total / 2));
+              else if (order === "To center") orderIdx = Math.floor(total / 2) - Math.abs(i - Math.floor(total / 2));
+              else if (order === "Random") orderIdx = ((i * 13) % total);
+
+              const charStart = anim.start + orderIdx * stagger;
               const charEval = evaluateAnimationConfig(
                 { ...anim, start: charStart },
                 currentTime,
@@ -283,8 +294,10 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
           } else {
             // Word by word
             const tokens = layer.content.split(/(\s+)/);
-            let wordIndex = 0;
-            const stagger = anim.stagger ?? 0.08;
+            const wordsOnly = tokens.filter((t) => !/^\s+$/.test(t));
+            const totalWords = wordsOnly.length;
+            let wordCount = 0;
+
             return tokens.map((token, idx) => {
               if (/^\s+$/.test(token)) {
                 return (
@@ -293,25 +306,44 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
                   </span>
                 );
               }
-              const wordStart = anim.start + wordIndex * stagger;
-              wordIndex++;
+              const currentWordIdx = wordCount++;
+              let orderIdx = currentWordIdx;
+              if (order === "Backward") orderIdx = totalWords - 1 - currentWordIdx;
+              else if (order === "From center") orderIdx = Math.abs(currentWordIdx - Math.floor(totalWords / 2));
+              else if (order === "To center") orderIdx = Math.floor(totalWords / 2) - Math.abs(currentWordIdx - Math.floor(totalWords / 2));
+              else if (order === "Random") orderIdx = ((currentWordIdx * 7) % totalWords);
+
+              const wordStart = anim.start + orderIdx * stagger;
               const wordEval = evaluateAnimationConfig(
                 { ...anim, start: wordStart },
                 currentTime,
                 mode
               );
+
+              const isBaseline = anim.preset === "baselineReveal";
+
               return (
                 <span
                   key={idx}
                   style={{
                     display: "inline-block",
-                    opacity: wordEval.opacity,
-                    transform: compileTransform(wordEval.transform),
-                    filter: wordEval.filter,
-                    whiteSpace: "pre",
+                    overflow: isBaseline ? "hidden" : "visible",
+                    verticalAlign: "bottom",
                   }}
                 >
-                  {token}
+                  <span
+                    style={{
+                      display: "inline-block",
+                      opacity: wordEval.opacity,
+                      transform: isBaseline
+                        ? `translateY(${(1 - (mode === "in" ? Math.min(1, Math.max(0, (currentTime - wordStart) / Math.max(anim.duration, 0.05))) : 0)) * 100}%)`
+                        : compileTransform(wordEval.transform),
+                      filter: wordEval.filter,
+                      whiteSpace: "pre",
+                    }}
+                  >
+                    {token}
+                  </span>
                 </span>
               );
             });

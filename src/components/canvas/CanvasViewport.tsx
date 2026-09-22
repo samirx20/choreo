@@ -525,7 +525,12 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         : 100;
 
       // Click-to-place elements via active tool
-      const createdLayer = createLayerForTool(activeTool, canvasX, canvasY);
+      const createdLayer = createLayerForTool(
+        activeTool,
+        canvasX,
+        canvasY,
+        activeScreen?.layers.length ?? 0
+      );
       if (createdLayer) {
         addLayer(createdLayer);
         if (activeTool === "text") {

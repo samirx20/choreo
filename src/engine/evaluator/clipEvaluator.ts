@@ -230,6 +230,25 @@ export function evaluateClipDelta(
   };
 }
 
+function parseHex(c: string): [number, number, number] {
+  let hex = c.replace("#", "").trim();
+  if (hex.length === 3) {
+    hex = hex.split("").map((x) => x + x).join("");
+  }
+  const num = parseInt(hex, 16);
+  if (isNaN(num)) return [109, 40, 217];
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
+function lerpColor(c1: string, c2: string, t: number): string {
+  const [r1, g1, b1] = parseHex(c1);
+  const [r2, g2, b2] = parseHex(c2);
+  const r = Math.round(r1 + (r2 - r1) * t);
+  const g = Math.round(g1 + (g2 - g1) * t);
+  const b = Math.round(b1 + (b2 - b1) * t);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 export function applyCustomPresetDelta(
   clip: AnimationClip,
   factor: number,
@@ -238,6 +257,7 @@ export function applyCustomPresetDelta(
   const {
     preset,
     params = {},
+    from = {},
     scaleAmount,
     rotationDegrees,
     distance,
@@ -247,59 +267,79 @@ export function applyCustomPresetDelta(
   const dist = (distance ?? params.distance ?? 60) * intensity;
   const dir = direction || params.direction || "up";
   const rot = (rotationDegrees ?? params.rotationDegrees ?? 90) * intensity;
-  const scaleBase = scaleAmount ?? params.scaleAmount ?? 1.3;
-  const scaleDelta = (scaleBase - 1) * intensity;
 
   switch (preset) {
     case "custom_move": {
-      if (dir === "up") d.y = -dist * factor;
-      else if (dir === "down") d.y = dist * factor;
-      else if (dir === "left") d.x = -dist * factor;
-      else d.x = dist * factor;
+      const defaultToY = dir === "up" ? -dist : dir === "down" ? dist : 0;
+      const defaultToX = dir === "left" ? -dist : dir === "right" ? dist : 0;
+      const fromX = from.x ?? from.distance ?? params.fromX ?? params.fromDistance ?? 0;
+      const toX = params.toX ?? defaultToX;
+      const fromY = from.y ?? params.fromY ?? 0;
+      const toY = params.toY ?? defaultToY;
+      d.x = fromX + (toX - fromX) * factor;
+      d.y = fromY + (toY - fromY) * factor;
       break;
     }
     case "custom_scale": {
-      const s = 1 + scaleDelta * factor;
+      const fromS = from.scale ?? params.fromScale ?? 1.0;
+      const toS = params.toScale ?? (scaleAmount ?? params.scaleAmount ?? 1.2);
+      const s = fromS + (toS - fromS) * factor;
       d.scaleX = s;
       d.scaleY = s;
       break;
     }
     case "custom_rotate": {
-      d.rotate = rot * factor;
+      const fromR = from.rotate ?? params.fromRotate ?? 0;
+      const toR = params.toRotate ?? rot;
+      d.rotate = fromR + (toR - fromR) * factor;
       break;
     }
     case "custom_opacity": {
-      const targetOp = params.opacity ?? 0;
-      d.opacity = Math.max(0, Math.min(1, 1 - (1 - targetOp) * factor));
+      const fromOp = from.opacity ?? params.fromOpacity ?? 1;
+      const toOp = params.toOpacity ?? (params.opacity ?? 0);
+      d.opacity = Math.max(0, Math.min(1, fromOp + (toOp - fromOp) * factor));
       break;
     }
     case "custom_color": {
-      const col = params.color || "#6d28d9";
-      d.color = col;
-      d.backgroundColor = col;
+      const fromCol = from.color ?? params.fromColor ?? null;
+      const toCol = params.toColor ?? params.color ?? "#6d28d9";
+      const finalColor = fromCol ? lerpColor(fromCol, toCol, factor) : toCol;
+      d.color = finalColor;
+      d.backgroundColor = finalColor;
       break;
     }
     case "custom_shadow": {
-      const blur = (params.shadowBlur ?? 16) * factor;
-      const shadowDist = (params.shadowDistance ?? 8) * factor;
+      const fromBlur = from.shadowBlur ?? params.fromShadowBlur ?? 0;
+      const toBlur = params.toShadowBlur ?? params.shadowBlur ?? 16;
+      const fromDist = from.shadowDistance ?? params.fromShadowDistance ?? 0;
+      const toDist = params.toShadowDistance ?? params.shadowDistance ?? 8;
+      const blur = fromBlur + (toBlur - fromBlur) * factor;
+      const shadowDist = fromDist + (toDist - fromDist) * factor;
       const col = params.shadowColor ?? "rgba(0,0,0,0.5)";
       d.boxShadow = `0px ${shadowDist.toFixed(1)}px ${blur.toFixed(1)}px ${col}`;
       break;
     }
     case "custom_blur": {
-      d.blur = (params.blur ?? 12) * factor;
+      const fromB = from.blur ?? params.fromBlur ?? 0;
+      const toB = params.toBlur ?? params.blur ?? 10;
+      d.blur = fromB + (toB - fromB) * factor;
       break;
     }
     case "custom_backdrop_blur": {
-      const bb = (params.backdropBlur ?? 16) * factor;
+      const fromBb = from.backdropBlur ?? params.fromBackdropBlur ?? 0;
+      const toBb = params.toBackdropBlur ?? params.backdropBlur ?? 16;
+      const bb = fromBb + (toBb - fromBb) * factor;
       d.backdropFilter = `blur(${bb.toFixed(1)}px)`;
       break;
     }
     case "custom_glass": {
-      const bb = (params.backdropBlur ?? 20) * factor;
+      const fromBb = from.backdropBlur ?? params.fromBackdropBlur ?? 0;
+      const toBb = params.toBackdropBlur ?? params.backdropBlur ?? 20;
+      const fromOp = from.opacity ?? params.fromOpacity ?? 1;
+      const toOp = params.toOpacity ?? (params.opacity ?? 0.8);
+      const bb = fromBb + (toBb - fromBb) * factor;
       d.backdropFilter = `blur(${bb.toFixed(1)}px)`;
-      const targetOp = params.opacity ?? 0.8;
-      d.opacity = Math.max(0, Math.min(1, 1 - (1 - targetOp) * factor));
+      d.opacity = Math.max(0, Math.min(1, fromOp + (toOp - fromOp) * factor));
       break;
     }
     case "custom_visibility": {
@@ -308,22 +348,34 @@ export function applyCustomPresetDelta(
       break;
     }
     case "custom_resize": {
-      d.widthDelta = (params.widthDelta ?? 50) * factor;
-      d.heightDelta = (params.heightDelta ?? 50) * factor;
+      const fromW = from.widthDelta ?? params.fromWidthDelta ?? 0;
+      const toW = params.toWidthDelta ?? params.widthDelta ?? 50;
+      const fromH = from.heightDelta ?? params.fromHeightDelta ?? 0;
+      const toH = params.toHeightDelta ?? params.heightDelta ?? 50;
+      d.widthDelta = fromW + (toW - fromW) * factor;
+      d.heightDelta = fromH + (toH - fromH) * factor;
       break;
     }
     case "custom_morph": {
-      const m = (params.morphAmount ?? 1) * factor;
+      const fromM = from.morphAmount ?? params.fromMorphAmount ?? 0;
+      const toM = params.toMorphAmount ?? params.morphAmount ?? 1;
+      const m = fromM + (toM - fromM) * factor;
       d.borderRadius = 50 * m;
       break;
     }
     case "custom_radius": {
-      d.borderRadius = (params.radius ?? 24) * factor;
+      const fromR = from.radius ?? params.fromRadius ?? 0;
+      const toR = params.toRadius ?? params.radius ?? 16;
+      d.borderRadius = fromR + (toR - fromR) * factor;
       break;
     }
     case "custom_stroke": {
-      d.borderWidth = (params.strokeWidth ?? 4) * factor;
-      d.borderColor = params.strokeColor || "#6d28d9";
+      const fromSw = from.strokeWidth ?? params.fromStrokeWidth ?? 0;
+      const toSw = params.toStrokeWidth ?? params.strokeWidth ?? 4;
+      const fromSc = from.strokeColor ?? params.fromStrokeColor ?? null;
+      const toSc = params.toStrokeColor ?? params.strokeColor ?? "#6d28d9";
+      d.borderWidth = fromSw + (toSw - fromSw) * factor;
+      d.borderColor = fromSc ? lerpColor(fromSc, toSc, factor) : toSc;
       break;
     }
   }

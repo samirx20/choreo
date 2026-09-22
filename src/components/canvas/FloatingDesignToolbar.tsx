@@ -58,8 +58,11 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
     const sWidth = activeScreen.width ?? doc.settings.width;
     const sHeight = activeScreen.height ?? doc.settings.height;
     const size = 64;
+    const existingCount = activeScreen?.layers.length ?? 0;
+    const start = existingCount * 0.5;
+    const layerId = `icon_${Date.now()}`;
     addLayer({
-      id: `icon_${Date.now()}`,
+      id: layerId,
       name: name,
       type: "icon",
       iconName: name,
@@ -77,10 +80,21 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
       animation: {
         in: {
           preset: "pop",
-          start: 0,
+          start,
           duration: 0.5,
           easing: "bouncy",
         },
+        clips: [
+          {
+            id: `clip_${Date.now()}`,
+            preset: "pop",
+            type: "in",
+            start,
+            duration: 0.5,
+            easing: "bouncy",
+            params: { popScale: 1.15, fade: true },
+          },
+        ],
       },
     });
   };
@@ -162,6 +176,9 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
         const sHeight = activeScreen.height ?? doc.settings.height;
         const cleanName = file.name.replace(/\.[^/.]+$/, "");
 
+        const existingCount = activeScreen?.layers.length ?? 0;
+        const start = existingCount * 0.5;
+
         addLayer({
           id: `image_${Date.now()}`,
           name: cleanName || "Image",
@@ -181,11 +198,22 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
           },
           animation: {
             in: {
-              preset: "pop",
-              start: 0,
+              preset: "fade",
+              start,
               duration: 0.6,
-              easing: "bouncy",
+              easing: "smooth",
             },
+            clips: [
+              {
+                id: `clip_${Date.now()}`,
+                preset: "fade",
+                type: "in",
+                start,
+                duration: 0.6,
+                easing: "smooth",
+                params: { fade: true },
+              },
+            ],
           },
         });
       };

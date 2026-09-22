@@ -29,14 +29,18 @@ export const LineRenderer: React.FC<LineRendererProps> = ({
 
   const combinedStyle = { ...baseCss, ...computedStyle };
   const strokeColor =
+    (combinedStyle.borderColor as string) ||
+    (combinedStyle.color as string) ||
     (layer as LineLayer).strokeColor ||
     layer.style.borderColor ||
     layer.style.backgroundColor ||
     "#3b82f6";
   const strokeWidth =
-    (layer as LineLayer).strokeWidth ||
-    layer.style.borderWidth ||
-    2;
+    typeof combinedStyle.borderWidth === "number"
+      ? combinedStyle.borderWidth
+      : typeof combinedStyle.borderWidth === "string"
+      ? parseFloat(combinedStyle.borderWidth) || ((layer as LineLayer).strokeWidth || layer.style.borderWidth || 2)
+      : (layer as LineLayer).strokeWidth || layer.style.borderWidth || 2;
 
   const widthNum = typeof layer.style.width === "number" ? layer.style.width : 200;
   const heightNum = typeof layer.style.height === "number" ? layer.style.height : 20;

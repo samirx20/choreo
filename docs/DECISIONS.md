@@ -754,3 +754,25 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Deterministic Compounded Evaluation**:
   * All 14 custom channels are evaluated in `evaluateClipDelta` and compounded in `compoundLayerAnimations`.
   * `evaluateSceneAtTime` binds all computed properties (`backgroundColor`, `color`, `borderRadius`, `borderWidth`, `borderColor`, `boxShadow`, `backdropFilter`, `width`, `height`, `opacity`, `transform`) directly to the canvas rendering pipeline for deterministic scrubbing and real-time playback.
+
+---
+
+### Decision 34: Jitter From -> To Parameter Model, Element-Specific Preset Matrix, & Auto-Staggered Creation Defaults
+* **From -> To Parameter Transition Model**:
+  * Every animatable property in `ClipDetailView` supports an **Initial value** (`from`) with an expandable `+` toggle and a target **To** value (`params`).
+  * If no initial value is defined, it defaults to the layer's resting style. When the `+` button is clicked, users can specify an explicit starting value with an `×` reset button to revert to resting defaults.
+  * The mathematical evaluator (`applyCustomPresetDelta`) linearly/spring interpolates between `from` and `to` across the clip duration.
+* **Symmetric Rhythm & Clean Inspector Layout**:
+  * Inspector property rows feature symmetric vertical padding (`py-3`) bounded by clean separator dividers (`border-b border-border/60`), matching professional precision design tools.
+  * Misplaced controls (`Mode [In | Out]` and `Loop continuously`) are removed from custom transition clips and only exposed on relevant preset categories.
+  * A full-width `+ Add animation` button is anchored at the bottom of the inspector stack to quickly chain multi-channel animations.
+* **Element-Specific Animation Presets**:
+  * Presets in `AnimationCatalogSheet` are strictly tailored to the selected element type:
+    * **Text**: Typography presets (`Typewriter`, `Baseline Reveal`, kinetic slides, and split character/word/line animations).
+    * **Shapes & Frames**: Geometric scale, spring pop, mask wipe, and axial rotation presets.
+    * **Media (Images & Video)**: Telephoto zoom in/out, cinematic pans, soft focus blur in, and gentle alpha dissolve.
+    * **Icons & Glyphs**: Overshoot spring pops, bounce in, axial spins, and rotational wiggle accents.
+    * **Lines & Arrows**: Directional draw/path extension, wipe in, and axis scale reveals.
+* **Auto-Choreographed Staggered Creation Defaults**:
+  * Adding elements on canvas automatically staggers start times sequentially ($N \times 0.5\text{s}$) rather than stacking all animations at $t = 0$.
+  * Each tool assigns its element-tailored entrance preset (Text $\to$ `slideUp`, Rect/Frame $\to$ `grow`, Circle/Star $\to$ `pop`, Media $\to$ `fade`, Line/Arrow $\to$ `slideRight`).

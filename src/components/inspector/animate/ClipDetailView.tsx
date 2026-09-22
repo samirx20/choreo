@@ -13,6 +13,22 @@ import {
   ArrowDown,
   ArrowRight,
   SlidersHorizontal,
+  Plus,
+  X,
+  Maximize2,
+  Move,
+  SunMedium,
+  Palette,
+  BoxSelect,
+  Flame,
+  CircleDot,
+  Shield,
+  EyeOff,
+  ArrowLeftRight,
+  Shapes,
+  CornerUpRight,
+  Square,
+  Sparkles,
 } from "lucide-react";
 import { Layer, AnimationClip } from "@/types/scene";
 import { useProjectStore } from "@/store/useProjectStore";
@@ -58,6 +74,44 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
   const [clipNameInput, setClipNameInput] = useState(selectedClip.name || selectedClip.preset);
 
   const isTextLayer = clipLayer.type === "text" || clipLayer.type === "chunk";
+
+  // Helpers for Initial value (From) and To value bindings
+  const hasInitialValue = (key: string): boolean => {
+    if (selectedClip.from?.[key] !== undefined) return true;
+    const paramKey = `from${key.charAt(0).toUpperCase() + key.slice(1)}`;
+    return selectedClip.params?.[paramKey] !== undefined;
+  };
+
+  const getInitialValue = <T,>(key: string, defaultVal: T): T => {
+    if (selectedClip.from?.[key] !== undefined) return selectedClip.from[key];
+    const paramKey = `from${key.charAt(0).toUpperCase() + key.slice(1)}`;
+    if (selectedClip.params?.[paramKey] !== undefined) return selectedClip.params[paramKey];
+    return defaultVal;
+  };
+
+  const setInitialValue = (key: string, val: any) => {
+    const paramKey = `from${key.charAt(0).toUpperCase() + key.slice(1)}`;
+    updateAnimationClip(clipLayer.id, selectedClip.id, {
+      from: { ...selectedClip.from, [key]: val },
+      params: { ...selectedClip.params, [paramKey]: val },
+    });
+  };
+
+  const clearInitialValue = (key: string) => {
+    const newFrom = { ...(selectedClip.from || {}) };
+    delete newFrom[key];
+    const newParams = { ...(selectedClip.params || {}) };
+    const paramKey = `from${key.charAt(0).toUpperCase() + key.slice(1)}`;
+    delete newParams[paramKey];
+    updateAnimationClip(clipLayer.id, selectedClip.id, {
+      from: Object.keys(newFrom).length > 0 ? newFrom : undefined,
+      params: newParams,
+    });
+  };
+
+  // Property detection
+  const isCustom = selectedClip.preset.startsWith("custom_");
+
   const isDirectional =
     selectedClip.preset.toLowerCase().includes("slide") ||
     selectedClip.preset.toLowerCase().includes("move") ||
@@ -69,7 +123,6 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
     selectedClip.preset.toLowerCase().includes("grow") ||
     selectedClip.preset.toLowerCase().includes("shrink") ||
     selectedClip.preset.toLowerCase().includes("scale") ||
-    selectedClip.preset.toLowerCase().includes("pulse") ||
     selectedClip.scaleAmount !== undefined;
 
   const isRotationBased =
@@ -81,6 +134,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
 
   const isOpacityBased =
     selectedClip.preset.toLowerCase().includes("opacity") ||
+    selectedClip.preset.toLowerCase().includes("fade") ||
     selectedClip.params?.opacity !== undefined;
 
   const isRadiusBased =
@@ -98,6 +152,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
 
   const isBlurBased =
     selectedClip.preset === "custom_blur" ||
+    selectedClip.preset === "blurIn" ||
     (selectedClip.params?.blur !== undefined && !selectedClip.preset.includes("backdrop"));
 
   const isBackdropBlurBased =
@@ -123,10 +178,33 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
     selectedClip.preset === "custom_stroke" ||
     selectedClip.params?.strokeWidth !== undefined;
 
+  const isLoopingOrEmphasis =
+    selectedClip.type === "emphasis" ||
+    ["pulse", "float", "wiggle", "spin", "heartbeat", "breathe", "shake"].includes(selectedClip.preset);
+
+  // Pick appropriate header icon
+  const getHeaderIcon = () => {
+    if (isBlurBased) return <Flame className="h-4 w-4 text-[#7c3aed]" />;
+    if (isBackdropBlurBased) return <CircleDot className="h-4 w-4 text-[#7c3aed]" />;
+    if (isGlassBased) return <Shield className="h-4 w-4 text-[#7c3aed]" />;
+    if (isColorBased) return <Palette className="h-4 w-4 text-[#7c3aed]" />;
+    if (isShadowBased) return <BoxSelect className="h-4 w-4 text-[#7c3aed]" />;
+    if (isOpacityBased) return <SunMedium className="h-4 w-4 text-[#7c3aed]" />;
+    if (isRadiusBased) return <CornerUpRight className="h-4 w-4 text-[#7c3aed]" />;
+    if (isStrokeBased) return <Square className="h-4 w-4 text-[#7c3aed]" />;
+    if (isResizeBased) return <ArrowLeftRight className="h-4 w-4 text-[#7c3aed]" />;
+    if (isMorphBased) return <Shapes className="h-4 w-4 text-[#7c3aed]" />;
+    if (isVisibilityBased) return <EyeOff className="h-4 w-4 text-[#7c3aed]" />;
+    if (isDirectional) return <Move className="h-4 w-4 text-[#7c3aed]" />;
+    if (isScaleBased) return <Maximize2 className="h-4 w-4 text-[#7c3aed]" />;
+    if (isRotationBased) return <RotateCw className="h-4 w-4 text-[#7c3aed]" />;
+    return <Zap className="h-4 w-4 text-[#7c3aed]" />;
+  };
+
   return (
-    <div className="p-4 space-y-3.5 text-foreground select-none relative min-h-full">
+    <div className="p-4 space-y-0 text-foreground select-none relative min-h-full">
       {/* Navigation Breadcrumb back to Element view */}
-      <div className="flex items-center justify-between pb-2 border-b border-border">
+      <div className="flex items-center justify-between pb-3 border-b border-border/60">
         <button
           type="button"
           onClick={() => setSelectedClips([])}
@@ -137,10 +215,10 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
         </button>
       </div>
 
-      {/* Row 1: Header with ⚡ Preset Name | [ Change ] | ··· */}
-      <div className="flex items-center justify-between pb-3 border-b border-border">
+      {/* Row 1: Header with Icon + Preset Name | [ Change ] | ··· */}
+      <div className="py-3 flex items-center justify-between border-b border-border/60">
         <div className="flex items-center gap-2 flex-1 min-w-0 mr-2">
-          <Zap className="h-4 w-4 fill-current text-foreground shrink-0" />
+          {getHeaderIcon()}
           {isEditingClipName ? (
             <input
               type="text"
@@ -179,7 +257,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               className="text-sm font-bold text-foreground capitalize truncate cursor-pointer hover:underline"
               title="Double-click to rename animation"
             >
-              {selectedClip.name || selectedClip.preset}
+              {selectedClip.name || selectedClip.preset.replace("custom_", "")}
             </span>
           )}
         </div>
@@ -239,364 +317,152 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
         </div>
       </div>
 
-      {/* Row 2: Mode [ In | Out ] */}
-      <div className="flex items-center justify-between py-1 border-b border-border">
-        <span className="text-xs text-muted-foreground font-medium">Mode</span>
-        <div className="flex items-center bg-muted p-0.5 rounded-md">
-          <button
-            type="button"
-            onClick={() =>
-              updateAnimationClip(clipLayer.id, selectedClip.id, { type: "in" })
-            }
-            className={cn(
-              "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
-              selectedClip.type === "in"
-                ? "bg-card text-foreground shadow-2xs font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            In
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              updateAnimationClip(clipLayer.id, selectedClip.id, { type: "out" })
-            }
-            className={cn(
-              "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
-              selectedClip.type === "out"
-                ? "bg-card text-foreground shadow-2xs font-semibold"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            Out
-          </button>
-        </div>
-      </div>
-
-      {/* Preset Parameters */}
-      {isRotationBased && (
-        <div className="py-1 space-y-2 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Rotate by</span>
-            <div className="w-28">
-              <ScrubbableInput
-                label=""
-                unit="°"
-                value={selectedClip.rotationDegrees ?? 45}
-                min={-720}
-                max={720}
-                step={15}
-                decimals={0}
-                onChange={(val) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, { rotationDegrees: val })
-                }
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Direction</span>
-            <div className="flex items-center bg-muted p-0.5 rounded-md">
-              <button
-                type="button"
-                onClick={() =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    direction: "cw" as any,
-                    rotationDegrees: Math.abs(selectedClip.rotationDegrees ?? 45),
-                  })
-                }
-                className={cn(
-                  "p-1.5 rounded transition-colors cursor-pointer",
-                  selectedClip.direction !== "ccw" && (selectedClip.rotationDegrees ?? 45) >= 0
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                title="Clockwise"
-              >
-                <RotateCw className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    direction: "ccw" as any,
-                    rotationDegrees: -Math.abs(selectedClip.rotationDegrees ?? 45),
-                  })
-                }
-                className={cn(
-                  "p-1.5 rounded transition-colors cursor-pointer",
-                  selectedClip.direction === "ccw" || (selectedClip.rotationDegrees ?? 45) < 0
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                title="Counter-Clockwise"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            </div>
+      {/* Mode [ In | Out ] - ONLY for standard In/Out entrance/exit presets, never on custom or looping */}
+      {!isCustom && (selectedClip.type === "in" || selectedClip.type === "out") && (
+        <div className="py-3 flex items-center justify-between border-b border-border/60">
+          <span className="text-[13px] text-muted-foreground font-medium">Mode</span>
+          <div className="flex items-center bg-muted p-0.5 rounded-md">
+            <button
+              type="button"
+              onClick={() =>
+                updateAnimationClip(clipLayer.id, selectedClip.id, { type: "in" })
+              }
+              className={cn(
+                "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
+                selectedClip.type === "in"
+                  ? "bg-card text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              In
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                updateAnimationClip(clipLayer.id, selectedClip.id, { type: "out" })
+              }
+              className={cn(
+                "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
+                selectedClip.type === "out"
+                  ? "bg-card text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Out
+            </button>
           </div>
         </div>
       )}
 
-      {isScaleBased && (
-        <div className="py-1 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Scale</span>
-            <div className="w-28">
-              <ScrubbableInput
-                label=""
-                unit="x"
-                value={selectedClip.scaleAmount ?? 1.2}
-                min={0}
-                max={5}
-                step={0.05}
-                decimals={2}
-                onChange={(val) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, { scaleAmount: val })
-                }
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* =========================================================================
+          FROM -> TO PROPERTY CONTROLS (Jitter Symmetric Rhythm)
+         ========================================================================= */}
 
-      {isDirectional && (
-        <div className="py-1 space-y-2 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Distance</span>
-            <div className="w-28">
-              <ScrubbableInput
-                label=""
-                unit="px"
-                value={selectedClip.distance ?? 100}
-                min={0}
-                max={2000}
-                step={10}
-                decimals={0}
-                onChange={(val) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, { distance: val })
-                }
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Direction</span>
-            <div className="flex items-center bg-muted p-0.5 rounded-md gap-0.5">
-              {[
-                { id: "up", icon: ArrowUp, label: "Up" },
-                { id: "down", icon: ArrowDown, label: "Down" },
-                { id: "left", icon: ArrowLeft, label: "Left" },
-                { id: "right", icon: ArrowRight, label: "Right" },
-              ].map((d) => {
-                const isActive = selectedClip.direction === d.id;
-                const Icon = d.icon;
-                return (
-                  <button
-                    key={d.id}
-                    type="button"
-                    onClick={() =>
-                      updateAnimationClip(clipLayer.id, selectedClip.id, {
-                        direction: d.id as any,
-                      })
-                    }
-                    className={cn(
-                      "p-1.5 rounded transition-colors cursor-pointer",
-                      isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                    title={d.label}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isOpacityBased && (
-        <div className="py-1 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Target Opacity</span>
-            <div className="w-28">
-              <ScrubbableInput
-                label=""
-                unit="%"
-                value={Math.round((selectedClip.params?.opacity ?? 0) * 100)}
-                min={0}
-                max={100}
-                step={5}
-                decimals={0}
-                onChange={(val) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, opacity: val / 100 },
-                  })
-                }
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isRadiusBased && (
-        <div className="py-1 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Corner Radius</span>
-            <div className="w-28">
-              <ScrubbableInput
-                label=""
-                unit="px"
-                value={selectedClip.params?.radius ?? 16}
-                min={0}
-                max={200}
-                step={2}
-                decimals={0}
-                onChange={(val) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, radius: val },
-                  })
-                }
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Custom Color Parameter */}
-      {isColorBased && (
-        <div className="py-1 space-y-2 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Target Color</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={selectedClip.params?.color || "#6d28d9"}
-                onChange={(e) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, color: e.target.value },
-                  })
-                }
-                className="w-6 h-6 rounded cursor-pointer border border-border p-0 bg-transparent"
-              />
-              <input
-                type="text"
-                value={selectedClip.params?.color || "#6d28d9"}
-                onChange={(e) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, color: e.target.value },
-                  })
-                }
-                className="w-20 text-xs px-2 py-1 rounded bg-muted text-foreground border border-border font-mono uppercase"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Custom Shadow Parameters */}
-      {isShadowBased && (
-        <div className="py-1 space-y-2 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Blur</span>
-            <div className="w-28">
-              <ScrubbableInput
-                label=""
-                unit="px"
-                value={selectedClip.params?.shadowBlur ?? 16}
-                min={0}
-                max={100}
-                step={1}
-                decimals={0}
-                onChange={(val) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, shadowBlur: val },
-                  })
-                }
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Distance</span>
-            <div className="w-28">
-              <ScrubbableInput
-                label=""
-                unit="px"
-                value={selectedClip.params?.shadowDistance ?? 8}
-                min={0}
-                max={100}
-                step={1}
-                decimals={0}
-                onChange={(val) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, shadowDistance: val },
-                  })
-                }
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Color</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={selectedClip.params?.shadowColor || "#000000"}
-                onChange={(e) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, shadowColor: e.target.value },
-                  })
-                }
-                className="w-6 h-6 rounded cursor-pointer border border-border p-0 bg-transparent"
-              />
-              <input
-                type="text"
-                value={selectedClip.params?.shadowColor || "#000000"}
-                onChange={(e) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, shadowColor: e.target.value },
-                  })
-                }
-                className="w-20 text-xs px-2 py-1 rounded bg-muted text-foreground border border-border font-mono uppercase"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Custom Layer Blur Parameter */}
+      {/* Layer Blur */}
       {isBlurBased && (
-        <div className="py-1 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Blur</span>
-            <div className="w-28">
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Initial value</span>
+            {hasInitialValue("blur") ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-24">
+                  <ScrubbableInput
+                    label=""
+                    unit="px"
+                    value={getInitialValue("blur", 0)}
+                    min={0}
+                    max={100}
+                    step={1}
+                    decimals={0}
+                    onChange={(val) => setInitialValue("blur", val)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => clearInitialValue("blur")}
+                  className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  title="Remove initial value"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInitialValue("blur", 0)}
+                className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+                title="Add initial value"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">To</span>
+            <div className="w-24">
               <ScrubbableInput
                 label=""
                 unit="px"
-                value={selectedClip.params?.blur ?? 12}
+                value={selectedClip.params?.blur ?? 10}
                 min={0}
                 max={100}
                 step={1}
                 decimals={0}
                 onChange={(val) =>
                   updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, blur: val },
+                    params: { ...selectedClip.params, blur: val, toBlur: val },
                   })
                 }
               />
             </div>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Custom Background Blur Parameter */}
+      {/* Background Blur */}
       {isBackdropBlurBased && (
-        <div className="py-1 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Backdrop Blur</span>
-            <div className="w-28">
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Initial value</span>
+            {hasInitialValue("backdropBlur") ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-24">
+                  <ScrubbableInput
+                    label=""
+                    unit="px"
+                    value={getInitialValue("backdropBlur", 0)}
+                    min={0}
+                    max={100}
+                    step={1}
+                    decimals={0}
+                    onChange={(val) => setInitialValue("backdropBlur", val)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => clearInitialValue("backdropBlur")}
+                  className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  title="Remove initial value"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInitialValue("backdropBlur", 0)}
+                className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+                title="Add initial value"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">To</span>
+            <div className="w-24">
               <ScrubbableInput
                 label=""
                 unit="px"
@@ -607,21 +473,56 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                 decimals={0}
                 onChange={(val) =>
                   updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, backdropBlur: val },
+                    params: { ...selectedClip.params, backdropBlur: val, toBackdropBlur: val },
                   })
                 }
               />
             </div>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Custom Glass Parameters */}
+      {/* Glass */}
       {isGlassBased && (
-        <div className="py-1 space-y-2 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Glass Blur</span>
-            <div className="w-28">
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Initial Blur</span>
+            {hasInitialValue("backdropBlur") ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-24">
+                  <ScrubbableInput
+                    label=""
+                    unit="px"
+                    value={getInitialValue("backdropBlur", 0)}
+                    min={0}
+                    max={100}
+                    step={1}
+                    decimals={0}
+                    onChange={(val) => setInitialValue("backdropBlur", val)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => clearInitialValue("backdropBlur")}
+                  className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInitialValue("backdropBlur", 0)}
+                className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">To Blur</span>
+            <div className="w-24">
               <ScrubbableInput
                 label=""
                 unit="px"
@@ -638,9 +539,10 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               />
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Glass Opacity</span>
-            <div className="w-28">
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">To Opacity</span>
+            <div className="w-24">
               <ScrubbableInput
                 label=""
                 unit="%"
@@ -657,15 +559,577 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               />
             </div>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Custom Stroke Parameters */}
+      {/* Scale */}
+      {isScaleBased && (
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Initial value</span>
+            {hasInitialValue("scale") ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-24">
+                  <ScrubbableInput
+                    label=""
+                    unit="x"
+                    value={getInitialValue("scale", 1)}
+                    min={0}
+                    max={5}
+                    step={0.05}
+                    decimals={2}
+                    onChange={(val) => setInitialValue("scale", val)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => clearInitialValue("scale")}
+                  className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInitialValue("scale", 0.5)}
+                className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">To</span>
+            <div className="w-24">
+              <ScrubbableInput
+                label=""
+                unit="x"
+                value={selectedClip.scaleAmount ?? selectedClip.params?.scaleAmount ?? 1.2}
+                min={0}
+                max={5}
+                step={0.05}
+                decimals={2}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    scaleAmount: val,
+                    params: { ...selectedClip.params, scaleAmount: val, toScale: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Rotate */}
+      {isRotationBased && (
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Initial value</span>
+            {hasInitialValue("rotate") ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-24">
+                  <ScrubbableInput
+                    label=""
+                    unit="°"
+                    value={getInitialValue("rotate", 0)}
+                    min={-720}
+                    max={720}
+                    step={15}
+                    decimals={0}
+                    onChange={(val) => setInitialValue("rotate", val)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => clearInitialValue("rotate")}
+                  className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInitialValue("rotate", 0)}
+                className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">To</span>
+            <div className="w-24">
+              <ScrubbableInput
+                label=""
+                unit="°"
+                value={selectedClip.rotationDegrees ?? selectedClip.params?.rotationDegrees ?? 90}
+                min={-720}
+                max={720}
+                step={15}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    rotationDegrees: val,
+                    params: { ...selectedClip.params, rotationDegrees: val, toRotate: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Direction</span>
+            <div className="flex items-center bg-muted p-0.5 rounded-md">
+              <button
+                type="button"
+                onClick={() =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    direction: "cw" as any,
+                    rotationDegrees: Math.abs(selectedClip.rotationDegrees ?? 90),
+                  })
+                }
+                className={cn(
+                  "p-1.5 rounded transition-colors cursor-pointer",
+                  selectedClip.direction !== "ccw" && (selectedClip.rotationDegrees ?? 90) >= 0
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Clockwise"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    direction: "ccw" as any,
+                    rotationDegrees: -Math.abs(selectedClip.rotationDegrees ?? 90),
+                  })
+                }
+                className={cn(
+                  "p-1.5 rounded transition-colors cursor-pointer",
+                  selectedClip.direction === "ccw" || (selectedClip.rotationDegrees ?? 90) < 0
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Counter-Clockwise"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Move / Directional */}
+      {isDirectional && (
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Initial Distance</span>
+            {hasInitialValue("distance") ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-24">
+                  <ScrubbableInput
+                    label=""
+                    unit="px"
+                    value={getInitialValue("distance", 0)}
+                    min={0}
+                    max={2000}
+                    step={10}
+                    decimals={0}
+                    onChange={(val) => setInitialValue("distance", val)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => clearInitialValue("distance")}
+                  className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInitialValue("distance", 0)}
+                className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Distance</span>
+            <div className="w-24">
+              <ScrubbableInput
+                label=""
+                unit="px"
+                value={selectedClip.distance ?? selectedClip.params?.distance ?? 60}
+                min={0}
+                max={2000}
+                step={10}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    distance: val,
+                    params: { ...selectedClip.params, distance: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Direction</span>
+            <div className="flex items-center bg-muted p-0.5 rounded-md gap-0.5">
+              {[
+                { id: "up", icon: ArrowUp, label: "Up" },
+                { id: "down", icon: ArrowDown, label: "Down" },
+                { id: "left", icon: ArrowLeft, label: "Left" },
+                { id: "right", icon: ArrowRight, label: "Right" },
+              ].map((d) => {
+                const isActive = (selectedClip.direction || selectedClip.params?.direction || "up") === d.id;
+                const Icon = d.icon;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() =>
+                      updateAnimationClip(clipLayer.id, selectedClip.id, {
+                        direction: d.id as any,
+                        params: { ...selectedClip.params, direction: d.id },
+                      })
+                    }
+                    className={cn(
+                      "p-1.5 rounded transition-colors cursor-pointer",
+                      isActive
+                        ? "bg-primary/10 text-primary font-semibold"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                    title={d.label}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Opacity */}
+      {isOpacityBased && (
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Initial value</span>
+            {hasInitialValue("opacity") ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-24">
+                  <ScrubbableInput
+                    label=""
+                    unit="%"
+                    value={Math.round(getInitialValue("opacity", 1) * 100)}
+                    min={0}
+                    max={100}
+                    step={5}
+                    decimals={0}
+                    onChange={(val) => setInitialValue("opacity", val / 100)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => clearInitialValue("opacity")}
+                  className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInitialValue("opacity", 1)}
+                className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">To</span>
+            <div className="w-24">
+              <ScrubbableInput
+                label=""
+                unit="%"
+                value={Math.round((selectedClip.params?.opacity ?? 0) * 100)}
+                min={0}
+                max={100}
+                step={5}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, opacity: val / 100, toOpacity: val / 100 },
+                  })
+                }
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Color */}
+      {isColorBased && (
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Initial value</span>
+            {hasInitialValue("color") ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={getInitialValue("color", clipLayer.style.backgroundColor || "#3b82f6")}
+                  onChange={(e) => setInitialValue("color", e.target.value)}
+                  className="w-6 h-6 rounded cursor-pointer border border-border p-0 bg-transparent"
+                />
+                <input
+                  type="text"
+                  value={getInitialValue("color", clipLayer.style.backgroundColor || "#3b82f6")}
+                  onChange={(e) => setInitialValue("color", e.target.value)}
+                  className="w-20 text-xs px-2 py-1 rounded bg-muted text-foreground border border-border font-mono uppercase"
+                />
+                <button
+                  type="button"
+                  onClick={() => clearInitialValue("color")}
+                  className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInitialValue("color", clipLayer.style.backgroundColor || "#3b82f6")}
+                className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">To</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={selectedClip.params?.color || "#6d28d9"}
+                onChange={(e) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, color: e.target.value, toColor: e.target.value },
+                  })
+                }
+                className="w-6 h-6 rounded cursor-pointer border border-border p-0 bg-transparent"
+              />
+              <input
+                type="text"
+                value={selectedClip.params?.color || "#6d28d9"}
+                onChange={(e) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, color: e.target.value, toColor: e.target.value },
+                  })
+                }
+                className="w-20 text-xs px-2 py-1 rounded bg-muted text-foreground border border-border font-mono uppercase"
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Shadow */}
+      {isShadowBased && (
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Initial Blur</span>
+            {hasInitialValue("shadowBlur") ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-24">
+                  <ScrubbableInput
+                    label=""
+                    unit="px"
+                    value={getInitialValue("shadowBlur", 0)}
+                    min={0}
+                    max={100}
+                    step={1}
+                    decimals={0}
+                    onChange={(val) => setInitialValue("shadowBlur", val)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => clearInitialValue("shadowBlur")}
+                  className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInitialValue("shadowBlur", 0)}
+                className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">To Blur</span>
+            <div className="w-24">
+              <ScrubbableInput
+                label=""
+                unit="px"
+                value={selectedClip.params?.shadowBlur ?? 16}
+                min={0}
+                max={100}
+                step={1}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, shadowBlur: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Distance</span>
+            <div className="w-24">
+              <ScrubbableInput
+                label=""
+                unit="px"
+                value={selectedClip.params?.shadowDistance ?? 8}
+                min={0}
+                max={100}
+                step={1}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, shadowDistance: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Corner Radius */}
+      {isRadiusBased && (
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Initial value</span>
+            {hasInitialValue("radius") ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-24">
+                  <ScrubbableInput
+                    label=""
+                    unit="px"
+                    value={getInitialValue("radius", 0)}
+                    min={0}
+                    max={200}
+                    step={2}
+                    decimals={0}
+                    onChange={(val) => setInitialValue("radius", val)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => clearInitialValue("radius")}
+                  className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInitialValue("radius", 0)}
+                className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">To</span>
+            <div className="w-24">
+              <ScrubbableInput
+                label=""
+                unit="px"
+                value={selectedClip.params?.radius ?? 16}
+                min={0}
+                max={200}
+                step={2}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, radius: val, toRadius: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Stroke */}
       {isStrokeBased && (
-        <div className="py-1 space-y-2 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Stroke Width</span>
-            <div className="w-28">
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Initial Width</span>
+            {hasInitialValue("strokeWidth") ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-24">
+                  <ScrubbableInput
+                    label=""
+                    unit="px"
+                    value={getInitialValue("strokeWidth", 0)}
+                    min={0}
+                    max={50}
+                    step={1}
+                    decimals={0}
+                    onChange={(val) => setInitialValue("strokeWidth", val)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => clearInitialValue("strokeWidth")}
+                  className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setInitialValue("strokeWidth", 0)}
+                className="w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">To Width</span>
+            <div className="w-24">
               <ScrubbableInput
                 label=""
                 unit="px"
@@ -682,8 +1146,9 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               />
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Stroke Color</span>
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Color</span>
             <div className="flex items-center gap-2">
               <input
                 type="color"
@@ -707,15 +1172,15 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               />
             </div>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Custom Resize Parameters */}
+      {/* Resize */}
       {isResizeBased && (
-        <div className="py-1 space-y-2 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Width Delta</span>
-            <div className="w-28">
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Width Delta</span>
+            <div className="w-24">
               <ScrubbableInput
                 label=""
                 unit="px"
@@ -732,9 +1197,10 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               />
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Height Delta</span>
-            <div className="w-28">
+
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Height Delta</span>
+            <div className="w-24">
               <ScrubbableInput
                 label=""
                 unit="px"
@@ -751,82 +1217,78 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               />
             </div>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Custom Visibility Parameter */}
+      {/* Visibility */}
       {isVisibilityBased && (
-        <div className="py-1 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Visibility</span>
-            <div className="flex items-center bg-muted p-0.5 rounded-md">
-              <button
-                type="button"
-                onClick={() =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, visibility: "hide" },
-                  })
-                }
-                className={cn(
-                  "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
-                  (selectedClip.params?.visibility ?? "hide") === "hide"
-                    ? "bg-card text-foreground shadow-2xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Hide
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, visibility: "show" },
-                  })
-                }
-                className={cn(
-                  "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
-                  selectedClip.params?.visibility === "show"
-                    ? "bg-card text-foreground shadow-2xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Show
-              </button>
-            </div>
+        <div className="py-3 flex items-center justify-between border-b border-border/60">
+          <span className="text-[13px] text-muted-foreground font-medium">Visibility</span>
+          <div className="flex items-center bg-muted p-0.5 rounded-md">
+            <button
+              type="button"
+              onClick={() =>
+                updateAnimationClip(clipLayer.id, selectedClip.id, {
+                  params: { ...selectedClip.params, visibility: "hide" },
+                })
+              }
+              className={cn(
+                "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
+                (selectedClip.params?.visibility ?? "hide") === "hide"
+                  ? "bg-card text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Hide
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                updateAnimationClip(clipLayer.id, selectedClip.id, {
+                  params: { ...selectedClip.params, visibility: "show" },
+                })
+              }
+              className={cn(
+                "px-3 py-1 text-xs rounded transition-colors font-medium cursor-pointer",
+                selectedClip.params?.visibility === "show"
+                  ? "bg-card text-foreground shadow-2xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Show
+            </button>
           </div>
         </div>
       )}
 
-      {/* Custom Morph Parameter */}
+      {/* Morph */}
       {isMorphBased && (
-        <div className="py-1 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Morph Amount</span>
-            <div className="w-28">
-              <ScrubbableInput
-                label=""
-                unit="%"
-                value={Math.round((selectedClip.params?.morphAmount ?? 1) * 100)}
-                min={0}
-                max={100}
-                step={5}
-                decimals={0}
-                onChange={(val) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    params: { ...selectedClip.params, morphAmount: val / 100 },
-                  })
-                }
-              />
-            </div>
+        <div className="py-3 flex items-center justify-between border-b border-border/60">
+          <span className="text-[13px] text-muted-foreground font-medium">Morph Amount</span>
+          <div className="w-24">
+            <ScrubbableInput
+              label=""
+              unit="%"
+              value={Math.round((selectedClip.params?.morphAmount ?? 1) * 100)}
+              min={0}
+              max={100}
+              step={5}
+              decimals={0}
+              onChange={(val) =>
+                updateAnimationClip(clipLayer.id, selectedClip.id, {
+                  params: { ...selectedClip.params, morphAmount: val / 100 },
+                })
+              }
+            />
           </div>
         </div>
       )}
 
       {/* Text Animation Parameters */}
       {isTextLayer && (
-        <div className="py-1 space-y-2 border-b border-border">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Apply effect to</span>
+        <>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Apply effect to</span>
             <div className="w-28">
               <Select
                 value={
@@ -852,7 +1314,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                   });
                 }}
               >
-                <SelectTrigger className="w-28 h-7">
+                <SelectTrigger className="w-28 h-7 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent align="end">
@@ -865,8 +1327,8 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Order</span>
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Order</span>
             <div className="w-28">
               <Select
                 value={selectedClip.params?.order || "Forward"}
@@ -876,7 +1338,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                   });
                 }}
               >
-                <SelectTrigger className="w-28 h-7">
+                <SelectTrigger className="w-28 h-7 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent align="end">
@@ -890,9 +1352,9 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">Delay</span>
-            <div className="w-28">
+          <div className="py-3 flex items-center justify-between border-b border-border/60">
+            <span className="text-[13px] text-muted-foreground font-medium">Delay</span>
+            <div className="w-24">
               <ScrubbableInput
                 label=""
                 unit="ms"
@@ -909,51 +1371,51 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               />
             </div>
           </div>
-        </div>
+        </>
       )}
 
-      {/* Action / Emphasis parameters */}
-      {(selectedClip.type === "action" || selectedClip.type === "emphasis") && (
-        <div className="py-1 space-y-2 border-b border-border">
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
-              <Checkbox
-                checked={!!selectedClip.loop}
-                onCheckedChange={(checked) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    loop: Boolean(checked),
-                  })
-                }
-              />
-              <span>Loop continuously</span>
-            </label>
+      {/* Looping / Ambient Emphasis parameters */}
+      {isLoopingOrEmphasis && (
+        <div className="py-3 flex items-center justify-between border-b border-border/60">
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+            <Checkbox
+              checked={!!selectedClip.loop}
+              onCheckedChange={(checked) =>
+                updateAnimationClip(clipLayer.id, selectedClip.id, {
+                  loop: Boolean(checked),
+                })
+              }
+            />
+            <span>Loop continuously</span>
+          </label>
 
-            <div className="w-24">
-              <ScrubbableInput
-                label="Intensity"
-                value={selectedClip.intensity ?? 1}
-                min={0.1}
-                max={3.0}
-                step={0.1}
-                decimals={1}
-                onChange={(val) =>
-                  updateAnimationClip(clipLayer.id, selectedClip.id, { intensity: val })
-                }
-              />
-            </div>
+          <div className="w-20">
+            <ScrubbableInput
+              label="x"
+              value={selectedClip.intensity ?? 1}
+              min={0.1}
+              max={3.0}
+              step={0.1}
+              decimals={1}
+              onChange={(val) =>
+                updateAnimationClip(clipLayer.id, selectedClip.id, { intensity: val })
+              }
+            />
           </div>
         </div>
       )}
 
-      {/* Animation Section: Duration & Easing */}
-      <div className="py-1 space-y-2.5">
+      {/* =========================================================================
+          ANIMATION SECTION: Duration & Easing (Jitter Layout Rhythm)
+         ========================================================================= */}
+      <div className="py-3 space-y-2.5 border-b border-border/60">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-foreground">Animation</span>
+          <span className="text-[13px] font-bold text-foreground">Animation</span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted"
+                className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted cursor-pointer"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </button>
@@ -962,7 +1424,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               <DropdownMenuItem
                 onClick={() => {
                   updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    duration: 1.5,
+                    duration: 0.8,
                     easing: "smooth",
                   });
                 }}
@@ -976,8 +1438,8 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
 
         {/* Duration */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground font-medium">Duration</span>
-          <div className="w-28">
+          <span className="text-[13px] text-muted-foreground font-medium">Duration</span>
+          <div className="w-24">
             <ScrubbableInput
               label=""
               unit="s"
@@ -995,7 +1457,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
 
         {/* Easing */}
         <div className="flex items-center justify-between relative">
-          <span className="text-xs text-muted-foreground font-medium">Easing</span>
+          <span className="text-[13px] text-muted-foreground font-medium">Easing</span>
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -1117,6 +1579,19 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
             document.body
           )}
         </div>
+      </div>
+
+      {/* =========================================================================
+          BOTTOM: Add Animation Button (Jitter Style)
+         ========================================================================= */}
+      <div className="pt-3">
+        <button
+          type="button"
+          onClick={() => openAnimationCatalog()}
+          className="w-full py-2.5 px-3 rounded-lg bg-[#6d28d9]/10 hover:bg-[#6d28d9]/15 text-[#6d28d9] text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+        >
+          <span>Add animation</span>
+        </button>
       </div>
     </div>
   );

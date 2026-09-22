@@ -31,55 +31,60 @@ export function evaluateAnimationConfig(
       let filter: string | undefined;
       let clipPath: string | undefined;
 
+      const clipDist = config.distance ?? params.distance;
+      const clipScale = config.scaleAmount ?? params.scaleAmount;
+      const clipRot = config.rotationDegrees ?? params.rotationDegrees;
+
       if (preset === "pop" || preset === "grow") {
-        const initScale = params.initialScale ?? (preset === "pop" ? 0 : 0.5);
+        const initScale = clipScale ?? params.initialScale ?? (preset === "pop" ? 0 : 0.5);
         tState.scaleX = initScale;
         tState.scaleY = initScale;
       } else if (preset === "shrink" || preset === "popOut") {
-        tState.scaleX = 1.5;
-        tState.scaleY = 1.5;
+        const initScale = clipScale ?? 1.5;
+        tState.scaleX = initScale;
+        tState.scaleY = initScale;
       } else if (params.angle !== undefined && (preset.startsWith("slide") || preset === "polarSlide")) {
-        const dist = params.distance ?? 60;
+        const dist = clipDist ?? 60;
         const rad = (params.angle * Math.PI) / 180;
         tState.x = Math.cos(rad) * dist;
         tState.y = Math.sin(rad) * dist;
-      } else if (preset === "slideUp") {
-        tState.y = params.distance ?? 60;
-      } else if (preset === "slideDown") {
-        tState.y = -(params.distance ?? 60);
-      } else if (preset === "slideLeft") {
-        tState.x = params.distance ?? 80;
-      } else if (preset === "slideRight") {
-        tState.x = -(params.distance ?? 80);
+      } else if (preset === "slideUp" || (preset === "slide" && (config.direction === "up" || params.direction === "up"))) {
+        tState.y = clipDist ?? 60;
+      } else if (preset === "slideDown" || (preset === "slide" && (config.direction === "down" || params.direction === "down"))) {
+        tState.y = -(clipDist ?? 60);
+      } else if (preset === "slideLeft" || (preset === "slide" && (config.direction === "left" || params.direction === "left"))) {
+        tState.x = clipDist ?? 80;
+      } else if (preset === "slideRight" || (preset === "slide" && (config.direction === "right" || params.direction === "right"))) {
+        tState.x = -(clipDist ?? 80);
       } else if (preset === "blurIn") {
-        filter = `blur(${params.blurRadius ?? 20}px)`;
+        filter = `blur(${params.blurRadius ?? params.blur ?? 20}px)`;
       } else if (preset === "spin") {
-        tState.rotate = -180;
+        tState.rotate = -(clipRot ?? 180);
         tState.scaleX = 0;
         tState.scaleY = 0;
       } else if (preset === "twist") {
-        tState.rotate = 30;
-        tState.scaleX = 0.7;
-        tState.scaleY = 0.7;
+        tState.rotate = clipRot ?? 30;
+        tState.scaleX = clipScale ?? 0.7;
+        tState.scaleY = clipScale ?? 0.7;
       } else if (preset === "flipX") {
         tState.perspective = params.perspective ?? 600;
-        tState.rotateX = params.initialAngle ?? 90;
+        tState.rotateX = params.initialAngle ?? (clipRot ?? 90);
       } else if (preset === "flipY") {
         tState.perspective = params.perspective ?? 600;
-        tState.rotateY = params.initialAngle ?? 90;
+        tState.rotateY = params.initialAngle ?? (clipRot ?? 90);
       } else if (preset === "flip3D") {
         tState.perspective = params.perspective ?? 600;
         tState.rotateX = params.initialAngle ?? 60;
         tState.rotateY = -(params.initialAngle ?? 60);
       } else if (preset === "dropIn" || preset === "gravityFall") {
         tState.perspective = 800;
-        tState.y = -(params.distance ?? 300);
+        tState.y = -(clipDist ?? 300);
       } else if (preset === "elasticBounce") {
         tState.scaleX = 0;
         tState.scaleY = 0;
       } else if (preset === "scaleReveal") {
-        tState.scaleX = 0.8;
-        tState.scaleY = 0.8;
+        tState.scaleX = clipScale ?? 0.8;
+        tState.scaleY = clipScale ?? 0.8;
         clipPath = "inset(50% 50% 50% 50%)";
       } else if (preset === "circleIris") {
         clipPath = "circle(0% at 50% 50%)";
@@ -93,7 +98,8 @@ export function evaluateAnimationConfig(
         initOpacity = 0;
       } else if (preset === "mask_reveal" || preset === "maskWipe") {
         initOpacity = 1;
-        clipPath = evalMaskInset(0, params.direction || "up");
+        const maskDir = typeof config.direction === "string" && ["up", "down", "left", "right"].includes(config.direction) ? config.direction : (params.direction || "up");
+        clipPath = evalMaskInset(0, maskDir as any);
       } else if (preset === "circleReveal") {
         clipPath = `circle(0% at ${params.origin || "50% 50%"})`;
       }
@@ -144,56 +150,72 @@ export function evaluateAnimationConfig(
   let clipPath: string | undefined;
 
   const effectiveProgress = mode === "in" ? progress : 1 - progress;
+  const clipDist = config.distance ?? params.distance;
+  const clipScale = config.scaleAmount ?? params.scaleAmount;
+  const clipRot = config.rotationDegrees ?? params.rotationDegrees;
+  const allowFade = params.fade !== false;
 
   // Check polar slide override
   if (params.angle !== undefined && (preset.startsWith("slide") || preset === "polarSlide")) {
-    const dist = params.distance ?? 60;
+    const dist = clipDist ?? 60;
     const rad = (params.angle * Math.PI) / 180;
     tState.x = (1 - effectiveProgress) * Math.cos(rad) * dist;
     tState.y = (1 - effectiveProgress) * Math.sin(rad) * dist;
-    opacity = effectiveProgress;
+    opacity = allowFade ? effectiveProgress : 1;
   } else {
     // Preset recipes based on 8 atomic properties
     switch (preset) {
       case "fadeIn":
       case "fadeOut":
+      case "fade":
         opacity = effectiveProgress;
         break;
 
       case "slideUp": {
-        const dist = params.distance ?? 60;
+        const dist = clipDist ?? 60;
         tState.y = (1 - effectiveProgress) * dist;
-        opacity = effectiveProgress;
+        opacity = allowFade ? effectiveProgress : 1;
         break;
       }
 
       case "slideDown": {
-        const dist = params.distance ?? 60;
+        const dist = clipDist ?? 60;
         tState.y = -(1 - effectiveProgress) * dist;
-        opacity = effectiveProgress;
+        opacity = allowFade ? effectiveProgress : 1;
         break;
       }
 
       case "slideLeft": {
-        const dist = params.distance ?? 80;
+        const dist = clipDist ?? 80;
         tState.x = (1 - effectiveProgress) * dist;
-        opacity = effectiveProgress;
+        opacity = allowFade ? effectiveProgress : 1;
         break;
       }
 
       case "slideRight": {
-        const dist = params.distance ?? 80;
+        const dist = clipDist ?? 80;
         tState.x = -(1 - effectiveProgress) * dist;
-        opacity = effectiveProgress;
+        opacity = allowFade ? effectiveProgress : 1;
+        break;
+      }
+
+      case "slide": {
+        const dist = clipDist ?? 60;
+        const dir = config.direction || params.direction || "up";
+        if (dir === "down") tState.y = -(1 - effectiveProgress) * dist;
+        else if (dir === "left") tState.x = (1 - effectiveProgress) * dist;
+        else if (dir === "right") tState.x = -(1 - effectiveProgress) * dist;
+        else tState.y = (1 - effectiveProgress) * dist;
+        opacity = allowFade ? effectiveProgress : 1;
         break;
       }
 
       case "pop": {
-        const initialScale = params.initialScale ?? 0;
+        const initialScale = clipScale ?? params.initialScale ?? 0;
         const s = initialScale + (1 - initialScale) * effectiveProgress;
         tState.scaleX = s;
         tState.scaleY = s;
-        opacity = Math.min(effectiveProgress * 1.5, 1);
+        opacity = allowFade ? Math.min(effectiveProgress * 1.5, 1) : 1;
         break;
       }
 
@@ -201,42 +223,45 @@ export function evaluateAnimationConfig(
         const p = 1 - effectiveProgress;
         tState.scaleX = p;
         tState.scaleY = p;
-        opacity = p;
+        opacity = allowFade ? p : 1;
         break;
       }
 
       case "grow": {
-        const initialScale = params.initialScale ?? 0.5;
+        const initialScale = clipScale ?? params.initialScale ?? 0.5;
         const s = initialScale + (1 - initialScale) * effectiveProgress;
         tState.scaleX = s;
         tState.scaleY = s;
-        opacity = effectiveProgress;
+        opacity = allowFade ? effectiveProgress : 1;
         break;
       }
 
       case "shrink": {
-        const s = 1.5 - 0.5 * effectiveProgress;
+        const s = (clipScale ?? 1.5) - ((clipScale ?? 1.5) - 1) * effectiveProgress;
         tState.scaleX = s;
         tState.scaleY = s;
-        opacity = effectiveProgress;
+        opacity = allowFade ? effectiveProgress : 1;
         break;
       }
 
       case "spin": {
-        tState.rotate = -180 * (1 - effectiveProgress);
+        const totalRot = clipRot ?? 180;
+        tState.rotate = -totalRot * (1 - effectiveProgress);
         tState.scaleX = effectiveProgress;
         tState.scaleY = effectiveProgress;
-        opacity = effectiveProgress;
+        opacity = allowFade ? effectiveProgress : 1;
         break;
       }
 
       case "twist": {
-        const rot = 30 * (1 - effectiveProgress);
-        const s = 0.7 + 0.3 * effectiveProgress;
+        const totalRot = clipRot ?? 30;
+        const initialScale = clipScale ?? 0.7;
+        const rot = totalRot * (1 - effectiveProgress);
+        const s = initialScale + (1 - initialScale) * effectiveProgress;
         tState.rotate = rot;
         tState.scaleX = s;
         tState.scaleY = s;
-        opacity = effectiveProgress;
+        opacity = allowFade ? effectiveProgress : 1;
         break;
       }
 
@@ -341,7 +366,8 @@ export function evaluateAnimationConfig(
       }
 
       case "maskWipe": {
-        clipPath = evalMaskInset(effectiveProgress, params.direction || "up");
+        const maskDir = typeof config.direction === "string" && ["up", "down", "left", "right"].includes(config.direction) ? config.direction : (params.direction || "up");
+        clipPath = evalMaskInset(effectiveProgress, maskDir as any);
         opacity = 1;
         break;
       }

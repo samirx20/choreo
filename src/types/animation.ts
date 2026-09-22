@@ -138,6 +138,7 @@ export interface AnimationClip {
   rotationDegrees?: number;
   properties?: Array<'x' | 'y' | 'z' | 'scaleX' | 'scaleY' | 'rotation' | 'opacity' | 'filterBlur' | 'color'>;
   params?: Record<string, any>;
+  from?: Record<string, any>;
   disabled?: boolean;
   stepFps?: 'smooth' | number;
 }

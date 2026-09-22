@@ -30,8 +30,8 @@ export const IconRenderer: React.FC<IconRendererProps> = ({
   const combinedStyle = { ...baseCss, ...computedStyle };
   const widthNum = typeof layer.style.width === "number" ? layer.style.width : 48;
   const heightNum = typeof layer.style.height === "number" ? layer.style.height : 48;
-  const iconColor = layer.style.color || layer.style.borderColor || "#ffffff";
-  const strokeWidth = layer.strokeWidth ?? layer.style.borderWidth ?? 2;
+  const iconColor = (combinedStyle.color as string) || (combinedStyle.borderColor as string) || layer.style.color || layer.style.borderColor || "#ffffff";
+  const strokeWidth = typeof combinedStyle.borderWidth === "number" ? combinedStyle.borderWidth : (typeof combinedStyle.borderWidth === "string" ? parseFloat(combinedStyle.borderWidth) || (layer.strokeWidth ?? layer.style.borderWidth ?? 2) : (layer.strokeWidth ?? layer.style.borderWidth ?? 2));
 
   // Retrieve Lucide icon component by name (e.g. "Sparkles", "ArrowRight", "Zap")
   const IconComponent =

@@ -62,9 +62,9 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   }
 
   const combinedStyle = { ...baseCss, ...computedStyle };
-  const fill = layer.style.backgroundColor || "#3b82f6";
-  const strokeColor = layer.style.borderColor || fill;
-  const strokeWidth = layer.style.borderWidth || 2;
+  const fill = (combinedStyle.backgroundColor as string) || (combinedStyle.color as string) || layer.style.backgroundColor || "#3b82f6";
+  const strokeColor = (combinedStyle.borderColor as string) || layer.style.borderColor || fill;
+  const strokeWidth = typeof combinedStyle.borderWidth === "number" ? combinedStyle.borderWidth : (typeof combinedStyle.borderWidth === "string" ? parseFloat(combinedStyle.borderWidth) || (layer.style.borderWidth || 2) : (layer.style.borderWidth || 2));
   const widthNum = typeof layer.style.width === "number" ? layer.style.width : 100;
   const heightNum = typeof layer.style.height === "number" ? layer.style.height : 100;
 

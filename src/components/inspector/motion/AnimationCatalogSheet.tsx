@@ -21,6 +21,7 @@ import {
   ArrowLeftRight,
   Shapes,
   CornerUpRight,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Layer, AnimationClipType, getLayerClips } from "@/types/scene";
 import { cn } from "@/lib/utils";
@@ -76,6 +77,38 @@ const SHAPE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
   { id: "circleIris", name: "Circle Iris", duration: 0.8, easing: "smooth", type: "in", desc: "Radial circular aperture" },
   { id: "dropIn", name: "Drop In", duration: 0.8, easing: "bouncy", type: "in", desc: "Gravity descent from top" },
   { id: "blurIn", name: "Blur In", duration: 0.8, easing: "smooth", type: "in", desc: "Gaussian optical de-blur" },
+];
+
+const MEDIA_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+  { id: "fade", name: "Fade In", duration: 0.8, easing: "smooth", type: "in", desc: "Cinematic optical dissolve" },
+  { id: "grow", name: "Zoom In", duration: 1.0, easing: "smooth", type: "in", desc: "Gentle telephoto zoom entrance" },
+  { id: "shrink", name: "Zoom Out", duration: 1.0, easing: "smooth", type: "in", desc: "Wide scale settling into frame" },
+  { id: "slideUp", name: "Pan Up", duration: 0.8, easing: "snappy", type: "in", desc: "Upward camera pan reveal" },
+  { id: "slideDown", name: "Pan Down", duration: 0.8, easing: "snappy", type: "in", desc: "Downward camera pan reveal" },
+  { id: "slideLeft", name: "Pan Left", duration: 0.8, easing: "snappy", type: "in", desc: "Horizontal slide from right" },
+  { id: "slideRight", name: "Pan Right", duration: 0.8, easing: "snappy", type: "in", desc: "Horizontal slide from left" },
+  { id: "blurIn", name: "Blur In", duration: 0.8, easing: "smooth", type: "in", desc: "Soft focus optical reveal" },
+  { id: "dropIn", name: "Drop In", duration: 0.8, easing: "bouncy", type: "in", desc: "Physical descent from top" },
+];
+
+const ICON_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+  { id: "pop", name: "Pop", duration: 0.6, easing: "bouncy", type: "in", desc: "Snappy overshoot spring pop" },
+  { id: "bounce", name: "Bounce In", duration: 0.8, easing: "bouncy", type: "in", desc: "Elastic vertical bounce" },
+  { id: "spin", name: "Spin In", duration: 0.8, easing: "smooth", type: "in", desc: "360° axial glyph spin" },
+  { id: "wiggle", name: "Wiggle In", duration: 0.6, easing: "snappy", type: "in", desc: "Playful rotational snap" },
+  { id: "pulse", name: "Pulse Accent", duration: 0.8, easing: "smooth", type: "in", desc: "Scale bloom and settle" },
+  { id: "dropIn", name: "Drop In", duration: 0.8, easing: "bouncy", type: "in", desc: "Gravity descent from top" },
+  { id: "fade", name: "Fade In", duration: 0.6, easing: "smooth", type: "in", desc: "Clean alpha reveal" },
+  { id: "grow", name: "Scale Up", duration: 0.6, easing: "bouncy", type: "in", desc: "Scale expansion" },
+];
+
+const LINE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+  { id: "slideRight", name: "Draw / Slide Right", duration: 0.8, easing: "snappy", type: "in", desc: "Path extension from left" },
+  { id: "slideLeft", name: "Slide Left", duration: 0.8, easing: "snappy", type: "in", desc: "Path extension from right" },
+  { id: "mask_reveal", name: "Wipe In", duration: 0.8, easing: "smooth", type: "in", desc: "Directional path wipe" },
+  { id: "fade", name: "Fade In", duration: 0.6, easing: "smooth", type: "in", desc: "Clean alpha dissolve" },
+  { id: "pop", name: "Pop", duration: 0.6, easing: "bouncy", type: "in", desc: "Elastic scale snap" },
+  { id: "grow", name: "Expand", duration: 0.8, easing: "snappy", type: "in", desc: "Axis extension" },
 ];
 
 const EXIT_PRESETS: AnimationCatalogPreset[] = [
@@ -272,10 +305,15 @@ const EFFECTS_PRESETS: { id: string; name: string; desc: string; preset: Animati
 // ---------------------------------------------------------------------------
 const AnimationCard: React.FC<{
   preset: AnimationCatalogPreset;
-  isText: boolean;
+  layerType?: string;
   isSelected?: boolean;
   onApply: (preset: AnimationCatalogPreset) => void;
-}> = ({ preset, isText, isSelected = false, onApply }) => {
+}> = ({ preset, layerType, isSelected = false, onApply }) => {
+  const isText = layerType === "text" || layerType === "chunk";
+  const isMedia = layerType === "image" || layerType === "video";
+  const isIcon = layerType === "icon";
+  const isLine = layerType === "line";
+
   const getAnimationName = (presetId: string) => {
     switch (presetId) {
       case "fade": return "anim-preview-fade";
@@ -348,6 +386,21 @@ const AnimationCard: React.FC<{
           >
             Ag
           </span>
+        ) : isIcon ? (
+          <Sparkles
+            style={animStyle}
+            className="w-5 h-5 text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+          />
+        ) : isMedia ? (
+          <ImageIcon
+            style={animStyle}
+            className="w-5 h-5 text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+          />
+        ) : isLine ? (
+          <div
+            style={animStyle}
+            className="w-7 h-1 rounded-full bg-[#71717a] group-hover:bg-[#6d28d9] transition-colors"
+          />
         ) : (
           <div
             style={animStyle}
@@ -441,9 +494,17 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
-
-  const entrancePresets = isText ? TEXT_ENTRANCE_PRESETS : SHAPE_ENTRANCE_PRESETS;
+  const layerType = targetLayer?.type;
+  const entrancePresets =
+    layerType === "text" || layerType === "chunk"
+      ? TEXT_ENTRANCE_PRESETS
+      : layerType === "image" || layerType === "video"
+      ? MEDIA_ENTRANCE_PRESETS
+      : layerType === "icon"
+      ? ICON_ENTRANCE_PRESETS
+      : layerType === "line"
+      ? LINE_ENTRANCE_PRESETS
+      : SHAPE_ENTRANCE_PRESETS;
 
   return (
     <div
@@ -570,7 +631,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                     <AnimationCard
                       key={`in-${p.id}`}
                       preset={p}
-                      isText={isText}
+                      layerType={layerType}
                       isSelected={isPresetSelected(p)}
                       onApply={onApplyPreset}
                     />
@@ -591,7 +652,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                     <AnimationCard
                       key={`action-${p.id}`}
                       preset={p}
-                      isText={isText}
+                      layerType={layerType}
                       isSelected={isPresetSelected(p)}
                       onApply={onApplyPreset}
                     />
@@ -612,7 +673,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                     <AnimationCard
                       key={`out-${p.id}`}
                       preset={p}
-                      isText={isText}
+                      layerType={layerType}
                       isSelected={isPresetSelected(p)}
                       onApply={onApplyPreset}
                     />
@@ -683,7 +744,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
               <AnimationCard
                 key={eff.id}
                 preset={eff.preset}
-                isText={isText}
+                layerType={layerType}
                 isSelected={isPresetSelected(eff.preset)}
                 onApply={onApplyPreset}
               />
