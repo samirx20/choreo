@@ -263,7 +263,8 @@ export const SceneSettingsCard: React.FC = () => {
               <div className="flex items-center gap-1.5 w-36 justify-end">
                 <Input
                   type="text"
-                  value={currentBg.replace("#", "").toUpperCase()}
+                  value={currentBg.includes("gradient") ? "Gradient" : currentBg.replace("#", "").toUpperCase()}
+                  readOnly={currentBg.includes("gradient")}
                   onChange={(e) => {
                     const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
                     if (clean.length === 6 || clean.length === 3) {
@@ -279,7 +280,7 @@ export const SceneSettingsCard: React.FC = () => {
                   className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
                 />
                 <ColorPicker
-                  value={currentBg.startsWith("#") ? currentBg : "#ffffff"}
+                  value={currentBg || "#ffffff"}
                   onChange={(newColor) => {
                     if (applyToAllScenes) {
                       doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: newColor }));

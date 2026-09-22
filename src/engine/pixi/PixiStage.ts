@@ -135,7 +135,12 @@ export class PixiStage {
 
   public updateArtboardBackground(w: number, h: number, bgHex: string) {
     this.artboardBg.clear();
-    const colorNum = parseInt(bgHex.replace("#", ""), 16) || 0x18181b;
+    let cleanHex = bgHex;
+    if (bgHex && bgHex.includes("linear-gradient")) {
+      const match = bgHex.match(/#[0-9a-fA-F]{3,8}/);
+      cleanHex = match ? match[0] : "#18181b";
+    }
+    const colorNum = parseInt(cleanHex.replace("#", ""), 16) || 0x18181b;
 
     // Outer subtle border / drop shadow representation
     this.artboardBg.roundRect(0, 0, w, h, 8);

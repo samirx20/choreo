@@ -187,7 +187,7 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
         style={{
           width: `${width}px`,
           height: `${height}px`,
-          backgroundColor: bg,
+          background: bg,
           position: "relative",
           overflow: "hidden",
           boxShadow: "0 2px 16px rgba(0, 0, 0, 0.06)",

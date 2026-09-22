@@ -925,4 +925,33 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 35 test suites (294 tests) pass 100%.
   * Production build compiles cleanly in 11.41s with zero errors.
 
+---
+
+### Decision 42: Figma-Grade Color & Linear Gradient Picker with Circular Palette Swatches
+* **Solid & Gradient Dual Mode Architecture**:
+  * Upgraded `src/components/ui/color-picker.tsx` with a dual-tab header: `[ Solid ]` and `[ Linear Gradient ]` with active indicator underline and close action.
+  * Smart auto-detection parses incoming CSS values: if the value contains `linear-gradient(...)`, the picker automatically mounts in Gradient mode with parsed stops and angle; if solid hex/rgba, it mounts in Solid mode.
+* **Interactive Gradient Stop Bar & Controls**:
+  * Multi-stop gradient slider with draggable thumbs along a live gradient track.
+  * Clicking any stop selects it for live editing (color, opacity, offset).
+  * Clicking an empty section of the bar automatically creates a new color stop at that exact percentage.
+  * Stop deletion support when $>2$ stops exist.
+  * Precise degree/angle numeric input (`0°` to `360°`) with directional presets.
+  * Analytical CSS serializer producing `linear-gradient(${angle}deg, ${stops})`.
+* **Opacity / Alpha Slider & Native Eyedropper**:
+  * Added high-performance opacity slider with checkerboard transparency grid backing.
+  * Direct integration with Chromium/Tauri `window.EyeDropper` API for picking screen pixels.
+  * Hex dropdown indicator, live swatch dot preview, and dedicated opacity percentage input (`0%` to `100%`).
+* **Circular Design Swatches**:
+  * Replaced square swatches with small circular color/gradient dots (`w-5 h-5 rounded-full`) with a `+ Add` button to save active colors or gradients.
+* **Universal Rendering Engine Updates**:
+  * `styleUtils.ts`: Uses `css.background` for layers when background fill contains gradients.
+  * `ScreenRenderer.tsx`: Artboard uses `background: bg` so scene gradients render natively on canvas.
+  * `PixiStage.ts`: Protected against NaN when parsing linear-gradient strings during headless video export.
+* **Verification**:
+  * Created dedicated test suite `src/test/color_and_gradient_picker.test.ts` (9 tests passing).
+  * All 36 test suites (303 tests) pass 100%.
+  * Production build compiles cleanly in 9.75s with zero errors.
+
+
 

@@ -105,7 +105,11 @@ export function layerStyleToCss(
 
   // Background Fill
   if (style.backgroundColor) {
-    css.backgroundColor = style.backgroundColor;
+    if (style.backgroundColor.includes("gradient")) {
+      css.background = style.backgroundColor;
+    } else {
+      css.backgroundColor = style.backgroundColor;
+    }
   }
 
   // Typography

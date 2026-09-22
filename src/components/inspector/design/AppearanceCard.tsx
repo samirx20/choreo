@@ -65,7 +65,12 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
             <div className="flex items-center gap-1.5 w-36 justify-end">
               <Input
                 type="text"
-                value={(((isText || isIcon) ? style.color : style.backgroundColor) || "#B3B3B3").replace("#", "").toUpperCase()}
+                value={
+                  (((isText || isIcon) ? style.color : style.backgroundColor) || "#B3B3B3").includes("gradient")
+                    ? "Gradient"
+                    : (((isText || isIcon) ? style.color : style.backgroundColor) || "#B3B3B3").replace("#", "").toUpperCase()
+                }
+                readOnly={Boolean((((isText || isIcon) ? style.color : style.backgroundColor) || "").includes("gradient"))}
                 onChange={(e) => {
                   const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
                   if (clean.length === 6 || clean.length === 3) {
@@ -107,24 +112,29 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
             <div className="flex items-center justify-between">
               <span className="text-xs text-muted-foreground">Color</span>
               <div className="flex items-center gap-1.5 w-36 justify-end">
-                <Input
-                  type="text"
-                  value={(style.backgroundColor || "#f4f4f5").replace("#", "").toUpperCase()}
-                  onChange={(e) => {
-                    const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
-                    if (clean.length === 6 || clean.length === 3) {
-                      updateLayerStyle(selectedLayer.id, { backgroundColor: `#${clean}` });
-                    }
-                  }}
-                  className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
-                />
-                <ColorPicker
-                  value={style.backgroundColor || "#f4f4f5"}
-                  onChange={(c) => {
-                    updateLayerStyle(selectedLayer.id, { backgroundColor: c });
-                  }}
-                />
-              </div>
+              <Input
+                type="text"
+                value={
+                  (style.backgroundColor || "#f4f4f5").includes("gradient")
+                    ? "Gradient"
+                    : (style.backgroundColor || "#f4f4f5").replace("#", "").toUpperCase()
+                }
+                readOnly={Boolean(style.backgroundColor?.includes("gradient"))}
+                onChange={(e) => {
+                  const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
+                  if (clean.length === 6 || clean.length === 3) {
+                    updateLayerStyle(selectedLayer.id, { backgroundColor: `#${clean}` });
+                  }
+                }}
+                className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
+              />
+              <ColorPicker
+                value={style.backgroundColor || "#f4f4f5"}
+                onChange={(c) => {
+                  updateLayerStyle(selectedLayer.id, { backgroundColor: c });
+                }}
+              />
+            </div>
             </div>
           )}
         </div>
