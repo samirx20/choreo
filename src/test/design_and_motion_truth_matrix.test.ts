@@ -3,6 +3,7 @@ import { useProjectStore, INITIAL_SCENE } from "@/store/useProjectStore";
 import { Layer, TextLayer, ShapeLayer, IconLayer, ImageLayer, LineLayer } from "@/types/scene";
 import { layerStyleToCss } from "@/components/canvas/renderers/styleUtils";
 import { compoundLayerAnimations, evaluateClipDelta } from "@/engine/evaluator/clipEvaluator";
+import { getFilteredCustomCategories } from "@/components/inspector/motion/AnimationCatalogSheet";
 
 describe("Design & Motion Truth Matrix: Full Parity & Combinatorial Audit", () => {
   beforeEach(() => {
@@ -476,6 +477,84 @@ describe("Design & Motion Truth Matrix: Full Parity & Combinatorial Audit", () =
       // Phase 5: Post-Exit (t = 4.8s, after out_clip completed) -> permanently invisible
       const postOut = compoundLayerAnimations(layer, 4.8);
       expect(postOut.opacity).toBe(0);
+    });
+  });
+
+  // =========================================================================
+  // 6. CONTEXT-AWARE ANIMATION CATALOG PER ELEMENT TYPE
+  // =========================================================================
+  describe("Context-Aware Animation Catalog Filtering", () => {
+    it("filters out nonsensical custom channels for text layers (no morph, radius, stroke)", () => {
+      const textCategories = getFilteredCustomCategories("text");
+      const allItemIds = textCategories.flatMap((c) => c.items.map((i) => i.id));
+
+      expect(allItemIds).not.toContain("custom_morph");
+      expect(allItemIds).not.toContain("custom_radius");
+      expect(allItemIds).not.toContain("custom_stroke");
+
+      // Valid text channels remain accessible
+      expect(allItemIds).toContain("custom_scale");
+      expect(allItemIds).toContain("custom_color");
+      expect(allItemIds).toContain("custom_opacity");
+      expect(allItemIds).toContain("custom_blur");
+      expect(allItemIds).toContain("custom_backdrop_blur");
+    });
+
+    it("filters out nonsensical custom channels for lines (no radius, morph, backdrop blur, glass, resize)", () => {
+      const lineCategories = getFilteredCustomCategories("line");
+      const allItemIds = lineCategories.flatMap((c) => c.items.map((i) => i.id));
+
+      expect(allItemIds).not.toContain("custom_radius");
+      expect(allItemIds).not.toContain("custom_morph");
+      expect(allItemIds).not.toContain("custom_backdrop_blur");
+      expect(allItemIds).not.toContain("custom_glass");
+      expect(allItemIds).not.toContain("custom_resize");
+
+      // Lines retain stroke and color
+      expect(allItemIds).toContain("custom_stroke");
+      expect(allItemIds).toContain("custom_color");
+    });
+
+    it("filters out nonsensical custom channels for icons (no radius, morph, backdrop blur, glass, resize)", () => {
+      const iconCategories = getFilteredCustomCategories("icon");
+      const allItemIds = iconCategories.flatMap((c) => c.items.map((i) => i.id));
+
+      expect(allItemIds).not.toContain("custom_radius");
+      expect(allItemIds).not.toContain("custom_morph");
+      expect(allItemIds).not.toContain("custom_backdrop_blur");
+      expect(allItemIds).not.toContain("custom_glass");
+      expect(allItemIds).not.toContain("custom_resize");
+
+      // Icons retain stroke and color
+      expect(allItemIds).toContain("custom_stroke");
+      expect(allItemIds).toContain("custom_color");
+    });
+
+    it("filters out nonsensical custom channels for media (image/video: no morph, stroke, color)", () => {
+      const imgCategories = getFilteredCustomCategories("image");
+      const allItemIds = imgCategories.flatMap((c) => c.items.map((i) => i.id));
+
+      expect(allItemIds).not.toContain("custom_morph");
+      expect(allItemIds).not.toContain("custom_stroke");
+      expect(allItemIds).not.toContain("custom_color");
+
+      // Media retains radius, shadow, scale, blur, opacity
+      expect(allItemIds).toContain("custom_radius");
+      expect(allItemIds).toContain("custom_shadow");
+      expect(allItemIds).toContain("custom_scale");
+      expect(allItemIds).toContain("custom_blur");
+    });
+
+    it("keeps all custom channels for geometric shapes (rectangle/circle/polygon)", () => {
+      const shapeCategories = getFilteredCustomCategories("shape");
+      const allItemIds = shapeCategories.flatMap((c) => c.items.map((i) => i.id));
+
+      expect(allItemIds).toContain("custom_morph");
+      expect(allItemIds).toContain("custom_radius");
+      expect(allItemIds).toContain("custom_stroke");
+      expect(allItemIds).toContain("custom_color");
+      expect(allItemIds).toContain("custom_shadow");
+      expect(allItemIds).toContain("custom_scale");
     });
   });
 });

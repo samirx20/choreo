@@ -37,9 +37,9 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
   const hasGlass = (selectedLayer as any).isGlass === true;
 
   return (
-    <div className="pt-3 border-t border-border space-y-3">
+    <div className="border-t border-border divide-y divide-border/50">
       {/* 1. Fill Checkbox */}
-      <div className="space-y-2">
+      <div className="py-2.5 space-y-2">
         <div
           onClick={() => {
             if (isText || isIcon) {
@@ -89,7 +89,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
 
       {/* 1b. Background Fill for Text / Chunks / Badges */}
       {isText && (
-        <div className="space-y-2 pt-2 border-t border-border/50">
+        <div className="py-2.5 space-y-2">
           <div
             onClick={() => {
               updateLayerStyle(selectedLayer.id, {
@@ -129,7 +129,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
       )}
 
       {/* 2. Stroke Checkbox */}
-      <div className="space-y-2 pt-2 border-t border-border/50">
+      <div className="py-2.5 space-y-2">
         <div
           onClick={() => {
             const nextStroke = !hasStroke;
@@ -185,7 +185,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
       </div>
 
       {/* 3. Shadow Checkbox */}
-      <div className="space-y-2 pt-2 border-t border-border/50">
+      <div className="py-2.5 space-y-2">
         <div
           onClick={() => {
             const nextShadow = !hasShadow;
@@ -295,7 +295,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
       </div>
 
       {/* 4. Sticker / Die-Cut Border Checkbox */}
-      <div className="space-y-2 pt-2 border-t border-border/50">
+      <div className="py-2.5 space-y-2">
         <div
           onClick={() => {
             const nextSticker = !hasStickerBorder;
@@ -307,7 +307,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
           }}
           className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
         >
-          <span className="text-xs font-semibold text-foreground">Sticker outline</span>
+          <span className="text-xs font-semibold text-foreground">Sticker border</span>
           <Checkbox checked={hasStickerBorder} className="pointer-events-none" />
         </div>
 
@@ -320,7 +320,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
                   value={style.stickerBorder?.width || 4}
                   step={1}
                   min={1}
-                  max={20}
+                  max={24}
                   onChange={(val) =>
                     updateLayerStyle(selectedLayer.id, {
                       stickerBorder: {
@@ -369,7 +369,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
       </div>
 
       {/* 5. Layer Blur Checkbox */}
-      <div className="space-y-2 pt-2 border-t border-border/50">
+      <div className="py-2.5 space-y-2">
         <div
           onClick={() =>
             updateLayerStyle(selectedLayer.id, {
@@ -399,7 +399,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
       </div>
 
       {/* 6. Background Blur Checkbox */}
-      <div className="space-y-2 pt-2 border-t border-border/50">
+      <div className="py-2.5 space-y-2">
         <div
           onClick={() =>
             updateLayerStyle(selectedLayer.id, {
@@ -429,7 +429,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
       </div>
 
       {/* 7. Glass Checkbox */}
-      <div className="space-y-2 pt-2 border-t border-border/50">
+      <div className="py-2.5 space-y-2">
         <div
           onClick={() => {
             const nextGlass = !hasGlass;

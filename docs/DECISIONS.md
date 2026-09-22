@@ -838,5 +838,22 @@ The engine provides first-class, motion-first reactive primitives for each eleme
     * Tests all 14 custom animation channels with parameter sweeps across mid-transit and final duration states.
     * Tests lifecycle state invariants (`In` pre-window invisibility, `Action` in-place continuity, `Out` post-exit permanence).
 
+---
 
-
+### Decision 38: Context-Aware Animation Catalog Filtering & Inspector Symmetric Layout Polish
+* **Context-Aware Animation Catalog per Element Type**:
+  * Previously, the Custom animation tab displayed all 14 custom channels regardless of what element was selected, offering non-functional options (e.g. morph, corner radius, or stroke on plain text; radius, morph, or backdrop blur on single lines and icons; stroke or color fills on bitmap images and videos).
+  * Implemented `getFilteredCustomCategories(layerType)` in `AnimationCatalogSheet.tsx`:
+    - **Text / Chunk**: Hides `custom_morph`, `custom_radius`, `custom_stroke`. Keeps scale, rotation, movement, opacity, color, shadow, layer blur, backdrop blur, glass, resize, hide/show.
+    - **Line**: Hides `custom_radius`, `custom_morph`, `custom_backdrop_blur`, `custom_glass`, `custom_resize`. Keeps stroke, color, move, scale, rotate, opacity, shadow, blur.
+    - **Icon**: Hides `custom_radius`, `custom_morph`, `custom_backdrop_blur`, `custom_glass`, `custom_resize`. Keeps stroke, color, scale, rotate, move, opacity, shadow, blur.
+    - **Image / Video**: Hides `custom_morph`, `custom_stroke`, `custom_color`. Keeps scale, move, rotate, opacity, shadow, blur, backdrop blur, glass, corner radius, resize.
+    - **Shape**: Keeps all channels.
+* **Inspector Symmetric Layout & Spacing Polish (Jitter Parity)**:
+  * Resolved the 3:1 asymmetric spacing jitter across inspector property sections caused by parent `space-y-3` combined with child `pt-2 border-t`.
+  * Converted `AppearanceCard.tsx`, `TransformCard.tsx`, and `ClipDetailView.tsx` to use unified `divide-y divide-border/50` with symmetric `py-2.5 space-y-2` rows.
+  * Guarantees exact 10px spacing above and below every separator line with zero visual jitter when toggling checkboxes or switching selected layers.
+* **Verification**:
+  * 33 test suites (273 tests) pass cleanly.
+  * Automated regression tests in `src/test/design_and_motion_truth_matrix.test.ts` verify all custom channels filtering across text, line, icon, image, and shape primitives.
+  * Production bundle compiles cleanly with 0 TypeScript errors.

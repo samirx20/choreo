@@ -28,9 +28,9 @@ export const TransformCard: React.FC<TransformCardProps> = ({ selectedLayer }) =
     selectedLayer.type === "counter";
 
   return (
-    <div className="space-y-3">
+    <div className="divide-y divide-border/50">
       {/* Layout Section: Position, Size, Angle */}
-      <div className="space-y-2.5">
+      <div className="pb-2.5 space-y-2">
         <h4 className="text-xs font-semibold text-foreground">Layout</h4>
 
         {/* Position X & Y */}
@@ -93,7 +93,7 @@ export const TransformCard: React.FC<TransformCardProps> = ({ selectedLayer }) =
       </div>
 
       {/* Opacity Section */}
-      <div className="pt-3 border-t border-border flex items-center justify-between">
+      <div className="py-2.5 flex items-center justify-between">
         <span className="text-xs font-semibold text-foreground">Opacity</span>
         <div className="flex items-center gap-2 w-36 justify-end">
           <ScrubbableInput
@@ -111,7 +111,7 @@ export const TransformCard: React.FC<TransformCardProps> = ({ selectedLayer }) =
                 rotation: (rotation + 90) % 360,
               })
             }
-            className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted"
+            className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted cursor-pointer"
             title="Rotate 90°"
           >
             <RotateCw className="h-3.5 w-3.5" />
@@ -121,7 +121,7 @@ export const TransformCard: React.FC<TransformCardProps> = ({ selectedLayer }) =
 
       {/* Corner Section (for shapes/cards) */}
       {!isText && (
-        <div className="pt-3 border-t border-border space-y-2">
+        <div className="pt-2.5 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-foreground">Corner</span>
             <div className="flex items-center gap-1.5 w-36 justify-end">
@@ -135,7 +135,7 @@ export const TransformCard: React.FC<TransformCardProps> = ({ selectedLayer }) =
               <button
                 onClick={() => setExpandedCorners(!expandedCorners)}
                 className={cn(
-                  "p-1 rounded transition-colors",
+                  "p-1 rounded transition-colors cursor-pointer",
                   expandedCorners
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"

@@ -1455,57 +1455,56 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
       {/* =========================================================================
           ANIMATION SECTION: Duration & Easing (Jitter Layout Rhythm)
          ========================================================================= */}
-      <div className="py-3 space-y-2.5 border-b border-border/60">
-        <div className="flex items-center justify-between">
-          <span className="text-[13px] font-bold text-foreground">Animation</span>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted cursor-pointer"
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-popover border-border text-xs text-foreground">
-              <DropdownMenuItem
-                onClick={() => {
-                  updateAnimationClip(clipLayer.id, selectedClip.id, {
-                    duration: 0.8,
-                    easing: "smooth",
-                  });
-                }}
-                className="hover:bg-muted cursor-pointer"
-              >
-                Reset to default
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+      <div className="py-2.5 flex items-center justify-between border-b border-border/60">
+        <span className="text-[13px] font-bold text-foreground">Animation</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="p-1 text-muted-foreground hover:text-foreground rounded hover:bg-muted cursor-pointer"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-popover border-border text-xs text-foreground">
+            <DropdownMenuItem
+              onClick={() => {
+                updateAnimationClip(clipLayer.id, selectedClip.id, {
+                  duration: 0.8,
+                  easing: "smooth",
+                });
+              }}
+              className="hover:bg-muted cursor-pointer"
+            >
+              Reset to default
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
-        {/* Duration */}
-        <div className="flex items-center justify-between">
-          <span className="text-[13px] text-muted-foreground font-medium">Duration</span>
-          <div className="w-24">
-            <ScrubbableInput
-              label=""
-              unit="s"
-              value={selectedClip.duration}
-              min={0.05}
-              max={20}
-              step={0.05}
-              decimals={2}
-              onChange={(val) =>
-                updateAnimationClip(clipLayer.id, selectedClip.id, { duration: val })
-              }
-            />
-          </div>
+      {/* Duration */}
+      <div className="py-2.5 flex items-center justify-between border-b border-border/60">
+        <span className="text-[13px] text-muted-foreground font-medium">Duration</span>
+        <div className="w-24">
+          <ScrubbableInput
+            label=""
+            unit="s"
+            value={selectedClip.duration}
+            min={0.05}
+            max={20}
+            step={0.05}
+            decimals={2}
+            onChange={(val) =>
+              updateAnimationClip(clipLayer.id, selectedClip.id, { duration: val })
+            }
+          />
         </div>
+      </div>
 
-        {/* Easing */}
-        <div className="flex items-center justify-between relative">
-          <span className="text-[13px] text-muted-foreground font-medium">Easing</span>
-          <div className="flex items-center gap-1">
+      {/* Easing */}
+      <div className="py-2.5 flex items-center justify-between border-b border-border/60 relative">
+        <span className="text-[13px] text-muted-foreground font-medium">Easing</span>
+        <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => setShowEasingPopover(!showEasingPopover)}
@@ -1623,7 +1622,6 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
             document.body
           )}
         </div>
-      </div>
 
       {/* =========================================================================
           BOTTOM: Add Animation Button (Jitter Style)

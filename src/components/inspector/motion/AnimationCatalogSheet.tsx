@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ArrowLeft,
   X,
@@ -424,6 +424,24 @@ const AnimationCard: React.FC<{
   );
 };
 
+export function getFilteredCustomCategories(layerType?: string): CustomCategoryGroup[] {
+  return CUSTOM_CATEGORIES.map((section) => {
+    const items = section.items.filter((item) => {
+      if (layerType === "text" || layerType === "chunk") {
+        if (["custom_morph", "custom_radius", "custom_stroke"].includes(item.id)) return false;
+      } else if (layerType === "line") {
+        if (["custom_radius", "custom_morph", "custom_backdrop_blur", "custom_glass", "custom_resize"].includes(item.id)) return false;
+      } else if (layerType === "icon") {
+        if (["custom_radius", "custom_morph", "custom_backdrop_blur", "custom_glass", "custom_resize"].includes(item.id)) return false;
+      } else if (layerType === "image" || layerType === "video") {
+        if (["custom_morph", "custom_stroke", "custom_color"].includes(item.id)) return false;
+      }
+      return true;
+    });
+    return { ...section, items };
+  }).filter((section) => section.items.length > 0);
+}
+
 export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
   isOpen,
   onClose,
@@ -458,15 +476,12 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
       setActiveTab("EFFECTS");
     } else if (
       currentClip.preset.startsWith("custom_") ||
-      CUSTOM_CATEGORIES.some((g) => g.items.some((i) => i.id === currentClip.preset))
+      CUSTOM_CATEGORIES.some((cat) => cat.items.some((i) => i.id === currentClip.preset))
     ) {
       setActiveTab("CUSTOM");
     } else {
       setActiveTab("PRESETS");
-      if (currentClip.type === "in") setFilterCategory("in");
-      else if (currentClip.type === "out") setFilterCategory("out");
-      else if (currentClip.type === "action") setFilterCategory("action");
-      else setFilterCategory("all");
+      setFilterCategory(currentClip.type as any);
     }
   }, [isOpen, selectedClipId, currentClip?.id]);
 
@@ -505,6 +520,10 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
       : layerType === "line"
       ? LINE_ENTRANCE_PRESETS
       : SHAPE_ENTRANCE_PRESETS;
+
+  const filteredCustomCategories = useMemo(() => {
+    return getFilteredCustomCategories(layerType);
+  }, [layerType]);
 
   return (
     <div
@@ -688,7 +707,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
       {/* TAB 2: CUSTOM CHANNELS (Clean Jitter Categorized List, ZERO Preview Cards) */}
       {activeTab === "CUSTOM" && (
         <div className="flex-1 overflow-y-auto p-3 space-y-4">
-          {CUSTOM_CATEGORIES.map((section, sIdx) => (
+          {filteredCustomCategories.map((section, sIdx) => (
             <div key={section.category} className={cn(sIdx > 0 && "border-t border-[#e5e5e7] pt-3")}>
               <h3 className="text-[13px] font-bold text-[#18181b] tracking-tight px-2 pb-1.5">
                 {section.category}
