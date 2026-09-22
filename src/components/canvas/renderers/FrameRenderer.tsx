@@ -1,7 +1,6 @@
 import React, { useRef } from "react";
 import { FrameLayer, Layer } from "@/types/scene";
 import { layerStyleToCss } from "./styleUtils";
-import { getSquirclePath } from "@/engine/squircle";
 import { cn } from "@/lib/utils";
 
 interface FrameRendererProps {
@@ -26,19 +25,7 @@ export const FrameRenderer: React.FC<FrameRendererProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const isSelected = selectedLayerIds.includes(layer.id);
 
-  const isSquircle = Boolean(
-    layer.style.squircleFactor && layer.style.squircleFactor > 0
-  );
-  const strokeWidth = layer.style.borderWidth || 0;
-  const strokeColor = layer.style.borderColor || "transparent";
-
-  const baseCss = layerStyleToCss(
-    {
-      ...layer.style,
-      borderWidth: isSquircle ? 0 : layer.style.borderWidth,
-    },
-    isChildInFlex
-  );
+  const baseCss = layerStyleToCss(layer.style, isChildInFlex);
 
   const isFlex = layer.layout?.display === "flex";
   const layout = layer.layout || {
@@ -112,26 +99,6 @@ export const FrameRenderer: React.FC<FrameRendererProps> = ({
         layer.style.tailwindClasses
       )}
     >
-      {/* G2 Continuous Squircle SVG Stroke Overlay */}
-      {isSquircle && strokeWidth > 0 && (
-        <svg
-          className="absolute inset-0 w-full h-full pointer-events-none overflow-visible z-10"
-          viewBox={`0 0 ${widthNum} ${heightNum}`}
-        >
-          <path
-            d={getSquirclePath(
-              widthNum,
-              heightNum,
-              layer.style.borderRadius ?? 0,
-              layer.style.squircleFactor
-            )}
-            fill="none"
-            stroke={strokeColor}
-            strokeWidth={strokeWidth}
-          />
-        </svg>
-      )}
-
       {isEmpty ? (
         <div className="text-[10px] text-zinc-500 font-mono pointer-events-none select-none px-3 py-2 text-center">
           Frame (Empty)

@@ -93,7 +93,6 @@ export interface LayerStyle {
   borderColor?: string;
   borderStyle?: 'solid' | 'dashed' | 'dotted';
   strokeAlign?: 'inside' | 'center' | 'outside';
-  squircleFactor?: number; // 0 to 100 (Apple G2 continuous curvature)
 
   // GPU Shaders & Visual Effects
   shadows?: ShadowStyle[];

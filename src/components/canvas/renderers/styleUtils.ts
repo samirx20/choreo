@@ -1,6 +1,5 @@
 import { CSSProperties } from "react";
 import { LayerStyle } from "@/types/scene";
-import { getSquirclePath } from "@/engine/squircle";
 
 export function layerStyleToCss(
   style: Partial<LayerStyle>,
@@ -147,29 +146,12 @@ export function layerStyleToCss(
     (css as any).paintOrder = style.passOrder === "strokeOverFill" ? "stroke fill" : "fill stroke";
   }
 
-  // Border Radius & Squircle G2 Curvature
+  // Border Radius
   if (Array.isArray(style.borderRadius)) {
     const [tl, tr, br, bl] = style.borderRadius;
     css.borderRadius = `${tl}px ${tr}px ${br}px ${bl}px`;
   } else if (typeof style.borderRadius === "number") {
     css.borderRadius = `${style.borderRadius}px`;
-  }
-
-  // Apple G2 Continuous Curvature (Squircle Clip Path)
-  if (
-    style.squircleFactor &&
-    style.squircleFactor > 0 &&
-    typeof style.width === "number" &&
-    typeof style.height === "number" &&
-    style.borderRadius
-  ) {
-    const squircleD = getSquirclePath(
-      style.width,
-      style.height,
-      style.borderRadius,
-      style.squircleFactor
-    );
-    css.clipPath = `path('${squircleD}')`;
   }
 
   // Border / Stroke

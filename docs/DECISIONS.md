@@ -72,9 +72,8 @@ Programmatic video creation engines like Remotion force an AI agent to write low
 ---
 
 ### Decision 5: Optical & Typographic Hierarchy
-* **G2 Continuous Curvature (Squircles)**:
-  * All rounded cards use Lamé superellipses ($n \approx 4-5$) or quintic Bézier clothoids.
-  * Eliminates the optical "pinch" and shadow pooling caused by standard circular CSS `border-radius`.
+* **Direct Border Radius & Corner Shaping**:
+  * Clean, intentional corner radius controlled directly via standard `borderRadius` (uniform or per-corner), avoiding artificial superellipse SVG overlay wrappers or redundant G2 options.
 * **Metric-Aligned Baseline Mask Reveals**:
   * Text reveals clip strictly along font metric baselines and descenders (using parsed glyph metrics), ensuring letters emerge cleanly without clipping descenders ("g", "y", "p").
 * **Dual Elevation Shadows**:
