@@ -9,10 +9,19 @@
 ## 1. Current Verified Baseline
 
 The repository is in a clean, fully verified, production-ready state:
-* **Automated Unit & Integration Tests**: All **38 test suites (317 tests)** passing via Vitest (`npm test`).
-* **Production Build**: Compiles cleanly with **0 TypeScript / Vite bundling errors in 8.56s** (`npm run build`).
+* **Automated Unit & Integration Tests**: All **38 test suites (319 tests)** passing via Vitest (`npm test`).
+* **Production Build**: Compiles cleanly with **0 TypeScript / Vite bundling errors in 8.77s** (`npm run build`).
 * **Git Status**: Clean working tree on `main`.
 * **Recent Deliverables Completed**:
+  * **Codebase Pruning & Dependency Optimization**:
+    * Deleted unused components (`separator.tsx`, `slider.tsx`, `tabs.tsx`) and uninstalled unneeded Radix packages (`@radix-ui/react-separator`, `@radix-ui/react-slider`, `@radix-ui/react-tabs`).
+    * Static dead code inspection via `fallow dead-code` clean.
+  * **Tauri v2 Desktop Application Foundation**:
+    * Initialized official `src-tauri` directory with bundle identifier `app.motionstudio`.
+    * Window configuration configured for 1440×900 with 1024×700 min dimensions and resizable support.
+    * Added native plugins: `tauri-plugin-dialog` and `tauri-plugin-fs` with capabilities configured.
+    * Added desktop scripts in `package.json`: `"tauri"`, `"desktop:dev"`, `"desktop:build"`.
+    * Added runtime detection (`isTauriEnvironment()`) and desktop file path tracking (`currentFilePath`) in `fileAdapter.ts` for native OS file open/save dialogs and direct `Ctrl+S` disk writes.
   * **Multi-Scene Sequence Export & Downward-Expanding Export Card**:
     * Seamless sequence stitching across multiple scenes with continuous time mapping and zero black frames.
     * Transparent alpha video export (`video/webm; codecs=vp09.00.10.08`) with instant stage background toggling and automatic restoration.

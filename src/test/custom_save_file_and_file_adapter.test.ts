@@ -20,6 +20,10 @@ import {
   parseProjectJson,
   sanitizeProjectFileName,
   readProjectFromFileBlob,
+  isTauriEnvironment,
+  getActiveFilePath,
+  setActiveFilePath,
+  clearActiveFileHandle,
 } from "@/services/fileAdapter";
 import { INITIAL_SCENE } from "@/store/initialScene";
 
@@ -210,6 +214,24 @@ describe("Custom .mtn Save File & File Adapter Suite", () => {
       if (res.ok) {
         expect(res.file?.metadata.name).toBe("Apple Launch Keynote");
       }
+    });
+
+    it("manages native desktop file paths correctly", () => {
+      expect(isTauriEnvironment()).toBe(false);
+      expect(getActiveFilePath()).toBeNull();
+
+      setActiveFilePath("C:\\Users\\Test\\Documents\\showcase.mtn");
+      expect(getActiveFilePath()).toBe("C:\\Users\\Test\\Documents\\showcase.mtn");
+
+      clearActiveFileHandle();
+      expect(getActiveFilePath()).toBeNull();
+    });
+
+    it("detects Tauri environment when window.__TAURI_INTERNALS__ is present", () => {
+      (window as any).__TAURI_INTERNALS__ = {};
+      expect(isTauriEnvironment()).toBe(true);
+      delete (window as any).__TAURI_INTERNALS__;
+      expect(isTauriEnvironment()).toBe(false);
     });
   });
 });

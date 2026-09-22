@@ -7,8 +7,9 @@ import {
   MOTION_FILE_EXTENSION,
 } from "@/types/projectFile";
 
-// In-memory reference to the currently bound file handle on disk
+// In-memory reference to the currently bound file handle or desktop file path on disk
 let currentFileHandle: FileSystemFileHandle | null = null;
+let currentFilePath: string | null = null;
 
 export function getActiveFileHandle(): FileSystemFileHandle | null {
   return currentFileHandle;
@@ -18,8 +19,27 @@ export function setActiveFileHandle(handle: FileSystemFileHandle | null): void {
   currentFileHandle = handle;
 }
 
+export function getActiveFilePath(): string | null {
+  return currentFilePath;
+}
+
+export function setActiveFilePath(path: string | null): void {
+  currentFilePath = path;
+}
+
 export function clearActiveFileHandle(): void {
   currentFileHandle = null;
+  currentFilePath = null;
+}
+
+/**
+ * Returns true if running within the Tauri native desktop container
+ */
+export function isTauriEnvironment(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    ("__TAURI_INTERNALS__" in window || "__TAURI__" in window)
+  );
 }
 
 /**
@@ -67,7 +87,34 @@ export async function saveProjectToFile(
     const jsonString = JSON.stringify(filePackage, null, 2);
     const suggestedName = `${sanitizeProjectFileName(meta.name || doc.name)}${MOTION_FILE_EXTENSION}`;
 
-    // 1. Direct write to existing file handle if available and not 'Save As'
+    // 1. Tauri Native Desktop Container Save
+    if (isTauriEnvironment()) {
+      try {
+        const { save } = await import("@tauri-apps/plugin-dialog");
+        const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+
+        let targetPath = currentFilePath;
+        if (!targetPath || options?.forceSaveAs) {
+          const selected = await save({
+            defaultPath: suggestedName,
+            filters: [{ name: "Motion Studio Project (*.mtn)", extensions: ["mtn"] }],
+          });
+          if (!selected) {
+            return { ok: false, error: "Save cancelled" };
+          }
+          targetPath = selected;
+        }
+
+        await writeTextFile(targetPath, jsonString);
+        currentFilePath = targetPath;
+        const fileName = targetPath.split(/[\\/]/).pop() || suggestedName;
+        return { ok: true, fileName };
+      } catch (err: any) {
+        console.warn("Tauri native save failed, falling back:", err);
+      }
+    }
+
+    // 2. Direct write to existing web file handle if available and not 'Save As'
     if (currentFileHandle && !options?.forceSaveAs) {
       try {
         const writable = await currentFileHandle.createWritable();
@@ -80,7 +127,7 @@ export async function saveProjectToFile(
       }
     }
 
-    // 2. Native Save File Picker
+    // 3. Web Native Save File Picker
     if (hasFileSystemAccess()) {
       try {
         const handle = await (window as any).showSaveFilePicker({
@@ -103,7 +150,7 @@ export async function saveProjectToFile(
       }
     }
 
-    // 3. Fallback: Browser download
+    // 4. Fallback: Browser download
     triggerBrowserDownload(jsonString, suggestedName);
     return { ok: true, fileName: suggestedName };
   } catch (err: any) {
@@ -136,6 +183,46 @@ export async function openProjectFromFile(): Promise<{
   fileName?: string;
   error?: string;
 }> {
+  // 1. Tauri Native Desktop Container Open
+  if (isTauriEnvironment()) {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const { readTextFile } = await import("@tauri-apps/plugin-fs");
+
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: "Motion Studio Project (*.mtn)", extensions: ["mtn", "motion", "json"] }],
+      });
+
+      if (!selected) {
+        return { ok: false, error: "Open cancelled" };
+      }
+
+      const selectedPath = typeof selected === "string" ? selected : (selected as any).path;
+      if (!selectedPath) {
+        return { ok: false, error: "Invalid path returned by picker" };
+      }
+
+      const text = await readTextFile(selectedPath);
+      const parseResult = parseProjectJson(text);
+
+      if (!parseResult.ok) {
+        return { ok: false, error: parseResult.error };
+      }
+
+      currentFilePath = selectedPath;
+      const fileName = selectedPath.split(/[\\/]/).pop() || "project.mtn";
+      return {
+        ok: true,
+        file: parseResult.file,
+        fileName,
+      };
+    } catch (err: any) {
+      console.warn("Tauri native open failed, falling back:", err);
+    }
+  }
+
+  // 2. Web File System Access API
   if (hasFileSystemAccess()) {
     try {
       const [handle] = await (window as any).showOpenFilePicker({

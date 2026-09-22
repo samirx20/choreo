@@ -1058,6 +1058,32 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * 38 test suites, 317 unit and integration tests passing cleanly (`npm test`).
   * Production build compiles cleanly with 0 TypeScript / Vite bundling errors in 8.56s (`npm run build`).
 
+---
+
+### Decision 55: Codebase Pruning & Tauri v2 Native Desktop Application Foundation
+* **Dead Code Cleanup & Dependency Pruning**:
+  * Executed static analysis via `fallow dead-code` and manual codebase audit.
+  * Deleted 3 completely unused UI components: `src/components/ui/separator.tsx`, `src/components/ui/slider.tsx`, and `src/components/ui/tabs.tsx`.
+  * Removed unneeded dependencies from `package.json`: `@radix-ui/react-separator`, `@radix-ui/react-slider`, and `@radix-ui/react-tabs`.
+* **Tauri v2 Desktop Architecture Setup**:
+  * Initialized official Tauri v2 project structure (`src-tauri/`) with `npm run tauri init`:
+    * Configured bundle identifier: `app.motionstudio`.
+    * Window configuration: 1440×900 initial dimensions, minimum bounds 1024×700, resizable, centered.
+    * Development & build commands wired directly to Vite (`npm run dev`, `npm run build`).
+  * Configured `Cargo.toml` and `src-tauri/src/lib.rs` with essential native plugins:
+    * `tauri-plugin-dialog`: Native OS file open and save dialogs for `.mtn` project files.
+    * `tauri-plugin-fs`: Direct native filesystem read/write for projects and exported assets.
+    * `src-tauri/capabilities/default.json`: Granted default permissions for `core`, `dialog`, and `fs`.
+* **Cross-Environment File Adapter (`src/services/fileAdapter.ts`)**:
+  * Added `isTauriEnvironment()` to detect runtime presence of `__TAURI_INTERNALS__` or `__TAURI__`.
+  * In Tauri desktop runtime, `saveProjectToFile()` and `openProjectFromFile()` dynamically invoke `@tauri-apps/plugin-dialog` and `@tauri-apps/plugin-fs` with native file paths and OS dialogs.
+  * In browser environments, seamlessly falls back to Web File System Access API (`showSaveFilePicker` / `showOpenFilePicker`) and Blob download.
+  * Maintained native file path state (`currentFilePath`) for direct `Ctrl+S` desktop saving.
+* **Scripts & Verification**:
+  * Added npm scripts: `"tauri": "tauri"`, `"desktop:dev": "tauri dev"`, `"desktop:build": "tauri build"`.
+  * All 38 test suites (319 tests) passing 100% via `npm test`.
+  * Production bundle compiles in 8.77s with 0 TypeScript errors.
+
 
 
 
