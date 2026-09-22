@@ -234,4 +234,74 @@ describe("Universal Animation Roles (In | Action | Out) & Element Lifecycle", ()
     expect(postClipResting.transform.scaleX).toBeCloseTo(1.30, 2);
     expect(postClipResting.opacity).toBe(1.0);
   });
+
+  it("guarantees full duration spanning across all animation types (Move, Rotate, Opacity, Blur, Slide)", () => {
+    const store = useProjectStore.getState();
+    const layerId = "plus_icon_layer";
+
+    // 1. Move animation (start: 0s, duration: 2.0s, distance: 100px)
+    store.updateAnimationClip(layerId, "clip_scale_entrance", {
+      preset: "custom_move",
+      type: "action",
+      start: 0,
+      duration: 2.0,
+      easing: "smooth",
+      from: { y: 0 },
+      params: { toY: 100, direction: "down" },
+    });
+
+    const moveLayer = useProjectStore.getState().document.screens[0].layers[0];
+    // At t = 0.5s (25% progress): y should be smoothly developing, not snapped to 100
+    const moveAt25 = compoundLayerAnimations(moveLayer, 0.5).transform.y;
+    expect(moveAt25).toBeGreaterThan(15);
+    expect(moveAt25).toBeLessThan(45);
+
+    // At t = 1.0s (50% progress): y should be smoothly developing along smooth bezier (approx 80px)
+    const moveAt50 = compoundLayerAnimations(moveLayer, 1.0).transform.y;
+    expect(moveAt50).toBeGreaterThan(65);
+    expect(moveAt50).toBeLessThan(90);
+
+    // At t = 2.0s (100% end of duration): y reaches target 100
+    const moveAtEnd = compoundLayerAnimations(moveLayer, 2.0).transform.y;
+    expect(moveAtEnd).toBeCloseTo(100, 1);
+
+    // 2. Rotate animation (start: 0s, duration: 1.5s, 0 -> 180 deg)
+    store.updateAnimationClip(layerId, "clip_scale_entrance", {
+      preset: "custom_rotate",
+      type: "action",
+      start: 0,
+      duration: 1.5,
+      easing: "smooth",
+      from: { rotate: 0 },
+      params: { toRotate: 180 },
+    });
+
+    const rotLayer = useProjectStore.getState().document.screens[0].layers[0];
+    // At t = 0.3s (20% progress): rotation should be smoothly advancing
+    const rotAt20 = compoundLayerAnimations(rotLayer, 0.3).transform.rotate;
+    expect(rotAt20).toBeGreaterThan(20);
+    expect(rotAt20).toBeLessThan(70);
+
+    // At t = 1.5s: rotation reaches 180 deg
+    expect(compoundLayerAnimations(rotLayer, 1.5).transform.rotate).toBeCloseTo(180, 1);
+
+    // 3. Blur animation (start: 0s, duration: 1.0s, 0 -> 20px)
+    store.updateAnimationClip(layerId, "clip_scale_entrance", {
+      preset: "custom_blur",
+      type: "action",
+      start: 0,
+      duration: 1.0,
+      easing: "smooth",
+      from: { blur: 0 },
+      params: { toBlur: 20 },
+    });
+
+    const blurLayer = useProjectStore.getState().document.screens[0].layers[0];
+    // At t = 0.5s: blur should be smoothly active
+    const blurAt50 = compoundLayerAnimations(blurLayer, 0.5).filter;
+    expect(blurAt50).toContain("blur(");
+    const blurVal = parseFloat(blurAt50!.replace(/[^0-9.]/g, ""));
+    expect(blurVal).toBeGreaterThan(10);
+    expect(blurVal).toBeLessThan(18);
+  });
 });
