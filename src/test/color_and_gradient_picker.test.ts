@@ -73,6 +73,12 @@ describe("Color & Linear Gradient Picker Engine", () => {
 
       const radialSerialized = serializeGradient("radial", 0, stops);
       expect(radialSerialized).toBe("radial-gradient(circle, #3B82F6 0%, rgba(16, 185, 129, 0.8) 50%, #EC4899 100%)");
+
+      const angularSerialized = serializeGradient("angular", 45, stops);
+      expect(angularSerialized).toBe("conic-gradient(from 45deg at 50% 50%, #3B82F6 0%, rgba(16, 185, 129, 0.8) 50%, #EC4899 100%)");
+
+      const diamondSerialized = serializeGradient("diamond", 0, stops);
+      expect(diamondSerialized).toBe("radial-gradient(ellipse at center, #3B82F6 0%, rgba(16, 185, 129, 0.8) 50%, #EC4899 100%)");
     });
   });
 

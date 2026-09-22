@@ -974,6 +974,30 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * Full test suite: 36 test suites (303 tests) pass 100%.
   * Production build compiles cleanly in 10.39s with zero errors.
 
+---
+
+### Decision 44: All 4 Gradient Types Dropdown, Stop Color Picker Popover, & Contextual Saved Swatches
+* **4-Type Gradient Dropdown Menu (Figma Parity)**:
+  * Replaced the binary toggle with a proper Radix `DropdownMenu` supporting all 4 standard design tool gradient types:
+    1. **Linear**: `linear-gradient(${angle}deg, ...)`
+    2. **Radial**: `radial-gradient(circle, ...)`
+    3. **Angular**: `conic-gradient(from ${angle}deg at 50% 50%, ...)`
+    4. **Diamond**: `radial-gradient(ellipse at center, ...)`
+  * Visual active checkmark (`✓`) on the currently selected gradient type with degree badge.
+* **Stop Box Color Picker Popover**:
+  * Clicking on the Stop color box (`Stop 1`, `Stop 2`, etc.) opens a dedicated standard color picker popover:
+    - 2D Saturation / Value Canvas for that specific stop.
+    - Eyedropper tool to sample screen pixels into the stop.
+    - Full-spectrum Hue slider and Opacity slider for the active stop.
+  * Adjustments live-update the stop color and re-render the 2D gradient canvas in real time.
+* **Contextual Saved Swatches Removal**:
+  * Removed the solid "Saved" palette swatches section from the Gradient view, reserving it exclusively for the Solid view where solid color presets belong.
+* **Verification**:
+  * Added test cases in `src/test/color_and_gradient_picker.test.ts` for all 4 gradient types (Linear, Radial, Angular, Diamond).
+  * All 36 test suites (303 tests) pass 100%.
+  * Production build compiles cleanly in 10.25s with zero errors.
+
+
 
 
 

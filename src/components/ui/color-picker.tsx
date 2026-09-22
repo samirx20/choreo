@@ -3,7 +3,21 @@ import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 import { Input } from "./input";
 import { cn } from "@/lib/utils";
 import { useProjectStore } from "@/store/useProjectStore";
-import { Pipette, X, Plus, ChevronDown, Trash2, ArrowLeftRight } from "lucide-react";
+import {
+  Pipette,
+  X,
+  Plus,
+  ChevronDown,
+  Trash2,
+  ArrowLeftRight,
+  Check,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "./dropdown-menu";
 
 // ---------------------------------------------------------------------------
 // HSV <-> HEX Conversion Math (Closed-form, pure & fast)
@@ -122,6 +136,8 @@ export function parseHexOrRgba(input: string): { hex: string; alpha: number } {
   return { hex: `#${hex6.padEnd(6, "0").substring(0, 6)}`, alpha: 1 };
 }
 
+export type GradientType = "linear" | "radial" | "angular" | "diamond";
+
 export interface GradientStop {
   id: string;
   color: string; // 6-digit hex
@@ -130,8 +146,8 @@ export interface GradientStop {
 }
 
 export interface ParsedGradient {
-  type: "linear" | "radial";
-  angle: number; // For linear: degrees 0-360
+  type: GradientType;
+  angle: number; // Degrees 0-360
   stops: GradientStop[];
 }
 
@@ -145,12 +161,21 @@ export function parseLinearGradientString(str: string): ParsedGradient {
     ],
   };
 
-  const isRadial = str.includes("radial-gradient");
-  const isLinear = str.includes("linear-gradient");
-  if (!isRadial && !isLinear) return fallback;
+  if (!str) return fallback;
+
+  let type: GradientType = "linear";
+  if (str.includes("radial-gradient")) {
+    type = str.includes("ellipse") ? "diamond" : "radial";
+  } else if (str.includes("conic-gradient")) {
+    type = "angular";
+  } else if (str.includes("linear-gradient")) {
+    type = "linear";
+  } else {
+    return fallback;
+  }
 
   // Extract inner contents of gradient(...)
-  const innerMatch = str.match(/(?:linear|radial)-gradient\((.*)\)/i);
+  const innerMatch = str.match(/(?:linear|radial|conic)-gradient\((.*)\)/i);
   if (!innerMatch) return fallback;
 
   const rawParts = innerMatch[1].split(/,(?![^(]*\))/).map((s) => s.trim());
@@ -159,7 +184,7 @@ export function parseLinearGradientString(str: string): ParsedGradient {
   let angle = 135;
   let stopParts = rawParts;
 
-  if (isLinear) {
+  if (type === "linear") {
     const firstPart = rawParts[0].toLowerCase();
     if (firstPart.includes("deg")) {
       const degMatch = firstPart.match(/(-?\d+(?:\.\d+)?)deg/);
@@ -176,9 +201,15 @@ export function parseLinearGradientString(str: string): ParsedGradient {
       else if (firstPart.includes("top")) angle = 0;
       stopParts = rawParts.slice(1);
     }
+  } else if (type === "angular") {
+    const fromMatch = rawParts[0].match(/from\s+(-?\d+(?:\.\d+)?)deg/i);
+    if (fromMatch) {
+      angle = parseFloat(fromMatch[1]);
+      stopParts = rawParts.slice(1);
+    }
   } else {
-    // Radial gradient
-    if (rawParts[0].includes("circle") || rawParts[0].includes("at ")) {
+    // Radial / Diamond
+    if (rawParts[0].includes("circle") || rawParts[0].includes("ellipse") || rawParts[0].includes("at ")) {
       stopParts = rawParts.slice(1);
     }
   }
@@ -188,7 +219,12 @@ export function parseLinearGradientString(str: string): ParsedGradient {
     const match = part.match(/(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\))\s*([\d.]+%?)?/i);
     if (match) {
       const { hex, alpha } = parseHexOrRgba(match[1]);
-      let offset = idx === 0 ? 0 : idx === stopParts.length - 1 ? 100 : Math.round((idx / (stopParts.length - 1)) * 100);
+      let offset =
+        idx === 0
+          ? 0
+          : idx === stopParts.length - 1
+          ? 100
+          : Math.round((idx / (stopParts.length - 1)) * 100);
       if (match[2]) {
         offset = parseFloat(match[2].replace("%", ""));
       }
@@ -203,14 +239,14 @@ export function parseLinearGradientString(str: string): ParsedGradient {
 
   if (stops.length < 2) return fallback;
   return {
-    type: isRadial ? "radial" : "linear",
+    type,
     angle: ((angle % 360) + 360) % 360,
     stops,
   };
 }
 
 export function serializeGradient(
-  type: "linear" | "radial",
+  type: GradientType,
   angle: number,
   stops: GradientStop[]
 ): string {
@@ -223,6 +259,12 @@ export function serializeGradient(
   if (type === "radial") {
     return `radial-gradient(circle, ${stopStrings.join(", ")})`;
   }
+  if (type === "angular") {
+    return `conic-gradient(from ${Math.round(angle)}deg at 50% 50%, ${stopStrings.join(", ")})`;
+  }
+  if (type === "diamond") {
+    return `radial-gradient(ellipse at center, ${stopStrings.join(", ")})`;
+  }
   return `linear-gradient(${Math.round(angle)}deg, ${stopStrings.join(", ")})`;
 }
 
@@ -233,11 +275,10 @@ function angleToHandlePoints(angleDeg: number): {
   p1: { x: number; y: number };
   p2: { x: number; y: number };
 } {
-  // CSS: 0deg is bottom to top (dy < 0), 90deg is left to right (dx > 0)
   const rad = ((angleDeg - 90) * Math.PI) / 180;
   const dx = Math.cos(rad);
   const dy = Math.sin(rad);
-  const r = 0.32; // normalized length radius from center
+  const r = 0.32;
   return {
     p1: {
       x: Math.max(0.08, Math.min(0.92, 0.5 - dx * r)),
@@ -262,7 +303,7 @@ function handlePointsToAngle(
 }
 
 // ---------------------------------------------------------------------------
-// Curated Palette & Saved Swatches
+// Curated Palette & Saved Swatches (For Solid Mode)
 // ---------------------------------------------------------------------------
 const DEFAULT_SWATCHES = [
   "#10b981", // Emerald
@@ -273,10 +314,8 @@ const DEFAULT_SWATCHES = [
   "#ec4899", // Pink
   "#ef4444", // Red
   "#f97316", // Orange
-  "linear-gradient(135deg, #6366f1 0%, #ec4899 100%)",
 ];
 
-// Checkerboard pattern for opacity transparency visualization
 const CHECKERBOARD_STYLE: React.CSSProperties = {
   backgroundImage: `
     linear-gradient(45deg, #27272a 25%, transparent 25%),
@@ -305,7 +344,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   // Mode: "solid" | "gradient"
-  const isInitialGradient = Boolean(value && (value.includes("gradient")));
+  const isInitialGradient = Boolean(value && value.includes("gradient"));
   const [mode, setMode] = useState<"solid" | "gradient">(isInitialGradient ? "gradient" : "solid");
 
   // Solid state
@@ -316,7 +355,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
 
   // Gradient state
   const initialGrad = parseLinearGradientString(value && value.includes("gradient") ? value : "");
-  const [gradientType, setGradientType] = useState<"linear" | "radial">(initialGrad.type);
+  const [gradientType, setGradientType] = useState<GradientType>(initialGrad.type);
   const [gradientAngle, setGradientAngle] = useState(initialGrad.angle);
   const [gradientStops, setGradientStops] = useState<GradientStop[]>(initialGrad.stops);
   const [activeStopIndex, setActiveStopIndex] = useState(0);
@@ -324,7 +363,10 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   // 2-point vector dragger positions in normalized [0, 1]
   const [vectorPoints, setVectorPoints] = useState(() => angleToHandlePoints(initialGrad.angle));
 
-  // Saved swatches
+  // Active stop popover state (for opening standard color picker on the stop box)
+  const [isStopPickerOpen, setIsStopPickerOpen] = useState(false);
+
+  // Saved swatches (shown only in Solid view)
   const [savedSwatches, setSavedSwatches] = useState<string[]>(DEFAULT_SWATCHES);
 
   // Refs for drag capture
@@ -334,16 +376,25 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   const gradientCanvasRef = useRef<HTMLDivElement>(null);
   const stopBarRef = useRef<HTMLDivElement>(null);
 
+  // Stop popover refs
+  const stopSatAreaRef = useRef<HTMLDivElement>(null);
+  const stopHueSliderRef = useRef<HTMLDivElement>(null);
+  const stopAlphaSliderRef = useRef<HTMLDivElement>(null);
+
   const isDraggingSat = useRef(false);
   const isDraggingHue = useRef(false);
   const isDraggingAlpha = useRef(false);
   const isDraggingVectorHandle = useRef<1 | 2 | null>(null);
   const isDraggingStop = useRef<number | null>(null);
+  const isDraggingStopSat = useRef(false);
+  const isDraggingStopHue = useRef(false);
+  const isDraggingStopAlpha = useRef(false);
 
   const rafRef = useRef<number | null>(null);
 
   // Active stop in gradient mode
   const activeStop = gradientStops[activeStopIndex] || gradientStops[0];
+  const activeStopHsv = hexToHsv(activeStop?.color || "#6366F1");
 
   // Synchronize when external value changes while closed
   useEffect(() => {
@@ -390,7 +441,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
 
   // Emit gradient update
   const emitGradientUpdate = useCallback(
-    (type: "linear" | "radial", angle: number, stops: GradientStop[]) => {
+    (type: GradientType, angle: number, stops: GradientStop[]) => {
       const result = serializeGradient(type, angle, stops);
       emitChange(result);
     },
@@ -398,7 +449,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   );
 
   // ---------------------------------------------------------------------------
-  // Solid: Saturation / Value Drag Handler
+  // Solid Mode Drag Handlers
   // ---------------------------------------------------------------------------
   const handleSatMove = useCallback(
     (e: PointerEvent | React.PointerEvent) => {
@@ -428,9 +479,6 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     handleSatMove(e);
   };
 
-  // ---------------------------------------------------------------------------
-  // Hue Slider Drag Handler (Solid Mode)
-  // ---------------------------------------------------------------------------
   const handleHueMove = useCallback(
     (e: PointerEvent | React.PointerEvent) => {
       if (!hueSliderRef.current) return;
@@ -456,9 +504,6 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     handleHueMove(e);
   };
 
-  // ---------------------------------------------------------------------------
-  // Alpha Slider Drag Handler (Solid Mode)
-  // ---------------------------------------------------------------------------
   const handleAlphaMove = useCallback(
     (e: PointerEvent | React.PointerEvent) => {
       if (!alphaSliderRef.current) return;
@@ -483,7 +528,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   };
 
   // ---------------------------------------------------------------------------
-  // Gradient 2-Point Vector Dragger Handler
+  // Gradient: 2-Point Vector Dragger Handler
   // ---------------------------------------------------------------------------
   const handleVectorMove = useCallback(
     (e: PointerEvent | React.PointerEvent) => {
@@ -516,7 +561,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   };
 
   // ---------------------------------------------------------------------------
-  // Gradient Stop Bar Drag & Add Handler
+  // Gradient Stop Track Drag & Add Handler
   // ---------------------------------------------------------------------------
   const handleStopMove = useCallback(
     (e: PointerEvent | React.PointerEvent) => {
@@ -546,7 +591,6 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
     const offset = Math.round((x / rect.width) * 100);
 
-    // Check if clicked close to an existing stop
     const existingIdx = gradientStops.findIndex((s) => Math.abs(s.offset - offset) <= 6);
     if (existingIdx >= 0) {
       setActiveStopIndex(existingIdx);
@@ -554,7 +598,6 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       useProjectStore.getState().startTransaction();
       e.currentTarget.setPointerCapture(e.pointerId);
     } else {
-      // Add a new stop at click location
       const newStop: GradientStop = {
         id: `stop-${Date.now()}`,
         color: activeStop?.color || "#6366F1",
@@ -572,6 +615,99 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // Stop Popover Standard Color Picker Handlers
+  // ---------------------------------------------------------------------------
+  const handleStopSatMove = useCallback(
+    (e: PointerEvent | React.PointerEvent) => {
+      if (!stopSatAreaRef.current) return;
+      const rect = stopSatAreaRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const y = Math.max(0, Math.min(rect.height, e.clientY - rect.top));
+
+      const s = x / rect.width;
+      const v = 1 - y / rect.height;
+
+      setGradientStops((prev) => {
+        const updated = [...prev];
+        const cur = updated[activeStopIndex] || updated[0];
+        const h = hexToHsv(cur.color).h;
+        const newHex = hsvToHex(h, s, v);
+        updated[activeStopIndex] = { ...cur, color: newHex };
+        emitGradientUpdate(gradientType, gradientAngle, updated);
+        return updated;
+      });
+    },
+    [activeStopIndex, gradientType, gradientAngle, emitGradientUpdate]
+  );
+
+  const handleStopSatDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingStopSat.current = true;
+    useProjectStore.getState().startTransaction();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    handleStopSatMove(e);
+  };
+
+  const handleStopHueMove = useCallback(
+    (e: PointerEvent | React.PointerEvent) => {
+      if (!stopHueSliderRef.current) return;
+      const rect = stopHueSliderRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const h = Math.round((x / rect.width) * 360) % 360;
+
+      setGradientStops((prev) => {
+        const updated = [...prev];
+        const cur = updated[activeStopIndex] || updated[0];
+        const { s, v } = hexToHsv(cur.color);
+        const newHex = hsvToHex(h, s, v);
+        updated[activeStopIndex] = { ...cur, color: newHex };
+        emitGradientUpdate(gradientType, gradientAngle, updated);
+        return updated;
+      });
+    },
+    [activeStopIndex, gradientType, gradientAngle, emitGradientUpdate]
+  );
+
+  const handleStopHueDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingStopHue.current = true;
+    useProjectStore.getState().startTransaction();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    handleStopHueMove(e);
+  };
+
+  const handleStopAlphaMove = useCallback(
+    (e: PointerEvent | React.PointerEvent) => {
+      if (!stopAlphaSliderRef.current) return;
+      const rect = stopAlphaSliderRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+      const rawAlpha = Math.max(0, Math.min(1, x / rect.width));
+      const alpha = Math.round(rawAlpha * 100) / 100;
+
+      setGradientStops((prev) => {
+        const updated = [...prev];
+        const cur = updated[activeStopIndex] || updated[0];
+        updated[activeStopIndex] = { ...cur, alpha };
+        emitGradientUpdate(gradientType, gradientAngle, updated);
+        return updated;
+      });
+    },
+    [activeStopIndex, gradientType, gradientAngle, emitGradientUpdate]
+  );
+
+  const handleStopAlphaDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingStopAlpha.current = true;
+    useProjectStore.getState().startTransaction();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    handleStopAlphaMove(e);
+  };
+
+  // Global Pointer Up Handler
   const handlePointerUp = (e: React.PointerEvent) => {
     e.stopPropagation();
     if (
@@ -579,13 +715,19 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
       isDraggingHue.current ||
       isDraggingAlpha.current ||
       isDraggingVectorHandle.current !== null ||
-      isDraggingStop.current !== null
+      isDraggingStop.current !== null ||
+      isDraggingStopSat.current ||
+      isDraggingStopHue.current ||
+      isDraggingStopAlpha.current
     ) {
       isDraggingSat.current = false;
       isDraggingHue.current = false;
       isDraggingAlpha.current = false;
       isDraggingVectorHandle.current = null;
       isDraggingStop.current = null;
+      isDraggingStopSat.current = false;
+      isDraggingStopHue.current = false;
+      isDraggingStopAlpha.current = false;
       useProjectStore.getState().commitTransaction();
     }
   };
@@ -598,13 +740,19 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
         isDraggingHue.current ||
         isDraggingAlpha.current ||
         isDraggingVectorHandle.current !== null ||
-        isDraggingStop.current !== null
+        isDraggingStop.current !== null ||
+        isDraggingStopSat.current ||
+        isDraggingStopHue.current ||
+        isDraggingStopAlpha.current
       ) {
         isDraggingSat.current = false;
         isDraggingHue.current = false;
         isDraggingAlpha.current = false;
         isDraggingVectorHandle.current = null;
         isDraggingStop.current = null;
+        isDraggingStopSat.current = false;
+        isDraggingStopHue.current = false;
+        isDraggingStopAlpha.current = false;
         useProjectStore.getState().commitTransaction();
       }
     };
@@ -613,20 +761,24 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
   }, []);
 
   // EyeDropper API integration
-  const handleEyeDropper = async () => {
+  const handleEyeDropper = async (target: "solid" | "stop") => {
     if (typeof window !== "undefined" && "EyeDropper" in window) {
       try {
         const eyeDropper = new (window as any).EyeDropper();
         const result = await eyeDropper.open();
         if (result?.sRGBHex) {
           const pickedHex = result.sRGBHex.toUpperCase();
-          const newHsv = hexToHsv(pickedHex);
-          setSolidHexInput(pickedHex.replace("#", ""));
-          setSolidHsv(newHsv);
-          emitSolidUpdate(newHsv.h, newHsv.s, newHsv.v, solidAlpha);
+          if (target === "solid") {
+            const newHsv = hexToHsv(pickedHex);
+            setSolidHexInput(pickedHex.replace("#", ""));
+            setSolidHsv(newHsv);
+            emitSolidUpdate(newHsv.h, newHsv.s, newHsv.v, solidAlpha);
+          } else {
+            updateActiveStopColor(pickedHex);
+          }
         }
       } catch {
-        // User cancelled picker
+        // User cancelled
       }
     }
   };
@@ -694,14 +846,18 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
     emitGradientUpdate(gradientType, gradientAngle, updated);
   };
 
-  // Add current value to saved swatches
-  const handleAddSwatch = () => {
+  // Set gradient type (Linear, Radial, Angular, Diamond)
+  const handleSetGradientType = (type: GradientType) => {
+    setGradientType(type);
+    emitGradientUpdate(type, gradientAngle, gradientStops);
+  };
+
+  // Add current solid value to saved swatches (Only for solid mode)
+  const handleAddSolidSwatch = () => {
     const activeValue =
-      mode === "solid"
-        ? solidAlpha < 1
-          ? hexToRgbaString(hsvToHex(solidHsv.h, solidHsv.s, solidHsv.v), solidAlpha)
-          : hsvToHex(solidHsv.h, solidHsv.s, solidHsv.v)
-        : serializeGradient(gradientType, gradientAngle, gradientStops);
+      solidAlpha < 1
+        ? hexToRgbaString(hsvToHex(solidHsv.h, solidHsv.s, solidHsv.v), solidAlpha)
+        : hsvToHex(solidHsv.h, solidHsv.s, solidHsv.v);
 
     if (!savedSwatches.includes(activeValue)) {
       setSavedSwatches((prev) => [...prev, activeValue]);
@@ -710,6 +866,10 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
 
   const solidPureHue = hsvToHex(solidHsv.h, 1, 1);
   const solidCurrentHex = hsvToHex(solidHsv.h, solidHsv.s, solidHsv.v);
+
+  const stopPureHue = hsvToHex(activeStopHsv.h, 1, 1);
+  const stopCurrentHex = activeStop?.color || "#6366F1";
+  const stopCurrentAlpha = activeStop?.alpha ?? 1;
 
   const liveGradientCss = serializeGradient(gradientType, gradientAngle, gradientStops);
   const gradientBarTrackCss = `linear-gradient(to right, ${gradientStops
@@ -817,7 +977,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
-                onClick={handleEyeDropper}
+                onClick={() => handleEyeDropper("solid")}
                 className="h-8 w-8 rounded-lg border border-border/80 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors shrink-0 shadow-2xs cursor-pointer"
                 title="Eyedropper (Pick screen color)"
               >
@@ -928,6 +1088,48 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                 </span>
               </div>
             </div>
+
+            {/* Saved Swatches Section (Solid Mode Only) */}
+            <div className="pt-2 border-t border-border/60 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-foreground">Saved</span>
+                <button
+                  type="button"
+                  onClick={handleAddSolidSwatch}
+                  className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors font-medium cursor-pointer"
+                  title="Save current color"
+                >
+                  <Plus className="h-3 w-3" />
+                  <span>Add</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none">
+                {savedSwatches.map((swatch, idx) => (
+                  <button
+                    key={`${swatch}-${idx}`}
+                    type="button"
+                    onClick={() => {
+                      useProjectStore.getState().startTransaction();
+                      const { hex, alpha } = parseHexOrRgba(swatch);
+                      setSolidHsv(hexToHsv(hex));
+                      setSolidAlpha(alpha);
+                      setSolidHexInput(hex.replace("#", "").toUpperCase());
+                      emitChange(swatch);
+                      useProjectStore.getState().commitTransaction();
+                    }}
+                    className={cn(
+                      "h-5 w-5 rounded-full border transition-transform hover:scale-115 active:scale-95 cursor-pointer shrink-0 shadow-2xs",
+                      value === swatch
+                        ? "border-primary ring-2 ring-primary/40 scale-110"
+                        : "border-border/50"
+                    )}
+                    style={{ background: swatch }}
+                    title={swatch}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -948,9 +1150,7 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                 background: liveGradientCss,
               }}
             >
-              {/* Dashed line connecting the 2 vector points */}
               <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-                {/* Dark shadow stroke for high contrast */}
                 <line
                   x1={`${vectorPoints.p1.x * 100}%`}
                   y1={`${vectorPoints.p1.y * 100}%`}
@@ -960,7 +1160,6 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                   strokeWidth="2.5"
                   strokeDasharray="4 4"
                 />
-                {/* Crisp white dashed line */}
                 <line
                   x1={`${vectorPoints.p1.x * 100}%`}
                   y1={`${vectorPoints.p1.y * 100}%`}
@@ -1001,25 +1200,56 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
               </div>
             </div>
 
-            {/* Gradient Type Selector & Reverse Button */}
+            {/* Gradient Type Dropdown (Linear, Radial, Angular, Diamond) + Reverse Button */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextType = gradientType === "linear" ? "radial" : "linear";
-                    setGradientType(nextType);
-                    emitGradientUpdate(nextType, gradientAngle, gradientStops);
-                  }}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border/80 bg-muted/40 text-xs font-medium text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
-                  title="Toggle gradient type"
-                >
-                  <span className="capitalize">{gradientType}</span>
-                  <ChevronDown className="h-3 w-3 opacity-60" />
-                </button>
-                <span className="text-[11px] text-muted-foreground font-mono">
-                  {gradientAngle}°
-                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border/80 bg-muted/40 text-xs font-medium text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+                    >
+                      <span className="capitalize">{gradientType}</span>
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-32 bg-popover border-border text-xs z-50">
+                    <DropdownMenuItem
+                      onClick={() => handleSetGradientType("linear")}
+                      className="flex items-center justify-between cursor-pointer"
+                    >
+                      <span>Linear</span>
+                      {gradientType === "linear" && <Check className="h-3 w-3 text-primary" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleSetGradientType("radial")}
+                      className="flex items-center justify-between cursor-pointer"
+                    >
+                      <span>Radial</span>
+                      {gradientType === "radial" && <Check className="h-3 w-3 text-primary" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleSetGradientType("angular")}
+                      className="flex items-center justify-between cursor-pointer"
+                    >
+                      <span>Angular</span>
+                      {gradientType === "angular" && <Check className="h-3 w-3 text-primary" />}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleSetGradientType("diamond")}
+                      className="flex items-center justify-between cursor-pointer"
+                    >
+                      <span>Diamond</span>
+                      {gradientType === "diamond" && <Check className="h-3 w-3 text-primary" />}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {gradientType !== "radial" && (
+                  <span className="text-[11px] text-muted-foreground font-mono">
+                    {gradientAngle}°
+                  </span>
+                )}
               </div>
 
               {/* Reverse Gradient Direction Button (⇄) */}
@@ -1071,10 +1301,10 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
               </div>
             </div>
 
-            {/* Active Stop Inspector: Color + Hex + Alpha + Delete */}
-            <div className="p-2 rounded-lg bg-muted/40 border border-border/60 space-y-2">
+            {/* Active Stop Inspector: Box clicks to open Standard Color Picker */}
+            <div className="p-2.5 rounded-lg bg-muted/40 border border-border/60 space-y-2">
               <div className="flex items-center justify-between text-[11px]">
-                <span className="font-medium text-muted-foreground">
+                <span className="font-semibold text-foreground">
                   Stop {activeStopIndex + 1} ({Math.round(activeStop?.offset || 0)}%)
                 </span>
                 {gradientStops.length > 2 && (
@@ -1090,19 +1320,140 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                 )}
               </div>
 
-              {/* Stop Hex Input & Opacity Input */}
+              {/* Stop Color Box + Hex Input + Opacity Input */}
               <div className="flex items-center gap-2">
-                <div
-                  className="w-6 h-6 rounded border border-border/80 shadow-xs shrink-0"
-                  style={{ backgroundColor: activeStop?.color || "#ffffff" }}
-                />
+                {/* Color Box with Standard Color Picker Popover on click! */}
+                <Popover open={isStopPickerOpen} onOpenChange={setIsStopPickerOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="w-7 h-7 rounded border border-border shadow-xs shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-transform flex items-center justify-center p-0.5"
+                      title="Click to open standard color picker for this stop"
+                    >
+                      <div
+                        className="w-full h-full rounded-[2px]"
+                        style={{ backgroundColor: stopCurrentHex }}
+                      />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    side="left"
+                    align="start"
+                    sideOffset={10}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="w-[240px] p-3 bg-popover text-popover-foreground border-border shadow-2xl rounded-xl space-y-3 z-50 select-none"
+                  >
+                    <div className="flex items-center justify-between border-b border-border/60 pb-1.5 text-xs font-semibold">
+                      <span>Stop {activeStopIndex + 1} Color</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsStopPickerOpen(false)}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    {/* 2D Saturation / Value Canvas for Stop */}
+                    <div
+                      ref={stopSatAreaRef}
+                      onPointerDown={handleStopSatDown}
+                      onPointerMove={(e) => {
+                        if (isDraggingStopSat.current) handleStopSatMove(e);
+                      }}
+                      onPointerUp={handlePointerUp}
+                      className="relative w-full h-32 rounded-lg overflow-hidden cursor-crosshair shadow-inner"
+                      style={{
+                        backgroundColor: stopPureHue,
+                        backgroundImage: `
+                          linear-gradient(to right, #fff 0%, transparent 100%),
+                          linear-gradient(to top, #000 0%, transparent 100%)
+                        `,
+                      }}
+                    >
+                      <div
+                        className="absolute w-4 h-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_3px_rgba(0,0,0,0.8)] pointer-events-none"
+                        style={{
+                          left: `${activeStopHsv.s * 100}%`,
+                          top: `${(1 - activeStopHsv.v) * 100}%`,
+                          backgroundColor: stopCurrentHex,
+                        }}
+                      />
+                    </div>
+
+                    {/* Sliders: Eyedropper + Hue + Alpha */}
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEyeDropper("stop")}
+                        className="h-7 w-7 rounded-md border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0 cursor-pointer"
+                        title="Pick screen color"
+                      >
+                        <Pipette className="h-3 w-3" />
+                      </button>
+
+                      <div className="flex-1 space-y-1.5">
+                        {/* Hue */}
+                        <div
+                          ref={stopHueSliderRef}
+                          onPointerDown={handleStopHueDown}
+                          onPointerMove={(e) => {
+                            if (isDraggingStopHue.current) handleStopHueMove(e);
+                          }}
+                          onPointerUp={handlePointerUp}
+                          className="relative w-full h-2 rounded-full cursor-pointer shadow-inner"
+                          style={{
+                            backgroundImage:
+                              "linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)",
+                          }}
+                        >
+                          <div
+                            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow pointer-events-none"
+                            style={{
+                              left: `${(activeStopHsv.h / 360) * 100}%`,
+                              backgroundColor: stopPureHue,
+                            }}
+                          />
+                        </div>
+
+                        {/* Alpha */}
+                        <div
+                          ref={stopAlphaSliderRef}
+                          onPointerDown={handleStopAlphaDown}
+                          onPointerMove={(e) => {
+                            if (isDraggingStopAlpha.current) handleStopAlphaMove(e);
+                          }}
+                          onPointerUp={handlePointerUp}
+                          className="relative w-full h-2 rounded-full cursor-pointer shadow-inner overflow-hidden"
+                          style={CHECKERBOARD_STYLE}
+                        >
+                          <div
+                            className="absolute inset-0"
+                            style={{
+                              backgroundImage: `linear-gradient(to right, transparent, ${stopCurrentHex})`,
+                            }}
+                          />
+                          <div
+                            className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 h-3 rounded-full border-2 border-white shadow pointer-events-none"
+                            style={{
+                              left: `${stopCurrentAlpha * 100}%`,
+                              backgroundColor: stopCurrentHex,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                {/* Hex input */}
                 <div className="flex-1 relative">
                   <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-muted-foreground">
                     #
                   </span>
                   <Input
                     type="text"
-                    value={(activeStop?.color || "#ffffff").replace("#", "").toUpperCase()}
+                    value={stopCurrentHex.replace("#", "").toUpperCase()}
                     maxLength={6}
                     onChange={(e) => {
                       const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
@@ -1110,21 +1461,22 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                         updateActiveStopColor(`#${clean}`);
                       }
                     }}
-                    className="h-6 pl-5 pr-2 font-mono text-xs uppercase"
+                    className="h-7 pl-5 pr-2 font-mono text-xs uppercase"
                   />
                 </div>
 
+                {/* Opacity % */}
                 <div className="relative w-14 shrink-0">
                   <Input
                     type="number"
                     min={0}
                     max={100}
-                    value={Math.round((activeStop?.alpha ?? 1) * 100)}
+                    value={Math.round(stopCurrentAlpha * 100)}
                     onChange={(e) => {
                       const num = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
                       updateActiveStopAlpha(num / 100);
                     }}
-                    className="h-6 pr-3.5 text-center font-mono text-xs py-0"
+                    className="h-7 pr-3.5 text-center font-mono text-xs py-0"
                   />
                   <span className="absolute right-1 top-1/2 -translate-y-1/2 text-[9px] text-muted-foreground pointer-events-none">
                     %
@@ -1146,67 +1498,11 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({
                   const newHex = hsvToHex(h, 1, 1);
                   updateActiveStopColor(newHex);
                 }}
+                title="Quick hue select"
               />
             </div>
           </div>
         )}
-
-        {/* ================================================================= */}
-        {/* COMMON FOOTER: SAVED CIRCULAR SWATCHES                            */}
-        {/* ================================================================= */}
-        <div className="pt-2 border-t border-border/60 space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-semibold text-foreground">Saved</span>
-            <button
-              type="button"
-              onClick={handleAddSwatch}
-              className="flex items-center gap-1 text-[11px] text-primary hover:text-primary/80 transition-colors font-medium cursor-pointer"
-              title="Save current color or gradient"
-            >
-              <Plus className="h-3 w-3" />
-              <span>Add</span>
-            </button>
-          </div>
-
-          {/* Small circular dots row matching reference screenshot */}
-          <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none">
-            {savedSwatches.map((swatch, idx) => (
-              <button
-                key={`${swatch}-${idx}`}
-                type="button"
-                onClick={() => {
-                  useProjectStore.getState().startTransaction();
-                  if (swatch.includes("gradient")) {
-                    setMode("gradient");
-                    const parsed = parseLinearGradientString(swatch);
-                    setGradientType(parsed.type);
-                    setGradientAngle(parsed.angle);
-                    setGradientStops(parsed.stops);
-                    setVectorPoints(angleToHandlePoints(parsed.angle));
-                    setActiveStopIndex(0);
-                    emitChange(swatch);
-                  } else {
-                    setMode("solid");
-                    const { hex, alpha } = parseHexOrRgba(swatch);
-                    setSolidHsv(hexToHsv(hex));
-                    setSolidAlpha(alpha);
-                    setSolidHexInput(hex.replace("#", "").toUpperCase());
-                    emitChange(swatch);
-                  }
-                  useProjectStore.getState().commitTransaction();
-                }}
-                className={cn(
-                  "h-5 w-5 rounded-full border transition-transform hover:scale-115 active:scale-95 cursor-pointer shrink-0 shadow-2xs",
-                  value === swatch
-                    ? "border-primary ring-2 ring-primary/40 scale-110"
-                    : "border-border/50"
-                )}
-                style={{ background: swatch }}
-                title={swatch}
-              />
-            ))}
-          </div>
-        </div>
       </PopoverContent>
     </Popover>
   );
