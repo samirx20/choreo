@@ -34,6 +34,7 @@ export const ProjectsWorkspace: React.FC = () => {
     renameProject,
     exportProject,
     importProject,
+    loadProjectFromFileBlob,
   } = useProjectRegistryStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,18 +54,11 @@ export const ProjectsWorkspace: React.FC = () => {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const content = event.target?.result as string;
-      if (content) {
-        importProject(content);
-      }
-    };
-    reader.readAsText(file);
+    await loadProjectFromFileBlob(file);
     // Reset file input
     e.target.value = "";
   };
@@ -106,7 +100,7 @@ export const ProjectsWorkspace: React.FC = () => {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".json,.motion"
+            accept=".mtn,.motion,.json"
             onChange={handleFileChange}
             className="hidden"
           />
@@ -115,7 +109,7 @@ export const ProjectsWorkspace: React.FC = () => {
             type="button"
             onClick={handleImportClick}
             className="h-8 px-3 rounded text-xs font-medium text-zinc-300 hover:text-white bg-[#18181b] hover:bg-[#222226] border border-[#27272a] flex items-center gap-1.5 transition-colors"
-            title="Import project JSON file"
+            title="Import project file (.mtn)"
           >
             <Upload className="w-3.5 h-3.5 text-zinc-400" />
             <span>Import</span>

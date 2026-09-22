@@ -217,7 +217,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 className="gap-2 text-xs cursor-pointer hover:bg-white/10"
               >
                 <Download className="h-3.5 w-3.5 text-zinc-400" />
-                <span>Export .motion JSON</span>
+                <span>Export (.mtn)</span>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator className="bg-[#27272a]" />

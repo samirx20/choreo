@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useProjectStore, isMotionMode } from "@/store/useProjectStore";
 import { useProjectRegistryStore } from "@/store/useProjectRegistryStore";
 import { ProjectsWorkspace } from "@/components/workspace/ProjectsWorkspace";
@@ -13,6 +13,7 @@ import { ExportModal } from "@/components/export/ExportModal";
 import { ShortcutsModal } from "@/components/modals/ShortcutsModal";
 import { UniversalContextMenuPortal } from "@/components/common/UniversalContextMenuPortal";
 import { cn } from "@/lib/utils";
+import { Film } from "lucide-react";
 
 const App: React.FC = () => {
   const {
@@ -33,6 +34,9 @@ const App: React.FC = () => {
     currentView,
     loadRegistry,
     closeProject,
+    saveCurrentProjectToFile,
+    openProjectFromFilePicker,
+    loadProjectFromFileBlob,
   } = useProjectRegistryStore();
 
   const [isAiBarOpen, setIsAiBarOpen] = useState(false);
@@ -40,6 +44,8 @@ const App: React.FC = () => {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [isZenMode, setIsZenMode] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const dragCounter = useRef(0);
 
   const theme = useProjectStore((s) => s.theme);
 
@@ -84,6 +90,27 @@ const App: React.FC = () => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsAiBarOpen((prev) => !prev);
+        return;
+      }
+
+      // 1b. Save Project: Ctrl+S / Cmd+S
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && !e.shiftKey) {
+        e.preventDefault();
+        saveCurrentProjectToFile();
+        return;
+      }
+
+      // 1c. Save Project As: Ctrl+Shift+S / Cmd+Shift+S
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && e.shiftKey) {
+        e.preventDefault();
+        saveCurrentProjectToFile({ forceSaveAs: true });
+        return;
+      }
+
+      // 1d. Open Project: Ctrl+O / Cmd+O
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        openProjectFromFilePicker();
         return;
       }
 
@@ -182,81 +209,146 @@ const App: React.FC = () => {
     duplicateLayer,
     isZenMode,
     currentView,
+    saveCurrentProjectToFile,
+    openProjectFromFilePicker,
   ]);
 
-  // 1. Projects Management Workspace (Dashboard / Home View)
-  if (currentView === "workspace") {
-    return <ProjectsWorkspace />;
-  }
+  // Omnipresent Drag and Drop for .mtn files
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current += 1;
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      setIsDraggingFile(true);
+    }
+  };
 
-  // 2. Motion Studio Canvas Editor View
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setIsDraggingFile(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingFile(false);
+    dragCounter.current = 0;
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      await loadProjectFromFileBlob(file);
+    }
+  };
+
   return (
-    <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden font-sans select-none relative">
-      {/* 1. Global Tool Header */}
-      {!isZenMode && (
-        <TopNavBar
-          onOpenAiBar={() => setIsAiBarOpen(true)}
-          onOpenExportModal={() => setIsExportModalOpen(true)}
-          onToggleZenMode={() => setIsZenMode((prev) => !prev)}
-          onBackToWorkspace={closeProject}
-        />
-      )}
+    <div
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className="h-screen w-screen overflow-hidden relative select-none"
+    >
+      {/* 1. Projects Management Workspace (Dashboard / Home View) */}
+      {currentView === "workspace" ? (
+        <ProjectsWorkspace />
+      ) : (
+        /* 2. Motion Studio Canvas Editor View */
+        <div className="h-full w-full flex flex-col bg-background text-foreground overflow-hidden font-sans select-none relative">
+          {/* 1. Global Tool Header */}
+          {!isZenMode && (
+            <TopNavBar
+              onOpenAiBar={() => setIsAiBarOpen(true)}
+              onOpenExportModal={() => setIsExportModalOpen(true)}
+              onToggleZenMode={() => setIsZenMode((prev) => !prev)}
+              onBackToWorkspace={closeProject}
+            />
+          )}
 
-      {/* 2. Main Studio Workspace */}
-      <div className="flex-1 flex min-h-0 relative">
-        {/* Left Sidebar: Screens & Outliner */}
-        {!isZenMode && <LeftSidebar />}
+          {/* 2. Main Studio Workspace */}
+          <div className="flex-1 flex min-h-0 relative">
+            {/* Left Sidebar: Screens & Outliner */}
+            {!isZenMode && <LeftSidebar />}
 
-        {/* Center: Studio Viewport */}
-        <CanvasViewport
-          onOpenComponentsDrawer={() => setIsComponentsDrawerOpen(true)}
-          onOpenAiBar={() => setIsAiBarOpen(true)}
-        />
+            {/* Center: Studio Viewport */}
+            <CanvasViewport
+              onOpenComponentsDrawer={() => setIsComponentsDrawerOpen(true)}
+              onOpenAiBar={() => setIsAiBarOpen(true)}
+            />
 
-        {/* Right Sidebar Inspector (Jitter Design & Animate Switcher) */}
-        {!isZenMode && <RightInspectorPanel />}
-      </div>
+            {/* Right Sidebar Inspector (Jitter Design & Animate Switcher) */}
+            {!isZenMode && <RightInspectorPanel />}
+          </div>
 
-      {/* 3. Bottom Multi-Track Sequencer & Timeline (Motion Mode) */}
-      {!isZenMode && isMotionMode(uiMode) && (
-        <div className="shrink-0 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
-          <TimelinePanel />
+          {/* 3. Bottom Multi-Track Sequencer & Timeline (Motion Mode) */}
+          {!isZenMode && isMotionMode(uiMode) && (
+            <div className="shrink-0 transition-transform duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]">
+              <TimelinePanel />
+            </div>
+          )}
+
+          {/* Zen Mode Exit Badge */}
+          {isZenMode && (
+            <div
+              onClick={() => setIsZenMode(false)}
+              className="absolute top-4 right-4 z-50 bg-[#101014]/90 backdrop-blur-md border border-white/[0.1] text-[11px] text-[#a1a1aa] hover:text-white px-2.5 py-1 rounded-full cursor-pointer shadow-2xl transition-all"
+            >
+              Exit Zen Mode (Esc)
+            </div>
+          )}
+
+          {/* 4. Floating Overlays & Modals */}
+          <AICommandBar
+            isOpen={isAiBarOpen}
+            onClose={() => setIsAiBarOpen(false)}
+          />
+
+          <ComponentsDrawer
+            isOpen={isComponentsDrawerOpen}
+            onClose={() => setIsComponentsDrawerOpen(false)}
+          />
+
+          <ExportModal
+            isOpen={isExportModalOpen}
+            onClose={() => setIsExportModalOpen(false)}
+          />
+
+          <ShortcutsModal
+            isOpen={isShortcutsModalOpen}
+            onClose={() => setIsShortcutsModalOpen(false)}
+          />
+
+          {/* Universal Context Menu Portal (Zones A-G) */}
+          <UniversalContextMenuPortal />
         </div>
       )}
 
-      {/* Zen Mode Exit Badge */}
-      {isZenMode && (
-        <div
-          onClick={() => setIsZenMode(false)}
-          className="absolute top-4 right-4 z-50 bg-[#101014]/90 backdrop-blur-md border border-white/[0.1] text-[11px] text-[#a1a1aa] hover:text-white px-2.5 py-1 rounded-full cursor-pointer shadow-2xl transition-all"
-        >
-          Exit Zen Mode (Esc)
+      {/* Omnipresent Drag & Drop .mtn Overlay */}
+      {isDraggingFile && (
+        <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-8 pointer-events-none">
+          <div className="w-full max-w-md p-8 rounded-2xl border-2 border-dashed border-purple-500 bg-[#141417]/95 flex flex-col items-center text-center shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-14 h-14 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-4 border border-purple-500/30 shadow-inner">
+              <Film className="w-7 h-7" />
+            </div>
+            <h3 className="text-base font-semibold text-white tracking-tight">
+              Drop .mtn project to open
+            </h3>
+            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed max-w-xs">
+              Instant loading and schema validation of project scenes, layers, spring physics, and timeline.
+            </p>
+          </div>
         </div>
       )}
-
-      {/* 4. Floating Overlays & Modals */}
-      <AICommandBar
-        isOpen={isAiBarOpen}
-        onClose={() => setIsAiBarOpen(false)}
-      />
-
-      <ComponentsDrawer
-        isOpen={isComponentsDrawerOpen}
-        onClose={() => setIsComponentsDrawerOpen(false)}
-      />
-
-      <ExportModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-      />
-
-      <ShortcutsModal
-        isOpen={isShortcutsModalOpen}
-        onClose={() => setIsShortcutsModalOpen(false)}
-      />
-
-      {/* Universal Context Menu Portal (Zones A-G) */}
-      <UniversalContextMenuPortal />
     </div>
   );
 };

@@ -14,6 +14,15 @@ import {
   setActiveProjectId,
   sortProjects,
 } from "@/services/projectStorage";
+import {
+  saveProjectToFile,
+  openProjectFromFile,
+  readProjectFromFileBlob,
+  clearActiveFileHandle,
+  triggerBrowserDownload,
+  sanitizeProjectFileName,
+} from "@/services/fileAdapter";
+import { MOTION_FILE_EXTENSION } from "@/types/projectFile";
 import { useProjectStore } from "./useProjectStore";
 
 export type StudioView = "workspace" | "editor";
@@ -36,6 +45,9 @@ export interface ProjectRegistryState {
   renameProject: (id: string, newName: string) => void;
   importProject: (jsonContent: string) => string | null;
   exportProject: (id: string) => void;
+  saveCurrentProjectToFile: (options?: { forceSaveAs?: boolean }) => Promise<{ ok: boolean; fileName?: string; error?: string }>;
+  openProjectFromFilePicker: () => Promise<string | null>;
+  loadProjectFromFileBlob: (blob: Blob | File) => Promise<string | null>;
   setSearchQuery: (query: string) => void;
   setSortBy: (sortBy: ProjectSortOption) => void;
   setIsNewProjectModalOpen: (isOpen: boolean) => void;
@@ -78,7 +90,7 @@ export const useProjectRegistryStore = create<ProjectRegistryState>((set, get) =
     return true;
   },
 
-  closeProject: () => {
+      closeProject: () => {
     const activeId = get().activeProjectId;
     if (activeId) {
       // Auto-save currently active document state before closing
@@ -86,6 +98,7 @@ export const useProjectRegistryStore = create<ProjectRegistryState>((set, get) =
       saveProjectDocument(activeId, currentDoc);
     }
 
+    clearActiveFileHandle();
     setActiveProjectId(null);
     const updatedList = sortProjects(getProjectRegistry(), get().sortBy);
     set({
@@ -171,17 +184,101 @@ export const useProjectRegistryStore = create<ProjectRegistryState>((set, get) =
     if (!jsonStr) return;
 
     const meta = get().projects.find((p) => p.id === id);
-    const fileName = `${(meta?.name || "project").toLowerCase().replace(/[^a-z0-9_-]/g, "_")}.motion`;
+    const fileName = `${sanitizeProjectFileName(meta?.name || "project")}${MOTION_FILE_EXTENSION}`;
+    triggerBrowserDownload(jsonStr, fileName);
+  },
 
-    const blob = new Blob([jsonStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  saveCurrentProjectToFile: async (options?: { forceSaveAs?: boolean }) => {
+    const currentDoc = useProjectStore.getState().document;
+    const activeId = get().activeProjectId || "proj_temp";
+    const existingMeta = get().projects.find((p) => p.id === activeId);
+
+    const meta: ProjectMeta = existingMeta || {
+      id: activeId,
+      name: currentDoc.name || "Untitled Project",
+      width: currentDoc.settings?.width || 1920,
+      height: currentDoc.settings?.height || 1080,
+      fps: currentDoc.settings?.fps || 60,
+      duration: currentDoc.settings?.duration || 5.0,
+      screenCount: currentDoc.screens?.length || 1,
+      backgroundColor:
+        currentDoc.settings?.backgroundColor ||
+        currentDoc.screens?.[0]?.backgroundColor ||
+        "#09090b",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const result = await saveProjectToFile(currentDoc, meta, options);
+    if (result.ok && activeId) {
+      saveProjectDocument(activeId, currentDoc);
+      const updatedList = sortProjects(getProjectRegistry(), get().sortBy);
+      set({ projects: updatedList });
+    }
+    return result;
+  },
+
+  openProjectFromFilePicker: async () => {
+    const result = await openProjectFromFile();
+    if (!result.ok || !result.file) {
+      return null;
+    }
+
+    const doc = result.file.document;
+    const { id } = storageCreateProject({
+      name: result.file.metadata?.name || doc.name || "Opened Project",
+      width: doc.settings?.width || 1920,
+      height: doc.settings?.height || 1080,
+      fps: doc.settings?.fps || 60,
+      duration: doc.settings?.duration || 5.0,
+      backgroundColor: doc.settings?.backgroundColor || "#09090b",
+    });
+
+    saveProjectDocument(id, doc);
+    useProjectStore.getState().loadDocument(doc);
+    setActiveProjectId(id);
+
+    const updatedList = sortProjects(getProjectRegistry(), get().sortBy);
+    set({
+      projects: updatedList,
+      activeProjectId: id,
+      currentView: "editor",
+    });
+
+    return id;
+  },
+
+  loadProjectFromFileBlob: async (blob: Blob | File) => {
+    const result = await readProjectFromFileBlob(blob);
+    if (!result.ok || !result.file) {
+      return null;
+    }
+
+    const doc = result.file.document;
+    const projectName =
+      result.file.metadata?.name || doc.name || ("name" in blob ? (blob as File).name.replace(/\.[^/.]+$/, "") : "Imported Project");
+
+    const { id } = storageCreateProject({
+      name: projectName,
+      width: doc.settings?.width || 1920,
+      height: doc.settings?.height || 1080,
+      fps: doc.settings?.fps || 60,
+      duration: doc.settings?.duration || 5.0,
+      backgroundColor: doc.settings?.backgroundColor || "#09090b",
+    });
+
+    saveProjectDocument(id, doc);
+    useProjectStore.getState().loadDocument(doc);
+    setActiveProjectId(id);
+
+    const updatedList = sortProjects(getProjectRegistry(), get().sortBy);
+    set({
+      projects: updatedList,
+      activeProjectId: id,
+      currentView: "editor",
+    });
+
+    return id;
   },
 
   setSearchQuery: (query: string) => {

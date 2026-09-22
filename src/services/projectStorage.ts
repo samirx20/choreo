@@ -4,6 +4,10 @@ import {
   CreateProjectOptions,
   ProjectSortOption,
 } from "@/types/project";
+import {
+  createMotionStudioFilePackage,
+  validateAndNormalizeProjectFile,
+} from "@/types/projectFile";
 import { INITIAL_SCENE, STORAGE_DOC_KEY, normalizeScreens } from "@/store/initialScene";
 
 export const PROJECTS_REGISTRY_KEY = "motion_studio_projects_registry_v1";
@@ -247,24 +251,50 @@ export function renameProject(id: string, newName: string): void {
 }
 
 /**
- * Exports project as a JSON string
+ * Exports project as an official .mtn JSON package string
  */
 export function exportProjectFile(id: string): string | null {
   const doc = loadProjectDocument(id);
   if (!doc) return null;
-  return JSON.stringify(doc, null, 2);
+
+  const registry = getRawRegistry() || [];
+  const meta: ProjectMeta = registry.find((p) => p.id === id) || {
+    id,
+    name: doc.name || "Untitled Project",
+    width: doc.settings?.width || 1920,
+    height: doc.settings?.height || 1080,
+    fps: doc.settings?.fps || 60,
+    duration: doc.settings?.duration || 5.0,
+    screenCount: doc.screens?.length || 1,
+    backgroundColor:
+      doc.settings?.backgroundColor ||
+      doc.screens?.[0]?.backgroundColor ||
+      "#09090b",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+
+  const filePackage = createMotionStudioFilePackage(doc, meta);
+  return JSON.stringify(filePackage, null, 2);
 }
 
 /**
- * Imports a project from JSON string
+ * Imports a project from .mtn or legacy JSON string
  */
 export function importProjectFile(jsonContent: string): { id: string; document: SceneDocument } {
-  const parsed = JSON.parse(jsonContent);
-  if (!parsed || !Array.isArray(parsed.screens)) {
-    throw new Error("Invalid project file: missing screens array");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonContent);
+  } catch (err: any) {
+    throw new Error(`Invalid project JSON: ${err?.message || "Parsing failed"}`);
   }
 
-  const normalized = normalizeScreens(parsed);
+  const validation = validateAndNormalizeProjectFile(parsed);
+  if (!validation.ok) {
+    throw new Error(`Invalid project file: ${validation.error}`);
+  }
+
+  const normalized = normalizeScreens(validation.file.document);
   const id = generateId();
   normalized.name = normalized.name ? `${normalized.name} (Imported)` : "Imported Project";
 

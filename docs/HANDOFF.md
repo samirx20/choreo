@@ -9,26 +9,28 @@
 ## 1. Current Verified Baseline
 
 The repository is in a clean, fully verified, production-ready state:
-* **Automated Unit & Integration Tests**: All **36 test suites (304 tests)** passing via Vitest (`npm test`).
-* **Production Build**: Compiles cleanly with **0 TypeScript / Vite bundling errors in 10.54s** (`npm run build`).
-* **Git Status**: Fully synced with GitHub remote (`https://github.com/samirx20/choreo.git`).
+* **Automated Unit & Integration Tests**: All **37 test suites (314 tests)** passing via Vitest (`npm test`).
+* **Production Build**: Compiles cleanly with **0 TypeScript / Vite bundling errors in 9.53s** (`npm run build`).
+* **Git Status**: Clean working tree on `main`.
 * **Recent Deliverables Completed**:
+  * **Official `.mtn` Custom Save File & File System Adapter**:
+    * Strictly validated `MotionStudioFileSchema` (v1) with Zod, wrapping project metadata and `SceneDocument`.
+    * Dual-format auto-normalization (`validateAndNormalizeProjectFile`) supporting both `.mtn` packages and legacy raw JSON / `.motion` files with 100% backward compatibility.
+    * Native File System Access API integration (`showSaveFilePicker`, `showOpenFilePicker`) with file handle caching for instant `Ctrl+S` disk writes.
+    * Upgraded TopNavBar project title into a high-productivity File Dropdown Menu (Save, Save As, Open, Rename, Export, Back).
+    * Global keyboard shortcuts (`Ctrl+S`, `Ctrl+Shift+S`, `Ctrl+O`).
+    * Omnipresent Drag-and-Drop Dropzone overlay across both Workspace and Canvas Editor.
   * **Dual-View Figma-Grade ColorPicker**:
     * Full 2D Saturation/Value canvas with closed-form HSV coordinates and pointer capture.
     * 1D Rainbow Hue slider + Checkerboard Opacity slider.
     * EyeDropper API integration for live screen pixel sampling.
     * Circular saved swatches palette (Solid mode only).
   * **4-Type Gradient Engine**:
-    * Radix Dropdown supporting **Linear**, **Radial**, **Angular**, and **Diamond** with high-contrast theme-aware typography (`text-foreground font-medium`).
-    * **True 4-Facet Diamond Gradient**: Implemented using an 8-facet 4-fold angular reflection combined with an optical center highlight:
-      $$\text{Diamond CSS} = \text{radial-gradient}(\text{circle at 50\% 50\%}, \text{glow}) + \text{conic-gradient}(\text{from } \theta \text{ at 50\% 50\%}, \text{8-facet symmetry})$$
-    * Interactive 2D gradient canvas with 2-point vector dragger (`p1` start, `p2` end) connected by SVG dashed line.
-    * Reverse direction button (`ArrowLeftRight` / `⇄`) to flip stops.
-    * Multi-stop slider track with draggable stop thumbs.
-    * Dedicated Stop Inspector with Stop Color Popover containing a full standard 2D color picker for each stop.
+    * Radix Dropdown supporting **Linear**, **Radial**, **Angular**, and **Diamond** with high-contrast theme-aware typography.
+    * **True 4-Facet Diamond Gradient**: Implemented using an 8-facet 4-fold angular reflection combined with an optical center highlight.
+    * Interactive 2D gradient canvas with 2-point vector draggers, multi-stop slider track, and dedicated stop inspector.
   * **Scene Background Settings**:
     * Controlled "Apply to all scenes" checkbox synchronizing active scene background color across all scenes when enabled.
-    * Universal renderer and Pixi exporter safety (`bgHex.includes("gradient")`).
 
 ---
 

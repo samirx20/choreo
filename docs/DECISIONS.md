@@ -1010,6 +1010,34 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * 36 test files, 304 unit and integration tests passing 100%.
   * Production build compiles cleanly with zero TypeScript errors.
 
+---
+
+### Decision 53: Official .mtn Custom Save File Format, File System Adapter & Omnipresent Drag-and-Drop
+* **Official Single-File Package Extension (`.mtn`)**:
+  * Established `.mtn` as Motion Studio's official native single-file package format (`application/x-motion-studio` / `application/json`).
+  * Enforces strict Zod schema validation (`MotionStudioFileSchema` in `src/types/projectFile.ts`) covering `$schema`, `format: "motion-studio"`, `version: 1`, `generator`, `exportedAt`, `metadata: ProjectMeta`, and `document: SceneDocument`.
+* **Dual Backward Compatibility**:
+  * Built `validateAndNormalizeProjectFile` to seamlessly parse both the new v1 `.mtn` envelope and legacy raw `SceneDocument` JSON / `.motion` files without exceptions or data loss.
+* **Native File System Access API & Adapter**:
+  * Created `src/services/fileAdapter.ts` with direct OS filesystem saving via `window.showSaveFilePicker` and `window.showOpenFilePicker`.
+  * Implemented in-memory file handle caching (`FileSystemFileHandle`) allowing native `Ctrl+S` / `Cmd+S` to write directly back to disk without repeatedly prompting save dialogs.
+  * Graceful fallback to `Blob` / anchor download and `<input type="file">` for browsers without File System Access API.
+* **High-Productivity File Menu & Keyboard Shortcuts**:
+  * Upgraded `TopNavBar.tsx` project title into a full Figma-grade File Dropdown Menu:
+    * Inline rename trigger
+    * **Save (`Ctrl+S`)**
+    * **Save As... (`Ctrl+Shift+S`)**
+    * **Open Project (`Ctrl+O`)**
+    * **Export Video...**
+    * **Back to Projects Dashboard**
+  * Registered global shortcuts in `App.tsx` for `Ctrl+S`, `Ctrl+Shift+S`, and `Ctrl+O`.
+* **Omnipresent Drag-and-Drop Loading**:
+  * Wrapped the entire application shell with a global drag-and-drop listener and visual backdrop overlay (*"Drop .mtn project to open"*).
+  * Dropping any `.mtn`, `.motion`, or `.json` file anywhere on the workspace or canvas automatically validates the document and opens it into the editor.
+* **Verification**:
+  * 37 test suites, 314 unit and integration tests passing (`npm test`).
+  * Production build compiles cleanly with 0 TypeScript / Vite bundling errors in 9.53s (`npm run build`).
+
 
 
 
