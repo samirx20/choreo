@@ -1084,6 +1084,21 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 38 test suites (319 tests) passing 100% via `npm test`.
   * Production bundle compiles in 8.77s with 0 TypeScript errors.
 
+---
+
+### Decision 56: Tauri & Vite Watcher Isolation (EBUSY Lock Resolution)
+* **Root Cause Diagnosis**:
+  * When executing `tauri dev`, Vite runs concurrently via `beforeDevCommand`.
+  * Vite's file watcher (`server.watch`) defaulted to monitoring the entire repository workspace, including `src-tauri/target/debug/deps/`.
+  * When Cargo generated and locked Windows DLLs (`phf_macros-*.dll`), Node's `fs.watch` attempted to hook the locked file, throwing `EBUSY: resource busy or locked` and aborting Vite.
+* **Architecture Fix in `vite.config.ts`**:
+  * Configured `server.watch.ignored: ['**/src-tauri/**']` to completely isolate Vite's hot-reload watcher from Cargo's intermediate binary builds.
+  * Added `server.strictPort: true` to guarantee Tauri webview connects strictly to port 5173.
+  * Added `clearScreen: false` so Cargo compilation output remains uninterrupted in console output.
+* **Verification**:
+  * Verified Cargo compilation completes with 0 errors (`Finished dev profile [unoptimized + debuginfo] target(s) in 1m 11s`).
+  * 38 test suites passing cleanly (`npm test`).
+
 
 
 
