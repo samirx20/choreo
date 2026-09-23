@@ -87,18 +87,23 @@ describe("Universal Context Menu System (Zones A-G)", () => {
 
     // Zone A: Timeline Clip
     const menuA = buildTimelineClipMenu({ layerId: "l_1", clip: testClip, store: projectStore });
-    expect(menuA.some((i) => i.id === "quick-swap")).toBe(true);
     expect(menuA.some((i) => i.id === "split-clip")).toBe(true);
+    expect(menuA.some((i) => i.id === "duplicate-clip")).toBe(true);
+    expect(menuA.some((i) => i.id === "delete-clip")).toBe(true);
+    expect(menuA.some((i) => i.id === "quick-swap")).toBe(false);
 
     // Zone B: Timeline Track
     const menuB = buildTimelineTrackMenu({ layer: testLayer, store: projectStore });
-    expect(menuB.some((i) => i.id === "add-in")).toBe(true);
     expect(menuB.some((i) => i.id === "razor-split")).toBe(true);
+    expect(menuB.some((i) => i.id === "dup-layer")).toBe(true);
+    expect(menuB.some((i) => i.id === "delete-layer")).toBe(true);
+    expect(menuB.some((i) => i.id === "add-in")).toBe(false);
 
     // Zone C: Timeline Empty Space
     const menuC = buildTimelineEmptyMenu({ time: 1.5, store: projectStore });
-    expect(menuC.some((i) => i.id === "add-anim-here")).toBe(true);
     expect(menuC.some((i) => i.id === "set-work-in")).toBe(true);
+    expect(menuC.some((i) => i.id === "set-work-out")).toBe(true);
+    expect(menuC.some((i) => i.id === "add-anim-here")).toBe(false);
 
     // Zone D: Timeline Ruler
     const menuD = buildTimelineRulerMenu({
@@ -110,15 +115,20 @@ describe("Universal Context Menu System (Zones A-G)", () => {
     expect(menuD.some((i) => i.id === "set-in")).toBe(true);
     expect(menuD.some((i) => i.id === "toggle-smpte")).toBe(true);
 
-    // Zone E: Canvas Element
+    // Zone E: Canvas Element (Minimal & Form-Truth)
     const menuE = buildCanvasElementMenu({ layer: testLayer, store: projectStore });
-    expect(menuE.some((i) => i.id === "canvas-add-anim")).toBe(true);
     expect(menuE.some((i) => i.id === "bring-front")).toBe(true);
+    expect(menuE.some((i) => i.id === "duplicate-elem")).toBe(true);
+    expect(menuE.some((i) => i.id === "delete-elem")).toBe(true);
+    expect(menuE.some((i) => i.id === "toggle-text-sizing")).toBe(true); // Text specific
+    expect(menuE.some((i) => i.id === "canvas-add-anim")).toBe(false); // Pruned!
+    expect(menuE.some((i) => i.id === "rename-canvas-layer")).toBe(false); // Pruned!
 
     // Zone F: Canvas Pasteboard
     const menuF = buildCanvasPasteboardMenu({ store: projectStore });
-    expect(menuF.some((i) => i.id === "pasteboard-text")).toBe(true);
+    expect(menuF.some((i) => i.id === "select-all")).toBe(true);
     expect(menuF.some((i) => i.id === "zoom-100")).toBe(true);
+    expect(menuF.some((i) => i.id === "pasteboard-text")).toBe(false); // Pruned!
 
     // Zone G: Sidebar Card
     const menuG = buildSidebarCardMenu({ layerId: "l_1", clip: testClip, store: projectStore });

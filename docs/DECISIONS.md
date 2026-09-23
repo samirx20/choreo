@@ -1380,6 +1380,35 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 39 test suites (360 tests) pass cleanly (`npm test`).
   * Production build compiles cleanly with 0 errors in 10.39s (`npm run build`).
 
+---
+
+### Decision 68: Context Menu Simplification, Prompt Modal Eradication & Precision Actions
+* **The Problem**:
+  * Right-clicking canvas elements exposed generic clutter: `Add Animation...` with nested submenus (redundant with the Animate Inspector) and `Rename Layer`, which triggered ugly native browser modals (`window.prompt("Rename layer:")`).
+  * Other context menus (timeline tracks, clips, cards, scenes) also relied on `window.prompt()`, breaking immersion and violating the precision tool principle (Rule 9).
+  * Canvas right-click lacked element-specific physical operations (e.g. Reverse Direction / Toggle Arrowhead on lines, Auto-Width / Auto-Height toggle on text, Fit Mode on media).
+* **The Solution**:
+  1. **Eradication of Browser Prompt Modals (`contextMenuBuilders.tsx`)**:
+     * Completely removed all 5 `window.prompt()` calls from `contextMenuBuilders.tsx`.
+     * Renaming is performed exclusively through the left sidebar outliner and inspector using high-craft inline editing (`setRenamingLayerId`, `setRenamingSceneId`), matching Figma and After Effects.
+  2. **Canvas Element Context Menu (`buildCanvasElementMenu`)**:
+     * Pruned `Add Animation...` and `Rename Layer`.
+     * Added **Form-Truth Context Actions**:
+       * **Lines & Arrows**: "Reverse Direction" (swaps endpoints), "Toggle Arrowhead" (line $\leftrightarrow$ arrow).
+       * **Text**: "Switch to Auto-Width" $\leftrightarrow$ "Switch to Auto-Height".
+       * **Media**: "Toggle Fit Mode (Cover / Contain)".
+     * Retained essential arrangement (Bring to Front, Bring Forward, Send Backward, Send to Back) and core operations (Duplicate, Delete).
+  3. **Timeline Menus Streamlining**:
+     * **Timeline Clip Menu (`buildTimelineClipMenu`)**: Pruned hardcoded `Swap Preset` and `Rename Clip` prompt; kept precision clip controls (Split at Playhead, Duplicate, Align Start to Playhead, Delete).
+     * **Timeline Track Menu (`buildTimelineTrackMenu`)**: Pruned animation entrance/action/exit submenus and prompt rename; kept Razor Split, Duplicate, Visibility toggle, and Delete.
+     * **Timeline Empty Menu (`buildTimelineEmptyMenu`)**: Pruned `Add Animation` submenu; kept Work Area bounds controls (In, Out, Reset).
+     * **Canvas Pasteboard Menu (`buildCanvasPasteboardMenu`)**: Pruned shape creation shortcuts; kept Select All, Zoom 100%, and Fit to Viewport.
+* **Verification**:
+  * Updated unit tests in `src/test/context_menu_system.test.ts` and `src/test/omnipresent_renaming.test.ts` to verify the absence of prompt modals and the presence of high-signal actions.
+  * All 39 test suites (360 tests) pass cleanly (`npm test`).
+  * Production build compiles cleanly with 0 errors in 10.24s (`npm run build`).
+
+
 
 
 

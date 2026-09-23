@@ -2,26 +2,25 @@ import React from "react";
 import { ContextMenuItem } from "@/store/useContextMenuStore";
 import { ProjectStoreState } from "@/store/useProjectStore";
 import { AnimationClip, Layer } from "@/types/scene";
+import { isVectorLine } from "@/utils/layerCapabilities";
 import {
   Scissors,
   Copy,
   Trash2,
   Clock,
-  Sparkles,
-  ArrowUpRight,
-  Repeat,
-  Layers,
   Eye,
   EyeOff,
-  Plus,
   Maximize2,
-  Type,
-  Square,
-  Circle,
   RotateCcw,
   Pencil,
+  ArrowLeftRight,
+  ArrowUpRight,
 } from "lucide-react";
 
+/**
+ * Zone A: Timeline Clip Context Menu
+ * Clean, high-signal clip operations (no prompt modal, no redundant swap submenus).
+ */
 export function buildTimelineClipMenu(params: {
   layerId: string;
   clip: AnimationClip;
@@ -29,69 +28,9 @@ export function buildTimelineClipMenu(params: {
 }): ContextMenuItem[] {
   const { layerId, clip, store } = params;
   const t = store.currentTime;
-
   const canSplit = t > clip.start + 0.05 && t < clip.start + clip.duration - 0.05;
 
   return [
-    {
-      id: "quick-swap",
-      label: "Swap Preset",
-      icon: <Sparkles className="w-3.5 h-3.5" />,
-      children: [
-        {
-          id: "swap-pop",
-          label: "Pop In",
-          action: () => store.updateAnimationClip(layerId, clip.id, { preset: "pop", type: "in" }),
-        },
-        {
-          id: "swap-slide-up",
-          label: "Slide Up",
-          action: () => store.updateAnimationClip(layerId, clip.id, { preset: "slideUp", type: "in" }),
-        },
-        {
-          id: "swap-fade",
-          label: "Smooth Fade",
-          action: () => store.updateAnimationClip(layerId, clip.id, { preset: "fade", type: "in" }),
-        },
-        {
-          id: "swap-pulse",
-          label: "Pulse (Accent)",
-          action: () => store.updateAnimationClip(layerId, clip.id, { preset: "pulse", type: "action" }),
-        },
-        {
-          id: "swap-bounce",
-          label: "Bounce",
-          action: () => store.updateAnimationClip(layerId, clip.id, { preset: "bounce", type: "action" }),
-        },
-        {
-          id: "swap-wiggle",
-          label: "Wiggle",
-          action: () => store.updateAnimationClip(layerId, clip.id, { preset: "wiggle", type: "action" }),
-        },
-        {
-          id: "swap-fade-out",
-          label: "Fade Out",
-          action: () => store.updateAnimationClip(layerId, clip.id, { preset: "fade", type: "out" }),
-        },
-        {
-          id: "swap-slide-down",
-          label: "Slide Down (Exit)",
-          action: () => store.updateAnimationClip(layerId, clip.id, { preset: "slideDown", type: "out" }),
-        },
-      ],
-    },
-    {
-      id: "rename-clip",
-      label: "Rename Clip",
-      icon: <Pencil className="w-3.5 h-3.5" />,
-      shortcut: "F2",
-      action: () => {
-        const newName = window.prompt("Rename animation clip:", clip.name || clip.preset);
-        if (newName && newName.trim()) {
-          store.updateAnimationClip(layerId, clip.id, { name: newName.trim() });
-        }
-      },
-    },
     {
       id: "split-clip",
       label: "Split at Playhead",
@@ -114,18 +53,9 @@ export function buildTimelineClipMenu(params: {
       action: () => store.updateAnimationClip(layerId, clip.id, { start: Math.round(t * 100) / 100 }),
     },
     {
-      id: "divider-1",
+      id: "divider-clip",
       label: "",
       divider: true,
-    },
-    {
-      id: "ripple-delete",
-      label: "Ripple Delete",
-      shortcut: "Shift+Del",
-      danger: true,
-      action: () => {
-        store.removeAnimationClip(layerId, clip.id);
-      },
     },
     {
       id: "delete-clip",
@@ -138,6 +68,10 @@ export function buildTimelineClipMenu(params: {
   ];
 }
 
+/**
+ * Zone B: Timeline Track Context Menu
+ * Layer-level operations directly on the track header.
+ */
 export function buildTimelineTrackMenu(params: {
   layer: Layer;
   store: ProjectStoreState;
@@ -146,47 +80,6 @@ export function buildTimelineTrackMenu(params: {
   const t = store.currentTime;
 
   return [
-    {
-      id: "add-in",
-      label: "Add Entrance (In)",
-      icon: <Sparkles className="w-3.5 h-3.5 text-emerald-600" />,
-      action: () =>
-        store.addAnimationClip(layer.id, {
-          type: "in",
-          preset: "pop",
-          start: t,
-          duration: 0.6,
-        }),
-    },
-    {
-      id: "add-action",
-      label: "Add Kinetic Action",
-      icon: <Repeat className="w-3.5 h-3.5 text-amber-600" />,
-      action: () =>
-        store.addAnimationClip(layer.id, {
-          type: "action",
-          preset: "pulse",
-          start: t,
-          duration: 0.5,
-        }),
-    },
-    {
-      id: "add-out",
-      label: "Add Exit (Out)",
-      icon: <ArrowUpRight className="w-3.5 h-3.5 text-rose-600" />,
-      action: () =>
-        store.addAnimationClip(layer.id, {
-          type: "out",
-          preset: "fade",
-          start: t,
-          duration: 0.6,
-        }),
-    },
-    {
-      id: "divider-track-1",
-      label: "",
-      divider: true,
-    },
     {
       id: "razor-split",
       label: "Razor Split at Playhead",
@@ -202,18 +95,6 @@ export function buildTimelineTrackMenu(params: {
       action: () => store.duplicateLayer(layer.id),
     },
     {
-      id: "rename-track-layer",
-      label: "Rename Layer",
-      icon: <Pencil className="w-3.5 h-3.5" />,
-      shortcut: "F2",
-      action: () => {
-        const newName = window.prompt("Rename layer:", layer.name);
-        if (newName && newName.trim()) {
-          store.updateLayer(layer.id, { name: newName.trim() });
-        }
-      },
-    },
-    {
       id: "toggle-visibility",
       label: layer.style.opacity === 0 ? "Show Layer" : "Hide Layer",
       icon: layer.style.opacity === 0 ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />,
@@ -223,7 +104,7 @@ export function buildTimelineTrackMenu(params: {
         }),
     },
     {
-      id: "divider-track-2",
+      id: "divider-track",
       label: "",
       divider: true,
     },
@@ -238,63 +119,17 @@ export function buildTimelineTrackMenu(params: {
   ];
 }
 
+/**
+ * Zone C: Timeline Empty Space Context Menu
+ * Quick work area bounds setting at click position.
+ */
 export function buildTimelineEmptyMenu(params: {
   time: number;
   store: ProjectStoreState;
 }): ContextMenuItem[] {
   const { time, store } = params;
-  const selectedLayerId = store.selectedLayerIds[0];
 
   return [
-    {
-      id: "add-anim-here",
-      label: `Add Animation at ${time.toFixed(2)}s`,
-      icon: <Plus className="w-3.5 h-3.5" />,
-      disabled: !selectedLayerId,
-      children: [
-        {
-          id: "add-in-here",
-          label: "Entrance (Pop In)",
-          action: () =>
-            selectedLayerId &&
-            store.addAnimationClip(selectedLayerId, {
-              type: "in",
-              preset: "pop",
-              start: time,
-              duration: 0.6,
-            }),
-        },
-        {
-          id: "add-pulse-here",
-          label: "Action (Pulse)",
-          action: () =>
-            selectedLayerId &&
-            store.addAnimationClip(selectedLayerId, {
-              type: "action",
-              preset: "pulse",
-              start: time,
-              duration: 0.5,
-            }),
-        },
-        {
-          id: "add-out-here",
-          label: "Exit (Slide Down)",
-          action: () =>
-            selectedLayerId &&
-            store.addAnimationClip(selectedLayerId, {
-              type: "out",
-              preset: "slideDown",
-              start: time,
-              duration: 0.6,
-            }),
-        },
-      ],
-    },
-    {
-      id: "divider-empty-1",
-      label: "",
-      divider: true,
-    },
     {
       id: "set-work-in",
       label: "Set Work Area In Point",
@@ -317,6 +152,10 @@ export function buildTimelineEmptyMenu(params: {
   ];
 }
 
+/**
+ * Zone D: Timeline Ruler Context Menu
+ * Time format and navigation controls.
+ */
 export function buildTimelineRulerMenu(params: {
   time: number;
   isSmpte: boolean;
@@ -366,80 +205,23 @@ export function buildTimelineRulerMenu(params: {
   ];
 }
 
+/**
+ * Zone E: Canvas Element Context Menu
+ * Minimal, high-craft context menu: Z-ordering, element-specific form actions, duplicate, and delete.
+ * No generic animation pickers or browser modal rename prompts.
+ */
 export function buildCanvasElementMenu(params: {
   layer: Layer;
   store: ProjectStoreState;
 }): ContextMenuItem[] {
   const { layer, store } = params;
 
-  return [
-    {
-      id: "canvas-add-anim",
-      label: "Add Animation...",
-      icon: <Sparkles className="w-3.5 h-3.5" />,
-      children: [
-        {
-          id: "anim-pop",
-          label: "Pop In",
-          action: () =>
-            store.addAnimationClip(layer.id, {
-              type: "in",
-              preset: "pop",
-              start: store.currentTime,
-              duration: 0.6,
-            }),
-        },
-        {
-          id: "anim-slide-up",
-          label: "Slide Up",
-          action: () =>
-            store.addAnimationClip(layer.id, {
-              type: "in",
-              preset: "slideUp",
-              start: store.currentTime,
-              duration: 0.6,
-            }),
-        },
-        {
-          id: "anim-pulse",
-          label: "Pulse (Accent)",
-          action: () =>
-            store.addAnimationClip(layer.id, {
-              type: "action",
-              preset: "pulse",
-              start: store.currentTime,
-              duration: 0.5,
-            }),
-        },
-        {
-          id: "anim-exit",
-          label: "Fade Out",
-          action: () =>
-            store.addAnimationClip(layer.id, {
-              type: "out",
-              preset: "fade",
-              start: store.currentTime,
-              duration: 0.6,
-            }),
-        },
-      ],
-    },
-    {
-      id: "divider-elem-1",
-      label: "",
-      divider: true,
-    },
+  const items: ContextMenuItem[] = [
     {
       id: "bring-front",
       label: "Bring to Front",
       shortcut: "Ctrl+]",
       action: () => store.bringToFront(layer.id),
-    },
-    {
-      id: "send-back",
-      label: "Send to Back",
-      shortcut: "Ctrl+[",
-      action: () => store.sendToBack(layer.id),
     },
     {
       id: "bring-fwd",
@@ -454,10 +236,94 @@ export function buildCanvasElementMenu(params: {
       action: () => store.sendBackward(layer.id),
     },
     {
-      id: "divider-elem-2",
+      id: "send-back",
+      label: "Send to Back",
+      shortcut: "Ctrl+[",
+      action: () => store.sendToBack(layer.id),
+    },
+    {
+      id: "divider-elem-order",
       label: "",
       divider: true,
     },
+  ];
+
+  // Element-Specific Context Actions (Form Truth)
+  if (isVectorLine(layer)) {
+    items.push(
+      {
+        id: "reverse-direction",
+        label: "Reverse Direction",
+        icon: <ArrowLeftRight className="w-3.5 h-3.5" />,
+        action: () => {
+          const start = (layer as any).arrowStart || "none";
+          const end =
+            (layer as any).arrowEnd ||
+            ((layer as any).shapeType === "arrow" ? "arrow" : "none");
+          store.updateLayer(layer.id, {
+            arrowStart: end,
+            arrowEnd: start,
+          } as any);
+        },
+      },
+      {
+        id: "toggle-arrowhead",
+        label: "Toggle Arrowhead",
+        icon: <ArrowUpRight className="w-3.5 h-3.5" />,
+        action: () => {
+          const curEnd = (layer as any).arrowEnd;
+          store.updateLayer(layer.id, {
+            arrowEnd: curEnd === "arrow" ? "none" : "arrow",
+          } as any);
+        },
+      },
+      {
+        id: "divider-line-specific",
+        label: "",
+        divider: true,
+      }
+    );
+  } else if (layer.type === "text" || layer.type === "chunk") {
+    items.push(
+      {
+        id: "toggle-text-sizing",
+        label: layer.style?.textSizing === "auto-height" ? "Switch to Auto-Width" : "Switch to Auto-Height",
+        icon: <Maximize2 className="w-3.5 h-3.5" />,
+        action: () => {
+          const cur = layer.style?.textSizing ?? "auto-width";
+          store.updateLayerStyle(layer.id, {
+            textSizing: cur === "auto-height" ? "auto-width" : "auto-height",
+          });
+        },
+      },
+      {
+        id: "divider-text-specific",
+        label: "",
+        divider: true,
+      }
+    );
+  } else if (layer.type === "image" || layer.type === "video") {
+    items.push(
+      {
+        id: "toggle-fit-mode",
+        label: (layer as any).objectFit === "contain" ? "Fit Mode: Cover" : "Fit Mode: Contain",
+        action: () => {
+          const cur = (layer as any).objectFit || "cover";
+          store.updateLayer(layer.id, {
+            objectFit: cur === "cover" ? "contain" : "cover",
+          } as any);
+        },
+      },
+      {
+        id: "divider-media-specific",
+        label: "",
+        divider: true,
+      }
+    );
+  }
+
+  // Core Operations: Duplicate & Delete
+  items.push(
     {
       id: "duplicate-elem",
       label: "Duplicate",
@@ -466,120 +332,28 @@ export function buildCanvasElementMenu(params: {
       action: () => store.duplicateLayer(layer.id),
     },
     {
-      id: "rename-canvas-layer",
-      label: "Rename Layer",
-      icon: <Pencil className="w-3.5 h-3.5" />,
-      shortcut: "F2",
-      action: () => {
-        const newName = window.prompt("Rename layer:", layer.name);
-        if (newName && newName.trim()) {
-          store.updateLayer(layer.id, { name: newName.trim() });
-        }
-      },
-    },
-    {
       id: "delete-elem",
       label: "Delete",
       icon: <Trash2 className="w-3.5 h-3.5" />,
       shortcut: "Del",
       danger: true,
       action: () => store.removeLayer(layer.id),
-    },
-  ];
+    }
+  );
+
+  return items;
 }
 
+/**
+ * Zone F: Canvas Pasteboard Context Menu
+ * Clean viewport view and selection shortcuts.
+ */
 export function buildCanvasPasteboardMenu(params: {
   store: ProjectStoreState;
 }): ContextMenuItem[] {
   const { store } = params;
 
   return [
-    {
-      id: "pasteboard-text",
-      label: "Add Text",
-      icon: <Type className="w-3.5 h-3.5" />,
-      shortcut: "T",
-      action: () => {
-        const id = `text_${Date.now()}`;
-        store.addLayer({
-          id,
-          name: "Text",
-          type: "text",
-          content: "Kinetic Typography",
-          style: {
-            x: 200,
-            y: 200,
-            width: 400,
-            height: 80,
-            rotation: 0,
-            opacity: 1,
-            fontSize: 48,
-            color: "#0f172a",
-            fontWeight: "700",
-          },
-        });
-        store.selectLayer(id);
-      },
-    },
-    {
-      id: "pasteboard-rect",
-      label: "Add Rectangle",
-      icon: <Square className="w-3.5 h-3.5" />,
-      shortcut: "R",
-      action: () => {
-        const id = `rect_${Date.now()}`;
-        store.addLayer({
-          id,
-          name: "Rectangle",
-          type: "shape",
-          shapeType: "rectangle",
-          style: {
-            x: 240,
-            y: 240,
-            width: 240,
-            height: 140,
-            rotation: 0,
-            opacity: 1,
-            backgroundColor: "#f1f5f9",
-            borderRadius: 12,
-            borderWidth: 1,
-            borderColor: "#cbd5e1",
-          },
-        });
-        store.selectLayer(id);
-      },
-    },
-    {
-      id: "pasteboard-circle",
-      label: "Add Circle",
-      icon: <Circle className="w-3.5 h-3.5" />,
-      shortcut: "O",
-      action: () => {
-        const id = `circle_${Date.now()}`;
-        store.addLayer({
-          id,
-          name: "Circle",
-          type: "shape",
-          shapeType: "circle",
-          style: {
-            x: 280,
-            y: 280,
-            width: 160,
-            height: 160,
-            rotation: 0,
-            opacity: 1,
-            backgroundColor: "#e2e8f0",
-            borderRadius: 9999,
-          },
-        });
-        store.selectLayer(id);
-      },
-    },
-    {
-      id: "divider-pasteboard-1",
-      label: "",
-      divider: true,
-    },
     {
       id: "select-all",
       label: "Select All",
@@ -607,6 +381,10 @@ export function buildCanvasPasteboardMenu(params: {
   ];
 }
 
+/**
+ * Zone G: Sidebar Animation Card Context Menu
+ * Duplicate, reset, or delete animation clips from inspector cards.
+ */
 export function buildSidebarCardMenu(params: {
   layerId: string;
   clip: AnimationClip;
@@ -620,18 +398,6 @@ export function buildSidebarCardMenu(params: {
       label: "Duplicate Animation",
       icon: <Copy className="w-3.5 h-3.5" />,
       action: () => store.duplicateAnimationClip(layerId, clip.id),
-    },
-    {
-      id: "card-rename",
-      label: "Rename Animation",
-      icon: <Pencil className="w-3.5 h-3.5" />,
-      shortcut: "F2",
-      action: () => {
-        const newName = window.prompt("Rename animation clip:", clip.name || clip.preset);
-        if (newName && newName.trim()) {
-          store.updateAnimationClip(layerId, clip.id, { name: newName.trim() });
-        }
-      },
     },
     {
       id: "card-reset",
@@ -662,6 +428,10 @@ export function buildSidebarCardMenu(params: {
   ];
 }
 
+/**
+ * Scene Context Menu
+ * Scene level navigation, duplication, and deletion.
+ */
 export function buildSceneContextMenu(params: {
   screenId: string;
   store: ProjectStoreState;
@@ -670,7 +440,7 @@ export function buildSceneContextMenu(params: {
   const { screenId, store, onRename } = params;
   const canDelete = store.document.screens.length > 1;
 
-  return [
+  const items: ContextMenuItem[] = [
     {
       id: "scene-focus",
       label: "Fit Scene in Viewport",
@@ -692,23 +462,19 @@ export function buildSceneContextMenu(params: {
       shortcut: "Ctrl+D",
       action: () => store.duplicateScreen(screenId),
     },
-    {
+  ];
+
+  if (onRename) {
+    items.push({
       id: "scene-rename",
       label: "Rename Scene",
       icon: <Pencil className="w-3.5 h-3.5" />,
       shortcut: "F2",
-      action: () => {
-        if (onRename) {
-          onRename();
-        } else {
-          const currentScreen = store.document.screens.find((s) => s.id === screenId);
-          const newName = window.prompt("Rename scene:", currentScreen?.name || "Scene");
-          if (newName && newName.trim()) {
-            store.updateScreen(screenId, { name: newName.trim() });
-          }
-        }
-      },
-    },
+      action: onRename,
+    });
+  }
+
+  items.push(
     {
       id: "divider-scene",
       label: "",
@@ -726,6 +492,8 @@ export function buildSceneContextMenu(params: {
           store.deleteScreen(screenId);
         }
       },
-    },
-  ];
+    }
+  );
+
+  return items;
 }

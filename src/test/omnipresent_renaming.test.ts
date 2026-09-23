@@ -105,13 +105,11 @@ describe("Omnipresent Renaming and Multi-Path Scene/Layer Management", () => {
     expect(updatedClip?.name).toBe("Custom Bounce In");
   });
 
-  it("context menu builders provide rename options across track, clip, layer, and scene", async () => {
+  it("context menu builders eliminate prompt modals and support inline scene renaming", async () => {
     const {
-      buildTimelineClipMenu,
       buildTimelineTrackMenu,
       buildCanvasElementMenu,
       buildSceneContextMenu,
-      buildSidebarCardMenu,
     } = await import("@/components/contextmenu/contextMenuBuilders");
 
     const store = useProjectStore.getState();
@@ -125,22 +123,27 @@ describe("Omnipresent Renaming and Multi-Path Scene/Layer Management", () => {
     const freshStore = useProjectStore.getState();
     const freshLayer = freshStore.document.screens[0]?.layers[0];
     expect(freshLayer).toBeDefined();
-    const clip = freshLayer ? getLayerClips(freshLayer).find((c) => c.id === clipId) : undefined;
-    expect(clip).toBeDefined();
 
-    const clipMenu = buildTimelineClipMenu({ layerId: freshLayer!.id, clip: clip!, store: freshStore });
-    expect(clipMenu.some((item) => item.id === "rename-clip")).toBe(true);
-
-    const trackMenu = buildTimelineTrackMenu({ layer: freshLayer!, store: freshStore });
-    expect(trackMenu.some((item) => item.id === "rename-track-layer")).toBe(true);
-
+    // Canvas element menu: no prompt-based rename item
     const canvasMenu = buildCanvasElementMenu({ layer: freshLayer!, store: freshStore });
-    expect(canvasMenu.some((item) => item.id === "rename-canvas-layer")).toBe(true);
+    expect(canvasMenu.some((item) => item.id === "rename-canvas-layer")).toBe(false);
 
-    const sceneMenu = buildSceneContextMenu({ screenId: "screen_alpha", store: freshStore });
+    // Track menu: no prompt-based rename item
+    const trackMenu = buildTimelineTrackMenu({ layer: freshLayer!, store: freshStore });
+    expect(trackMenu.some((item) => item.id === "rename-track-layer")).toBe(false);
+
+    // Scene menu: triggers inline callback without browser prompt
+    let inlineRenameCalled = false;
+    const sceneMenu = buildSceneContextMenu({
+      screenId: "screen_alpha",
+      store: freshStore,
+      onRename: () => {
+        inlineRenameCalled = true;
+      },
+    });
     expect(sceneMenu.some((item) => item.id === "scene-rename")).toBe(true);
-
-    const sidebarCardMenu = buildSidebarCardMenu({ layerId: freshLayer!.id, clip: clip!, store: freshStore });
-    expect(sidebarCardMenu.some((item) => item.id === "card-rename")).toBe(true);
+    const renameItem = sceneMenu.find((item) => item.id === "scene-rename");
+    renameItem?.action?.();
+    expect(inlineRenameCalled).toBe(true);
   });
 });
