@@ -19,6 +19,7 @@ import {
   separateStrokeAndFill as separateStrokeFillEngine,
   splitShapeByEdges,
 } from "@/engine/shapeSplitter";
+import { getShapeEdges } from "@/engine/shapeGeometry";
 import {
   splitLineAtRatio,
   detachArrowhead as detachArrowheadEngine,
@@ -1099,11 +1100,17 @@ export const createLayerSlice = (
     if (!layer) return;
 
     if (layer.type === "shape") {
+      const shape = layer as ShapeLayer;
+      const edges = getShapeEdges(shape);
+      const isRect = !shape.shapeType || shape.shapeType === "rectangle";
+      const defaultEdges = isRect
+        ? ["top", "left"]
+        : edges.slice(0, Math.max(1, Math.floor(edges.length / 2))).map((e) => e.id);
       set({
         splitModeState: {
           layerId,
           type: "shape",
-          selectedEdges: ["top", "left"],
+          selectedEdges: defaultEdges,
           cutRatio: 0.5,
           detachArrowhead: false,
         },

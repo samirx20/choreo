@@ -42,7 +42,7 @@ export interface ModeSavedState {
   loopMode?: "all" | "scene";
 }
 
-export type ShapeEdgeId = "top" | "right" | "bottom" | "left";
+export type ShapeEdgeId = string;
 
 export interface SplitModeState {
   layerId: string;

@@ -1,6 +1,7 @@
 import React from "react";
 import { ShapeLayer } from "@/types/scene";
-import { useProjectStore, findParentGroupInTree, ShapeEdgeId } from "@/store/useProjectStore";
+import { useProjectStore, findParentGroupInTree } from "@/store/useProjectStore";
+import { getShapeEdges } from "@/engine/shapeGeometry";
 import { Scissors, X, Check } from "lucide-react";
 
 interface ShapeSplitOverlayProps {
@@ -48,49 +49,7 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
   const rotation = layer.style.rotation || 0;
 
   const selectedEdges = splitModeState.selectedEdges;
-
-  const edges: { id: ShapeEdgeId; label: string; style: React.CSSProperties }[] = [
-    {
-      id: "top",
-      label: "Top Edge",
-      style: {
-        top: -10,
-        left: 8,
-        right: 8,
-        height: 20,
-      },
-    },
-    {
-      id: "right",
-      label: "Right Edge",
-      style: {
-        top: 8,
-        bottom: 8,
-        right: -10,
-        width: 20,
-      },
-    },
-    {
-      id: "bottom",
-      label: "Bottom Edge",
-      style: {
-        bottom: -10,
-        left: 8,
-        right: 8,
-        height: 20,
-      },
-    },
-    {
-      id: "left",
-      label: "Left Edge",
-      style: {
-        top: 8,
-        bottom: 8,
-        left: -10,
-        width: 20,
-      },
-    },
-  ];
+  const edges = getShapeEdges(layer);
 
   return (
     <div
@@ -104,9 +63,6 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
         transformOrigin: "center center",
       }}
     >
-      {/* Outer bounding guidance outline */}
-      <div className="absolute inset-0 rounded-sm border border-dashed border-violet-500/40 pointer-events-none" />
-
       {/* Floating Action Pill Header (unrotated orientation) */}
       <div
         className="absolute left-1/2 -top-12 -translate-x-1/2 pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/95 border border-violet-500/50 shadow-2xl backdrop-blur-md whitespace-nowrap text-xs text-zinc-200 z-50 animate-in fade-in zoom-in-95 duration-150"
@@ -120,7 +76,7 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
         </div>
         <div className="h-3 w-px bg-zinc-700 mx-0.5" />
         <span className="text-zinc-400 text-[11px]">
-          {selectedEdges.length} {selectedEdges.length === 1 ? "edge" : "edges"} selected
+          {selectedEdges.length} of {edges.length} {edges.length === 1 ? "edge" : "edges"} selected
         </span>
         <button
           type="button"
@@ -146,35 +102,73 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
         </button>
       </div>
 
-      {/* Interactive Edge Selector Bars */}
-      {edges.map((edge) => {
-        const isSelected = selectedEdges.includes(edge.id);
-        const isHorizontal = edge.id === "top" || edge.id === "bottom";
+      {/* SVG Edge Overlays matching the EXACT Shape Geometry */}
+      <svg
+        viewBox={`0 0 ${visualW} ${visualH}`}
+        className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
+      >
+        <defs>
+          <filter id="purple-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#8b5cf6" floodOpacity="0.8" />
+          </filter>
+        </defs>
 
-        return (
-          <div
-            key={edge.id}
-            style={edge.style}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleSplitEdge(edge.id);
-            }}
-            className={`absolute flex items-center justify-center cursor-pointer pointer-events-auto transition-all duration-150 group`}
-            title={`Click to ${isSelected ? "deselect" : "select"} ${edge.label}`}
-          >
-            {/* Edge Hit Track and Indicator */}
-            <div
-              className={`transition-all duration-150 rounded-full ${
-                isHorizontal ? "w-full h-2" : "h-full w-2"
-              } ${
-                isSelected
-                  ? "bg-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.9)] ring-2 ring-violet-400/50"
-                  : "bg-zinc-600/60 hover:bg-zinc-400 group-hover:scale-110"
-              }`}
-            />
-          </div>
-        );
-      })}
+        {edges.map((edge) => {
+          const isSelected = selectedEdges.includes(edge.id);
+
+          return (
+            <g
+              key={edge.id}
+              className="group cursor-pointer pointer-events-auto"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleSplitEdge(edge.id);
+              }}
+            >
+              {/* Invisible wide hit path */}
+              <path
+                d={edge.d}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={20}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="cursor-pointer"
+              />
+
+              {/* Visible edge line */}
+              <path
+                d={edge.d}
+                fill="none"
+                stroke={isSelected ? "#8b5cf6" : "#71717a"}
+                strokeWidth={isSelected ? 4.5 : 2.5}
+                strokeDasharray={isSelected ? undefined : "6 4"}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                filter={isSelected ? "url(#purple-glow)" : undefined}
+                className={`transition-all duration-150 ${
+                  isSelected
+                    ? "opacity-100"
+                    : "opacity-60 group-hover:opacity-100 group-hover:stroke-zinc-300"
+                }`}
+              />
+
+              {/* Mid-point handle indicator */}
+              <circle
+                cx={edge.midPoint.x}
+                cy={edge.midPoint.y}
+                r={isSelected ? 5 : 4}
+                fill={isSelected ? "#8b5cf6" : "#27272a"}
+                stroke={isSelected ? "#ffffff" : "#71717a"}
+                strokeWidth={1.5}
+                className={`transition-transform duration-150 ${
+                  isSelected ? "scale-110 drop-shadow-[0_0_4px_rgba(139,92,246,0.8)]" : "group-hover:scale-125"
+                }`}
+              />
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 };

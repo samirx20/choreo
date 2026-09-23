@@ -113,6 +113,76 @@ describe("Interactive Split Mode & Locked Compound Entities", () => {
       expect(part2.shapeType).toBe("path");
       expect(part1.d).toContain("A 20 20");
       expect(part2.d).toContain("A 20 20");
+
+      // Verify zero corner gaps: part1 ends at J1 (400, 20) where part2 starts!
+      expect(part1.d).toContain("400 20");
+      expect(part2.d).toContain("M 400 20");
+      // And part2 ends at J3 (0, 230) where part1 starts!
+      expect(part2.d).toContain("0 230");
+      expect(part1.d).toContain("M 0 230");
+    });
+
+    it("enters split mode on Triangle with 3 actual edges and splits into 2 complementary paths", () => {
+      const triangleLayer: ShapeLayer = {
+        id: "tri-1",
+        name: "Play Icon Triangle",
+        type: "shape",
+        shapeType: "triangle",
+        style: { x: 50, y: 50, width: 200, height: 200, borderWidth: 2, borderColor: "#000", rotation: 0, opacity: 1 },
+      };
+
+      useProjectStore.getState().addLayer(triangleLayer);
+      useProjectStore.getState().enterSplitMode(triangleLayer.id);
+
+      const splitState = useProjectStore.getState().splitModeState;
+      expect(splitState).not.toBeNull();
+      // Triangle must have 3 edges (edge-0, edge-1, edge-2), NOT 4 rectangle edges
+      expect(splitState?.selectedEdges).toEqual(["edge-0"]);
+
+      // Select edge-0 and edge-1
+      useProjectStore.getState().toggleSplitEdge("edge-1");
+      expect(useProjectStore.getState().splitModeState?.selectedEdges).toEqual(["edge-0", "edge-1"]);
+
+      useProjectStore.getState().confirmSplit();
+
+      const screen = useProjectStore.getState().document.screens[0];
+      const splitGroup = screen.layers.find((l) => (l as any).isCompound) as any;
+      expect(splitGroup).toBeDefined();
+      expect(splitGroup.children).toHaveLength(2);
+      const [p1, p2] = splitGroup.children;
+      expect(p1.shapeType).toBe("path");
+      expect(p2.shapeType).toBe("path");
+    });
+
+    it("enters split mode on Star with 10 actual edges and splits into 2 complementary paths", () => {
+      const starLayer: ShapeLayer = {
+        id: "star-1",
+        name: "Badge Star",
+        type: "shape",
+        shapeType: "star",
+        points: 5,
+        innerRadiusRatio: 0.382,
+        style: { x: 50, y: 50, width: 200, height: 200, borderWidth: 2, borderColor: "#000", rotation: 0, opacity: 1 },
+      };
+
+      useProjectStore.getState().addLayer(starLayer);
+      useProjectStore.getState().enterSplitMode(starLayer.id);
+
+      const splitState = useProjectStore.getState().splitModeState;
+      expect(splitState).not.toBeNull();
+      // 5-point star has 10 segments (edges 0..9)
+      expect(splitState?.selectedEdges).toHaveLength(5);
+      expect(splitState?.selectedEdges[0]).toBe("edge-0");
+
+      useProjectStore.getState().confirmSplit();
+
+      const screen = useProjectStore.getState().document.screens[0];
+      const splitGroup = screen.layers.find((l) => (l as any).isCompound) as any;
+      expect(splitGroup).toBeDefined();
+      expect(splitGroup.children).toHaveLength(2);
+      const [p1, p2] = splitGroup.children;
+      expect(p1.shapeType).toBe("path");
+      expect(p2.shapeType).toBe("path");
     });
   });
 

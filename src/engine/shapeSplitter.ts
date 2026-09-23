@@ -1,4 +1,5 @@
 import { ShapeLayer, GroupLayer, Layer } from "@/types/scene";
+import { getShapeEdges, buildPathFromEdges } from "./shapeGeometry";
 
 export interface SplitShapeResult {
   group: GroupLayer;
@@ -323,14 +324,10 @@ export function separateStrokeAndFill(layer: ShapeLayer): SplitShapeResult {
  */
 export function splitShapeByEdges(
   layer: ShapeLayer,
-  selectedEdges: ("top" | "right" | "bottom" | "left")[]
+  selectedEdges: string[]
 ): SplitShapeResult {
   const widthNum = typeof layer.style.width === "number" ? layer.style.width : 200;
   const heightNum = typeof layer.style.height === "number" ? layer.style.height : 150;
-
-  const rawRadius = typeof layer.style.borderRadius === "number" ? layer.style.borderRadius : 0;
-  const maxRadius = Math.min(widthNum / 2, heightNum / 2);
-  const r = Math.max(0, Math.min(rawRadius, maxRadius));
 
   const strokeWidth =
     typeof layer.style.borderWidth === "number" && layer.style.borderWidth > 0
@@ -339,65 +336,13 @@ export function splitShapeByEdges(
   const strokeColor =
     layer.style.borderColor || layer.style.backgroundColor || "#3b82f6";
 
-  const W = widthNum;
-  const H = heightNum;
+  const allEdges = getShapeEdges(layer);
+  const unselectedEdges = allEdges
+    .map((e) => e.id)
+    .filter((id) => !selectedEdges.includes(id));
 
-  function buildPathD(edges: ("top" | "right" | "bottom" | "left")[]): string {
-    const hasTop = edges.includes("top");
-    const hasRight = edges.includes("right");
-    const hasBottom = edges.includes("bottom");
-    const hasLeft = edges.includes("left");
-
-    if (hasTop && hasLeft && !hasRight && !hasBottom) {
-      return r > 0
-        ? `M 0 ${H - r} L 0 ${r} A ${r} ${r} 0 0 1 ${r} 0 L ${W - r} 0`
-        : `M 0 ${H} L 0 0 L ${W} 0`;
-    }
-    if (hasRight && hasBottom && !hasTop && !hasLeft) {
-      return r > 0
-        ? `M ${W} ${r} L ${W} ${H - r} A ${r} ${r} 0 0 1 ${W - r} ${H} L ${r} ${H}`
-        : `M ${W} 0 L ${W} ${H} L 0 ${H}`;
-    }
-    if (hasTop && hasRight && !hasBottom && !hasLeft) {
-      return r > 0
-        ? `M ${r} 0 L ${W - r} 0 A ${r} ${r} 0 0 1 ${W} ${r} L ${W} ${H - r}`
-        : `M 0 0 L ${W} 0 L ${W} ${H}`;
-    }
-    if (hasBottom && hasLeft && !hasTop && !hasRight) {
-      return r > 0
-        ? `M ${W - r} ${H} L ${r} ${H} A ${r} ${r} 0 0 1 0 ${H - r} L 0 ${r}`
-        : `M ${W} ${H} L 0 ${H} L 0 0`;
-    }
-
-    const pathParts: string[] = [];
-    if (hasTop) {
-      pathParts.push(r > 0 ? `M ${r} 0 L ${W - r} 0` : `M 0 0 L ${W} 0`);
-      if (hasRight && r > 0) pathParts.push(`A ${r} ${r} 0 0 1 ${W} ${r}`);
-    }
-    if (hasRight) {
-      if (!hasTop || r === 0) pathParts.push(r > 0 ? `M ${W} ${r} L ${W} ${H - r}` : `M ${W} 0 L ${W} ${H}`);
-      else pathParts.push(`L ${W} ${H - r}`);
-      if (hasBottom && r > 0) pathParts.push(`A ${r} ${r} 0 0 1 ${W - r} ${H}`);
-    }
-    if (hasBottom) {
-      if (!hasRight || r === 0) pathParts.push(r > 0 ? `M ${W - r} ${H} L ${r} ${H}` : `M ${W} ${H} L 0 ${H}`);
-      else pathParts.push(`L ${r} ${H}`);
-      if (hasLeft && r > 0) pathParts.push(`A ${r} ${r} 0 0 1 0 ${H - r}`);
-    }
-    if (hasLeft) {
-      if (!hasBottom || r === 0) pathParts.push(r > 0 ? `M 0 ${H - r} L 0 ${r}` : `M 0 ${H} L 0 0`);
-      else pathParts.push(`L 0 ${r}`);
-      if (hasTop && r > 0) pathParts.push(`A ${r} ${r} 0 0 1 ${r} 0`);
-    }
-
-    return pathParts.join(" ") || `M 0 0 L 0 0`;
-  }
-
-  const allEdges: ("top" | "right" | "bottom" | "left")[] = ["top", "right", "bottom", "left"];
-  const unselectedEdges = allEdges.filter((e) => !selectedEdges.includes(e));
-
-  const pathA_d = buildPathD(selectedEdges);
-  const pathB_d = buildPathD(unselectedEdges);
+  const pathA_d = buildPathFromEdges(allEdges, selectedEdges);
+  const pathB_d = buildPathFromEdges(allEdges, unselectedEdges);
 
   const baseStyle = {
     ...layer.style,
