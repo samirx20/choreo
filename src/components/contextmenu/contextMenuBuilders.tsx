@@ -250,7 +250,22 @@ export function buildCanvasElementMenu(params: {
 
   // Element-Specific Context Actions (Form Truth)
   if (isVectorLine(layer)) {
+    const isArrow = (layer as any).shapeType === "arrow" || (layer as any).arrowEnd;
     items.push(
+      {
+        id: "split-line-midpoint",
+        label: "Split at Midpoint",
+        action: () => store.splitLineAtPoint(layer.id, 0.5),
+      },
+      ...(isArrow
+        ? [
+            {
+              id: "detach-arrowhead",
+              label: "Detach Arrowhead",
+              action: () => store.detachArrowhead(layer.id),
+            },
+          ]
+        : []),
       {
         id: "reverse-direction",
         label: "Reverse Direction",
@@ -286,6 +301,16 @@ export function buildCanvasElementMenu(params: {
   } else if (layer.type === "text" || layer.type === "chunk") {
     items.push(
       {
+        id: "split-text-words",
+        label: "Split into Words",
+        action: () => store.splitTextIntoWords(layer.id),
+      },
+      {
+        id: "split-text-lines",
+        label: "Split into Lines",
+        action: () => store.splitTextIntoLines(layer.id),
+      },
+      {
         id: "toggle-text-sizing",
         label: layer.style?.textSizing === "auto-height" ? "Switch to Auto-Width" : "Switch to Auto-Height",
         icon: <Maximize2 className="w-3.5 h-3.5" />,
@@ -298,6 +323,48 @@ export function buildCanvasElementMenu(params: {
       },
       {
         id: "divider-text-specific",
+        label: "",
+        divider: true,
+      }
+    );
+  } else if (layer.type === "shape") {
+    const hasStroke =
+      (typeof layer.style?.borderWidth === "number" && layer.style.borderWidth > 0) ||
+      Boolean(layer.style?.borderColor);
+    const hasFill =
+      Boolean(layer.style?.backgroundColor && layer.style.backgroundColor !== "transparent") ||
+      Boolean(layer.style?.fillColor && layer.style.fillColor !== "transparent");
+
+    items.push(
+      {
+        id: "split-contour-stroke",
+        label: "Split Contour (Dual Stroke)",
+        action: () => store.splitShapeContour(layer.id),
+      },
+      ...(hasStroke && hasFill
+        ? [
+            {
+              id: "separate-stroke-fill",
+              label: "Separate Stroke & Fill",
+              action: () => store.separateStrokeAndFill(layer.id),
+            },
+          ]
+        : []),
+      {
+        id: "divider-shape-specific",
+        label: "",
+        divider: true,
+      }
+    );
+  } else if (layer.type === "group" || layer.type === "frame") {
+    items.push(
+      {
+        id: "detach-group-absolute",
+        label: "Detach to Canvas Layers",
+        action: () => store.detachGroupToAbsolute(layer.id),
+      },
+      {
+        id: "divider-group-specific",
         label: "",
         divider: true,
       }

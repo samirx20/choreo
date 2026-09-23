@@ -1444,6 +1444,41 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 39 test suites (360 tests) pass cleanly (`npm test`).
   * Production build compiles cleanly with 0 errors in 10.86s (`npm run build`).
 
+---
+
+### Decision 70: Universal Element Splitting Engine (0.0000px Visual Shift Invariance)
+* **The Problem**:
+  * Choreographing sophisticated motion graphics (such as dual-origin path draw-on, stroke-draw then fill-fade, stagger-revealed typography without baseline jumps, arrow tip stamp-on after shaft travel, and un-nesting containers) previously required awkward manual workarounds or duplicate layers that broke alignment.
+  * Attempting to split elements manually creates visual shifts ($> 0\text{px}$), breaks sentence font kerning/spacing, scrambles reading order, or ruins closed-contour corner arcs.
+* **The Solution**:
+  1. **Shape Contour Decomposition (`splitRoundedRectContour` & `splitCircleContour`)**:
+     * Solves closed rounded rectangles into two continuous bezier arc SVG paths:
+       * **Path A**: North-West ($NW$) $\to$ South-West ($SW$) $\to$ South-East ($SE$), preserving authored `borderRadius` arc segments (`A r r 0 0 0 ...`).
+       * **Path B**: South-East ($SE$) $\to$ North-East ($NE$) $\to$ North-West ($NW$), preserving authored `borderRadius` arc segments.
+     * Generates exact perimeter calculations (`pathPerimeter`) and SVG path definitions (`d`) rendered via `<path d={layer.d} pathLength="100" ... />`.
+     * Pre-assigns dual-origin draw-on animations so both halves draw simultaneously from top-left and bottom-right.
+     * Circles split cleanly into Top Semi-Circle Arc and Bottom Semi-Circle Arc ($180^\circ$ continuous arcs).
+  2. **Stroke & Fill Separation (`separateStrokeAndFill`)**:
+     * Disentangles any shape's stroke and fill into two sibling layers under a parent group:
+       * **Fill Layer**: Keeps original geometry, `borderWidth: 0`, and `backgroundColor: layer.style.backgroundColor`, with delayed fade/bloom animation.
+       * **Stroke Layer**: Keeps `backgroundColor: "transparent"` with authored `borderWidth` and `borderColor`, with instant draw-on animation.
+  3. **Enhanced Typography Semantic Splitting (`splitTextIntoLines` & `splitTextBySelection`)**:
+     * **Line Splitting**: Measures canvas text bounds or line-height intervals to split multiline text blocks into vertically stacked sibling layers with exact line advance offsets.
+     * **Selection Splitting**: Splits text into strict reading order `[Prefix, Selection, Suffix]`, preserving word spacing advance widths and 0.0000px resting coordinates.
+  4. **Line & Arrowhead Disentanglement (`splitLineAtRatio` & `detachArrowhead`)**:
+     * **Midpoint/Ratio Splitting**: Decomposes a line into two collinear line segments with continuous travel and staggered draw-on.
+     * **Arrowhead Detachment**: Converts a monolithic arrow into an independent line shaft (draw-on entrance) and arrowhead marker triangle glyph (punchy spring pop entrance).
+  5. **Container / Group Coordinate Preservation Detaching (`detachGroupToAbsolute`)**:
+     * Calculates absolute canvas transforms (`x = group.x + child.x`, `y = group.y + child.y`, `rotation = group.rot + child.rot`) and un-nests children directly into the scene root with 0.0000px layout shift.
+  6. **Context Menus & Store Integration**:
+     * First-class context menu options registered for shapes, lines, text, and groups.
+     * Layer store actions: `splitShapeContour`, `separateStrokeAndFill`, `splitTextIntoWords`, `splitTextIntoLines`, `splitLineAtPoint`, `detachArrowhead`, and `detachGroupToAbsolute`.
+* **Verification**:
+  * 11 comprehensive automated tests in `src/test/universal_element_splitting.test.ts`.
+  * All 40 test suites (372 tests) pass cleanly (`npm test`).
+  * Production build compiles cleanly with 0 errors (`npm run build`).
+
+
 
 
 

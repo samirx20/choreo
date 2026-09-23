@@ -66,11 +66,16 @@ src/
 * Every schema exposed to agents or stored in state must have an accompanying **Zod schema** and derived TypeScript type.
 * Avoid `any` types. If dynamic properties are necessary, use strict discriminated unions or typed records with validation.
 
-### Rule 7: Motion-First Reactive Primitives Over Manual Keyframes
+### Rule 7: Motion-First Reactive Primitives & Zero-Shift Splitting
 * Never force AI agents to calculate transient frame-by-frame coordinates for expanding cards, following cursors, or leader lines.
 * Use first-class relational bindings and reactive layout primitives:
   * **Reactive Container Hugging (`mode: 'hug'`)**: Background cards dynamically expand to hug typing text or rolling counters with spring buffering.
-  * **Smart Invariant Splitting (`split_text_layer`)**: Split text into sentences or words with a 0.0px visual shift guarantee and baseline reveals.
+  * **Universal Element Splitting (0.0000px Visual Shift Invariance)**:
+    * Shape contour decomposition: Rounded rectangles split into dual continuous bezier arc paths (NW $\to$ SE and SE $\to$ NW) with dual-origin draw-on.
+    * Stroke & Fill separation: Instant stroke draw-on paired with delayed fill fade-in.
+    * Typography semantic splitting: Words, lines, and custom selections with exact whitespace advance calculation.
+    * Line & Arrow detachment: Collinear ratio splitting and independent arrowhead tip stamping.
+    * Container detaching: Absolute coordinate preservation un-nesting.
   * **Word Morphing (`configure_word_morph`)**: Rotating keyword highlights with continuous spring reflow of trailing suffixes.
   * **Connected Leader Lines & Pins**: Dynamic links tracking moving elements with physical inertia lag.
 

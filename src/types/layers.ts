@@ -289,6 +289,8 @@ export interface CounterLayer extends BaseLayer {
 export interface ShapeLayer extends BaseLayer {
   type: 'shape';
   shapeType: 'rectangle' | 'circle' | 'ellipse' | 'triangle' | 'star' | 'polygon' | 'line' | 'arrow' | 'path';
+  d?: string;
+  pathPerimeter?: number;
   points?: number;
   sides?: number;
   innerRadiusRatio?: number;

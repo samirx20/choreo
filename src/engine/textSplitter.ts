@@ -236,3 +236,190 @@ export function splitTextIntoWords(layer: TextLayer): GroupLayer {
 
   return group;
 }
+
+/**
+ * Splits a multi-line text layer into distinct line layers.
+ * Preserves baseline distance and metric line box clipping so descenders never get chopped.
+ */
+export function splitTextIntoLines(layer: TextLayer): GroupLayer {
+  const rawText = layer.content;
+  const rawLines = rawText.split(/\r?\n/);
+  const finalLines = rawLines.length > 1 ? rawLines : [rawText];
+
+  const fontSize = typeof layer.style.fontSize === "number" ? layer.style.fontSize : 48;
+  const lineHeight = typeof layer.style.lineHeight === "number" ? layer.style.lineHeight : 1.2;
+  const metricBox = calculateMetricLineBox(fontSize, lineHeight);
+
+  const chunks: ChunkLayer[] = finalLines.map((lineText, idx) => ({
+    id: `line_${Date.now()}_${idx}`,
+    name: lineText.trim() || `Line ${idx + 1}`,
+    type: "chunk",
+    content: lineText,
+    style: {
+      x: 0,
+      y: 0,
+      width: "auto",
+      height: "auto",
+      rotation: 0,
+      opacity: 1,
+      fontSize: layer.style.fontSize,
+      fontWeight: layer.style.fontWeight,
+      fontFamily: layer.style.fontFamily,
+      color: layer.style.color || "#FFFFFF",
+      lineHeight: layer.style.lineHeight || 1.2,
+      textAlign: layer.style.textAlign || "left",
+      verticalAlign: "bottom",
+    },
+    animation: {
+      in: {
+        preset: "baselineRise",
+        start: idx * 0.12,
+        duration: 0.6,
+        easing: "snappy",
+      },
+    },
+  }));
+
+  const group: GroupLayer = {
+    id: `group_lines_${Date.now()}`,
+    name: `${layer.name} (Split Lines)`,
+    type: "group",
+    layout: {
+      display: "flex",
+      flexDirection: "column",
+      gap: metricBox.halfLeading * 2 || 8,
+      align:
+        layer.style.textAlign === "center"
+          ? "center"
+          : layer.style.textAlign === "right"
+          ? "end"
+          : "start",
+      justifyContent: "center",
+    },
+    autoFit: true,
+    style: {
+      ...layer.style,
+      width: layer.style.width || "auto",
+      height: "auto",
+      padding: 0,
+      backgroundColor: "transparent",
+      borderWidth: 0,
+      shadows: [],
+    },
+    children: chunks,
+  };
+
+  return group;
+}
+
+/**
+ * Splits text by selection range in strict semantic reading order:
+ * [Prefix, Selected, Suffix].
+ * Never scrambles sentence order, ensuring 0.0px visual shift at rest.
+ */
+export function splitTextBySelection(
+  layer: TextLayer,
+  start: number,
+  end: number
+): { group: GroupLayer; selectedId: string } {
+  const fullContent = layer.content || "";
+  const actualStart = Math.max(0, Math.min(start, end));
+  const actualEnd = Math.min(fullContent.length, Math.max(start, end));
+
+  const prefix = fullContent.slice(0, actualStart);
+  const selected = fullContent.slice(actualStart, actualEnd);
+  const suffix = fullContent.slice(actualEnd);
+
+  const chunks: ChunkLayer[] = [];
+  let selectedChunkId = "";
+
+  if (prefix) {
+    chunks.push({
+      id: `chunk_${Date.now()}_pre`,
+      name: prefix.trim() || "Prefix",
+      type: "chunk",
+      content: prefix,
+      style: {
+        ...layer.style,
+        x: 0,
+        y: 0,
+        width: "auto",
+        height: "auto",
+      },
+    });
+  }
+
+  if (selected) {
+    selectedChunkId = `chunk_${Date.now()}_sel`;
+    chunks.push({
+      id: selectedChunkId,
+      name: selected.trim() || "Selection",
+      type: "chunk",
+      content: selected,
+      style: {
+        ...layer.style,
+        x: 0,
+        y: 0,
+        width: "auto",
+        height: "auto",
+      },
+      animation: {
+        in: {
+          preset: "pop",
+          start: 0,
+          duration: 0.6,
+          easing: "bouncy",
+        },
+      },
+    });
+  }
+
+  if (suffix) {
+    chunks.push({
+      id: `chunk_${Date.now()}_suf`,
+      name: suffix.trim() || "Suffix",
+      type: "chunk",
+      content: suffix,
+      style: {
+        ...layer.style,
+        x: 0,
+        y: 0,
+        width: "auto",
+        height: "auto",
+      },
+    });
+  }
+
+  const group: GroupLayer = {
+    id: `group_sel_${Date.now()}`,
+    name: `${layer.name} (Split Selection)`,
+    type: "group",
+    layout: {
+      display: "flex",
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 0,
+      align: "center",
+      justifyContent:
+        layer.style.textAlign === "left"
+          ? "start"
+          : layer.style.textAlign === "right"
+          ? "end"
+          : "center",
+    },
+    autoFit: true,
+    style: {
+      ...layer.style,
+      width: layer.style.width || "auto",
+      height: "auto",
+      padding: 0,
+      backgroundColor: "transparent",
+      borderWidth: 0,
+      shadows: [],
+    },
+    children: chunks,
+  };
+
+  return { group, selectedId: selectedChunkId };
+}
+

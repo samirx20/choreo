@@ -127,6 +127,13 @@ export interface ProjectStoreState {
   groupSelection: () => void;
   splitTextRange: (layerId: string, start: number, end: number) => void;
   splitTextAtCaret: (layerId: string, index: number) => void;
+  splitTextIntoWords: (layerId: string) => void;
+  splitTextIntoLines: (layerId: string) => void;
+  splitShapeContour: (layerId: string) => void;
+  separateStrokeAndFill: (layerId: string) => void;
+  splitLineAtPoint: (layerId: string, ratio?: number) => void;
+  detachArrowhead: (layerId: string) => void;
+  detachGroupToAbsolute: (groupId: string) => void;
   mergeChunkWithPrevious: (chunkId: string) => void;
   mergeChunkWithNext: (chunkId: string) => void;
 

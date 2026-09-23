@@ -61,7 +61,7 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
     (computedStyle as any)?.trimStart !== undefined ||
     (layer.strokeDashArray && layer.strokeDashArray.length > 0);
 
-  const isSvgShape = ["star", "polygon", "triangle", "line", "arrow"].includes(layer.shapeType);
+  const isSvgShape = ["star", "polygon", "triangle", "line", "arrow", "path"].includes(layer.shapeType);
   const baseCss = layerStyleToCss({
     ...layer.style,
     backgroundColor: isSvgShape ? "transparent" : layer.style.backgroundColor,
@@ -209,6 +209,30 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             strokeLinecap={(layer.strokeCap as any) || "round"}
             strokeDasharray={hasTrim ? `${Math.max(0, (tEnd - tStart) * 280)} 280` : (layer.strokeDashArray ? layer.strokeDashArray.join(" ") : undefined)}
             strokeDashoffset={hasTrim ? -((tStart + tOffset) * 280) : undefined}
+          />
+        </svg>
+      )}
+      {layer.shapeType === "path" && layer.d && (
+        <svg
+          viewBox={`0 0 ${widthNum} ${heightNum}`}
+          className="w-full h-full overflow-visible pointer-events-none"
+        >
+          <path
+            d={layer.d}
+            fill={fill}
+            stroke={hasStroke ? strokeColor : "none"}
+            strokeWidth={hasStroke ? strokeWidth : 0}
+            strokeLinejoin={(layer.strokeJoin as any) || "round"}
+            strokeLinecap={(layer.strokeCap as any) || "round"}
+            pathLength="100"
+            strokeDasharray={
+              hasTrim
+                ? `${Math.max(0, (tEnd - tStart) * 100)} 100`
+                : layer.strokeDashArray
+                ? layer.strokeDashArray.join(" ")
+                : undefined
+            }
+            strokeDashoffset={hasTrim ? -((tStart + tOffset) * 100) : undefined}
           />
         </svg>
       )}

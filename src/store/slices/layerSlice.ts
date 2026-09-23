@@ -8,6 +8,21 @@ import {
 } from "../helpers/treeHelpers";
 import { commitDoc } from "../historyManager";
 import { splitLayerAtPlayhead } from "@/engine/video/razorSplit";
+import {
+  splitTextIntoWords as splitWordsEngine,
+  splitTextIntoLines as splitLinesEngine,
+  splitTextBySelection,
+} from "@/engine/textSplitter";
+import {
+  splitRoundedRectContour,
+  splitCircleContour,
+  separateStrokeAndFill as separateStrokeFillEngine,
+} from "@/engine/shapeSplitter";
+import {
+  splitLineAtRatio,
+  detachArrowhead as detachArrowheadEngine,
+} from "@/engine/lineSplitter";
+import { ShapeLayer } from "@/types/scene";
 
 export type LayerSlice = Pick<
   ProjectStoreState,
@@ -26,6 +41,13 @@ export type LayerSlice = Pick<
   | "groupSelection"
   | "splitTextRange"
   | "splitTextAtCaret"
+  | "splitTextIntoWords"
+  | "splitTextIntoLines"
+  | "splitShapeContour"
+  | "separateStrokeAndFill"
+  | "splitLineAtPoint"
+  | "detachArrowhead"
+  | "detachGroupToAbsolute"
   | "mergeChunkWithPrevious"
   | "mergeChunkWithNext"
   | "addLayerBinding"
@@ -649,6 +671,202 @@ export const createLayerSlice = (
       selectedLayerIds: [selectedChunkId],
       editingLayerId: null,
       activeTextSelection: null,
+    });
+  },
+
+  splitTextIntoWords: (layerId) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    const targetLayer = findLayerInTree(activeScreen.layers, layerId);
+    if (!targetLayer || (targetLayer.type !== "text" && targetLayer.type !== "chunk")) return;
+
+    const group = splitWordsEngine(targetLayer as any);
+
+    const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, () => group);
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: group.children.map((c) => c.id),
+      editingLayerId: null,
+      activeTextSelection: null,
+    });
+  },
+
+  splitTextIntoLines: (layerId) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    const targetLayer = findLayerInTree(activeScreen.layers, layerId);
+    if (!targetLayer || (targetLayer.type !== "text" && targetLayer.type !== "chunk")) return;
+
+    const group = splitLinesEngine(targetLayer as any);
+
+    const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, () => group);
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: group.children.map((c) => c.id),
+      editingLayerId: null,
+      activeTextSelection: null,
+    });
+  },
+
+  splitShapeContour: (layerId) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    const targetLayer = findLayerInTree(activeScreen.layers, layerId);
+    if (!targetLayer || targetLayer.type !== "shape") return;
+
+    const shape = targetLayer as ShapeLayer;
+    const isCirc = shape.shapeType === "circle" || shape.shapeType === "ellipse";
+    const splitResult = isCirc ? splitCircleContour(shape) : splitRoundedRectContour(shape);
+
+    const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, () => splitResult.group);
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: splitResult.subLayers.map((s) => s.id),
+    });
+  },
+
+  separateStrokeAndFill: (layerId) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    const targetLayer = findLayerInTree(activeScreen.layers, layerId);
+    if (!targetLayer || targetLayer.type !== "shape") return;
+
+    const splitResult = separateStrokeFillEngine(targetLayer as ShapeLayer);
+
+    const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, () => splitResult.group);
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: [splitResult.subLayers[1].id],
+    });
+  },
+
+  splitLineAtPoint: (layerId, ratio = 0.5) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    const targetLayer = findLayerInTree(activeScreen.layers, layerId);
+    if (!targetLayer) return;
+
+    const splitResult = splitLineAtRatio(targetLayer, ratio);
+
+    const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, () => splitResult.group);
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: splitResult.segments.map((s) => s.id),
+    });
+  },
+
+  detachArrowhead: (layerId) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    const targetLayer = findLayerInTree(activeScreen.layers, layerId);
+    if (!targetLayer) return;
+
+    const splitResult = detachArrowheadEngine(targetLayer);
+
+    const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, () => splitResult.group);
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: [splitResult.segments[1].id],
+    });
+  },
+
+  detachGroupToAbsolute: (groupId) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    const targetGroup = findLayerInTree(activeScreen.layers, groupId);
+    if (!targetGroup || (targetGroup.type !== "group" && targetGroup.type !== "frame")) return;
+
+    const parentGroup = targetGroup as GroupLayer | FrameLayer;
+    const parentX = parentGroup.style.x || 0;
+    const parentY = parentGroup.style.y || 0;
+
+    const absoluteChildren: Layer[] = parentGroup.children.map((child) => ({
+      ...child,
+      style: {
+        ...child.style,
+        x: Math.round(parentX + (child.style.x || 0)),
+        y: Math.round(parentY + (child.style.y || 0)),
+        rotation: (parentGroup.style.rotation || 0) + (child.style.rotation || 0),
+      },
+    }));
+
+    const replaceInTree = (layers: Layer[]): Layer[] => {
+      const result: Layer[] = [];
+      for (const layer of layers) {
+        if (layer.id === groupId) {
+          result.push(...absoluteChildren);
+        } else if ((layer.type === "group" || layer.type === "frame") && (layer as any).children) {
+          result.push({
+            ...layer,
+            children: replaceInTree((layer as any).children),
+          } as Layer);
+        } else {
+          result.push(layer);
+        }
+      }
+      return result;
+    };
+
+    const nextLayers = replaceInTree(activeScreen.layers);
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: absoluteChildren.map((c) => c.id),
     });
   },
 
