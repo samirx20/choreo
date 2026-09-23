@@ -424,6 +424,32 @@ describe("Element Individuality & Physical Coherence Matrix", () => {
       expect(midDelta.trimEnd).toBeCloseTo(37.5, 1); // 0 + (75 - 0) * 0.5
       expect(midDelta.trimOffset).toBeCloseTo(5, 1);
     });
+
+    it("supports Option C dynamic layer echo in AnimationCatalogSheet with element-specific presets and unified studio styling", async () => {
+      const {
+        TEXT_HEADLINE_PRESETS,
+        TEXT_PARAGRAPH_PRESETS,
+        SHAPE_ENTRANCE_PRESETS,
+        LINE_ENTRANCE_PRESETS,
+        MEDIA_ENTRANCE_PRESETS,
+        ICON_ENTRANCE_PRESETS,
+      } = await import("@/components/inspector/motion/AnimationCatalogSheet");
+
+      // Verify specialized catalogs are populated and adhere to form-truth
+      expect(TEXT_HEADLINE_PRESETS.some((p) => p.id === "baselineRise")).toBe(true);
+      expect(TEXT_PARAGRAPH_PRESETS.some((p) => p.id === "typewriter")).toBe(true);
+      expect(SHAPE_ENTRANCE_PRESETS.some((p) => p.id === "cardSettlePop")).toBe(true);
+      expect(SHAPE_ENTRANCE_PRESETS.some((p) => p.id === "elevationRise")).toBe(true);
+      expect(SHAPE_ENTRANCE_PRESETS.some((p) => p.id === "glassIris")).toBe(true);
+      expect(LINE_ENTRANCE_PRESETS.some((p) => p.id === "arrowShoot")).toBe(true);
+      expect(MEDIA_ENTRANCE_PRESETS.some((p) => p.id === "kenBurns")).toBe(true);
+      expect(ICON_ENTRANCE_PRESETS.some((p) => p.id === "iconPop")).toBe(true);
+
+      // Verify no cross-pollution: lines don't have card settle or typewriter; text doesn't have arrow shoot
+      expect(LINE_ENTRANCE_PRESETS.some((p) => p.id === "typewriter")).toBe(false);
+      expect(LINE_ENTRANCE_PRESETS.some((p) => p.id === "cardSettlePop")).toBe(false);
+      expect(TEXT_HEADLINE_PRESETS.some((p) => p.id === "arrowShoot")).toBe(false);
+    });
   });
 
   describe("Canvas Direct Manipulation Gizmos & Sizing Modes (Option 3)", () => {

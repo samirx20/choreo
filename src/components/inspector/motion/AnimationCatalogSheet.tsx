@@ -31,8 +31,13 @@ import {
   isCircle,
   isStar,
   isPolygon,
+  isMedia as isMediaLayer,
   canHaveTrimPath,
 } from "@/utils/layerCapabilities";
+import {
+  generateStarPoints,
+  generatePolygonPoints,
+} from "@/components/canvas/renderers/ShapeRenderer";
 
 export interface AnimationCatalogPreset {
   id: string;
@@ -326,19 +331,388 @@ const EFFECTS_PRESETS: { id: string; name: string; desc: string; preset: Animati
 ];
 
 // ---------------------------------------------------------------------------
+// ADAPTIVE PREVIEW SHAPE (Option C: Dynamic Layer Echo)
+// Renders the exact geometry of the active element with unified studio tile styling.
+// ---------------------------------------------------------------------------
+interface AdaptivePreviewShapeProps {
+  preset: AnimationCatalogPreset;
+  targetLayer?: Layer | null;
+  layerType?: string;
+  animStyle: React.CSSProperties;
+}
+
+const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
+  preset,
+  targetLayer,
+  layerType,
+  animStyle,
+}) => {
+  const isText =
+    targetLayer?.type === "text" ||
+    targetLayer?.type === "chunk" ||
+    layerType === "text" ||
+    layerType === "chunk";
+  const isMedia =
+    (targetLayer && isMediaLayer(targetLayer)) ||
+    layerType === "image" ||
+    layerType === "video";
+  const isIcon = targetLayer?.type === "icon" || layerType === "icon";
+  const isLine = targetLayer ? isVectorLine(targetLayer) : layerType === "line";
+  const isCirc = targetLayer ? isCircle(targetLayer) : false;
+  const isSt = targetLayer ? isStar(targetLayer) : false;
+  const isPoly = targetLayer ? isPolygon(targetLayer) : false;
+
+  // 1. Text Elements ("Ag" specimen)
+  if (isText) {
+    return (
+      <div className="relative flex items-center justify-center">
+        {preset.id === "highlightDraw" && (
+          <div
+            className="absolute inset-x-[-4px] bottom-0.5 h-[5px] bg-[#6d28d9]/25 rounded-full"
+            style={{ animation: "anim-preview-highlightDraw 1.8s ease-in-out infinite" }}
+          />
+        )}
+        <span
+          style={animStyle}
+          className={cn(
+            "font-serif font-extrabold text-[19px] text-[#27272a] group-hover:text-[#6d28d9] transition-colors select-none tracking-tight",
+            preset.id === "custom_radius" && "px-1.5 py-0.5 border border-current rounded-xs"
+          )}
+        >
+          Ag
+        </span>
+      </div>
+    );
+  }
+
+  // 2. Vector Lines & Arrows
+  if (isLine) {
+    if (preset.id === "arrowShoot") {
+      return (
+        <svg className="w-8 h-4 overflow-visible" viewBox="0 0 32 16">
+          <line
+            x1="2"
+            y1="8"
+            x2="24"
+            y2="8"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+            style={{
+              strokeDasharray: 24,
+              animation: "anim-preview-arrowStem 1.8s ease-in-out infinite",
+            }}
+          />
+          <polyline
+            points="18,3 25,8 18,13"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+            style={{
+              animation: "anim-preview-arrowHead 1.8s ease-in-out infinite",
+            }}
+          />
+        </svg>
+      );
+    }
+
+    if (preset.id === "dashFlow") {
+      return (
+        <svg className="w-8 h-3 overflow-visible" viewBox="0 0 32 8">
+          <line
+            x1="2"
+            y1="4"
+            x2="30"
+            y2="4"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeDasharray="6 3"
+            className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+            style={{
+              animation: "anim-preview-dashFlow 1.2s linear infinite",
+            }}
+          />
+        </svg>
+      );
+    }
+
+    if (preset.id === "drawOn" || preset.id === "custom_trim") {
+      return (
+        <svg className="w-8 h-3 overflow-visible" viewBox="0 0 32 8">
+          <line
+            x1="2"
+            y1="4"
+            x2="30"
+            y2="4"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeOpacity="0.2"
+            className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+          />
+          <line
+            x1="2"
+            y1="4"
+            x2="30"
+            y2="4"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            pathLength="100"
+            className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+            style={{
+              strokeDasharray: 100,
+              animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
+            }}
+          />
+        </svg>
+      );
+    }
+
+    return (
+      <div
+        style={animStyle}
+        className="w-7 h-1 rounded-full bg-[#71717a] group-hover:bg-[#6d28d9] transition-colors"
+      />
+    );
+  }
+
+  // 3. Icons
+  if (isIcon) {
+    return (
+      <Sparkles
+        style={animStyle}
+        className="w-5 h-5 text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+      />
+    );
+  }
+
+  // 4. Media (Image / Video)
+  if (isMedia) {
+    return (
+      <div
+        style={animStyle}
+        className="w-7 h-5 rounded-[4px] bg-[#f4f4f7] border border-[#d4d4d8] group-hover:bg-[#ede9fe] group-hover:border-[#7c3aed] flex items-center justify-center transition-colors shadow-2xs"
+      >
+        <ImageIcon className="w-3.5 h-3.5 text-[#71717a] group-hover:text-[#6d28d9] transition-colors" />
+      </div>
+    );
+  }
+
+  // 5. Shapes: Circle, Star, Polygon, or Rectangle/Frame
+  const isTrimPreset = preset.id === "drawOn" || preset.id === "custom_trim";
+  const isGlass = preset.id === "glassIris" || preset.id === "custom_glass";
+
+  // 5A. Circle
+  if (isCirc) {
+    if (isTrimPreset) {
+      return (
+        <svg className="w-6 h-6 overflow-visible -rotate-90 origin-center" viewBox="0 0 24 24">
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeOpacity="0.2"
+            className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            pathLength="100"
+            className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+            style={{
+              strokeDasharray: 100,
+              animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
+            }}
+          />
+        </svg>
+      );
+    }
+
+    return (
+      <div
+        style={animStyle}
+        className={cn(
+          "w-6 h-6 rounded-full transition-all",
+          isGlass
+            ? "backdrop-blur-md bg-white/60 border border-white/90 shadow-2xs"
+            : "bg-[#f4f4f7] border border-[#d4d4d8] group-hover:bg-[#ede9fe] group-hover:border-[#7c3aed] group-hover:text-[#6d28d9]"
+        )}
+      />
+    );
+  }
+
+  // 5B. Star
+  if (isSt) {
+    const starPts = generateStarPoints(5, 0.42);
+    if (isTrimPreset) {
+      return (
+        <svg className="w-6 h-6 overflow-visible" viewBox="0 0 100 100">
+          <polygon
+            points={starPts}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="6"
+            strokeOpacity="0.2"
+            className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+          />
+          <polygon
+            points={starPts}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            pathLength="100"
+            className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+            style={{
+              strokeDasharray: 100,
+              animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
+            }}
+          />
+        </svg>
+      );
+    }
+
+    return (
+      <div style={animStyle} className="w-6 h-6 flex items-center justify-center">
+        <svg className="w-6 h-6 overflow-visible" viewBox="0 0 100 100">
+          <polygon
+            points={starPts}
+            fill="currentColor"
+            stroke="currentColor"
+            strokeWidth="4"
+            strokeLinejoin="round"
+            className="text-[#a1a1aa] group-hover:text-[#7c3aed] transition-colors"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  // 5C. Polygon / Triangle
+  if (isPoly) {
+    const sides = (targetLayer as any)?.sides ?? ((targetLayer as any)?.shapeType === "triangle" ? 3 : 6);
+    const polyPts = generatePolygonPoints(sides);
+    if (isTrimPreset) {
+      return (
+        <svg className="w-6 h-6 overflow-visible" viewBox="0 0 100 100">
+          <polygon
+            points={polyPts}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="6"
+            strokeOpacity="0.2"
+            className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+          />
+          <polygon
+            points={polyPts}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            pathLength="100"
+            className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+            style={{
+              strokeDasharray: 100,
+              animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
+            }}
+          />
+        </svg>
+      );
+    }
+
+    return (
+      <div style={animStyle} className="w-6 h-6 flex items-center justify-center">
+        <svg className="w-6 h-6 overflow-visible" viewBox="0 0 100 100">
+          <polygon
+            points={polyPts}
+            fill="currentColor"
+            stroke="currentColor"
+            strokeWidth="4"
+            strokeLinejoin="round"
+            className="text-[#a1a1aa] group-hover:text-[#7c3aed] transition-colors"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  // 5D. Rectangle / Frame / General Shape Default
+  if (isTrimPreset) {
+    return (
+      <svg className="w-6 h-6 overflow-visible" viewBox="0 0 24 24">
+        <rect
+          x="2"
+          y="2"
+          width="20"
+          height="20"
+          rx="4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeOpacity="0.2"
+          className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+        />
+        <rect
+          x="2"
+          y="2"
+          width="20"
+          height="20"
+          rx="4"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          pathLength="100"
+          className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+          style={{
+            strokeDasharray: 100,
+            animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
+          }}
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <div
+      style={animStyle}
+      className={cn(
+        "w-6 h-6 transition-all",
+        isGlass
+          ? "rounded-[5px] backdrop-blur-md bg-white/60 border border-white/90 shadow-2xs"
+          : "rounded-[5px] bg-[#f4f4f7] border border-[#d4d4d8] group-hover:bg-[#ede9fe] group-hover:border-[#7c3aed]",
+        preset.id === "circleIris" && "rounded-full"
+      )}
+    />
+  );
+};
+
+// ---------------------------------------------------------------------------
 // FULL PREVIEW WINDOW CARD (Animation plays all the time, smaller name outside)
 // ---------------------------------------------------------------------------
 const AnimationCard: React.FC<{
   preset: AnimationCatalogPreset;
+  targetLayer?: Layer | null;
   layerType?: string;
   isSelected?: boolean;
   onApply: (preset: AnimationCatalogPreset) => void;
-}> = ({ preset, layerType, isSelected = false, onApply }) => {
-  const isText = layerType === "text" || layerType === "chunk";
-  const isMedia = layerType === "image" || layerType === "video";
-  const isIcon = layerType === "icon";
-  const isLine = layerType === "line";
-
+}> = ({ preset, targetLayer, layerType, isSelected = false, onApply }) => {
   const getAnimationName = (presetId: string) => {
     switch (presetId) {
       case "fade": return "anim-preview-fade";
@@ -396,7 +770,7 @@ const AnimationCard: React.FC<{
     }
   };
 
-  // Preview plays continuously all the time!
+  // Preview plays continuously all the time
   const animStyle: React.CSSProperties = {
     animation: `${getAnimationName(preset.id)} 1.5s ease-in-out infinite`,
   };
@@ -423,156 +797,20 @@ const AnimationCard: React.FC<{
           </div>
         )}
 
-        {/* Render preview element based on preset characteristics */}
-        {isText ? (
-          <span
-            style={animStyle}
-            className={cn(
-              "font-serif font-extrabold text-[18px] text-[#18181b] group-hover:text-[#6d28d9] transition-colors select-none",
-              preset.id === "custom_radius" && "px-1.5 py-0.5 border border-current"
-            )}
-          >
-            Ag
-          </span>
-        ) : preset.id === "drawOn" || preset.id === "custom_trim" ? (
-          isLine ? (
-            <svg className="w-8 h-3 overflow-visible" viewBox="0 0 32 8">
-              <line
-                x1="2"
-                y1="4"
-                x2="30"
-                y2="4"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
-                style={{
-                  strokeDasharray: 32,
-                  animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
-                }}
-              />
-            </svg>
-          ) : (
-            <svg className="w-7 h-7 overflow-visible" viewBox="0 0 28 28">
-              <rect
-                x="2"
-                y="2"
-                width="24"
-                height="24"
-                rx="4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
-                style={{
-                  strokeDasharray: 96,
-                  animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
-                }}
-              />
-            </svg>
-          )
-        ) : preset.id === "arrowShoot" ? (
-          <svg className="w-8 h-4 overflow-visible" viewBox="0 0 32 16">
-            <line
-              x1="2"
-              y1="8"
-              x2="24"
-              y2="8"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
-              style={{
-                strokeDasharray: 24,
-                animation: "anim-preview-arrowStem 1.8s ease-in-out infinite",
-              }}
-            />
-            <polyline
-              points="18,3 25,8 18,13"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
-              style={{
-                animation: "anim-preview-arrowHead 1.8s ease-in-out infinite",
-              }}
-            />
-          </svg>
-        ) : preset.id === "dashFlow" ? (
-          <svg className="w-8 h-3 overflow-visible" viewBox="0 0 32 8">
-            <line
-              x1="2"
-              y1="4"
-              x2="30"
-              y2="4"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeDasharray="6 3"
-              className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
-              style={{
-                animation: "anim-preview-dashFlow 1.2s linear infinite",
-              }}
-            />
-          </svg>
-        ) : preset.id === "glassIris" ? (
-          <div className="relative w-9 h-7 flex items-center justify-center">
-            {/* Background colorful elements so frosted blur is prominently visible */}
-            <div className="absolute -left-1 -top-1 w-3.5 h-3.5 rounded-full bg-[#8b5cf6]/80" />
-            <div className="absolute -right-1 -bottom-1 w-3.5 h-3.5 rounded-full bg-[#f59e0b]/80" />
-            <div
-              style={{
-                animation: "anim-preview-glass 2s ease-in-out infinite",
-              }}
-              className="w-8 h-6 rounded-md bg-white/45 border border-white/90 shadow-2xs relative z-10"
-            />
+        {/* Ambient background glow for glassmorphism preview */}
+        {(preset.id === "glassIris" || preset.id === "custom_glass") && (
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-linear-to-tr from-[#8b5cf6]/35 to-[#ec4899]/35 blur-xs" />
           </div>
-        ) : preset.id === "cardSettlePop" ? (
-          <div
-            style={{
-              animation: "anim-preview-cardSettle 1.8s cubic-bezier(0.34, 1.56, 0.64, 1) infinite",
-            }}
-            className="w-8 h-6 rounded-md bg-white border border-[#d4d4d8] shadow-xs group-hover:border-[#6d28d9]/60 flex flex-col justify-center gap-0.5 px-1.5"
-          >
-            <div className="w-full h-1 bg-[#6d28d9]/40 rounded-full" />
-            <div className="w-2/3 h-0.5 bg-[#a1a1aa] rounded-full" />
-          </div>
-        ) : preset.id === "elevationRise" ? (
-          <div
-            style={{
-              animation: "anim-preview-elevation 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite",
-            }}
-            className="w-8 h-6 rounded-md bg-white border border-[#e4e4e7] group-hover:border-[#6d28d9]/60 flex flex-col justify-center gap-0.5 px-1.5"
-          >
-            <div className="w-full h-1 bg-[#71717a]/30 rounded-full" />
-            <div className="w-2/3 h-0.5 bg-[#a1a1aa]/60 rounded-full" />
-          </div>
-        ) : isIcon ? (
-          <Sparkles
-            style={animStyle}
-            className="w-5 h-5 text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
-          />
-        ) : isMedia ? (
-          <ImageIcon
-            style={animStyle}
-            className="w-5 h-5 text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
-          />
-        ) : isLine ? (
-          <div
-            style={animStyle}
-            className="w-7 h-1 rounded-full bg-[#71717a] group-hover:bg-[#6d28d9] transition-colors"
-          />
-        ) : (
-          <div
-            style={animStyle}
-            className={cn(
-              "h-5 w-5 rounded-[4px] bg-[#71717a] group-hover:bg-[#6d28d9] transition-colors",
-              preset.id === "circleIris" && "rounded-full"
-            )}
-          />
         )}
+
+        {/* Option C: Dynamic Layer Echo adaptive preview shape */}
+        <AdaptivePreviewShape
+          preset={preset}
+          targetLayer={targetLayer}
+          layerType={layerType}
+          animStyle={animStyle}
+        />
       </div>
 
       {/* Smaller name outside the box */}
@@ -763,41 +1001,40 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
         /* 1. Opacity / Alpha Reveal (Stationary, flat) */
         @keyframes anim-preview-fade { 0% { opacity: 0.08; } 45%, 80% { opacity: 1; } 100% { opacity: 0.08; } }
 
-        /* 2. Vector Stroke Draw Path (Trim) */
+        /* 2. Vector Stroke Draw Path (Trim) - 100% steady perimeter draw with zero opacity blinking or rotation */
         @keyframes anim-preview-drawOn-stroke {
-          0% { stroke-dashoffset: 96; opacity: 0.2; }
-          15% { opacity: 1; }
-          50%, 75% { stroke-dashoffset: 0; opacity: 1; }
-          90%, 100% { stroke-dashoffset: 96; opacity: 0.2; }
+          0% { stroke-dashoffset: 100; }
+          45%, 75% { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: 100; }
         }
 
-        /* 3. Directional Slides (Pure Translation, 22px travel, zero scale, zero shadow) */
-        @keyframes anim-preview-slideUp { 0% { transform: translateY(22px); opacity: 0; } 45%, 80% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(22px); opacity: 0; } }
-        @keyframes anim-preview-slideDown { 0% { transform: translateY(-22px); opacity: 0; } 45%, 80% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-22px); opacity: 0; } }
-        @keyframes anim-preview-slideLeft { 0% { transform: translateX(22px); opacity: 0; } 45%, 80% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(22px); opacity: 0; } }
-        @keyframes anim-preview-slideRight { 0% { transform: translateX(-22px); opacity: 0; } 45%, 80% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-22px); opacity: 0; } }
+        /* 3. Directional Slides (Pure Translation, 24px travel, zero scale, zero shadow) */
+        @keyframes anim-preview-slideUp { 0% { transform: translateY(24px); opacity: 0; } 45%, 80% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(24px); opacity: 0; } }
+        @keyframes anim-preview-slideDown { 0% { transform: translateY(-24px); opacity: 0; } 45%, 80% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-24px); opacity: 0; } }
+        @keyframes anim-preview-slideLeft { 0% { transform: translateX(24px); opacity: 0; } 45%, 80% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(24px); opacity: 0; } }
+        @keyframes anim-preview-slideRight { 0% { transform: translateX(-24px); opacity: 0; } 45%, 80% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-24px); opacity: 0; } }
 
-        /* 4. Card Settle (Spring scale overshoot + elastic recoil + settling shadow) */
+        /* 4. Card Settle (Snappy spring scale overshoot + recoil + settling impact shadow) */
         @keyframes anim-preview-cardSettle {
-          0% { transform: scale(0.65) translateY(6px); opacity: 0.2; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-          40% { transform: scale(1.14) translateY(-2px); opacity: 1; box-shadow: 0 10px 20px -3px rgba(0,0,0,0.16); }
-          65% { transform: scale(0.96) translateY(1px); opacity: 1; box-shadow: 0 3px 6px rgba(0,0,0,0.08); }
-          80%, 90% { transform: scale(1) translateY(0); opacity: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
-          100% { transform: scale(0.65) translateY(6px); opacity: 0.2; }
+          0% { transform: scale(0.35); opacity: 0.2; box-shadow: 0 0 0 rgba(0,0,0,0); }
+          38% { transform: scale(1.24); opacity: 1; box-shadow: 0 8px 16px -2px rgba(0,0,0,0.18); }
+          58% { transform: scale(0.93); opacity: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
+          75%, 90% { transform: scale(1); opacity: 1; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
+          100% { transform: scale(0.35); opacity: 0.2; }
         }
 
-        /* 5. Elevation Rise (Z-axis lift-off + blooming deep soft purple-tinted elevation shadow) */
+        /* 5. Elevation Rise (Z-axis lift-off + blooming deep soft purple-tinted elevation shadow, minimal Y travel) */
         @keyframes anim-preview-elevation {
-          0% { transform: translateY(5px) scale(0.94); box-shadow: 0 1px 2px rgba(0,0,0,0.04); opacity: 0.3; }
-          45%, 75% { transform: translateY(-6px) scale(1.08); box-shadow: 0 18px 24px -4px rgba(109, 40, 217, 0.40), 0 8px 12px -2px rgba(0,0,0,0.12); opacity: 1; }
-          100% { transform: translateY(5px) scale(0.94); box-shadow: 0 1px 2px rgba(0,0,0,0.04); opacity: 0.3; }
+          0% { transform: translateY(0) scale(0.95); box-shadow: 0 1px 2px rgba(0,0,0,0.04); opacity: 0.35; }
+          45%, 75% { transform: translateY(-3px) scale(1.10); box-shadow: 0 16px 24px -2px rgba(109, 40, 217, 0.45), 0 6px 10px -2px rgba(0,0,0,0.15); opacity: 1; }
+          100% { transform: translateY(0) scale(0.95); box-shadow: 0 1px 2px rgba(0,0,0,0.04); opacity: 0.35; }
         }
 
-        /* 6. Frosted Glass Iris (Aperture expand + optical backdrop blur revealing colored backing) */
+        /* 6. Frosted Glass Iris (Aperture expand + optical backdrop blur over ambient glow) */
         @keyframes anim-preview-glass {
-          0% { transform: scale(0.35); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); opacity: 0; }
-          45%, 75% { transform: scale(1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); opacity: 1; }
-          100% { transform: scale(0.35); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); opacity: 0; }
+          0% { transform: scale(0.3); opacity: 0; }
+          45%, 75% { transform: scale(1); opacity: 1; }
+          100% { transform: scale(0.3); opacity: 0; }
         }
 
         /* 7. Arrow Shoot (Shaft draws forward + head snaps in) */
@@ -958,6 +1195,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                         <AnimationCard
                           key={`headline-${p.id}`}
                           preset={p}
+                          targetLayer={targetLayer}
                           layerType={layerType}
                           isSelected={isPresetSelected(p)}
                           onApply={onApplyPreset}
@@ -977,6 +1215,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                         <AnimationCard
                           key={`paragraph-${p.id}`}
                           preset={p}
+                          targetLayer={targetLayer}
                           layerType={layerType}
                           isSelected={isPresetSelected(p)}
                           onApply={onApplyPreset}
@@ -996,6 +1235,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                       <AnimationCard
                         key={`in-${p.id}`}
                         preset={p}
+                        targetLayer={targetLayer}
                         layerType={layerType}
                         isSelected={isPresetSelected(p)}
                         onApply={onApplyPreset}
@@ -1018,6 +1258,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                     <AnimationCard
                       key={`action-${p.id}`}
                       preset={p}
+                      targetLayer={targetLayer}
                       layerType={layerType}
                       isSelected={isPresetSelected(p)}
                       onApply={onApplyPreset}
@@ -1039,6 +1280,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                     <AnimationCard
                       key={`out-${p.id}`}
                       preset={p}
+                      targetLayer={targetLayer}
                       layerType={layerType}
                       isSelected={isPresetSelected(p)}
                       onApply={onApplyPreset}
@@ -1110,6 +1352,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
               <AnimationCard
                 key={eff.id}
                 preset={eff.preset}
+                targetLayer={targetLayer}
                 layerType={layerType}
                 isSelected={isPresetSelected(eff.preset)}
                 onApply={onApplyPreset}

@@ -1408,6 +1408,42 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 39 test suites (360 tests) pass cleanly (`npm test`).
   * Production build compiles cleanly with 0 errors in 10.24s (`npm run build`).
 
+---
+
+### Decision 69: Option C Dynamic Layer Echo & Unified Animation Catalog Aesthetic
+* **The Problem**:
+  * The animation catalog preview tiles in `AnimationCatalogSheet.tsx` suffered from severe visual disharmony:
+    * `Card Settle` and `Elevation Rise` rendered ad-hoc website card wireframes with fake paragraph skeleton lines, looking completely out of place for general shapes and icons.
+    * `Glass Iris` displayed cartoon polka dots behind its frosted surface.
+    * `Draw Path (Trim)` on rectangles created an optical illusion of a 3D card rotating around the Y-axis due to opacity fades and arbitrary stroke directions.
+    * `Fade In`, `Card Settle`, `Elevation Rise`, and `Slide` looked overly similar because their physical and optical channels lacked clear visual differentiation.
+* **The Solution**:
+  1. **Option C: Dynamic Layer Echo (`AdaptivePreviewShape`)**:
+     * Preview tiles dynamically mirror the geometry of the selected `targetLayer`:
+       * **Text (`text`, `chunk`)**: Refined `"Ag"` typographic specimen in bold display serif/sans.
+       * **Lines & Arrows (`line`, `arrow`)**: Clean vector line or arrow with matching line caps.
+       * **Circles (`circle`, `ellipse`)**: Clean circular geometry (`rounded-full` or SVG circle).
+       * **Stars (`star`)**: 5-point star SVG with analytical `generateStarPoints`.
+       * **Polygons & Triangles (`polygon`, `triangle`)**: Regular polygon/triangle SVG with `generatePolygonPoints`.
+       * **Media (`image`, `video`)**: Modern media frame tile with subtle photo icon.
+       * **Icons (`icon`)**: Crisp Lucide vector glyph (`Sparkles`).
+       * **Rectangles & General Shapes**: Clean rounded studio tile (`rounded-[5px]`).
+  2. **Unified Studio Tile Surface Styling**:
+     * Standardized all preview elements to the exact same high-craft surface styling:
+       `bg-[#f4f4f7] border border-[#d4d4d8] text-[#52525b] group-hover:bg-[#ede9fe] group-hover:border-[#7c3aed] group-hover:text-[#6d28d9]`.
+     * Zero fake skeleton lines, zero arbitrary polka dots.
+  3. **High-Signal Physical & Optical Channel Differentiation**:
+     * **Draw Path (Trim)**: Uses the exact same geometry with `fill: none` and SVG `pathLength="100"`. A faint background guide track is visible at 20% opacity, while the active stroke draws smoothly from 0% to 100% with no opacity fading, completely eliminating the rotating-card optical illusion.
+     * **Elevation Rise**: The shape stays centered with minimal Y travel, scales slightly ($1.0 \to 1.10$), and blooms a deep, soft, purple-tinted elevation shadow (`0 16px 24px -2px rgba(109, 40, 217, 0.45)`), distinctly communicating Z-axis elevation.
+     * **Card Settle**: Physical spring bounce overshoot ($0.35 \to 1.24 \to 0.93 \to 1.0$) with crisp contact landing shadow.
+     * **Glass Iris**: Frosted glass surface (`backdrop-blur-md bg-white/60 border border-white/90`) expanding over a soft ambient gradient glow in the preview tile.
+     * **Slide**: Pure translational motion ($+24\text{px} \to 0\text{px}$) with zero scale change and zero elevation shadow.
+     * **Fade In**: Pure alpha dissolve ($0.08 \to 1.0$), completely stationary at scale 1.0.
+* **Verification**:
+  * Unit tests added in `src/test/element_individuality_matrix.test.ts` verifying specialized catalog population and zero cross-pollution.
+  * All 39 test suites (360 tests) pass cleanly (`npm test`).
+  * Production build compiles cleanly with 0 errors in 10.86s (`npm run build`).
+
 
 
 
