@@ -245,265 +245,265 @@ export const TimelinePanel: React.FC = () => {
 
   return (
     <div
-      className="flex flex-col w-full h-[240px] bg-white border-t border-[#e5e5e7] select-none text-xs text-[#18181b]"
+      className="relative flex flex-col w-full h-[300px] bg-white border-t border-[#e5e5e7] select-none text-xs text-[#18181b]"
       data-testid="timeline-panel"
     >
-      <div
-        ref={tracksContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col"
-      >
-        {/* Sticky Scene Blocks Row */}
-        <div className="sticky top-0 z-20 flex h-7 bg-[#fbfbfa] border-b border-[#e5e5e7]">
-          {/* Left Label */}
-          <div className="w-56 shrink-0 sticky left-0 z-30 px-3 flex items-center justify-between border-r border-[#e5e5e7] bg-[#fbfbfa] text-[11px] font-medium text-[#71717a]">
-            <span>Scenes ({doc.screens.length})</span>
-            <span className="text-[10px] text-[#a1a1aa] font-mono">{totalDuration.toFixed(1)}s total</span>
-          </div>
+      {/* 1. TOP HEADER: Transport Controls & Time Ruler (Play, Loop, Time Indicators) */}
+      <div className="flex h-8 bg-white border-b border-[#e5e5e7] z-20 shrink-0">
+        {/* Left Transport Controls: Play & Loop */}
+        <div className="w-56 shrink-0 px-3 flex items-center gap-2 border-r border-[#e5e5e7] bg-white">
+          {/* Play / Pause button */}
+          <button
+            type="button"
+            onClick={() => setIsPlaying(!isPlaying)}
+            className="h-6 w-6 rounded flex items-center justify-center text-[#18181b] hover:bg-[#f4f4f6] transition-colors"
+            title="Play / Pause (Space)"
+          >
+            {isPlaying ? (
+              <Pause className="h-4 w-4 fill-current" />
+            ) : (
+              <Play className="h-4 w-4 fill-current ml-0.5" />
+            )}
+          </button>
 
-          {/* Scene Blocks Lane */}
-          <div className="relative flex-1 overflow-hidden bg-[#fbfbfa]">
-            {screenTimings.map((st) => {
-              const isScreenActive = st.screen.id === activeScreenId;
-              const leftPct = (st.startTime / maxSec) * 100;
-              const widthPct = (st.duration / maxSec) * 100;
-              return (
+          {/* Loop button with Mode (All vs Scene) */}
+          <button
+            type="button"
+            onClick={() => {
+              if (!isLooping) {
+                setIsLooping(true);
+                setLoopMode("all");
+              } else if (loopMode === "all") {
+                setLoopMode("scene");
+              } else {
+                setIsLooping(false);
+              }
+            }}
+            data-testid="timeline-loop-toggle"
+            className={`h-6 px-1.5 gap-1 rounded flex items-center justify-center transition-colors text-[10px] font-medium ${
+              isLooping
+                ? "bg-[#f4f4f6] text-[#7c3aed]"
+                : "text-[#a1a1aa] hover:text-[#18181b]"
+            }`}
+            title={
+              !isLooping
+                ? "Looping Disabled (click to enable Loop All)"
+                : loopMode === "all"
+                ? "Looping All Scenes (click to loop active scene only)"
+                : "Looping Active Scene (click to disable loop)"
+            }
+          >
+            <Repeat className="h-3 w-3" />
+            {isLooping && (
+              <span className="text-[9px] uppercase tracking-wider font-semibold">
+                {loopMode === "scene" ? "Scene" : "All"}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Ruler Lane */}
+        <div
+          ref={rulerRef}
+          data-testid="timeline-ruler"
+          onPointerDown={startScrubbing}
+          className="relative flex-1 cursor-ew-resize overflow-hidden bg-white"
+        >
+          {/* Shaded Active Scene Duration Span */}
+          <div
+            className="absolute top-0 bottom-0 bg-[#7c3aed]/8 border-x border-[#7c3aed]/25 pointer-events-none"
+            style={{
+              left: `${(screenStartTime / maxSec) * 100}%`,
+              width: `${(activeTiming.duration / maxSec) * 100}%`,
+            }}
+          />
+
+          {/* Ticks and Seconds Markers */}
+          {rulerTicks.map((tick, idx) => {
+            const pct = (tick.time / maxSec) * 100;
+            if (pct > 100) return null;
+
+            const isEndTick = tick.time === maxSec;
+            const isStartTick = tick.time === 0;
+
+            return (
+              <div
+                key={`tick-${idx}`}
+                className="absolute top-0 bottom-0 flex flex-col items-center pointer-events-none"
+                style={{ left: `${pct}%` }}
+              >
                 <div
-                  key={st.screen.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    selectScreen(st.screen.id);
-                    setCurrentTime(st.startTime);
-                  }}
-                  style={{
-                    left: `${leftPct}%`,
-                    width: `${widthPct}%`,
-                  }}
-                  className={`absolute top-0.5 bottom-0.5 rounded border flex items-center justify-between px-2 cursor-pointer transition-all select-none ${
-                    isScreenActive
-                      ? "bg-[#7c3aed] text-white border-[#6d28d9] shadow-xs font-semibold z-10"
-                      : "bg-white text-[#52525b] border-[#e4e4e7] hover:border-[#a1a1aa] hover:bg-[#f4f4f6]"
+                  className={`w-px ${
+                    tick.label ? "h-2 bg-[#d4d4d8]" : "h-1 bg-[#e4e4e7]"
                   }`}
-                  title={`${st.screen.name}: ${st.duration}s (click to focus scene)`}
-                >
-                  {editingSceneId === st.screen.id ? (
-                    <input
-                      type="text"
-                      value={editingSceneName}
-                      onChange={(e) => setEditingSceneName(e.target.value)}
-                      onBlur={() => {
+                />
+                {tick.label && (
+                  <span
+                    className={`text-[10px] text-[#71717a] font-sans mt-1 ${
+                      isEndTick
+                        ? "-translate-x-full pr-0.5"
+                        : isStartTick
+                        ? "translate-x-0 pl-0.5"
+                        : "-translate-x-1/2"
+                    }`}
+                  >
+                    {tick.label}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Jitter Red Playhead Pill */}
+          <div
+            ref={playheadBadgeRef}
+            data-testid="timeline-playhead-badge"
+            className="absolute top-1 pointer-events-none z-40 bg-[#ef4444] text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shadow-sm"
+            style={{
+              left: `${(currentTime / maxSec) * 100}%`,
+              transform: `translateX(-${Math.max(
+                0,
+                Math.min(100, (currentTime / maxSec) * 100)
+              )}%)`,
+            }}
+          >
+            {currentTime.toFixed(2)}
+          </div>
+        </div>
+      </div>
+
+      {/* 2. SCENE COMPONENT: Touching directly below the Ruler */}
+      <div className="flex h-7 bg-[#fbfbfa] border-b border-[#e5e5e7] z-10 shrink-0">
+        {/* Left Label */}
+        <div className="w-56 shrink-0 px-3 flex items-center justify-between border-r border-[#e5e5e7] bg-[#fbfbfa] text-[11px] font-medium text-[#71717a]">
+          <span>Scenes ({doc.screens.length})</span>
+          <span className="text-[10px] text-[#a1a1aa] font-mono">{totalDuration.toFixed(1)}s total</span>
+        </div>
+
+        {/* Scene Blocks Lane */}
+        <div className="relative flex-1 overflow-hidden bg-[#fbfbfa]">
+          {screenTimings.map((st) => {
+            const isScreenActive = st.screen.id === activeScreenId;
+            const leftPct = (st.startTime / maxSec) * 100;
+            const widthPct = (st.duration / maxSec) * 100;
+            return (
+              <div
+                key={st.screen.id}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  selectScreen(st.screen.id);
+                  setCurrentTime(st.startTime);
+                }}
+                style={{
+                  left: `${leftPct}%`,
+                  width: `${widthPct}%`,
+                }}
+                className={`absolute top-0.5 bottom-0.5 rounded border flex items-center justify-between px-2 cursor-pointer transition-all select-none ${
+                  isScreenActive
+                    ? "bg-[#7c3aed] text-white border-[#6d28d9] shadow-xs font-semibold z-10"
+                    : "bg-white text-[#52525b] border-[#e4e4e7] hover:border-[#a1a1aa] hover:bg-[#f4f4f6]"
+                }`}
+                title={`${st.screen.name}: ${st.duration}s (click to focus scene)`}
+              >
+                {editingSceneId === st.screen.id ? (
+                  <input
+                    type="text"
+                    value={editingSceneName}
+                    onChange={(e) => setEditingSceneName(e.target.value)}
+                    onBlur={() => {
+                      if (editingSceneName.trim()) {
+                        updateScreen(st.screen.id, { name: editingSceneName.trim() });
+                      }
+                      setEditingSceneId(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
                         if (editingSceneName.trim()) {
                           updateScreen(st.screen.id, { name: editingSceneName.trim() });
                         }
                         setEditingSceneId(null);
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          if (editingSceneName.trim()) {
-                            updateScreen(st.screen.id, { name: editingSceneName.trim() });
-                          }
-                          setEditingSceneId(null);
-                        } else if (e.key === "Escape") {
-                          setEditingSceneId(null);
-                        }
-                      }}
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                      onDoubleClick={(e) => e.stopPropagation()}
-                      className="h-4 px-1 bg-white text-[#18181b] border border-[#6d28d9] rounded text-[10px] outline-none min-w-[60px]"
-                    />
-                  ) : (
-                    <span
-                      onDoubleClick={(e) => {
-                        e.stopPropagation();
-                        setEditingSceneId(st.screen.id);
-                        setEditingSceneName(st.screen.name);
-                      }}
-                      className="truncate text-[10px] cursor-text hover:underline"
-                      title="Double-click to rename scene"
-                    >
-                      {st.screen.name}
-                    </span>
-                  )}
-                  <span
-                    className={`text-[9px] font-mono shrink-0 ml-1 ${
-                      isScreenActive ? "text-white/80" : "text-[#a1a1aa]"
-                    }`}
-                  >
-                    {st.duration}s
-                  </span>
-
-                  {/* Drag handle on right edge to resize scene duration */}
-                  <div
-                    onPointerDown={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
-                      const startX = e.clientX;
-                      const initialDuration = st.duration;
-                      if (!rulerRef.current) return;
-                      const rulerWidth = rulerRef.current.clientWidth;
-                      const secPerPx = maxSec / (rulerWidth || 1);
-
-                      const onPointerMove = (ev: PointerEvent) => {
-                        const deltaPx = ev.clientX - startX;
-                        const newDuration = Math.max(
-                          0.5,
-                          Math.round((initialDuration + deltaPx * secPerPx) * 10) / 10
-                        );
-                        updateScreen(st.screen.id, { duration: newDuration });
-                      };
-
-                      const onPointerUp = () => {
-                        window.removeEventListener("pointermove", onPointerMove);
-                        window.removeEventListener("pointerup", onPointerUp);
-                      };
-
-                      window.addEventListener("pointermove", onPointerMove);
-                      window.addEventListener("pointerup", onPointerUp);
+                      } else if (e.key === "Escape") {
+                        setEditingSceneId(null);
+                      }
                     }}
-                    className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-black/20 rounded-r transition-colors"
-                    title="Drag to resize scene duration"
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    className="h-4 px-1 bg-white text-[#18181b] border border-[#6d28d9] rounded text-[10px] outline-none min-w-[60px]"
                   />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Sticky Ruler Row */}
-        <div className="sticky top-7 z-20 flex h-8 bg-white border-b border-[#e5e5e7]">
-          {/* Left Transport Controls: Play & Loop */}
-          <div className="w-56 shrink-0 sticky left-0 z-30 px-3 flex items-center gap-2 border-r border-[#e5e5e7] bg-white">
-            {/* Play / Pause button */}
-            <button
-              type="button"
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="h-6 w-6 rounded flex items-center justify-center text-[#18181b] hover:bg-[#f4f4f6] transition-colors"
-              title="Play / Pause (Space)"
-            >
-              {isPlaying ? (
-                <Pause className="h-4 w-4 fill-current" />
-              ) : (
-                <Play className="h-4 w-4 fill-current ml-0.5" />
-              )}
-            </button>
-
-            {/* Loop button with Mode (All vs Scene) */}
-            <button
-              type="button"
-              onClick={() => {
-                if (!isLooping) {
-                  setIsLooping(true);
-                  setLoopMode("all");
-                } else if (loopMode === "all") {
-                  setLoopMode("scene");
-                } else {
-                  setIsLooping(false);
-                }
-              }}
-              data-testid="timeline-loop-toggle"
-              className={`h-6 px-1.5 gap-1 rounded flex items-center justify-center transition-colors text-[10px] font-medium ${
-                isLooping
-                  ? "bg-[#f4f4f6] text-[#7c3aed]"
-                  : "text-[#a1a1aa] hover:text-[#18181b]"
-              }`}
-              title={
-                !isLooping
-                  ? "Looping Disabled (click to enable Loop All)"
-                  : loopMode === "all"
-                  ? "Looping All Scenes (click to loop active scene only)"
-                  : "Looping Active Scene (click to disable loop)"
-              }
-            >
-              <Repeat className="h-3 w-3" />
-              {isLooping && (
-                <span className="text-[9px] uppercase tracking-wider font-semibold">
-                  {loopMode === "scene" ? "Scene" : "All"}
-                </span>
-              )}
-            </button>
-          </div>
-
-          {/* Ruler Lane */}
-          <div
-            ref={rulerRef}
-            data-testid="timeline-ruler"
-            onPointerDown={startScrubbing}
-            className="relative flex-1 cursor-ew-resize overflow-hidden bg-white"
-          >
-            {/* Shaded Active Scene Duration Span */}
-            <div
-              className="absolute top-0 bottom-0 bg-[#7c3aed]/8 border-x border-[#7c3aed]/25 pointer-events-none"
-              style={{
-                left: `${(screenStartTime / maxSec) * 100}%`,
-                width: `${(activeTiming.duration / maxSec) * 100}%`,
-              }}
-            />
-
-            {/* Ticks and Seconds Markers */}
-            {rulerTicks.map((tick, idx) => {
-              const pct = (tick.time / maxSec) * 100;
-              if (pct > 100) return null;
-
-              const isEndTick = tick.time === maxSec;
-              const isStartTick = tick.time === 0;
-
-              return (
-                <div
-                  key={`tick-${idx}`}
-                  className="absolute top-0 bottom-0 flex flex-col items-center pointer-events-none"
-                  style={{ left: `${pct}%` }}
+                ) : (
+                  <span
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setEditingSceneId(st.screen.id);
+                      setEditingSceneName(st.screen.name);
+                    }}
+                    className="truncate text-[10px] cursor-text hover:underline"
+                    title="Double-click to rename scene"
+                  >
+                    {st.screen.name}
+                  </span>
+                )}
+                <span
+                  className={`text-[9px] font-mono shrink-0 ml-1 ${
+                    isScreenActive ? "text-white/80" : "text-[#a1a1aa]"
+                  }`}
                 >
-                  <div
-                    className={`w-px ${
-                      tick.label ? "h-2 bg-[#d4d4d8]" : "h-1 bg-[#e4e4e7]"
-                    }`}
-                  />
-                  {tick.label && (
-                    <span
-                      className={`text-[10px] text-[#71717a] font-sans mt-1 ${
-                        isEndTick
-                          ? "-translate-x-full pr-0.5"
-                          : isStartTick
-                          ? "translate-x-0 pl-0.5"
-                          : "-translate-x-1/2"
-                      }`}
-                    >
-                      {tick.label}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+                  {st.duration}s
+                </span>
 
-            {/* Jitter Red Playhead Pill */}
-            <div
-              ref={playheadBadgeRef}
-              data-testid="timeline-playhead-badge"
-              className="absolute top-1 pointer-events-none z-40 bg-[#ef4444] text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded-full shadow-sm"
-              style={{
-                left: `${(currentTime / maxSec) * 100}%`,
-                transform: `translateX(-${Math.max(
-                  0,
-                  Math.min(100, (currentTime / maxSec) * 100)
-                )}%)`,
-              }}
-            >
-              {currentTime.toFixed(2)}
-            </div>
-          </div>
+                {/* Drag handle on right edge to resize scene duration */}
+                <div
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    const startX = e.clientX;
+                    const initialDuration = st.duration;
+                    if (!rulerRef.current) return;
+                    const rulerWidth = rulerRef.current.clientWidth;
+                    const secPerPx = maxSec / (rulerWidth || 1);
+
+                    const onPointerMove = (ev: PointerEvent) => {
+                      const deltaPx = ev.clientX - startX;
+                      const newDuration = Math.max(
+                        0.5,
+                        Math.round((initialDuration + deltaPx * secPerPx) * 10) / 10
+                      );
+                      updateScreen(st.screen.id, { duration: newDuration });
+                    };
+
+                    const onPointerUp = () => {
+                      window.removeEventListener("pointermove", onPointerMove);
+                      window.removeEventListener("pointerup", onPointerUp);
+                    };
+
+                    window.addEventListener("pointermove", onPointerMove);
+                    window.addEventListener("pointerup", onPointerUp);
+                  }}
+                  className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-black/20 rounded-r transition-colors"
+                  title="Drag to resize scene duration"
+                />
+              </div>
+            );
+          })}
         </div>
+      </div>
 
-        {/* Global Vertical Red Playhead Line across all tracks */}
-        <div className="absolute left-56 right-0 top-[60px] bottom-0 pointer-events-none overflow-hidden z-30">
-          <div
-            ref={playheadLineRef}
-            data-testid="timeline-playhead-line"
-            className="absolute top-0 bottom-0 w-px bg-[#ef4444] pointer-events-none transition-none shadow-xs"
-            style={{ left: `${(currentTime / maxSec) * 100}%` }}
-          />
-        </div>
+      {/* Global Vertical Red Playhead Line across scenes and tracks */}
+      <div className="absolute left-56 right-0 top-8 bottom-0 pointer-events-none overflow-hidden z-30">
+        <div
+          ref={playheadLineRef}
+          data-testid="timeline-playhead-line"
+          className="absolute top-0 bottom-0 w-px bg-[#ef4444] pointer-events-none transition-none shadow-xs"
+          style={{ left: `${(currentTime / maxSec) * 100}%` }}
+        />
+      </div>
 
-        {/* Track Rows (Left Header + Right Lane) */}
+      {/* 3. TRACKS CONTAINER: Scrollable track rows */}
+      <div
+        ref={tracksContainerRef}
+        className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col bg-white"
+      >
         <div className="flex-1 divide-y divide-[#f4f4f6]">
           {visibleLayers.length > 0 ? (
             visibleLayers.map((layer) => {

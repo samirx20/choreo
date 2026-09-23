@@ -1255,3 +1255,26 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 39 test suites (348 tests) pass cleanly (`npm test`).
   * Production build compiles cleanly with 0 errors in 10.17s (`npm run build`).
 
+---
+
+### Decision 64: Timeline Architecture — Transport/Ruler Top Row, Touching Scene Blocks & Height Expansion
+* **The Problem**:
+  * Previously, the Timeline Panel placed the Scene Blocks Row (`h-7`) at `top-0`, and placed the Sticky Ruler / Transport Controls row (`h-8`, containing the Play button, Loop button, and time ticks) *below* the scene blocks at `top-7`, with both wrapped inside the scrollable tracks container (`overflow-y-auto`).
+  * As a result, when users scrolled down through track rows, layers and animation clips scrolled up between or behind the sticky elements, making the play button and ruler look like they were "floating" with clips appearing above and below them.
+  * Furthermore, the play button row did not seamlessly touch the scene component, and the total timeline height was cramped at `240px` (only ~180px for tracks).
+* **The Solution**:
+  * **Top-Level Header Reordering (`TimelinePanel.tsx`)**:
+    * **Row 1 (Top Header, `h-8` 32px)**: Dedicated transport and time ruler header containing the Play/Pause button, Loop mode toggle (`All` / `Scene`), ruler ticks, seconds indicators (`0.00`, `1s`, `2s`...), and red playhead pill.
+    * **Row 2 (Scene Blocks, `h-7` 28px)**: Placed directly on top of the tracks and **touching directly underneath Row 1** with a clean single 1px border. Contains scene counts/duration and scene duration blocks.
+  * **Scroll Container Isolation**:
+    * Both Row 1 and Row 2 are now hoisted out of the scrollable container as fixed, non-scrolling `shrink-0` headers.
+    * Track rows and animation clips are isolated inside their own `flex-1 overflow-y-auto` container strictly *below* the scenes. No track or clip can ever scroll over, between, or above the transport controls or scenes.
+  * **Global Vertical Playhead Alignment**:
+    * The global vertical red playhead line now anchors at `top-8` (32px from top, directly underneath the red playhead badge) and extends seamlessly down through the scene blocks and all layer clips to the bottom of the panel.
+  * **Timeline Height Expansion**:
+    * Increased panel height from `h-[240px]` to `h-[300px]` (providing ~240px of clear vertical track space), allowing 7–8 layer tracks to display comfortably without clipping or premature scrolling.
+* **Verification**:
+  * All 39 test suites (348 tests) pass cleanly (`npm test`).
+  * Production build compiles cleanly with 0 errors in 9.91s (`npm run build`).
+
+
