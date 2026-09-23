@@ -117,6 +117,22 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     marqueeRef.current = marquee;
   }, [marquee]);
 
+  const [drawingCreation, setDrawingCreation] = useState<{
+    tool: string;
+    screenId: string;
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+    isShift: boolean;
+    isAlt: boolean;
+  } | null>(null);
+
+  const drawingCreationRef = useRef(drawingCreation);
+  useEffect(() => {
+    drawingCreationRef.current = drawingCreation;
+  }, [drawingCreation]);
+
   const [altPressed, setAltPressed] = useState(false);
   const [hoveredLayerId, setHoveredLayerId] = useState<string | null>(null);
 
@@ -338,9 +354,9 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     };
   }, [isPanning]);
 
-  // Window marquee listener so fast movement or leaving canvas boundary never drops marquee selection
+  // Window marquee and creation drag listener so fast movement or leaving canvas boundary never drops interaction
   useEffect(() => {
-    if (!marquee) return;
+    if (!marquee && !drawingCreation) return;
 
     const onWindowMouseMove = (e: MouseEvent) => {
       const screenEl = document.getElementById(`screen-${activeScreen.id}`);
@@ -352,19 +368,154 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       const canvasX = (e.clientX - screenRect.left) / domScale;
       const canvasY = (e.clientY - screenRect.top) / domScale;
 
+      if (drawingCreationRef.current) {
+        drawingCreationRef.current = {
+          ...drawingCreationRef.current,
+          currentX: canvasX,
+          currentY: canvasY,
+          isShift: e.shiftKey,
+          isAlt: e.altKey,
+        };
+        setDrawingCreation((prev) =>
+          prev
+            ? {
+                ...prev,
+                currentX: canvasX,
+                currentY: canvasY,
+                isShift: e.shiftKey,
+                isAlt: e.altKey,
+              }
+            : null
+        );
+      }
+
       if (marqueeRef.current) {
         marqueeRef.current = {
           ...marqueeRef.current,
           currentX: canvasX,
           currentY: canvasY,
         };
+        setMarquee((prev) =>
+          prev ? { ...prev, currentX: canvasX, currentY: canvasY } : null
+        );
       }
-      setMarquee((prev) =>
-        prev ? { ...prev, currentX: canvasX, currentY: canvasY } : null
-      );
     };
 
     const onWindowMouseUp = (e: MouseEvent) => {
+      // 1. Finalize Interactive Drag-to-Create
+      const draw = drawingCreationRef.current;
+      if (draw) {
+        drawingCreationRef.current = null;
+        setDrawingCreation(null);
+
+        const screenEl = document.getElementById(`screen-${activeScreen.id}`);
+        const screenRect = screenEl?.getBoundingClientRect();
+        const domScale =
+          screenRect && screenRect.width > 0
+            ? screenRect.width / doc.settings.width
+            : effectiveScale;
+
+        const currentX = screenRect ? (e.clientX - screenRect.left) / domScale : draw.currentX;
+        const currentY = screenRect ? (e.clientY - screenRect.top) / domScale : draw.currentY;
+
+        const deltaX = currentX - draw.startX;
+        const deltaY = currentY - draw.startY;
+        const isDrag = Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5;
+        const isLineLike = draw.tool === "line" || draw.tool === "arrow";
+
+        let createdLayer: Layer | null = null;
+
+        if (!isDrag) {
+          // Single-click fallback: default standard size centered at click position
+          createdLayer = createLayerForTool(
+            draw.tool,
+            draw.startX,
+            draw.startY,
+            activeScreen?.layers.length ?? 0
+          );
+        } else if (isLineLike) {
+          // Dragged Line / Arrow
+          let dx = deltaX;
+          let dy = deltaY;
+          let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+          if (draw.isShift || e.shiftKey) {
+            angle = Math.round(angle / 45) * 45;
+            const rad = angle * (Math.PI / 180);
+            const dist = Math.hypot(dx, dy);
+            dx = Math.cos(rad) * dist;
+            dy = Math.sin(rad) * dist;
+          }
+          const length = Math.max(20, Math.round(Math.hypot(dx, dy)));
+
+          createdLayer = createLayerForTool(
+            draw.tool,
+            draw.startX,
+            draw.startY,
+            activeScreen?.layers.length ?? 0,
+            {
+              x: Math.round(draw.startX),
+              y: Math.round(draw.startY - 10),
+              width: length,
+              height: 20,
+              rotation: Math.round(angle),
+            }
+          );
+        } else {
+          // Dragged 2D Box Shape / Frame / Text
+          let rawW = deltaX;
+          let rawH = deltaY;
+
+          // Shift: lock 1:1 aspect ratio
+          if (draw.isShift || e.shiftKey) {
+            const maxDim = Math.max(Math.abs(rawW), Math.abs(rawH));
+            rawW = (rawW >= 0 ? 1 : -1) * maxDim;
+            rawH = (rawH >= 0 ? 1 : -1) * maxDim;
+          }
+
+          let left: number;
+          let top: number;
+          let width: number;
+          let height: number;
+
+          // Alt: expand from center origin
+          if (draw.isAlt || e.altKey) {
+            width = Math.max(20, Math.round(Math.abs(rawW) * 2));
+            height = Math.max(20, Math.round(Math.abs(rawH) * 2));
+            left = Math.round(draw.startX - width / 2);
+            top = Math.round(draw.startY - height / 2);
+          } else {
+            left = Math.round(Math.min(draw.startX, draw.startX + rawW));
+            top = Math.round(Math.min(draw.startY, draw.startY + rawH));
+            width = Math.max(20, Math.round(Math.abs(rawW)));
+            height = Math.max(20, Math.round(Math.abs(rawH)));
+          }
+
+          createdLayer = createLayerForTool(
+            draw.tool,
+            draw.startX,
+            draw.startY,
+            activeScreen?.layers.length ?? 0,
+            {
+              x: left,
+              y: top,
+              width,
+              height,
+            }
+          );
+        }
+
+        if (createdLayer) {
+          addLayer(createdLayer);
+          selectLayer(createdLayer.id, false);
+          if (draw.tool === "text") {
+            setEditingLayerId(createdLayer.id);
+          }
+          setTool("select");
+          return;
+        }
+      }
+
+      // 2. Finalize Marquee Selection
       const m = marqueeRef.current;
       if (!m) {
         setMarquee(null);
@@ -454,13 +605,40 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       setMarquee(null);
     };
 
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (drawingCreationRef.current) {
+          drawingCreationRef.current = null;
+          setDrawingCreation(null);
+          setTool("select");
+        }
+        if (marqueeRef.current) {
+          marqueeRef.current = null;
+          setMarquee(null);
+        }
+      }
+    };
+
     window.addEventListener("mousemove", onWindowMouseMove);
     window.addEventListener("mouseup", onWindowMouseUp);
+    window.addEventListener("keydown", onKeyDown);
     return () => {
       window.removeEventListener("mousemove", onWindowMouseMove);
       window.removeEventListener("mouseup", onWindowMouseUp);
+      window.removeEventListener("keydown", onKeyDown);
     };
-  }, [marquee !== null, activeScreen.id, doc.settings.width, effectiveScale, deselectAll]);
+  }, [
+    marquee !== null,
+    drawingCreation !== null,
+    activeScreen.id,
+    doc.settings.width,
+    effectiveScale,
+    deselectAll,
+    addLayer,
+    selectLayer,
+    setEditingLayerId,
+    setTool,
+  ]);
 
   const isPanMode = spacePressed || activeTool === "hand";
 
@@ -524,19 +702,33 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         ? (e.clientY - hitScreenRect.top) / domScale
         : 100;
 
-      // Click-to-place elements via active tool
-      const createdLayer = createLayerForTool(
-        activeTool,
-        canvasX,
-        canvasY,
-        activeScreen?.layers.length ?? 0
-      );
-      if (createdLayer) {
-        addLayer(createdLayer);
-        if (activeTool === "text") {
-          setEditingLayerId(createdLayer.id);
-        }
-        setTool("select");
+      // Interactive Drag-to-Create Elements via active tool
+      const isCreationTool = [
+        "rectangle",
+        "circle",
+        "star",
+        "triangle",
+        "polygon",
+        "line",
+        "arrow",
+        "frame",
+        "text",
+      ].includes(activeTool);
+
+      if (isCreationTool) {
+        e.preventDefault();
+        const startCreation = {
+          tool: activeTool,
+          screenId: hitScreen.id,
+          startX: canvasX,
+          startY: canvasY,
+          currentX: canvasX,
+          currentY: canvasY,
+          isShift: e.shiftKey,
+          isAlt: e.altKey,
+        };
+        drawingCreationRef.current = startCreation;
+        setDrawingCreation(startCreation);
         return;
       }
 
@@ -658,6 +850,60 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   const activeScreenIdx = Math.max(0, doc.screens.indexOf(activeScreen));
   const activeScreenX = isAnimate ? 0 : (activeScreen.x ?? (activeScreenIdx * ((activeScreen.width ?? doc.settings.width) + 120)));
   const activeScreenY = isAnimate ? 0 : (activeScreen.y ?? 0);
+
+  const isLineLikeCreation =
+    drawingCreation !== null && (drawingCreation.tool === "line" || drawingCreation.tool === "arrow");
+
+  const previewBounds = useMemo(() => {
+    if (!drawingCreation || isLineLikeCreation) return null;
+    let rawW = drawingCreation.currentX - drawingCreation.startX;
+    let rawH = drawingCreation.currentY - drawingCreation.startY;
+
+    if (drawingCreation.isShift) {
+      const maxDim = Math.max(Math.abs(rawW), Math.abs(rawH));
+      rawW = (rawW >= 0 ? 1 : -1) * maxDim;
+      rawH = (rawH >= 0 ? 1 : -1) * maxDim;
+    }
+
+    if (drawingCreation.isAlt) {
+      const width = Math.max(4, Math.abs(rawW) * 2);
+      const height = Math.max(4, Math.abs(rawH) * 2);
+      return {
+        left: Math.round(drawingCreation.startX - width / 2),
+        top: Math.round(drawingCreation.startY - height / 2),
+        width: Math.round(width),
+        height: Math.round(height),
+      };
+    }
+
+    return {
+      left: Math.round(Math.min(drawingCreation.startX, drawingCreation.startX + rawW)),
+      top: Math.round(Math.min(drawingCreation.startY, drawingCreation.startY + rawH)),
+      width: Math.max(4, Math.round(Math.abs(rawW))),
+      height: Math.max(4, Math.round(Math.abs(rawH))),
+    };
+  }, [drawingCreation, isLineLikeCreation]);
+
+  const previewLine = useMemo(() => {
+    if (!drawingCreation || !isLineLikeCreation) return null;
+    let dx = drawingCreation.currentX - drawingCreation.startX;
+    let dy = drawingCreation.currentY - drawingCreation.startY;
+    let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    if (drawingCreation.isShift) {
+      angle = Math.round(angle / 45) * 45;
+      const rad = angle * (Math.PI / 180);
+      const dist = Math.hypot(dx, dy);
+      dx = Math.cos(rad) * dist;
+      dy = Math.sin(rad) * dist;
+    }
+    const length = Math.hypot(dx, dy);
+    return {
+      x: drawingCreation.startX,
+      y: drawingCreation.startY,
+      length,
+      angle,
+    };
+  }, [drawingCreation, isLineLikeCreation]);
 
   return (
     <main
@@ -865,6 +1111,50 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
             y: activeScreenY,
           }}
         />
+
+        {/* Creation Ghost Preview */}
+        {drawingCreation &&
+          (Math.abs(drawingCreation.currentX - drawingCreation.startX) > 4 ||
+            Math.abs(drawingCreation.currentY - drawingCreation.startY) > 4) &&
+          (isLineLikeCreation && previewLine ? (
+            <div
+              style={{
+                position: "absolute",
+                left: `${activeScreenX + previewLine.x}px`,
+                top: `${activeScreenY + previewLine.y}px`,
+                width: `${Math.max(1, previewLine.length)}px`,
+                height: "2px",
+                transformOrigin: "0 50%",
+                transform: `rotate(${previewLine.angle}deg)`,
+              }}
+              className="bg-[#7c3aed] pointer-events-none z-50 flex items-center justify-center"
+            >
+              <span
+                style={{
+                  transform: `rotate(${-previewLine.angle}deg)`,
+                }}
+                className="absolute -top-6 text-[10px] font-mono font-medium text-white bg-zinc-900/90 px-1.5 py-0.5 rounded shadow-xs border border-zinc-700/50 whitespace-nowrap"
+              >
+                {Math.round(previewLine.length)}px ({Math.round(previewLine.angle)}°)
+              </span>
+            </div>
+          ) : previewBounds ? (
+            <div
+              style={{
+                position: "absolute",
+                left: `${activeScreenX + previewBounds.left}px`,
+                top: `${activeScreenY + previewBounds.top}px`,
+                width: `${previewBounds.width}px`,
+                height: `${previewBounds.height}px`,
+                borderRadius: drawingCreation.tool === "circle" ? "9999px" : "4px",
+              }}
+              className="border-2 border-dashed border-[#7c3aed] bg-[#7c3aed]/10 pointer-events-none z-50 flex items-end justify-end p-1.5"
+            >
+              <span className="text-[10px] font-mono font-medium text-white bg-zinc-900/90 px-1.5 py-0.5 rounded shadow-xs border border-zinc-700/50 whitespace-nowrap">
+                {Math.round(previewBounds.width)} × {Math.round(previewBounds.height)}
+              </span>
+            </div>
+          ) : null)}
 
         {/* Marquee Selection Rectangle */}
         {marquee &&

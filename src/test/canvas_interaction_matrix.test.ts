@@ -13,6 +13,7 @@ import { layerStyleToCss } from "../components/canvas/renderers/styleUtils";
 import { TextRenderer } from "../components/canvas/renderers/TextRenderer";
 import { render } from "@testing-library/react";
 import { Layer, GroupLayer, TextLayer } from "../types/scene";
+import { createLayerForTool } from "../components/canvas/helpers/toolCreationHelpers";
 
 describe("Canvas Interaction & State Matrix Tests", () => {
   beforeEach(() => {
@@ -1037,6 +1038,85 @@ describe("Canvas Interaction & State Matrix Tests", () => {
       const prevScreen = doc.screens[doc.screens.length - 2];
       const prevRight = (prevScreen.x ?? 0) + (prevScreen.width ?? 1920);
       expect(duplicated.x).toBeGreaterThanOrEqual(prevRight + 120);
+    });
+  });
+
+  describe("Domain K: Interactive Drag-to-Create Elements & Modifiers", () => {
+    it("creates geometric shape with custom dragged bounds", () => {
+      const rect = createLayerForTool("rectangle", 100, 100, 0, {
+        x: 150,
+        y: 220,
+        width: 480,
+        height: 320,
+      });
+
+      expect(rect).not.toBeNull();
+      expect(rect?.type).toBe("shape");
+      expect(rect?.style.x).toBe(150);
+      expect(rect?.style.y).toBe(220);
+      expect(rect?.style.width).toBe(480);
+      expect(rect?.style.height).toBe(320);
+    });
+
+    it("creates frame with custom dragged bounds", () => {
+      const frame = createLayerForTool("frame", 100, 100, 0, {
+        x: 300,
+        y: 180,
+        width: 600,
+        height: 400,
+      });
+
+      expect(frame).not.toBeNull();
+      expect(frame?.type).toBe("frame");
+      expect(frame?.style.x).toBe(300);
+      expect(frame?.style.y).toBe(180);
+      expect(frame?.style.width).toBe(600);
+      expect(frame?.style.height).toBe(400);
+    });
+
+    it("creates text layer with custom dragged bounds and proportionate font size", () => {
+      const text = createLayerForTool("text", 100, 100, 0, {
+        x: 200,
+        y: 150,
+        width: 500,
+        height: 120,
+      });
+
+      expect(text).not.toBeNull();
+      expect(text?.type).toBe("text");
+      expect(text?.style.x).toBe(200);
+      expect(text?.style.y).toBe(150);
+      expect(text?.style.width).toBe(500);
+      expect(text?.style.height).toBe(120);
+      // FontSize scales comfortably with height (e.g. 120 * 0.55 = 66)
+      expect(text?.style.fontSize).toBe(66);
+    });
+
+    it("creates line and arrow with custom length and angle", () => {
+      const arrow = createLayerForTool("arrow", 50, 50, 0, {
+        x: 100,
+        y: 200,
+        width: 350,
+        height: 20,
+        rotation: 45,
+      });
+
+      expect(arrow).not.toBeNull();
+      expect(arrow?.type).toBe("line");
+      expect(arrow?.style.x).toBe(100);
+      expect(arrow?.style.y).toBe(200);
+      expect(arrow?.style.width).toBe(350);
+      expect(arrow?.style.rotation).toBe(45);
+      expect(arrow?.style.pivotX).toBe(0);
+    });
+
+    it("preserves single-click fallback to standard default size when customBounds is omitted", () => {
+      const defaultCircle = createLayerForTool("circle", 400, 300, 0);
+      expect(defaultCircle).not.toBeNull();
+      expect(defaultCircle?.style.width).toBe(200);
+      expect(defaultCircle?.style.height).toBe(200);
+      expect(defaultCircle?.style.x).toBe(300); // 400 - 100
+      expect(defaultCircle?.style.y).toBe(200); // 300 - 100
     });
   });
 });

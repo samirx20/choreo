@@ -1164,3 +1164,27 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Verification**:
   * Added unit test suite in `src/test/design_and_motion_truth_matrix.test.ts` verifying triangle/star fill preservation, hollow toggling, line creation, and stroke resolution.
   * All 38 test suites (324 tests) pass 100% cleanly.
+
+---
+
+### Decision 61: Interactive Drag-to-Create Elements on Canvas with Live Preview Ghost & Modifiers
+* **Creation Lifecycle Architecture (`src/components/canvas/CanvasViewport.tsx`, `toolCreationHelpers.ts`)**:
+  * Replaced immediate on-mousedown layer spawning with a 3-stage interactive drag lifecycle (`onMouseDown` $\to$ `windowMouseMove` $\to$ `windowMouseUp`).
+  * On mouse down with a creation tool (`rectangle`, `circle`, `star`, `triangle`, `polygon`, `line`, `arrow`, `frame`, `text`), captures `drawingCreation` starting coordinates without committing to the AST.
+  * On mouse move, dynamically evaluates candidate bounds, modifier keys, and dimensions.
+  * On mouse up, finalizes the element at the exact authored size, position, and orientation, auto-selects the created layer, and restores `activeTool` to `"select"`.
+* **Hybrid Click vs. Drag (Best of Both Worlds)**:
+  * **Drag ($\Delta > 5\text{px}$)**: Spawns the element matching the user's dragged bounding box or line vector.
+  * **Single Click ($\Delta \le 5\text{px}$)**: Gracefully falls back to placing standard default dimensions (`200×200`, `240×70`, etc.) centered at the click position.
+* **Professional Modifiers (Figma/Illustrator Parity)**:
+  * **Shift Key (Aspect Lock & Angle Snap)**: Locks 1:1 aspect ratio for boxes (perfect squares for rectangle/frame, perfect circles for ellipse/star, equilateral polygons). For lines and arrows, snaps angle to clean 45° increments (0°, 45°, 90°, 135°, 180°).
+  * **Alt Key (Center Origin Expansion)**: Expands shapes outward symmetrically from the initial click point rather than corner-to-corner.
+  * **Escape Key**: Instantly cancels current drawing creation drag and returns to select tool with zero side effects.
+* **Real-Time Creation Ghost Preview Overlay (`CanvasViewport.tsx`)**:
+  * For box shapes and frames: renders a high-visibility dashed accent border (`#7c3aed`), translucent fill, and real-time dimension badge (`320 × 240`).
+  * For lines and arrows: renders an accent line rotated directly along the drag vector with live length and angle badge (`280px (45°)`).
+* **Text Layer Auto-Proportioning (`toolCreationHelpers.ts`)**:
+  * When dragging a custom text box, `fontSize` automatically scales proportionately to dragged height (`Math.min(72, Math.max(20, Math.round(height * 0.55)))`), immediately opening inline editing upon placement.
+* **Verification**:
+  * Added unit test suite in `src/test/canvas_interaction_matrix.test.ts` (Domain K) verifying custom bounds creation across shapes, frames, text, lines, and click fallbacks.
+  * All 38 test suites (329 tests) pass 100% cleanly.

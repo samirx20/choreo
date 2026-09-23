@@ -1,11 +1,20 @@
 import { Layer } from "@/types/scene";
 import { THEME_TOKENS } from "@/theme/tokens";
 
+export interface CreationBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation?: number;
+}
+
 export function createLayerForTool(
   tool: string,
   canvasX: number,
   canvasY: number,
-  existingLayerCount: number = 0
+  existingLayerCount: number = 0,
+  customBounds?: CreationBounds
 ): Layer | null {
   const start = Math.round(existingLayerCount * 0.5 * 100) / 100;
   const duration = 0.5;
@@ -13,16 +22,24 @@ export function createLayerForTool(
   if (tool === "text") {
     const newId = `text_${Date.now()}`;
     const clipId = `clip_${Date.now()}_in`;
+    const width = customBounds ? Math.max(60, customBounds.width) : 240;
+    const height = customBounds ? Math.max(30, customBounds.height) : 70;
+    const x = customBounds ? Math.round(customBounds.x) : Math.round(canvasX);
+    const y = customBounds ? Math.round(customBounds.y) : Math.round(canvasY);
+    const fontSize = customBounds
+      ? Math.min(72, Math.max(20, Math.round(height * 0.55)))
+      : 54;
+
     return {
       id: newId,
       name: "Text Layer",
       type: "text",
       content: "Add text",
       style: {
-        x: Math.round(canvasX),
-        y: Math.round(canvasY),
-        width: 240,
-        height: 70,
+        x,
+        y,
+        width,
+        height,
         textSizing: "fixed",
         scaleX: 1,
         scaleY: 1,
@@ -30,7 +47,7 @@ export function createLayerForTool(
         pivotY: 0.5,
         rotation: 0,
         opacity: 1,
-        fontSize: 54,
+        fontSize,
         fontWeight: 800,
         fontFamily: "Inter",
         color: THEME_TOKENS.typography.headingColor,
@@ -64,6 +81,11 @@ export function createLayerForTool(
   if (tool === "frame") {
     const newId = `frame_${Date.now()}`;
     const clipId = `clip_${Date.now()}_in`;
+    const width = customBounds ? Math.max(40, customBounds.width) : 300;
+    const height = customBounds ? Math.max(40, customBounds.height) : 200;
+    const x = customBounds ? Math.round(customBounds.x) : Math.round(canvasX - 150);
+    const y = customBounds ? Math.round(customBounds.y) : Math.round(canvasY - 100);
+
     return {
       id: newId,
       name: "Frame",
@@ -71,10 +93,10 @@ export function createLayerForTool(
       clipContent: true,
       children: [],
       style: {
-        x: Math.round(canvasX - 150),
-        y: Math.round(canvasY - 100),
-        width: 300,
-        height: 200,
+        x,
+        y,
+        width,
+        height,
         rotation: 0,
         opacity: 1,
         backgroundColor: "rgba(255, 255, 255, 0.05)",
@@ -110,6 +132,12 @@ export function createLayerForTool(
     const isArrow = tool === "arrow";
     const newId = `${tool}_${Date.now()}`;
     const clipId = `clip_${Date.now()}_in`;
+    const width = customBounds ? Math.max(20, customBounds.width) : 200;
+    const height = customBounds ? Math.max(10, customBounds.height) : 20;
+    const x = customBounds ? Math.round(customBounds.x) : Math.round(canvasX - 100);
+    const y = customBounds ? Math.round(customBounds.y) : Math.round(canvasY - 10);
+    const rotation = customBounds?.rotation ?? 0;
+
     return {
       id: newId,
       name: isArrow ? "Arrow" : "Line",
@@ -119,11 +147,13 @@ export function createLayerForTool(
       strokeWidth: 3,
       strokeColor: THEME_TOKENS.accent.primary,
       style: {
-        x: Math.round(canvasX - 100),
-        y: Math.round(canvasY - 10),
-        width: 200,
-        height: 20,
-        rotation: 0,
+        x,
+        y,
+        width,
+        height,
+        rotation,
+        pivotX: customBounds ? 0 : 0.5,
+        pivotY: 0.5,
         opacity: 1,
         backgroundColor: THEME_TOKENS.accent.primary,
         borderColor: THEME_TOKENS.accent.primary,
@@ -156,16 +186,21 @@ export function createLayerForTool(
   if (tool === "polygon") {
     const newId = `polygon_${Date.now()}`;
     const clipId = `clip_${Date.now()}_in`;
+    const width = customBounds ? Math.max(20, customBounds.width) : 200;
+    const height = customBounds ? Math.max(20, customBounds.height) : 200;
+    const x = customBounds ? Math.round(customBounds.x) : Math.round(canvasX - 100);
+    const y = customBounds ? Math.round(customBounds.y) : Math.round(canvasY - 100);
+
     return {
       id: newId,
       name: "Polygon",
       type: "polygon",
       sides: 5,
       style: {
-        x: Math.round(canvasX - 100),
-        y: Math.round(canvasY - 100),
-        width: 200,
-        height: 200,
+        x,
+        y,
+        width,
+        height,
         rotation: 0,
         opacity: 1,
         backgroundColor: THEME_TOKENS.accent.primary,
@@ -202,16 +237,21 @@ export function createLayerForTool(
     const defaultPreset = isRect ? "grow" : "pop";
     const defaultName = isRect ? "Grow" : "Pop";
 
+    const width = customBounds ? Math.max(20, customBounds.width) : 200;
+    const height = customBounds ? Math.max(20, customBounds.height) : 200;
+    const x = customBounds ? Math.round(customBounds.x) : Math.round(canvasX - 100);
+    const y = customBounds ? Math.round(customBounds.y) : Math.round(canvasY - 100);
+
     return {
       id: newId,
       name: `${shapeType.charAt(0).toUpperCase() + shapeType.slice(1)}`,
       type: "shape",
       shapeType,
       style: {
-        x: Math.round(canvasX - 100),
-        y: Math.round(canvasY - 100),
-        width: 200,
-        height: 200,
+        x,
+        y,
+        width,
+        height,
         scaleX: 1,
         scaleY: 1,
         pivotX: 0.5,
