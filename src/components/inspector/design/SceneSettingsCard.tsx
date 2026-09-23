@@ -35,7 +35,6 @@ export const SceneSettingsCard: React.FC = () => {
 
   const [isEditingSceneName, setIsEditingSceneName] = useState(false);
   const [sceneNameInput, setSceneNameInput] = useState(activeScreen.name);
-  const [applyToAllScenes, setApplyToAllScenes] = useState(false);
 
   useEffect(() => {
     setSceneNameInput(activeScreen.name);
@@ -228,25 +227,15 @@ export const SceneSettingsCard: React.FC = () => {
         <div
           onClick={() => {
             if (hasSceneFill) {
-              // Disabling fill -> set transparent
-              if (applyToAllScenes) {
-                doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: "transparent" }));
-                updateSettings({ backgroundColor: "transparent" });
-              } else {
-                updateScreen(activeScreen.id, { backgroundColor: "transparent" });
-              }
+              updateScreen(activeScreen.id, { backgroundColor: "transparent" });
             } else {
-              // Enabling fill -> restore a valid non-transparent color (never "transparent")
               const restoreColor =
-                settings.backgroundColor && settings.backgroundColor !== "transparent"
+                activeScreen.backgroundColor && activeScreen.backgroundColor !== "transparent"
+                  ? activeScreen.backgroundColor
+                  : settings.backgroundColor && settings.backgroundColor !== "transparent"
                   ? settings.backgroundColor
                   : "#ffffff";
-              if (applyToAllScenes) {
-                doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: restoreColor }));
-                updateSettings({ backgroundColor: restoreColor });
-              } else {
-                updateScreen(activeScreen.id, { backgroundColor: restoreColor });
-              }
+              updateScreen(activeScreen.id, { backgroundColor: restoreColor });
             }
           }}
           className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
@@ -270,13 +259,7 @@ export const SceneSettingsCard: React.FC = () => {
                   onChange={(e) => {
                     const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
                     if (clean.length === 6 || clean.length === 3) {
-                      const newColor = `#${clean}`;
-                      if (applyToAllScenes) {
-                        doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: newColor }));
-                        updateSettings({ backgroundColor: newColor });
-                      } else {
-                        updateScreen(activeScreen.id, { backgroundColor: newColor });
-                      }
+                      updateScreen(activeScreen.id, { backgroundColor: `#${clean}` });
                     }
                   }}
                   className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
@@ -284,39 +267,11 @@ export const SceneSettingsCard: React.FC = () => {
                 <ColorPicker
                   value={currentBg || "#ffffff"}
                   onChange={(newColor) => {
-                    if (applyToAllScenes) {
-                      doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: newColor }));
-                      updateSettings({ backgroundColor: newColor });
-                    } else {
-                      updateScreen(activeScreen.id, { backgroundColor: newColor });
-                    }
+                    updateScreen(activeScreen.id, { backgroundColor: newColor });
                   }}
                 />
               </div>
             </div>
-
-            {doc.screens.length > 1 && (
-              <div className="flex items-center justify-end gap-2 pt-1">
-                <Checkbox
-                  id="apply-to-all-scenes"
-                  checked={applyToAllScenes}
-                  onCheckedChange={(checked) => {
-                    const isChecked = Boolean(checked);
-                    setApplyToAllScenes(isChecked);
-                    if (isChecked) {
-                      doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: currentBg }));
-                      updateSettings({ backgroundColor: currentBg });
-                    }
-                  }}
-                />
-                <label
-                  htmlFor="apply-to-all-scenes"
-                  className="text-[11px] text-muted-foreground hover:text-foreground cursor-pointer select-none"
-                >
-                  Apply to all scenes
-                </label>
-              </div>
-            )}
           </div>
         )}
       </div>

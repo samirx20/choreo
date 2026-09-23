@@ -46,8 +46,8 @@ describe("ColorPicker Math & Scene Fill Architecture", () => {
     });
   });
 
-  describe("Per-scene Fill vs Apply to All Scenes synchronization", () => {
-    it("allows scenes to have independent background colors when apply to all is false", () => {
+  describe("Sequential Scene Background Inheritance & Fill Architecture", () => {
+    it("allows scenes to have independent background colors", () => {
       const store = useProjectStore.getState();
       const firstScreenId = store.document.screens[0].id;
 
@@ -66,32 +66,34 @@ describe("ColorPicker Math & Scene Fill Architecture", () => {
       expect(updatedScreens[1].backgroundColor).toBe("#0000ff");
     });
 
-    it("synchronizes background color to all scenes when applied globally", () => {
+    it("automatically inherits the background color of the preceding scene across additions", () => {
       const store = useProjectStore.getState();
-      store.addScreen();
-      store.addScreen();
-      expect(useProjectStore.getState().document.screens.length).toBe(3);
-
-      const targetColor = "#10b981";
-
-      // Simulate 'Apply to all scenes' behavior
-      useProjectStore.getState().document.screens.forEach((s) => {
-        useProjectStore.getState().updateScreen(s.id, { backgroundColor: targetColor });
-      });
-      useProjectStore.getState().updateSettings({ backgroundColor: targetColor });
-
-      const allScreens = useProjectStore.getState().document.screens;
-      expect(allScreens.every((s) => s.backgroundColor === targetColor)).toBe(true);
-      expect(useProjectStore.getState().document.settings.backgroundColor).toBe(targetColor);
-    });
-
-    it("defaults new projects and newly added screens to white (#ffffff)", () => {
-      const store = useProjectStore.getState();
-      expect(store.document.settings.backgroundColor).toBe("#ffffff");
+      // 1. Scene 1 defaults to white
       expect(store.document.screens[0].backgroundColor).toBe("#ffffff");
 
+      // 2. Add Scene 2 -> inherits white
       store.addScreen();
-      expect(useProjectStore.getState().document.screens[1].backgroundColor).toBe("#ffffff");
+      const screen2 = useProjectStore.getState().document.screens[1];
+      expect(screen2.backgroundColor).toBe("#ffffff");
+
+      // 3. Change Scene 2 to black
+      store.updateScreen(screen2.id, { backgroundColor: "#000000" });
+      expect(useProjectStore.getState().document.screens[1].backgroundColor).toBe("#000000");
+
+      // 4. Add Scene 3 -> inherits black from Scene 2
+      store.addScreen();
+      const screen3 = useProjectStore.getState().document.screens[2];
+      expect(screen3.backgroundColor).toBe("#000000");
+
+      // 5. Change Scene 3 to a gradient
+      const gradient = "linear-gradient(180deg, #ff5f56 0%, #ffbd2e 100%)";
+      store.updateScreen(screen3.id, { backgroundColor: gradient });
+      expect(useProjectStore.getState().document.screens[2].backgroundColor).toBe(gradient);
+
+      // 6. Add Scene 4 -> inherits the gradient from Scene 3
+      store.addScreen();
+      const screen4 = useProjectStore.getState().document.screens[3];
+      expect(screen4.backgroundColor).toBe(gradient);
     });
 
     it("reliably disables fill to transparent and re-enables back to a valid color", () => {

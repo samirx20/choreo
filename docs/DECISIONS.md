@@ -1134,3 +1134,16 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Verification**:
   * Added unit tests in `src/test/color_picker_and_scene_fill.test.ts` for default white background and bidirectional fill toggling.
   * All tests pass cleanly.
+
+---
+
+### Decision 59: Sequential Scene Background Inheritance & Removal of "Apply to All"
+* **Sequential Preceding Screen Background Inheritance (`src/store/slices/sceneSlice.ts`)**:
+  * In `addScreen`, newly appended scenes now automatically inherit the background of the **preceding scene** (`const lastScreen = doc.screens[doc.screens.length - 1]; const inheritedBg = lastScreen?.backgroundColor ?? doc.settings?.backgroundColor ?? "#ffffff";`).
+  * Workflow: Scene 1 (white) $\to$ Scene 2 starts with white. If Scene 3 is changed to black $\to$ Scene 4 starts with black. If Scene 4 is changed to a gradient $\to$ Scene 5 starts with that gradient.
+* **Removal of "Apply to All Scenes" Complexity (`src/components/inspector/design/SceneSettingsCard.tsx`)**:
+  * Eliminated the `applyToAllScenes` checkbox, state, and batch-mutation logic entirely.
+  * Every scene independently controls its own background fill without global cross-scene overwriting side-effects.
+* **Verification**:
+  * Added unit test suite in `src/test/color_picker_and_scene_fill.test.ts` verifying sequential inheritance across multiple scenes (white $\to$ black $\to$ gradient).
+  * All 38 test suites (322 tests) pass 100% cleanly.
