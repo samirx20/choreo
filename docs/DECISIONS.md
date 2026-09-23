@@ -1530,9 +1530,13 @@ The engine provides first-class, motion-first reactive primitives for each eleme
      - When split, the resulting parts are grouped inside a parent container tagged with `isCompound: true` and `compoundType: 'split-shape' | 'split-text' | 'split-line'`.
      - In **Design Mode**, canvas clicks on any child segment automatically resolve to the compound parent group (`findParentGroupInTree`), guaranteeing the entity moves and transforms strictly as one unified object with 0.0000px visual shift.
      - In **Animate / Motion Mode**, sub-layers are individually selectable on the timeline and inspector, enabling distinct motion choreography (e.g. Draw-On Part 1 while Part 2 fades or settles).
+  4. **Exact Shape Geometry & Aspect Ratio Matching (`shapeGeometry.ts`)**:
+     - Derived exact parametric vertices and edges for Triangles (3 edges), Stars (10 edges), Polygons ($N$ edges), Rectangles (4 edges + corner arcs), and Circles (4 quadrant arcs).
+     - Applied uniform $S = \min(W, H)/100$ scale and centering offsets ($offsetX, offsetY$) matching SVG `viewBox="0 0 100 100"` (`xMidYMid meet`), preventing distortion or skew on non-square shapes.
+     - Formulated closed-loop corner junctions ($J_0, J_1, J_2, J_3$) ensuring zero missing corner arcs and 0.0000px gap.
 * **Verification**:
-  * 18 unit tests passing across `src/test/interactive_split_mode.test.ts` and `src/test/universal_element_splitting.test.ts`.
-  * All 42 test suites (389 tests) pass cleanly (`npm test`).
+  * 10 dedicated tests in `src/test/interactive_split_mode.test.ts`.
+  * All 42 test suites (392 tests) pass cleanly (`npm test`).
   * Production build passes with 0 errors (`npm run build`).
 
 
