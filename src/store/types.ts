@@ -42,6 +42,16 @@ export interface ModeSavedState {
   loopMode?: "all" | "scene";
 }
 
+export type ShapeEdgeId = "top" | "right" | "bottom" | "left";
+
+export interface SplitModeState {
+  layerId: string;
+  type: "shape" | "line";
+  selectedEdges: ShapeEdgeId[];
+  cutRatio: number;
+  detachArrowhead: boolean;
+}
+
 export interface ScreenTiming {
   screen: Screen;
   startTime: number;
@@ -58,6 +68,7 @@ export interface ProjectStoreState {
   selectedLayerIds: string[];
   editingLayerId: string | null;
   activeTextSelection: { layerId: string; start: number; end: number; text: string } | null;
+  splitModeState: SplitModeState | null;
   activeTool: CanvasTool;
   uiMode: UiMode;
   motionLayerIds: string[] | null;
@@ -206,4 +217,12 @@ export interface ProjectStoreState {
       params?: Record<string, any>;
     }
   ) => string | null;
+
+  // Interactive Split Mode Actions
+  enterSplitMode: (layerId: string) => void;
+  toggleSplitEdge: (edge: ShapeEdgeId) => void;
+  setSplitCutRatio: (ratio: number) => void;
+  setSplitDetachArrowhead: (detach: boolean) => void;
+  exitSplitMode: () => void;
+  confirmSplit: () => void;
 }

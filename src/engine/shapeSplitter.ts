@@ -128,6 +128,8 @@ export function splitRoundedRectContour(
     id: `group_split_${Date.now()}`,
     name: `${layer.name} (Dual Path)`,
     type: "group",
+    isCompound: true,
+    compoundType: "split-shape",
     style: {
       x: layer.style.x,
       y: layer.style.y,
@@ -215,6 +217,8 @@ export function splitCircleContour(layer: ShapeLayer): SplitShapeResult {
     id: `group_circ_${Date.now()}`,
     name: `${layer.name} (Split Arcs)`,
     type: "group",
+    isCompound: true,
+    compoundType: "split-shape",
     style: {
       x: layer.style.x,
       y: layer.style.y,
@@ -239,8 +243,8 @@ export function splitCircleContour(layer: ShapeLayer): SplitShapeResult {
  * Allows choreographing stroke draw-on first, followed by a soft fill fade/iris reveal.
  */
 export function separateStrokeAndFill(layer: ShapeLayer): SplitShapeResult {
-  const widthNum = typeof layer.style.width === "number" ? layer.style.width : 100;
-  const heightNum = typeof layer.style.height === "number" ? layer.style.height : 100;
+  const widthNum = typeof layer.style.width === "number" ? layer.style.width : 200;
+  const heightNum = typeof layer.style.height === "number" ? layer.style.height : 150;
 
   // 1. Fill Layer
   const fillLayer: ShapeLayer = {
@@ -293,6 +297,8 @@ export function separateStrokeAndFill(layer: ShapeLayer): SplitShapeResult {
     id: `group_separated_${Date.now()}`,
     name: `${layer.name} (Fill & Stroke)`,
     type: "group",
+    isCompound: true,
+    compoundType: "split-shape",
     style: {
       x: layer.style.x,
       y: layer.style.y,
@@ -307,4 +313,168 @@ export function separateStrokeAndFill(layer: ShapeLayer): SplitShapeResult {
   };
 
   return { group, subLayers: [fillLayer, strokeLayer] };
+}
+
+/**
+ * Splits a shape's perimeter into two independent SVG path layers based on interactively selected edges.
+ * Part 1: The selected edges (with corner radii arcs).
+ * Part 2: The remaining edges (with corner radii arcs).
+ * Both parts are packaged in a compound locked group (moves as one, animates separately).
+ */
+export function splitShapeByEdges(
+  layer: ShapeLayer,
+  selectedEdges: ("top" | "right" | "bottom" | "left")[]
+): SplitShapeResult {
+  const widthNum = typeof layer.style.width === "number" ? layer.style.width : 200;
+  const heightNum = typeof layer.style.height === "number" ? layer.style.height : 150;
+
+  const rawRadius = typeof layer.style.borderRadius === "number" ? layer.style.borderRadius : 0;
+  const maxRadius = Math.min(widthNum / 2, heightNum / 2);
+  const r = Math.max(0, Math.min(rawRadius, maxRadius));
+
+  const strokeWidth =
+    typeof layer.style.borderWidth === "number" && layer.style.borderWidth > 0
+      ? layer.style.borderWidth
+      : 2;
+  const strokeColor =
+    layer.style.borderColor || layer.style.backgroundColor || "#3b82f6";
+
+  const W = widthNum;
+  const H = heightNum;
+
+  function buildPathD(edges: ("top" | "right" | "bottom" | "left")[]): string {
+    const hasTop = edges.includes("top");
+    const hasRight = edges.includes("right");
+    const hasBottom = edges.includes("bottom");
+    const hasLeft = edges.includes("left");
+
+    if (hasTop && hasLeft && !hasRight && !hasBottom) {
+      return r > 0
+        ? `M 0 ${H - r} L 0 ${r} A ${r} ${r} 0 0 1 ${r} 0 L ${W - r} 0`
+        : `M 0 ${H} L 0 0 L ${W} 0`;
+    }
+    if (hasRight && hasBottom && !hasTop && !hasLeft) {
+      return r > 0
+        ? `M ${W} ${r} L ${W} ${H - r} A ${r} ${r} 0 0 1 ${W - r} ${H} L ${r} ${H}`
+        : `M ${W} 0 L ${W} ${H} L 0 ${H}`;
+    }
+    if (hasTop && hasRight && !hasBottom && !hasLeft) {
+      return r > 0
+        ? `M ${r} 0 L ${W - r} 0 A ${r} ${r} 0 0 1 ${W} ${r} L ${W} ${H - r}`
+        : `M 0 0 L ${W} 0 L ${W} ${H}`;
+    }
+    if (hasBottom && hasLeft && !hasTop && !hasRight) {
+      return r > 0
+        ? `M ${W - r} ${H} L ${r} ${H} A ${r} ${r} 0 0 1 0 ${H - r} L 0 ${r}`
+        : `M ${W} ${H} L 0 ${H} L 0 0`;
+    }
+
+    const pathParts: string[] = [];
+    if (hasTop) {
+      pathParts.push(r > 0 ? `M ${r} 0 L ${W - r} 0` : `M 0 0 L ${W} 0`);
+      if (hasRight && r > 0) pathParts.push(`A ${r} ${r} 0 0 1 ${W} ${r}`);
+    }
+    if (hasRight) {
+      if (!hasTop || r === 0) pathParts.push(r > 0 ? `M ${W} ${r} L ${W} ${H - r}` : `M ${W} 0 L ${W} ${H}`);
+      else pathParts.push(`L ${W} ${H - r}`);
+      if (hasBottom && r > 0) pathParts.push(`A ${r} ${r} 0 0 1 ${W - r} ${H}`);
+    }
+    if (hasBottom) {
+      if (!hasRight || r === 0) pathParts.push(r > 0 ? `M ${W - r} ${H} L ${r} ${H}` : `M ${W} ${H} L 0 ${H}`);
+      else pathParts.push(`L ${r} ${H}`);
+      if (hasLeft && r > 0) pathParts.push(`A ${r} ${r} 0 0 1 0 ${H - r}`);
+    }
+    if (hasLeft) {
+      if (!hasBottom || r === 0) pathParts.push(r > 0 ? `M 0 ${H - r} L 0 ${r}` : `M 0 ${H} L 0 0`);
+      else pathParts.push(`L 0 ${r}`);
+      if (hasTop && r > 0) pathParts.push(`A ${r} ${r} 0 0 1 ${r} 0`);
+    }
+
+    return pathParts.join(" ") || `M 0 0 L 0 0`;
+  }
+
+  const allEdges: ("top" | "right" | "bottom" | "left")[] = ["top", "right", "bottom", "left"];
+  const unselectedEdges = allEdges.filter((e) => !selectedEdges.includes(e));
+
+  const pathA_d = buildPathD(selectedEdges);
+  const pathB_d = buildPathD(unselectedEdges);
+
+  const baseStyle = {
+    ...layer.style,
+    backgroundColor: "transparent",
+    borderWidth: strokeWidth,
+    borderColor: strokeColor,
+    borderRadius: 0,
+  };
+
+  const pathA: ShapeLayer = {
+    id: `path_${Date.now()}_sel`,
+    name: `${layer.name} (Selected Edges)`,
+    type: "shape",
+    shapeType: "path",
+    d: pathA_d,
+    strokeCap: layer.strokeCap || "round",
+    strokeJoin: layer.strokeJoin || "round",
+    trimStart: 0,
+    trimEnd: 100,
+    style: {
+      ...baseStyle,
+      x: 0,
+      y: 0,
+    },
+    animation: {
+      in: {
+        preset: "drawOn",
+        duration: 0.8,
+        start: 0,
+        easing: "snappy",
+      },
+    },
+  };
+
+  const pathB: ShapeLayer = {
+    id: `path_${Date.now()}_rem`,
+    name: `${layer.name} (Remaining Edges)`,
+    type: "shape",
+    shapeType: "path",
+    d: pathB_d,
+    strokeCap: layer.strokeCap || "round",
+    strokeJoin: layer.strokeJoin || "round",
+    trimStart: 0,
+    trimEnd: 100,
+    style: {
+      ...baseStyle,
+      x: 0,
+      y: 0,
+    },
+    animation: {
+      in: {
+        preset: "drawOn",
+        duration: 0.8,
+        start: 0,
+        easing: "snappy",
+      },
+    },
+  };
+
+  const group: GroupLayer = {
+    id: `compound_shape_${Date.now()}`,
+    name: `${layer.name} (Split)`,
+    type: "group",
+    isCompound: true,
+    compoundType: "split-shape",
+    style: {
+      x: layer.style.x,
+      y: layer.style.y,
+      width: widthNum,
+      height: heightNum,
+      rotation: layer.style.rotation || 0,
+      opacity: layer.style.opacity ?? 1,
+      backgroundColor: "transparent",
+      borderWidth: 0,
+    },
+    children: [pathA, pathB],
+  };
+
+  return { group, subLayers: [pathA, pathB] };
 }

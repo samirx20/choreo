@@ -1,5 +1,5 @@
-import { ProjectStoreState } from "../types";
-import { SceneDocument, Layer, GroupLayer, FrameLayer } from "@/types/scene";
+import { ProjectStoreState, ShapeEdgeId } from "../types";
+import { SceneDocument, Layer, GroupLayer, FrameLayer, ShapeLayer, LineLayer } from "@/types/scene";
 import {
   findLayerInTree,
   mutateLayerInTree,
@@ -17,15 +17,16 @@ import {
   splitRoundedRectContour,
   splitCircleContour,
   separateStrokeAndFill as separateStrokeFillEngine,
+  splitShapeByEdges,
 } from "@/engine/shapeSplitter";
 import {
   splitLineAtRatio,
   detachArrowhead as detachArrowheadEngine,
 } from "@/engine/lineSplitter";
-import { ShapeLayer } from "@/types/scene";
 
 export type LayerSlice = Pick<
   ProjectStoreState,
+  | "splitModeState"
   | "addLayer"
   | "updateLayer"
   | "removeLayer"
@@ -54,12 +55,19 @@ export type LayerSlice = Pick<
   | "updateLayerBinding"
   | "removeLayerBinding"
   | "razorSplitLayer"
+  | "enterSplitMode"
+  | "toggleSplitEdge"
+  | "setSplitCutRatio"
+  | "setSplitDetachArrowhead"
+  | "exitSplitMode"
+  | "confirmSplit"
 >;
 
 export const createLayerSlice = (
   set: (fn: Partial<ProjectStoreState> | ((prev: ProjectStoreState) => Partial<ProjectStoreState>)) => void,
   get: () => ProjectStoreState
 ): LayerSlice => ({
+  splitModeState: null,
   addLayer: (layer, targetGroupId) => {
     const { document: doc, activeScreenId } = get();
     const nextDoc: SceneDocument = {
@@ -639,6 +647,8 @@ export const createLayerSlice = (
         id: newGroupId,
         name: targetLayer.name || "Text Group",
         type: "group",
+        isCompound: true,
+        compoundType: "split-text",
         layout: {
           display: "flex",
           flexDirection: "row",
@@ -1078,5 +1088,139 @@ export const createLayerSlice = (
     });
 
     return splitResult;
+  },
+
+  enterSplitMode: (layerId) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    const layer = findLayerInTree(activeScreen.layers, layerId);
+    if (!layer) return;
+
+    if (layer.type === "shape") {
+      set({
+        splitModeState: {
+          layerId,
+          type: "shape",
+          selectedEdges: ["top", "left"],
+          cutRatio: 0.5,
+          detachArrowhead: false,
+        },
+        selectedLayerIds: [layerId],
+      });
+    } else if (layer.type === "line") {
+      set({
+        splitModeState: {
+          layerId,
+          type: "line",
+          selectedEdges: [],
+          cutRatio: 0.5,
+          detachArrowhead: false,
+        },
+        selectedLayerIds: [layerId],
+      });
+    }
+  },
+
+  toggleSplitEdge: (edge) => {
+    const { splitModeState } = get();
+    if (!splitModeState || splitModeState.type !== "shape") return;
+
+    const exists = splitModeState.selectedEdges.includes(edge);
+    const nextEdges = exists
+      ? splitModeState.selectedEdges.filter((e) => e !== edge)
+      : [...splitModeState.selectedEdges, edge];
+
+    if (nextEdges.length === 0) return;
+
+    set({
+      splitModeState: {
+        ...splitModeState,
+        selectedEdges: nextEdges,
+      },
+    });
+  },
+
+  setSplitCutRatio: (ratio) => {
+    const { splitModeState } = get();
+    if (!splitModeState) return;
+    const clamped = Math.max(0.05, Math.min(0.95, ratio));
+    set({
+      splitModeState: {
+        ...splitModeState,
+        cutRatio: clamped,
+      },
+    });
+  },
+
+  setSplitDetachArrowhead: (detach) => {
+    const { splitModeState } = get();
+    if (!splitModeState) return;
+    set({
+      splitModeState: {
+        ...splitModeState,
+        detachArrowhead: detach,
+      },
+    });
+  },
+
+  exitSplitMode: () => {
+    set({ splitModeState: null });
+  },
+
+  confirmSplit: () => {
+    const { document: doc, activeScreenId, splitModeState } = get();
+    if (!splitModeState) return;
+
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) {
+      set({ splitModeState: null });
+      return;
+    }
+
+    const targetLayer = findLayerInTree(activeScreen.layers, splitModeState.layerId);
+    if (!targetLayer) {
+      set({ splitModeState: null });
+      return;
+    }
+
+    let splitGroup: GroupLayer | null = null;
+
+    if (splitModeState.type === "shape" && targetLayer.type === "shape") {
+      const res = splitShapeByEdges(targetLayer as ShapeLayer, splitModeState.selectedEdges);
+      splitGroup = res.group;
+    } else if (splitModeState.type === "line" && targetLayer.type === "line") {
+      if (splitModeState.detachArrowhead) {
+        const res = detachArrowheadEngine(targetLayer as LineLayer);
+        splitGroup = res.group;
+      } else {
+        const res = splitLineAtRatio(targetLayer as LineLayer, splitModeState.cutRatio);
+        splitGroup = res.group;
+      }
+    }
+
+    if (!splitGroup) {
+      set({ splitModeState: null });
+      return;
+    }
+
+    const nextLayers = mutateLayerInTree(
+      activeScreen.layers,
+      splitModeState.layerId,
+      () => splitGroup!
+    );
+
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: [splitGroup.id],
+      splitModeState: null,
+    });
   },
 });

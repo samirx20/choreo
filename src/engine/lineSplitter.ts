@@ -79,6 +79,8 @@ export function splitLineAtRatio(layer: Layer, ratio: number = 0.5): SplitLineRe
     id: `group_line_${Date.now()}`,
     name: `${layer.name} (Split Line)`,
     type: "group",
+    isCompound: true,
+    compoundType: "split-line",
     style: {
       x: layer.style.x,
       y: layer.style.y,
@@ -161,6 +163,8 @@ export function detachArrowhead(layer: Layer): SplitLineResult {
     id: `group_arrow_${Date.now()}`,
     name: `${layer.name} (Shaft & Head)`,
     type: "group",
+    isCompound: true,
+    compoundType: "split-line",
     style: {
       x: layer.style.x,
       y: layer.style.y,

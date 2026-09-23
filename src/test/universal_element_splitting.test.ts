@@ -361,7 +361,7 @@ describe("Pillar A: Universal Element Splitting Engine", () => {
       expect(detachedChild2?.style.y).toBe(180);
     });
 
-    it("exposes element-specific splitting actions in canvas context menu", () => {
+    it("exposes interactive split actions in canvas context menu", () => {
       const store = useProjectStore.getState();
 
       const rectLayer: ShapeLayer = {
@@ -375,7 +375,7 @@ describe("Pillar A: Universal Element Splitting Engine", () => {
         id: "t1",
         name: "Title",
         type: "text",
-        content: "Hello",
+        content: "Hello World",
         style: { x: 0, y: 0, width: 100, height: 30, rotation: 0, opacity: 1 },
       };
       const lineLayer = {
@@ -386,21 +386,28 @@ describe("Pillar A: Universal Element Splitting Engine", () => {
       } as Layer;
 
       const rectMenu = buildCanvasElementMenu({ layer: rectLayer, store });
-      const textMenu = buildCanvasElementMenu({ layer: textLayer, store });
       const lineMenu = buildCanvasElementMenu({ layer: lineLayer, store });
 
       const hasAction = (menu: any[], id: string) => menu.some((item) => item.id === id);
 
-      // Shape menu has contour & stroke/fill split
-      expect(hasAction(rectMenu, "split-contour-stroke")).toBe(true);
-      expect(hasAction(rectMenu, "separate-stroke-fill")).toBe(true);
+      // Shape menu has enter split mode
+      expect(hasAction(rectMenu, "enter-split-mode")).toBe(true);
 
-      // Text menu has word & line split
-      expect(hasAction(textMenu, "split-text-words")).toBe(true);
-      expect(hasAction(textMenu, "split-text-lines")).toBe(true);
+      // Line menu has enter split mode
+      expect(hasAction(lineMenu, "enter-split-mode")).toBe(true);
 
-      // Line menu has midpoint split
-      expect(hasAction(lineMenu, "split-line-midpoint")).toBe(true);
+      // Text menu without selection does not have canned split actions
+      const textMenuNoSel = buildCanvasElementMenu({ layer: textLayer, store });
+      expect(hasAction(textMenuNoSel, "split-text-words")).toBe(false);
+      expect(hasAction(textMenuNoSel, "split-text-lines")).toBe(false);
+
+      // Text menu with active selection has Split action
+      const storeWithSel = {
+        ...store,
+        activeTextSelection: { layerId: "t1", start: 0, end: 5, text: "Hello" },
+      } as any;
+      const textMenuWithSel = buildCanvasElementMenu({ layer: textLayer, store: storeWithSel });
+      expect(hasAction(textMenuWithSel, "split-text-selection")).toBe(true);
     });
   });
 });

@@ -252,6 +252,8 @@ export interface BaseLayer {
   grid?: GridCoordinates;
   animation?: LayerAnimation;
   bindings?: ElementLinkBinding[];
+  isCompound?: boolean;
+  compoundType?: 'split-shape' | 'split-text' | 'split-line';
 }
 
 export interface GroupLayer extends BaseLayer {
@@ -262,6 +264,8 @@ export interface GroupLayer extends BaseLayer {
   children: Layer[];
   autoLink?: boolean;
   staggerDelay?: number;
+  isCompound?: boolean;
+  compoundType?: 'split-shape' | 'split-text' | 'split-line';
 }
 
 export interface TextLayer extends BaseLayer {

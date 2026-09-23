@@ -15,6 +15,8 @@ import { THEME_TOKENS } from "@/theme/tokens";
 import { ScreenRenderer } from "./renderers/ScreenRenderer";
 import { evaluateSceneAtTime } from "@/engine/evaluator";
 import { TransformBox } from "./TransformBox";
+import { ShapeSplitOverlay } from "./ShapeSplitOverlay";
+import { LineSplitOverlay } from "./LineSplitOverlay";
 import { SnapGuide } from "./snapping";
 import { DistanceOverlay } from "./DistanceOverlay";
 import { BindingConnectionOverlay } from "./BindingConnectionOverlay";
@@ -76,6 +78,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     distributeSpacing,
     pan,
     setPan,
+    splitModeState,
   } = useProjectStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -102,6 +105,10 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     .filter((l): l is Layer => l !== null);
 
   const selectedRootLayer = selectedLayers[0] || null;
+
+  const splitTargetLayer = splitModeState
+    ? findLayerInTree(activeScreen.layers, splitModeState.layerId)
+    : null;
 
   const [marquee, setMarquee] = useState<{
     startX: number;
@@ -1261,8 +1268,35 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           />
         )}
 
-        {/* Interactive Transform Bounding Box */}
-        {selectedRootLayer && (
+        {/* Interactive Split Mode Overlays */}
+        {splitTargetLayer && splitTargetLayer.type === "shape" && (
+          <ShapeSplitOverlay
+            layer={splitTargetLayer as any}
+            canvasWidth={activeScreen.width ?? doc.settings.width}
+            canvasHeight={activeScreen.height ?? doc.settings.height}
+            effectiveScale={effectiveScale}
+            screenOffset={{
+              x: activeScreenX,
+              y: activeScreenY,
+            }}
+          />
+        )}
+
+        {splitTargetLayer && (splitTargetLayer.type === "line" || (splitTargetLayer as any).shapeType === "arrow") && (
+          <LineSplitOverlay
+            layer={splitTargetLayer as any}
+            canvasWidth={activeScreen.width ?? doc.settings.width}
+            canvasHeight={activeScreen.height ?? doc.settings.height}
+            effectiveScale={effectiveScale}
+            screenOffset={{
+              x: activeScreenX,
+              y: activeScreenY,
+            }}
+          />
+        )}
+
+        {/* Interactive Transform Bounding Box (hidden during Split Mode) */}
+        {!splitModeState && selectedRootLayer && (
           <TransformBox
             layer={selectedRootLayer}
             canvasWidth={activeScreen.width ?? doc.settings.width}

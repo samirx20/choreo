@@ -1510,6 +1510,32 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 41 test suites (382 tests) pass cleanly (`npm test`).
   * Production build compiles cleanly with 0 errors (`npm run build`).
 
+---
+
+### Decision 72: Interactive Split Mode & Move-As-One Compound Entities
+* **The Problem**:
+  * The initial splitting implementation provided hardcoded/pre-baked menu presets ("split into words", "split into lines", canned contour split) rather than an interactive user selection workflow.
+  * Splitting allowed individual pieces to be dragged independently on the canvas, causing unintentional layout shifts, destroyed kerning, and misaligned contours.
+* **The Solution**:
+  1. **Strict 3-Element Scope & Pruned Context Menus**:
+     - Stripped all canned preset items from right-click menus across the studio.
+     - Shapes (Rectangles, Triangles, Polygons, Stars): Right-click $\to$ **"Enter Split Mode"**.
+     - Lines & Arrows: Right-click $\to$ **"Enter Split Mode"**.
+     - Text: Highlight any text span with cursor $\to$ right-click $\to$ **"Split"** (splits selection from remainder).
+     - Images, Videos, 3D mockups, and Icons do not expose splitting.
+  2. **Interactive Canvas Split Overlays**:
+     - **`ShapeSplitOverlay`**: Displays 4 interactive edge selector bars (Top, Right, Bottom, Left) with high-contrast violet glow on hover/selected, minimum 1-edge constraint, and a floating frosted-glass action pill with "Confirm Split" and "Cancel".
+     - **`LineSplitOverlay`**: Displays an interactive draggable cut pin and track along the line shaft with ratio readout, an optional "Detach Arrowhead" toggle for arrows, and a floating action pill.
+  3. **Locked Compound Entity Architecture (`isCompound: true`)**:
+     - When split, the resulting parts are grouped inside a parent container tagged with `isCompound: true` and `compoundType: 'split-shape' | 'split-text' | 'split-line'`.
+     - In **Design Mode**, canvas clicks on any child segment automatically resolve to the compound parent group (`findParentGroupInTree`), guaranteeing the entity moves and transforms strictly as one unified object with 0.0000px visual shift.
+     - In **Animate / Motion Mode**, sub-layers are individually selectable on the timeline and inspector, enabling distinct motion choreography (e.g. Draw-On Part 1 while Part 2 fades or settles).
+* **Verification**:
+  * 18 unit tests passing across `src/test/interactive_split_mode.test.ts` and `src/test/universal_element_splitting.test.ts`.
+  * All 42 test suites (389 tests) pass cleanly (`npm test`).
+  * Production build passes with 0 errors (`npm run build`).
+
+
 
 
 

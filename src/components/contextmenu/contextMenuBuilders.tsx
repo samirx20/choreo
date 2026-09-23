@@ -254,22 +254,13 @@ export function buildCanvasElementMenu(params: {
 
   // Element-Specific Context Actions (Form Truth)
   if (isVectorLine(layer)) {
-    const isArrow = (layer as any).shapeType === "arrow" || (layer as any).arrowEnd;
     items.push(
       {
-        id: "split-line-midpoint",
-        label: "Split at Midpoint",
-        action: () => store.splitLineAtPoint(layer.id, 0.5),
+        id: "enter-split-mode",
+        label: "Enter Split Mode",
+        icon: <Scissors className="w-3.5 h-3.5" />,
+        action: () => store.enterSplitMode(layer.id),
       },
-      ...(isArrow
-        ? [
-            {
-              id: "detach-arrowhead",
-              label: "Detach Arrowhead",
-              action: () => store.detachArrowhead(layer.id),
-            },
-          ]
-        : []),
       {
         id: "reverse-direction",
         label: "Reverse Direction",
@@ -303,17 +294,27 @@ export function buildCanvasElementMenu(params: {
       }
     );
   } else if (layer.type === "text" || layer.type === "chunk") {
+    const hasSelection =
+      store.activeTextSelection &&
+      store.activeTextSelection.layerId === layer.id &&
+      store.activeTextSelection.start < store.activeTextSelection.end;
+
     items.push(
-      {
-        id: "split-text-words",
-        label: "Split into Words",
-        action: () => store.splitTextIntoWords(layer.id),
-      },
-      {
-        id: "split-text-lines",
-        label: "Split into Lines",
-        action: () => store.splitTextIntoLines(layer.id),
-      },
+      ...(hasSelection
+        ? [
+            {
+              id: "split-text-selection",
+              label: "Split",
+              icon: <Scissors className="w-3.5 h-3.5" />,
+              action: () =>
+                store.splitTextRange(
+                  layer.id,
+                  store.activeTextSelection!.start,
+                  store.activeTextSelection!.end
+                ),
+            },
+          ]
+        : []),
       {
         id: "toggle-text-sizing",
         label: layer.style?.textSizing === "auto-height" ? "Switch to Auto-Width" : "Switch to Auto-Height",
@@ -332,28 +333,13 @@ export function buildCanvasElementMenu(params: {
       }
     );
   } else if (layer.type === "shape") {
-    const hasStroke =
-      (typeof layer.style?.borderWidth === "number" && layer.style.borderWidth > 0) ||
-      Boolean(layer.style?.borderColor);
-    const hasFill =
-      Boolean(layer.style?.backgroundColor && layer.style.backgroundColor !== "transparent") ||
-      Boolean(layer.style?.fillColor && layer.style.fillColor !== "transparent");
-
     items.push(
       {
-        id: "split-contour-stroke",
-        label: "Split Contour (Dual Stroke)",
-        action: () => store.splitShapeContour(layer.id),
+        id: "enter-split-mode",
+        label: "Enter Split Mode",
+        icon: <Scissors className="w-3.5 h-3.5" />,
+        action: () => store.enterSplitMode(layer.id),
       },
-      ...(hasStroke && hasFill
-        ? [
-            {
-              id: "separate-stroke-fill",
-              label: "Separate Stroke & Fill",
-              action: () => store.separateStrokeAndFill(layer.id),
-            },
-          ]
-        : []),
       {
         id: "divider-shape-specific",
         label: "",
