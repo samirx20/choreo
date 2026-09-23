@@ -139,6 +139,40 @@ export function evaluateAnimationConfig(
       } else if (preset === "highlightDraw") {
         clipPath = "inset(0 100% 0 0)";
         initOpacity = 0;
+      } else if (preset === "cardSettlePop") {
+        tState.scaleX = 0.88;
+        tState.scaleY = 0.88;
+        initOpacity = 0;
+      } else if (preset === "elevationRise") {
+        tState.y = clipDist ?? 24;
+        initOpacity = 0;
+      } else if (preset === "glassIris") {
+        filter = "blur(16px)";
+        tState.scaleX = 0.95;
+        tState.scaleY = 0.95;
+        initOpacity = 0;
+      } else if (preset === "kenBurns") {
+        tState.scaleX = 1.0;
+        tState.scaleY = 1.0;
+        initOpacity = 1;
+      } else if (preset === "focusPull") {
+        filter = `blur(${(params.blurRadius ?? 16).toFixed(1)}px)`;
+        tState.scaleX = 1.04;
+        tState.scaleY = 1.04;
+        initOpacity = 0;
+      } else if (preset === "arrowShoot") {
+        tState.scaleX = 0;
+        initOpacity = 0;
+      } else if (preset === "dashFlow") {
+        initOpacity = 1;
+      } else if (preset === "iconPop") {
+        tState.scaleX = 0;
+        tState.scaleY = 0;
+        tState.rotate = -15;
+        initOpacity = 0;
+      } else if (preset === "stampSettle") {
+        tState.y = -(clipDist ?? 30);
+        initOpacity = 0;
       }
 
       return {
@@ -315,6 +349,102 @@ export function evaluateAnimationConfig(
         tState.scaleX = 0.95 + 0.05 * p;
         opacity = allowFade ? p : 1;
         clipPath = `inset(0 ${(1 - p) * 100}% 0 0)`;
+        break;
+      }
+
+      case "cardSettlePop": {
+        const springVal = evaluateSpring(
+          effectiveProgress,
+          1.0,
+          params.stiffness ?? 180,
+          params.damping ?? 14
+        );
+        const s = 0.88 + 0.12 * springVal;
+        tState.scaleX = s;
+        tState.scaleY = s;
+        opacity = allowFade ? effectiveProgress : 1;
+        break;
+      }
+
+      case "elevationRise": {
+        const dist = clipDist ?? 24;
+        tState.y = ((1 - effectiveProgress) * dist) || 0;
+        opacity = allowFade ? effectiveProgress : 1;
+        break;
+      }
+
+      case "glassIris": {
+        const maxBlur = params.blurRadius ?? 20;
+        const blur = (1 - effectiveProgress) * maxBlur;
+        if (blur > 0.1) {
+          filter = `blur(${blur.toFixed(1)}px)`;
+        }
+        const s = 0.95 + 0.05 * effectiveProgress;
+        tState.scaleX = s;
+        tState.scaleY = s;
+        opacity = 0.3 + 0.7 * effectiveProgress;
+        break;
+      }
+
+      case "kenBurns": {
+        const p = effectiveProgress;
+        const s = 1.0 + 0.08 * p;
+        tState.scaleX = s;
+        tState.scaleY = s;
+        const panDist = (params.distance ?? 20) * p;
+        tState.x = Number(panDist.toFixed(1));
+        opacity = 1;
+        break;
+      }
+
+      case "focusPull": {
+        const maxBlur = params.blurRadius ?? 16;
+        const blur = (1 - effectiveProgress) * maxBlur;
+        if (blur > 0.1) {
+          filter = `blur(${blur.toFixed(1)}px)`;
+        }
+        const s = 1.04 - 0.04 * effectiveProgress;
+        tState.scaleX = s;
+        tState.scaleY = s;
+        opacity = effectiveProgress;
+        break;
+      }
+
+      case "arrowShoot": {
+        tState.scaleX = effectiveProgress;
+        opacity = allowFade ? effectiveProgress : 1;
+        break;
+      }
+
+      case "dashFlow": {
+        opacity = 1;
+        break;
+      }
+
+      case "iconPop": {
+        const springVal = evaluateSpring(
+          effectiveProgress,
+          1.0,
+          params.stiffness ?? 220,
+          params.damping ?? 12
+        );
+        tState.scaleX = springVal;
+        tState.scaleY = springVal;
+        tState.rotate = -15 * (1 - effectiveProgress);
+        opacity = allowFade ? Math.min(effectiveProgress * 2, 1) : 1;
+        break;
+      }
+
+      case "stampSettle": {
+        const dist = clipDist ?? 30;
+        const springVal = evaluateSpring(
+          effectiveProgress,
+          1.0,
+          params.stiffness ?? 240,
+          params.damping ?? 16
+        );
+        tState.y = (-(1 - springVal) * dist) || 0;
+        opacity = allowFade ? Math.min(effectiveProgress * 2, 1) : 1;
         break;
       }
 

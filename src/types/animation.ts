@@ -58,6 +58,15 @@ export type AnimationPreset =
   | 'popOut'
   | 'jellySquash'
   | 'glitchDisintegrate'
+  | 'cardSettlePop'
+  | 'elevationRise'
+  | 'glassIris'
+  | 'kenBurns'
+  | 'focusPull'
+  | 'arrowShoot'
+  | 'dashFlow'
+  | 'iconPop'
+  | 'stampSettle'
   | 'wiggle'
   | 'heartbeat';
 

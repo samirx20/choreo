@@ -128,6 +128,8 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
     selectedClip.preset.toLowerCase().includes("shrink") ||
     selectedClip.preset.toLowerCase().includes("scale") ||
     selectedClip.preset === "elasticScalePop" ||
+    selectedClip.preset === "cardSettlePop" ||
+    selectedClip.preset === "kenBurns" ||
     selectedClip.scaleAmount !== undefined;
 
   const isRotationBased =
@@ -135,6 +137,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
     selectedClip.preset.toLowerCase().includes("twist") ||
     selectedClip.preset.toLowerCase().includes("wiggle") ||
     selectedClip.preset.toLowerCase().includes("rotate") ||
+    selectedClip.preset === "iconPop" ||
     selectedClip.rotationDegrees !== undefined;
 
   const isOpacityBased =
@@ -152,6 +155,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
 
   const isShadowBased =
     selectedClip.preset.toLowerCase().includes("shadow") ||
+    selectedClip.preset === "elevationRise" ||
     selectedClip.params?.shadowBlur !== undefined ||
     selectedClip.params?.shadowDistance !== undefined;
 
@@ -159,6 +163,8 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
     selectedClip.preset === "custom_blur" ||
     selectedClip.preset === "blurIn" ||
     selectedClip.preset === "blurFocusPop" ||
+    selectedClip.preset === "focusPull" ||
+    selectedClip.preset === "glassIris" ||
     (selectedClip.params?.blur !== undefined && !selectedClip.preset.includes("backdrop"));
 
   const isBackdropBlurBased =

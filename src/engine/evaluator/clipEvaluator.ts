@@ -57,7 +57,7 @@ export function evaluateClipDelta(
 
   // 1. PRE-WINDOW
   if (t < start) {
-    if (preset === "drawOn" || preset === "trimPath") {
+    if (preset === "drawOn" || preset === "trimPath" || preset === "arrowShoot") {
       d.trimEnd = type === "out" ? 100 : 0;
       d.opacity = type === "out" ? 1 : 0;
       return d;
@@ -89,7 +89,7 @@ export function evaluateClipDelta(
 
   // 2. POST-WINDOW
   if (t >= start + safeDur && !loop) {
-    if (preset === "drawOn" || preset === "trimPath") {
+    if (preset === "drawOn" || preset === "trimPath" || preset === "arrowShoot") {
       d.trimEnd = type === "out" ? 0 : 100;
       d.opacity = type === "out" ? 0 : 1;
       return d;
@@ -142,10 +142,16 @@ export function evaluateClipDelta(
     progress = easeFn(rawProgress);
   }
 
-  if (preset === "drawOn" || preset === "trimPath") {
+  if (preset === "drawOn" || preset === "trimPath" || preset === "arrowShoot") {
     d.trimEnd = type === "out"
       ? Math.max(0, Math.min(100, (1 - progress) * 100))
       : Math.max(0, Math.min(100, progress * 100));
+    d.opacity = 1;
+    return d;
+  }
+
+  if (preset === "dashFlow") {
+    d.trimOffset = Math.round(progress * 100);
     d.opacity = 1;
     return d;
   }
@@ -279,6 +285,7 @@ export function evaluateClipDelta(
 
   const mode = type === "out" ? "out" : "in";
   const evalResult = evaluateAnimationConfig({ ...clip, start }, t, mode, effectiveFps);
+  const effProgress = mode === "out" ? 1 - progress : progress;
 
   return {
     x: evalResult.transform.x,
@@ -293,6 +300,14 @@ export function evaluateClipDelta(
     opacity: evalResult.opacity,
     blur: evalResult.filter ? parseFloat(evalResult.filter.replace(/[^0-9.]/g, "")) || 0 : 0,
     clipPath: evalResult.clipPath,
+    boxShadow:
+      preset === "elevationRise"
+        ? `0px ${Math.round(4 + 16 * effProgress)}px ${Math.round(8 + 32 * effProgress)}px rgba(0,0,0,${(0.05 + 0.15 * effProgress).toFixed(2)})`
+        : undefined,
+    backdropFilter:
+      preset === "glassIris"
+        ? `blur(${Math.round(20 * effProgress)}px)`
+        : undefined,
   };
 }
 

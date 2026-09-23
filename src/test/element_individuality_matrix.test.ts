@@ -591,7 +591,161 @@ describe("Element Individuality & Physical Coherence Matrix", () => {
       expect(cascadeStart.transform.y).toBe(28);
       expect(cascadeEnd.transform.y).toBe(0);
     });
+
+    it("verifies universal element-specific preset catalogs for surfaces, media, icons, and lines", async () => {
+      const {
+        SHAPE_ENTRANCE_PRESETS,
+        MEDIA_ENTRANCE_PRESETS,
+        ICON_ENTRANCE_PRESETS,
+        LINE_ENTRANCE_PRESETS,
+        ACTION_PRESETS,
+      } = await import("@/components/inspector/motion/AnimationCatalogSheet");
+
+      // Surfaces & Cards
+      const shapeIds = SHAPE_ENTRANCE_PRESETS.map((p) => p.id);
+      expect(shapeIds).toContain("cardSettlePop");
+      expect(shapeIds).toContain("elevationRise");
+      expect(shapeIds).toContain("glassIris");
+      expect(shapeIds).toContain("drawOn");
+
+      // Media
+      const mediaIds = MEDIA_ENTRANCE_PRESETS.map((p) => p.id);
+      expect(mediaIds).toContain("kenBurns");
+      expect(mediaIds).toContain("focusPull");
+
+      // Icons
+      const iconIds = ICON_ENTRANCE_PRESETS.map((p) => p.id);
+      expect(iconIds).toContain("iconPop");
+      expect(iconIds).toContain("stampSettle");
+
+      // Lines & Vectors
+      const lineIds = LINE_ENTRANCE_PRESETS.map((p) => p.id);
+      expect(lineIds).toContain("arrowShoot");
+      expect(lineIds).toContain("drawOn");
+
+      // Actions
+      const actionIds = ACTION_PRESETS.map((p) => p.id);
+      expect(actionIds).toContain("dashFlow");
+    });
+
+    it("evaluates card, surface, media, vector, and icon animation physics accurately", async () => {
+      const { evaluateAnimationConfig } = await import("@/engine/evaluator");
+
+      // Card Settle Pop: scale spring settle
+      const cardStart = evaluateAnimationConfig({ preset: "cardSettlePop", start: 0, duration: 1, easing: "snappy" }, 0, "in");
+      const cardEnd = evaluateAnimationConfig({ preset: "cardSettlePop", start: 0, duration: 1, easing: "snappy" }, 1, "in");
+      expect(cardStart.transform.scaleX).toBeCloseTo(0.88, 2);
+      expect(cardEnd.transform.scaleX).toBeCloseTo(1.0, 2);
+
+      // Elevation Rise: y translation with physical elevation rise
+      const elevStart = evaluateAnimationConfig({ preset: "elevationRise", start: 0, duration: 1, easing: "smooth" }, 0, "in");
+      const elevEnd = evaluateAnimationConfig({ preset: "elevationRise", start: 0, duration: 1, easing: "smooth" }, 1, "in");
+      expect(elevStart.transform.y).toBe(24);
+      expect(elevEnd.transform.y).toBe(0);
+
+      // Glass Iris: optical blur reveal
+      const glassStart = evaluateAnimationConfig({ preset: "glassIris", start: 0, duration: 1, easing: "smooth" }, 0, "in");
+      const glassEnd = evaluateAnimationConfig({ preset: "glassIris", start: 0, duration: 1, easing: "smooth" }, 1, "in");
+      expect(glassStart.filter).toContain("blur");
+      expect(glassStart.transform.scaleX).toBeCloseTo(0.95, 2);
+      expect(glassEnd.transform.scaleX).toBeCloseTo(1.0, 2);
+
+      // Ken Burns: slow telephoto zoom drift and pan during active window
+      const kbStart = evaluateAnimationConfig({ preset: "kenBurns", start: 0, duration: 2, easing: "linear" }, 0, "in");
+      const kbMid = evaluateAnimationConfig({ preset: "kenBurns", start: 0, duration: 2, easing: "linear" }, 1, "in");
+      expect(kbStart.transform.scaleX).toBeCloseTo(1.0, 2);
+      expect(kbMid.transform.scaleX).toBeCloseTo(1.04, 2);
+      expect(kbMid.transform.x).toBeCloseTo(10, 1);
+
+      // Focus Pull: blur reduction to zero
+      const fpStart = evaluateAnimationConfig({ preset: "focusPull", start: 0, duration: 1, easing: "linear" }, 0, "in");
+      const fpMid = evaluateAnimationConfig({ preset: "focusPull", start: 0, duration: 1, easing: "linear" }, 0.5, "in");
+      expect(fpStart.filter).toContain("blur(16.0px)");
+      expect(fpMid.filter).toContain("blur(8.0px)");
+
+      // Icon Rotational Pop: scale spring with rotational snap
+      const iconStart = evaluateAnimationConfig({ preset: "iconPop", start: 0, duration: 0.6, easing: "bouncy" }, 0, "in");
+      const iconEnd = evaluateAnimationConfig({ preset: "iconPop", start: 0, duration: 0.6, easing: "bouncy" }, 0.6, "in");
+      expect(iconStart.transform.scaleX).toBe(0);
+      expect(iconStart.transform.rotate).toBe(-15);
+      expect(iconEnd.transform.scaleX).toBeCloseTo(1.0, 2);
+      expect(iconEnd.transform.rotate).toBeCloseTo(0, 1);
+
+      // Stamp Settle: drop from above (-30px) to 0
+      const stampStart = evaluateAnimationConfig({ preset: "stampSettle", start: 0, duration: 0.7, easing: "bouncy" }, 0, "in");
+      const stampEnd = evaluateAnimationConfig({ preset: "stampSettle", start: 0, duration: 0.7, easing: "bouncy" }, 0.7, "in");
+      expect(stampStart.transform.y).toBe(-30);
+      expect(stampEnd.transform.y).toBe(0);
+    });
+
+    it("evaluates clipEvaluator for dynamic boxShadow (elevationRise), backdropFilter (glassIris), and trim path (arrowShoot/dashFlow)", async () => {
+      const { evaluateClipDelta } = await import("@/engine/evaluator/clipEvaluator");
+
+      // Elevation Rise injects boxShadow
+      const elevClip = {
+        id: "clip-elev",
+        layerId: "rect1",
+        type: "in",
+        preset: "elevationRise",
+        start: 1,
+        duration: 1,
+        easing: "smooth",
+      } as any;
+
+      const deltaBefore = evaluateClipDelta(elevClip, 0.5);
+      expect(deltaBefore.opacity).toBe(0);
+
+      const deltaActive = evaluateClipDelta(elevClip, 1.5);
+      expect(deltaActive.boxShadow).toBeDefined();
+      expect(deltaActive.boxShadow).toContain("rgba(0,0,0,");
+
+      // Glass Iris injects backdropFilter
+      const glassClip = {
+        id: "clip-glass",
+        layerId: "rect1",
+        type: "in",
+        preset: "glassIris",
+        start: 1,
+        duration: 1,
+        easing: "smooth",
+      } as any;
+
+      const glassActive = evaluateClipDelta(glassClip, 1.5);
+      expect(glassActive.backdropFilter).toContain("blur(");
+
+      // Arrow Shoot animates trimEnd
+      const arrowClip = {
+        id: "clip-arrow",
+        layerId: "arrow1",
+        type: "in",
+        preset: "arrowShoot",
+        start: 1,
+        duration: 1,
+        easing: "linear",
+      } as any;
+
+      const arrowBefore = evaluateClipDelta(arrowClip, 0.5);
+      expect(arrowBefore.trimEnd).toBe(0);
+
+      const arrowMid = evaluateClipDelta(arrowClip, 1.5);
+      expect(arrowMid.trimEnd).toBe(50);
+
+      // Dash Flow animates trimOffset
+      const dashClip = {
+        id: "clip-dash",
+        layerId: "arrow1",
+        type: "action",
+        preset: "dashFlow",
+        start: 1,
+        duration: 2,
+        easing: "linear",
+      } as any;
+
+      const dashMid = evaluateClipDelta(dashClip, 2.0);
+      expect(dashMid.trimOffset).toBe(50);
+    });
   });
 });
+
 
 

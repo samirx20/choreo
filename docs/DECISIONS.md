@@ -1344,5 +1344,42 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 39 test suites (357 tests) pass cleanly (`npm test`).
   * Production build compiles cleanly with 0 errors in 9.94s (`npm run build`).
 
+---
+
+### Decision 67: Universal Element-Specific Animation Preset Suite (Surfaces, Media, Vectors, Icons)
+* **The Problem**:
+  * After delivering dedicated presets for typography (Decision 66), other element types (Surfaces/Cards, Media/Images/Videos, Vectors/Lines, and Icons) still relied on generic transform presets (`pop`, `fade`, `grow`), lacking the tailored physical and optical characteristics expected of Apple- and Google-tier showcases.
+  * Surfaces needed dynamic physical elevation blooms and optical frosted glass irises.
+  * Media elements lacked cinematic telephoto zooms (`kenBurns`) and camera rack focus pulls (`focusPull`).
+  * Vector lines and arrows needed kinetic draw-on shoot progression (`arrowShoot`) and animated dash flowing (`dashFlow`).
+  * Icons and glyphs needed playful rotational kicks (`iconPop`) and tactile contact stamping (`stampSettle`).
+* **The Solution**:
+  1. **Preset Catalog Expansions (`AnimationCatalogSheet.tsx`, `src/types/animation.ts`)**:
+     * **Surfaces & Cards (`Frame`, `Rectangle`)**:
+       * `cardSettlePop`: Overshoot scale entrance ($0.88 \to 1.0$) with harmonic spring settle ($k=180, c=14$).
+       * `elevationRise`: Translates vertically ($+24\text{px} \to 0$) while physically blooming dynamic `boxShadow` ($0\text{px } 4\text{px } 8\text{px} \to 0\text{px } 20\text{px } 40\text{px } \text{rgba}(0,0,0,0.20)$).
+       * `glassIris`: Frosted glass aperture reveal combining optical backdrop blur ($20\text{px} \to 0\text{px}$ filter blur and progressive CSS `backdropFilter: blur()`).
+     * **Media (`Image`, `Video`)**:
+       * `kenBurns`: Cinematic telephoto camera drift slowly scaling from $1.0 \to 1.08$ with subtle $+20\text{px}$ camera pan.
+       * `focusPull`: Optical camera rack focus pulling out of a heavy $16\text{px}$ Gaussian blur into crisp focus with subtle $1.04 \to 1.0$ zoom settle.
+     * **Vectors & Lines (`Line`, `Arrow`)**:
+       * `arrowShoot`: Directional path shoot advancing `trimEnd` from $0\% \to 100\%$ along the vector trajectory.
+       * `dashFlow`: Continuous linear loop animating `trimOffset` ($0\% \to 100\%$) for kinetic dashed paths.
+     * **Icons & Glyphs (`Icon`)**:
+       * `iconPop`: Snappy overshoot scale pop ($k=220, c=12$) with playful $-15^\circ \to 0^\circ$ rotational kick.
+       * `stampSettle`: Vertical descent from above ($-30\text{px} \to 0$) with elastic contact dampening ($k=240, c=16$).
+  2. **Evaluation Engine Fidelity (`configEvaluator.ts`, `clipEvaluator.ts`)**:
+     * Added pre-window, active-window, and post-window mathematical evaluation for all 9 new presets.
+     * `clipEvaluator.ts` injects dynamic `boxShadow` (for `elevationRise`) and `backdropFilter` (for `glassIris`) directly into `EvaluatedDelta`, seamlessly rendering in CSS without component modifications.
+     * `arrowShoot` and `dashFlow` integrate directly into the vector trim path rendering engine via `trimEnd` and `trimOffset`.
+  3. **Clip Detail Inspector Integration (`ClipDetailView.tsx`)**:
+     * Updated inspector property selectors so presets expose relevant controls (`isScaleBased`, `isRotationBased`, `isShadowBased`, `isBlurBased`).
+* **Verification**:
+  * Added 3 comprehensive integration unit tests in `src/test/element_individuality_matrix.test.ts` verifying catalog inclusion, analytical physics evaluation, and `clipEvaluator` dynamic property injection.
+  * All 31 tests in `element_individuality_matrix.test.ts` pass cleanly.
+  * All 39 test suites (360 tests) pass cleanly (`npm test`).
+  * Production build compiles cleanly with 0 errors in 10.39s (`npm run build`).
+
+
 
 

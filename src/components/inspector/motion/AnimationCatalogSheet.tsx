@@ -80,6 +80,9 @@ export const TEXT_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
 ];
 
 export const SHAPE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+  { id: "cardSettlePop", name: "Card Settle", duration: 0.8, easing: "snappy", type: "in", desc: "Overshoot scale with physical spring settle" },
+  { id: "elevationRise", name: "Elevation Rise", duration: 0.8, easing: "smooth", type: "in", desc: "Rises into frame with expanding physical elevation shadow" },
+  { id: "glassIris", name: "Glass Iris", duration: 0.8, easing: "smooth", type: "in", desc: "Optical backdrop blur and frosted glass reveal" },
   { id: "drawOn", name: "Draw Path (Trim)", duration: 0.8, easing: "snappy", type: "in", desc: "Stroke reveals along perimeter contour" },
   { id: "pop", name: "Pop", duration: 0.6, easing: "bouncy", type: "in", desc: "Snappy overshoot scale" },
   { id: "slide", name: "Slide", duration: 0.8, easing: "snappy", type: "in", desc: "Kinetic directional entrance", params: { direction: "up", distance: 60 } },
@@ -95,6 +98,8 @@ export const SHAPE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
 ];
 
 export const MEDIA_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+  { id: "kenBurns", name: "Ken Burns Drift", duration: 2.0, easing: "smooth", type: "in", desc: "Cinematic slow camera drift and telephoto pan" },
+  { id: "focusPull", name: "Rack Focus Pull", duration: 1.0, easing: "smooth", type: "in", desc: "Starts in optical blur and pulls into crisp sharpness", params: { blurRadius: 16 } },
   { id: "fade", name: "Fade In", duration: 0.8, easing: "smooth", type: "in", desc: "Cinematic optical dissolve" },
   { id: "grow", name: "Zoom In", duration: 1.0, easing: "smooth", type: "in", desc: "Gentle telephoto zoom entrance" },
   { id: "shrink", name: "Zoom Out", duration: 1.0, easing: "smooth", type: "in", desc: "Wide scale settling into frame" },
@@ -105,6 +110,8 @@ export const MEDIA_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
 ];
 
 export const ICON_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+  { id: "iconPop", name: "Rotational Pop", duration: 0.6, easing: "bouncy", type: "in", desc: "Snappy overshoot scale pop with playful ±15° rotational kick" },
+  { id: "stampSettle", name: "Stamp Settle", duration: 0.7, easing: "bouncy", type: "in", desc: "Descent from above with snappy elastic contact dampening" },
   { id: "pop", name: "Pop", duration: 0.6, easing: "bouncy", type: "in", desc: "Snappy overshoot spring pop" },
   { id: "bounce", name: "Bounce In", duration: 0.8, easing: "bouncy", type: "in", desc: "Elastic vertical bounce" },
   { id: "spin", name: "Spin In", duration: 0.8, easing: "smooth", type: "in", desc: "360° axial glyph spin" },
@@ -117,6 +124,7 @@ export const ICON_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
 
 export const LINE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
   { id: "drawOn", name: "Draw Path (Trim)", duration: 0.8, easing: "snappy", type: "in", desc: "Vector path draws sequentially along stroke" },
+  { id: "arrowShoot", name: "Arrow Shoot", duration: 0.8, easing: "snappy", type: "in", desc: "Kinetic directional shoot advancing along vector" },
   { id: "slide", name: "Slide / Extend", duration: 0.8, easing: "snappy", type: "in", desc: "Directional path extension", params: { direction: "right", distance: 60 } },
   { id: "wipe", name: "Wipe In", duration: 0.8, easing: "smooth", type: "in", desc: "Directional path unmask", params: { direction: "right" } },
   { id: "fade", name: "Fade In", duration: 0.6, easing: "smooth", type: "in", desc: "Clean alpha dissolve" },
@@ -131,8 +139,9 @@ export const EXIT_PRESETS: AnimationCatalogPreset[] = [
   { id: "blurIn", name: "Blur Out", duration: 0.8, easing: "smooth", type: "out", desc: "Gaussian dissolution" },
 ];
 
-const ACTION_PRESETS: AnimationCatalogPreset[] = [
+export const ACTION_PRESETS: AnimationCatalogPreset[] = [
   { id: "pulse", name: "Pulse Accent", duration: 0.8, easing: "smooth", type: "action", desc: "Snappy scale bloom and settle" },
+  { id: "dashFlow", name: "Dash Flow", duration: 1.5, easing: "linear", type: "action", desc: "Continuous animated stroke dash offset flow" },
   { id: "bounce", name: "Bounce", duration: 0.8, easing: "bouncy", type: "action", desc: "Vertical hop with elastic damping" },
   { id: "wiggle", name: "Wiggle", duration: 0.6, easing: "snappy", type: "action", desc: "Rotational rocking accent" },
   { id: "shake", name: "Shake", duration: 0.5, easing: "snappy", type: "action", desc: "Rapid horizontal disturbance" },
@@ -350,6 +359,15 @@ const AnimationCard: React.FC<{
       case "wordCascade": return "anim-preview-cascade";
       case "lineReveal": return "anim-preview-lineReveal";
       case "highlightDraw": return "anim-preview-highlightDraw";
+      case "cardSettlePop": return "anim-preview-cardSettle";
+      case "elevationRise": return "anim-preview-elevation";
+      case "glassIris": return "anim-preview-glass";
+      case "kenBurns": return "anim-preview-kenBurns";
+      case "focusPull": return "anim-preview-focusPull";
+      case "arrowShoot": return "anim-preview-arrowShoot";
+      case "dashFlow": return "anim-preview-dashFlow";
+      case "iconPop": return "anim-preview-iconPop";
+      case "stampSettle": return "anim-preview-stampSettle";
       case "pop": return "anim-preview-pop";
       case "grow": return "anim-preview-grow";
       case "shrink": return "anim-preview-shrink";
@@ -641,6 +659,15 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
         @keyframes anim-preview-cascade { 0%, 100% { transform: translateY(8px); opacity: 0.2; } 50% { transform: translateY(0); opacity: 1; } }
         @keyframes anim-preview-lineReveal { 0%, 100% { clip-path: inset(100% 0 0 0); } 50% { clip-path: inset(0 0 0 0); } }
         @keyframes anim-preview-highlightDraw { 0%, 100% { clip-path: inset(0 100% 0 0); } 50% { clip-path: inset(0 0 0 0); } }
+        @keyframes anim-preview-cardSettle { 0%, 100% { transform: scale(0.88); opacity: 0.3; } 50% { transform: scale(1.04); opacity: 1; } 75% { transform: scale(1); opacity: 1; } }
+        @keyframes anim-preview-elevation { 0%, 100% { transform: translateY(8px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); opacity: 0.3; } 50% { transform: translateY(0); box-shadow: 0 12px 24px rgba(109,40,217,0.3); opacity: 1; } }
+        @keyframes anim-preview-glass { 0%, 100% { backdrop-filter: blur(0px); opacity: 0.3; } 50% { backdrop-filter: blur(12px); opacity: 1; } }
+        @keyframes anim-preview-kenBurns { 0%, 100% { transform: scale(1) translateX(0); } 50% { transform: scale(1.1) translateX(4px); } }
+        @keyframes anim-preview-focusPull { 0%, 100% { filter: blur(5px); transform: scale(1.05); opacity: 0.3; } 50% { filter: blur(0px); transform: scale(1); opacity: 1; } }
+        @keyframes anim-preview-arrowShoot { 0%, 100% { transform: scaleX(0.1); opacity: 0.2; } 50% { transform: scaleX(1); opacity: 1; } }
+        @keyframes anim-preview-dashFlow { 0% { stroke-dashoffset: 20; } 100% { stroke-dashoffset: 0; } }
+        @keyframes anim-preview-iconPop { 0%, 100% { transform: scale(0.3) rotate(-15deg); opacity: 0.2; } 50% { transform: scale(1.25) rotate(5deg); opacity: 1; } 75% { transform: scale(1) rotate(0deg); opacity: 1; } }
+        @keyframes anim-preview-stampSettle { 0%, 100% { transform: translateY(-16px); opacity: 0.2; } 50% { transform: translateY(0); opacity: 1; } 65% { transform: translateY(-3px); } 80% { transform: translateY(0); } }
         @keyframes anim-preview-dropIn { 0%, 100% { transform: translateY(-22px); opacity: 0; } 50% { transform: translateY(0); opacity: 1; } 65% { transform: translateY(-5px); } 80% { transform: translateY(0); } }
         @keyframes anim-preview-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
         @keyframes anim-preview-bounce { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-16px); } 60% { transform: translateY(0); } 75% { transform: translateY(-6px); } 90% { transform: translateY(0); } }
