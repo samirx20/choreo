@@ -185,11 +185,13 @@ export type DrivenProperty =
 export type LinkMode =
   | 'pin'
   | 'hug'
+  | 'reflow'
   | 'match'
   | 'remap'
   | 'lag'
   | 'track-word'
-  | 'leader-line';
+  | 'leader-line'
+  | 'connect';
 
 export interface ElementLinkBinding {
   id: string;
@@ -214,6 +216,11 @@ export interface ElementLinkBinding {
   minHeight?: number;
   maxWidth?: number;
   maxHeight?: number;
+
+  // Dynamic Reflow Gap
+  reflowAxis?: 'horizontal' | 'vertical';
+  reflowGap?: number;
+  reflowAlignment?: 'start' | 'center' | 'end';
 
   lineCurve?: 'straight' | 'bezier' | 'orthogonal';
   dashSpeed?: number;

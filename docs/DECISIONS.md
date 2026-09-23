@@ -1478,6 +1478,39 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 40 test suites (372 tests) pass cleanly (`npm test`).
   * Production build compiles cleanly with 0 errors (`npm run build`).
 
+---
+
+### Decision 71: Pillar B Universal Relational Linking Engine
+* **The Problem**:
+  * Previously, creating coordinated motion (such as background cards expanding to hug dynamic typing text, badges pinned to moving corners, sibling words sliding to maintain an exact reflow gap, and connector lines tracking moving targets) required tedious, error-prone manual frame-by-frame coordinate math.
+  * Lack of a first-class reflow gap primitive caused trailing elements to collide or drift when lead elements changed size or animated.
+  * The Studio Inspector lacked UI to visualize, create, or tune relational bindings, and agents lacked high-level tools to bind elements safely with cycle prevention.
+* **The Solution**:
+  1. **Dynamic Reflow Gap (`mode: 'reflow'`)**:
+     * Implemented first-class axis reflow in `dependencyEngine.ts`:
+       * Horizontal flow: $x_{\text{driven}} = x_{\text{driver}} + w_{\text{driver}} + G$.
+       * Vertical flow: $y_{\text{driven}} = y_{\text{driver}} + h_{\text{driver}} + G$.
+       * Configurable cross-axis alignment (`start`, `center`, `end`).
+       * Smooth second-order harmonic oscillator spring momentum hand-off when driver layer animates or changes bounds.
+  2. **Dynamic Connector Lines (`mode: 'connect' | 'leader-line'`)**:
+     * Real-time tracking of source anchor $P_1$ and destination anchor $P_2$, calculating line length ($dist$) and angle ($\theta$) dynamically on canvas as either endpoint element transforms.
+  3. **Multi-Target Boundary Hugging & Spatial Pinning**:
+     * Boundary hugging (`mode: 'hug'`) wraps container bounds around driver content with padding ($p_x, p_y$), anchor preservation, and spring buffering.
+     * Spatial pinning (`mode: 'pin'`) locks driven elements to any of 9 driver anchors with offset $(dx, dy)$ and progress bar track following.
+  4. **Cycle Prevention & Topological Sorting**:
+     * Kahn's topological sort detects and handles dependency cycles safely, and agent tools prevent circular dependencies ($A \to B \to A$) constructively with learning notices.
+  5. **Studio UI & Canvas Wire Feedback**:
+     * **`RelationalLinksCard`**: Clean, high-signal Inspector card displaying active links with type badges (`HUG`, `PIN`, `REFLOW`, `CONNECT`), parameter summaries, deletion buttons, and an inline link creator.
+     * **Multi-Selection Context Menus**: Single-click "Hug Bounds of...", "Pin to...", and "Reflow After..." actions when 2 canvas layers are selected.
+     * **Visual Link Wires (`BindingConnectionOverlay`)**: Subtle glowing animated guide wires with anchor origin dots and relationship pills indicating active links on selected layers.
+  6. **Agent Tools API**:
+     * `link_elements` and `unlink_elements` tools in `src/tools/linkElements.ts` with Zod validation, parameter sanitization, and self-healing error handling.
+* **Verification**:
+  * 10 automated unit and integration tests in `src/test/universal_relational_linking.test.ts`.
+  * All 41 test suites (382 tests) pass cleanly (`npm test`).
+  * Production build compiles cleanly with 0 errors (`npm run build`).
+
+
 
 
 

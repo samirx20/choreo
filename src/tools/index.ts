@@ -4,6 +4,7 @@ export * from "./placeElement";
 export * from "./applyAnimation";
 export * from "./getStoryboardState";
 export * from "./lintStoryboardTool";
+export * from "./linkElements";
 export * from "./orchestrator";
 
 // Underlying Perception & Grid Engines

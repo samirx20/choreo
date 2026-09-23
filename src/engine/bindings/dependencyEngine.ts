@@ -194,6 +194,12 @@ export function sortLayersByDependency(layers: Layer[]): string[] {
           adjList.set(b.driverLayerId, driverList);
           inDegree.set(id, (inDegree.get(id) || 0) + 1);
         }
+        if (b.targetLayerId && layerMap.has(b.targetLayerId) && b.targetLayerId !== id) {
+          const targetList = adjList.get(b.targetLayerId) || [];
+          targetList.push(id);
+          adjList.set(b.targetLayerId, targetList);
+          inDegree.set(id, (inDegree.get(id) || 0) + 1);
+        }
       }
     }
   }
@@ -493,7 +499,78 @@ export function evaluateBinding(
       };
     }
 
-    case 'leader-line': {
+    case 'reflow': {
+      const axis = binding.reflowAxis || 'horizontal';
+      const gap = binding.reflowGap ?? 16;
+      const alignment = binding.reflowAlignment || 'center';
+
+      let posX = targetBox.x;
+      let posY = targetBox.y;
+
+      if (axis === 'horizontal') {
+        const restingX = driverBox.x + driverBox.width + gap;
+        if (alignment === 'start') {
+          posY = driverBox.y;
+        } else if (alignment === 'end') {
+          posY = driverBox.y + driverBox.height - targetBox.height;
+        } else {
+          // center
+          posY = driverBox.y + driverBox.height / 2 - targetBox.height / 2;
+        }
+
+        // Dynamic spring momentum handoff if driver layer is animating
+        if (binding.expansionPhysics === 'spring' && driverLayer.animation?.in) {
+          const anim = driverLayer.animation.in;
+          const start = anim.start ?? 0;
+          if (currentTime >= start) {
+            const tau = Math.max(0, currentTime - start);
+            const spring = evaluateSpring(tau, 1.0, binding.stiffness || 260, binding.damping || 24);
+            const baseX = targetLayer.style.x ?? restingX;
+            posX = baseX + (restingX - baseX) * Math.min(1.15, Math.max(0, spring));
+          } else {
+            posX = targetLayer.style.x ?? restingX;
+          }
+        } else {
+          posX = restingX;
+        }
+      } else {
+        // Vertical reflow
+        const restingY = driverBox.y + driverBox.height + gap;
+        if (alignment === 'start') {
+          posX = driverBox.x;
+        } else if (alignment === 'end') {
+          posX = driverBox.x + driverBox.width - targetBox.width;
+        } else {
+          // center
+          posX = driverBox.x + driverBox.width / 2 - targetBox.width / 2;
+        }
+
+        if (binding.expansionPhysics === 'spring' && driverLayer.animation?.in) {
+          const anim = driverLayer.animation.in;
+          const start = anim.start ?? 0;
+          if (currentTime >= start) {
+            const tau = Math.max(0, currentTime - start);
+            const spring = evaluateSpring(tau, 1.0, binding.stiffness || 260, binding.damping || 24);
+            const baseY = targetLayer.style.y ?? restingY;
+            posY = baseY + (restingY - baseY) * Math.min(1.15, Math.max(0, spring));
+          } else {
+            posY = targetLayer.style.y ?? restingY;
+          }
+        } else {
+          posY = restingY;
+        }
+      }
+
+      return {
+        property: axis === 'horizontal' ? 'x' : 'y',
+        value: axis === 'horizontal' ? posX : posY,
+        x: posX,
+        y: posY,
+      };
+    }
+
+    case 'leader-line':
+    case 'connect': {
       const driverAnchor = binding.driverAnchor || 'center';
       const targetAnchor = binding.targetAnchor || 'center';
 
@@ -615,14 +692,14 @@ export function resolveSceneBindings(
         layerStyle.height = `${Math.round(evalResult.height)}px`;
       }
 
-      if (binding.mode === 'pin' || binding.mode === 'hug' || binding.mode === 'track-word') {
+      if (binding.mode === 'pin' || binding.mode === 'hug' || binding.mode === 'track-word' || binding.mode === 'reflow') {
         if (evalResult.x !== undefined) {
           layerStyle.left = `${Math.round(evalResult.x)}px`;
         }
         if (evalResult.y !== undefined) {
           layerStyle.top = `${Math.round(evalResult.y)}px`;
         }
-      } else if (binding.mode === 'leader-line') {
+      } else if (binding.mode === 'leader-line' || binding.mode === 'connect') {
         if (evalResult.x !== undefined) {
           layerStyle.left = `${Math.round(evalResult.x)}px`;
         }

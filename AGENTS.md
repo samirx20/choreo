@@ -77,7 +77,8 @@ src/
     * Line & Arrow detachment: Collinear ratio splitting and independent arrowhead tip stamping.
     * Container detaching: Absolute coordinate preservation un-nesting.
   * **Word Morphing (`configure_word_morph`)**: Rotating keyword highlights with continuous spring reflow of trailing suffixes.
-  * **Connected Leader Lines & Pins**: Dynamic links tracking moving elements with physical inertia lag.
+  * **Dynamic Reflow Gap (`mode: 'reflow'`)**: Sibling elements maintain exact continuous axis gap ($G\text{px}$) with spring momentum when lead elements resize or animate.
+  * **Connected Leader Lines & Pins (`mode: 'connect' | 'pin'`)**: Dynamic links tracking moving elements with physical inertia lag and 9-point anchor alignment.
 
 ### Rule 8: Impeccable Craft Floor & Banned Anti-Patterns
 Never generate or suggest cheap SaaS cliches, decorative gimmicks, or lazy UI tropes:

@@ -15,6 +15,10 @@ import {
   Pencil,
   ArrowLeftRight,
   ArrowUpRight,
+  Link2,
+  Unlink,
+  Pin,
+  MoveHorizontal,
 } from "lucide-react";
 
 /**
@@ -383,6 +387,101 @@ export function buildCanvasElementMenu(params: {
       },
       {
         id: "divider-media-specific",
+        label: "",
+        divider: true,
+      }
+    );
+  }
+
+  // Relational Linking Actions
+  const selectedIds = store.selectedLayerIds || [];
+  if (selectedIds.length === 2 && selectedIds.includes(layer.id)) {
+    const otherId = selectedIds.find((id) => id !== layer.id);
+    const activeScreen = store.document.screens.find((s) => s.id === store.activeScreenId);
+    let otherLayer: Layer | undefined;
+    function findOther(layers: Layer[]) {
+      for (const l of layers) {
+        if (l.id === otherId) otherLayer = l;
+        if (l.type === "group" && (l as any).children) findOther((l as any).children);
+      }
+    }
+    if (activeScreen && otherId) findOther(activeScreen.layers);
+
+    if (otherLayer) {
+      items.push(
+        {
+          id: "link-hug-other",
+          label: `Hug Bounds of "${otherLayer.name}"`,
+          icon: <Maximize2 className="w-3.5 h-3.5 text-purple-400" />,
+          action: () => {
+            store.addLayerBinding(layer.id, {
+              id: `bind_${Date.now()}`,
+              driverLayerId: otherLayer!.id,
+              driverProp: "width",
+              drivenProp: "width",
+              mode: "hug",
+              padding: [16, 12],
+              expansionPhysics: "spring",
+            });
+          },
+        },
+        {
+          id: "link-pin-other",
+          label: `Pin to "${otherLayer.name}"`,
+          icon: <Pin className="w-3.5 h-3.5 text-blue-400" />,
+          action: () => {
+            store.addLayerBinding(layer.id, {
+              id: `bind_${Date.now()}`,
+              driverLayerId: otherLayer!.id,
+              driverProp: "x",
+              drivenProp: "x",
+              mode: "pin",
+              driverAnchor: "middle-right",
+              targetAnchor: "middle-left",
+              offset2D: [12, 0],
+              expansionPhysics: "spring",
+            });
+          },
+        },
+        {
+          id: "link-reflow-other",
+          label: `Reflow After "${otherLayer.name}" (16px)`,
+          icon: <MoveHorizontal className="w-3.5 h-3.5 text-emerald-400" />,
+          action: () => {
+            store.addLayerBinding(layer.id, {
+              id: `bind_${Date.now()}`,
+              driverLayerId: otherLayer!.id,
+              driverProp: "x",
+              drivenProp: "x",
+              mode: "reflow",
+              reflowAxis: "horizontal",
+              reflowGap: 16,
+              reflowAlignment: "center",
+              expansionPhysics: "spring",
+            });
+          },
+        },
+        {
+          id: "divider-linking",
+          label: "",
+          divider: true,
+        }
+      );
+    }
+  } else if (layer.bindings && layer.bindings.length > 0) {
+    items.push(
+      {
+        id: "unlink-all",
+        label: `Unlink All (${layer.bindings.length} link${layer.bindings.length > 1 ? "s" : ""})`,
+        icon: <Unlink className="w-3.5 h-3.5 text-amber-400" />,
+        action: () => {
+          for (const b of layer.bindings || []) {
+            store.removeLayerBinding(layer.id, b.id);
+          }
+        },
+      },
+      {
+        id: "divider-unlinking",
         label: "",
         divider: true,
       }
