@@ -184,6 +184,34 @@ describe("Interactive Split Mode & Locked Compound Entities", () => {
       expect(p1.shapeType).toBe("path");
       expect(p2.shapeType).toBe("path");
     });
+
+    it("preserves uniform 1:1 aspect ratio and centering on non-square Star (W != H)", () => {
+      const wideStar: ShapeLayer = {
+        id: "star-wide",
+        name: "Wide Star Box",
+        type: "shape",
+        shapeType: "star",
+        points: 5,
+        innerRadiusRatio: 0.382,
+        style: { x: 50, y: 50, width: 400, height: 200, borderWidth: 2, borderColor: "#000", rotation: 0, opacity: 1 },
+      };
+
+      useProjectStore.getState().addLayer(wideStar);
+      useProjectStore.getState().enterSplitMode(wideStar.id);
+
+      // Verify top point is centered at W/2 = 200, not stretched to 400/2
+      const edges = useProjectStore.getState().splitModeState?.selectedEdges;
+      expect(edges).toBeDefined();
+
+      useProjectStore.getState().confirmSplit();
+
+      const screen = useProjectStore.getState().document.screens[0];
+      const splitGroup = screen.layers.find((l) => (l as any).isCompound) as any;
+      const [p1] = splitGroup.children;
+      // In 400x200 box, scale = 2, offsetX = 100, offsetY = 0.
+      // Top tip (50, 5) -> x = 100 + 50*2 = 200, y = 0 + 5*2 = 10.
+      expect(p1.d).toContain("200 10");
+    });
   });
 
   describe("Canvas Compound Entity Move-As-One vs Independent Choreography", () => {

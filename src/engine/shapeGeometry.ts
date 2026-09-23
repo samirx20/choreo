@@ -25,11 +25,19 @@ export function getShapeEdges(layer: ShapeLayer): ShapeEdge[] {
 
   const shapeType = layer.shapeType || "rectangle";
 
+  // For shapes rendered with viewBox="0 0 100 100" (triangle, polygon, star):
+  // SVG scales uniformly via xMidYMid meet:
+  const S = Math.min(W, H) / 100;
+  const offsetX = (W - 100 * S) / 2;
+  const offsetY = (H - 100 * S) / 2;
+  const toX = (px: number) => offsetX + px * S;
+  const toY = (py: number) => offsetY + py * S;
+
   if (shapeType === "triangle") {
     // 3 vertices from generatePolygonPoints(3)
-    const V0 = { x: 0.5 * W, y: 0.05 * H };
-    const V1 = { x: (88.97 / 100) * W, y: (72.5 / 100) * H };
-    const V2 = { x: (11.03 / 100) * W, y: (72.5 / 100) * H };
+    const V0 = { x: toX(50), y: toY(5) };
+    const V1 = { x: toX(50 + 45 * Math.cos(Math.PI / 6)), y: toY(50 + 45 * Math.sin(Math.PI / 6)) };
+    const V2 = { x: toX(50 - 45 * Math.cos(Math.PI / 6)), y: toY(50 + 45 * Math.sin(Math.PI / 6)) };
 
     return [
       {
@@ -65,9 +73,9 @@ export function getShapeEdges(layer: ShapeLayer): ShapeEdge[] {
     const vertices: { x: number; y: number }[] = [];
     for (let i = 0; i < sides; i++) {
       const angle = (i * 2 * Math.PI) / sides - Math.PI / 2;
-      const x = ((cx + r * Math.cos(angle)) / 100) * W;
-      const y = ((cy + r * Math.sin(angle)) / 100) * H;
-      vertices.push({ x, y });
+      const px = cx + r * Math.cos(angle);
+      const py = cy + r * Math.sin(angle);
+      vertices.push({ x: toX(px), y: toY(py) });
     }
 
     const edges: ShapeEdge[] = [];
@@ -97,9 +105,9 @@ export function getShapeEdges(layer: ShapeLayer): ShapeEdge[] {
     for (let i = 0; i < totalVertices; i++) {
       const r = i % 2 === 0 ? rOuter : rInner;
       const angle = (i * Math.PI) / points - Math.PI / 2;
-      const x = ((cx + r * Math.cos(angle)) / 100) * W;
-      const y = ((cy + r * Math.sin(angle)) / 100) * H;
-      vertices.push({ x, y });
+      const px = cx + r * Math.cos(angle);
+      const py = cy + r * Math.sin(angle);
+      vertices.push({ x: toX(px), y: toY(py) });
     }
 
     const edges: ShapeEdge[] = [];
