@@ -329,12 +329,16 @@ export function splitShapeByEdges(
   const widthNum = typeof layer.style.width === "number" ? layer.style.width : 200;
   const heightNum = typeof layer.style.height === "number" ? layer.style.height : 150;
 
-  const strokeWidth =
-    typeof layer.style.borderWidth === "number" && layer.style.borderWidth > 0
-      ? layer.style.borderWidth
-      : 2;
+  const hasOriginalFill = Boolean(
+    layer.style.backgroundColor && layer.style.backgroundColor !== "transparent"
+  );
+  const originalBorderWidth =
+    typeof layer.style.borderWidth === "number" ? layer.style.borderWidth : 0;
+  const hasOriginalStroke = originalBorderWidth > 0;
+
+  const strokeWidth = originalBorderWidth;
   const strokeColor =
-    layer.style.borderColor || layer.style.backgroundColor || "#3b82f6";
+    layer.style.borderColor || layer.style.backgroundColor || "#18181b";
 
   const allEdges = getShapeEdges(layer);
   const unselectedEdges = allEdges
@@ -402,6 +406,33 @@ export function splitShapeByEdges(
     },
   };
 
+  const children: Layer[] = [];
+  const subLayers: ShapeLayer[] = [];
+
+  if (hasOriginalFill) {
+    const fillLayer: ShapeLayer = {
+      id: `fill_${Date.now()}`,
+      name: `${layer.name} (Fill)`,
+      type: layer.type as any,
+      shapeType: (layer as any).shapeType || ((layer as any).type === "polygon" ? "polygon" : "rectangle"),
+      sides: (layer as any).sides,
+      points: (layer as any).points,
+      innerRadiusRatio: (layer as any).innerRadiusRatio,
+      style: {
+        ...layer.style,
+        x: 0,
+        y: 0,
+        borderWidth: 0,
+        borderColor: "transparent",
+      },
+    } as any;
+    children.push(fillLayer);
+    subLayers.push(fillLayer);
+  }
+
+  children.push(pathA, pathB);
+  subLayers.push(pathA, pathB);
+
   const group: GroupLayer = {
     id: `compound_shape_${Date.now()}`,
     name: `${layer.name} (Split)`,
@@ -409,17 +440,19 @@ export function splitShapeByEdges(
     isCompound: true,
     compoundType: "split-shape",
     style: {
+      ...layer.style,
       x: layer.style.x,
       y: layer.style.y,
       width: widthNum,
       height: heightNum,
       rotation: layer.style.rotation || 0,
       opacity: layer.style.opacity ?? 1,
-      backgroundColor: "transparent",
-      borderWidth: 0,
+      backgroundColor: layer.style.backgroundColor || "transparent",
+      borderWidth: strokeWidth,
+      borderColor: strokeColor,
     },
-    children: [pathA, pathB],
+    children,
   };
 
-  return { group, subLayers: [pathA, pathB] };
+  return { group, subLayers };
 }

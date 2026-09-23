@@ -29,7 +29,17 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const prevRectRef = useRef<DOMRect | null>(null);
 
-  const baseCss = layerStyleToCss(layer.style, isChildInFlex);
+  const isCompound = Boolean(layer.isCompound);
+  const effectiveStyle = isCompound
+    ? {
+        ...layer.style,
+        backgroundColor: "transparent",
+        borderWidth: 0,
+        borderColor: "transparent",
+        boxShadow: undefined,
+      }
+    : layer.style;
+  const baseCss = layerStyleToCss(effectiveStyle, isChildInFlex);
 
   const isFlex = layer.layout?.display === "flex";
 

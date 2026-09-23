@@ -110,11 +110,82 @@ export const createLayerSlice = (
               isText &&
               typeof newContent === "string" &&
               (!layer.name || layer.name === (layer as any).content);
-            return {
+
+            let nextLayer: Layer = {
               ...layer,
               ...(shouldSyncName ? { name: newContent } : {}),
               ...updates,
             } as Layer;
+
+            if (
+              layer.isCompound &&
+              (layer.type === "group" || layer.type === "frame") &&
+              Array.isArray((layer as any).children)
+            ) {
+              const styleUpdates = updates.style;
+              if (styleUpdates) {
+                const compoundType = (layer as any).compoundType;
+                const nextChildren = (layer as any).children.map((child: Layer) => {
+                  if (compoundType === "split-shape") {
+                    if (child.id.startsWith("fill_") || (child as any).shapeType !== "path") {
+                      return {
+                        ...child,
+                        style: {
+                          ...child.style,
+                          ...(styleUpdates.backgroundColor !== undefined
+                            ? { backgroundColor: styleUpdates.backgroundColor }
+                            : {}),
+                          ...(styleUpdates.opacity !== undefined ? { opacity: styleUpdates.opacity } : {}),
+                        },
+                      };
+                    }
+                    if ((child as any).shapeType === "path") {
+                      return {
+                        ...child,
+                        style: {
+                          ...child.style,
+                          ...(styleUpdates.borderWidth !== undefined
+                            ? { borderWidth: styleUpdates.borderWidth }
+                            : {}),
+                          ...(styleUpdates.borderColor !== undefined
+                            ? { borderColor: styleUpdates.borderColor }
+                            : {}),
+                          ...(styleUpdates.opacity !== undefined ? { opacity: styleUpdates.opacity } : {}),
+                        },
+                      };
+                    }
+                  } else if (compoundType === "split-text") {
+                    return {
+                      ...child,
+                      style: {
+                        ...child.style,
+                        ...(styleUpdates.color !== undefined ? { color: styleUpdates.color } : {}),
+                        ...(styleUpdates.fontSize !== undefined ? { fontSize: styleUpdates.fontSize } : {}),
+                        ...(styleUpdates.fontFamily !== undefined ? { fontFamily: styleUpdates.fontFamily } : {}),
+                        ...(styleUpdates.fontWeight !== undefined ? { fontWeight: styleUpdates.fontWeight } : {}),
+                        ...(styleUpdates.letterSpacing !== undefined ? { letterSpacing: styleUpdates.letterSpacing } : {}),
+                      },
+                    };
+                  } else if (compoundType === "split-line") {
+                    return {
+                      ...child,
+                      style: {
+                        ...child.style,
+                        ...(styleUpdates.borderWidth !== undefined ? { borderWidth: styleUpdates.borderWidth } : {}),
+                        ...(styleUpdates.borderColor !== undefined ? { borderColor: styleUpdates.borderColor } : {}),
+                      },
+                    };
+                  }
+                  return child;
+                });
+                nextLayer = {
+                  ...nextLayer,
+                  children: nextChildren,
+                } as Layer;
+              }
+            }
+
+            return nextLayer;
           }),
         };
       }),

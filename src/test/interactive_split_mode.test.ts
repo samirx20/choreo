@@ -248,6 +248,94 @@ describe("Interactive Split Mode & Locked Compound Entities", () => {
       // Top tip (50, 5) -> x = 100 + 50*2 = 200, y = 0 + 5*2 = 10.
       expect(p1.d).toContain("200 10");
     });
+
+    it("preserves fill and enables master stroke/fill property propagation on filled shape with no stroke", () => {
+      const starLayer: ShapeLayer = {
+        id: "star-filled-no-stroke",
+        name: "Solid Star",
+        type: "shape",
+        shapeType: "star",
+        points: 5,
+        innerRadiusRatio: 0.382,
+        style: {
+          x: 100,
+          y: 100,
+          width: 300,
+          height: 300,
+          backgroundColor: "#18181b",
+          borderWidth: 0,
+          borderColor: "transparent",
+          rotation: 0,
+          opacity: 1,
+        },
+      };
+
+      useProjectStore.getState().addLayer(starLayer);
+      useProjectStore.getState().enterSplitMode(starLayer.id);
+      useProjectStore.getState().confirmSplit();
+
+      const screen = useProjectStore.getState().document.screens[0];
+      const splitGroup = screen.layers.find((l) => (l as any).isCompound) as any;
+
+      expect(splitGroup).toBeDefined();
+      expect(splitGroup.isCompound).toBe(true);
+      // Master properties on the compound group match the original element
+      expect(splitGroup.style.backgroundColor).toBe("#18181b");
+      expect(splitGroup.style.borderWidth).toBe(0);
+
+      // Children contain the intact fill layer + 2 edge stroke paths
+      expect(splitGroup.children).toHaveLength(3);
+      const fillChild = splitGroup.children.find((c: any) => c.id.startsWith("fill_"));
+      const pathChildren = splitGroup.children.filter((c: any) => c.shapeType === "path");
+
+      expect(fillChild).toBeDefined();
+      expect(fillChild.shapeType).toBe("star");
+      expect(fillChild.style.backgroundColor).toBe("#18181b");
+      expect(fillChild.style.borderWidth).toBe(0);
+      expect(pathChildren).toHaveLength(2);
+      expect(pathChildren[0].style.borderWidth).toBe(0);
+      expect(pathChildren[1].style.borderWidth).toBe(0);
+
+      // 1. User checks Stroke and sets width to 6 in Inspector
+      useProjectStore.getState().updateLayerStyle(splitGroup.id, {
+        borderWidth: 6,
+        borderColor: "#000000",
+      });
+
+      const updatedScreen = useProjectStore.getState().document.screens[0];
+      const updatedGroup = updatedScreen.layers.find((l) => l.id === splitGroup.id) as any;
+      expect(updatedGroup.style.borderWidth).toBe(6);
+      expect(updatedGroup.style.borderColor).toBe("#000000");
+
+      // Propagated to child edge paths, NOT to fill layer
+      const updatedPaths = updatedGroup.children.filter((c: any) => c.shapeType === "path");
+      expect(updatedPaths[0].style.borderWidth).toBe(6);
+      expect(updatedPaths[0].style.borderColor).toBe("#000000");
+      expect(updatedPaths[1].style.borderWidth).toBe(6);
+      expect(updatedPaths[1].style.borderColor).toBe("#000000");
+
+      // 2. User changes Fill color to red
+      useProjectStore.getState().updateLayerStyle(splitGroup.id, {
+        backgroundColor: "#ef4444",
+      });
+
+      const redScreen = useProjectStore.getState().document.screens[0];
+      const redGroup = redScreen.layers.find((l) => l.id === splitGroup.id) as any;
+      expect(redGroup.style.backgroundColor).toBe("#ef4444");
+      const redFillChild = redGroup.children.find((c: any) => c.id.startsWith("fill_"));
+      expect(redFillChild.style.backgroundColor).toBe("#ef4444");
+
+      // 3. User unchecks Fill (transparent)
+      useProjectStore.getState().updateLayerStyle(splitGroup.id, {
+        backgroundColor: "transparent",
+      });
+
+      const transScreen = useProjectStore.getState().document.screens[0];
+      const transGroup = transScreen.layers.find((l) => l.id === splitGroup.id) as any;
+      expect(transGroup.style.backgroundColor).toBe("transparent");
+      const transFillChild = transGroup.children.find((c: any) => c.id.startsWith("fill_"));
+      expect(transFillChild.style.backgroundColor).toBe("transparent");
+    });
   });
 
   describe("Canvas Compound Entity Move-As-One vs Independent Choreography", () => {

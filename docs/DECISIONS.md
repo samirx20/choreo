@@ -1534,9 +1534,13 @@ The engine provides first-class, motion-first reactive primitives for each eleme
      - Derived exact parametric vertices and edges for Triangles (3 edges), Stars (10 edges), Polygons ($N$ edges), Rectangles (4 edges + corner arcs), and Circles (4 quadrant arcs).
      - Applied uniform $S = \min(W, H)/100$ scale and centering offsets ($offsetX, offsetY$) matching SVG `viewBox="0 0 100 100"` (`xMidYMid meet`), preventing distortion or skew on non-square shapes.
      - Formulated closed-loop corner junctions ($J_0, J_1, J_2, J_3$) ensuring zero missing corner arcs and 0.0000px gap.
+   5. **Fill Preservation, Bounding-Box Border Isolation & Master Property Propagation**:
+      - **Fill Preservation**: Splitting filled shapes preserves the original shape geometry and fill color via a dedicated `(Fill)` sub-layer. The split shape remains visually solid at rest—fill is never discarded.
+      - **Bounding-Box Border Isolation (`GroupRenderer.tsx`)**: When `layer.isCompound` is true, the container `<div>` is strictly an invisible coordinate frame and never renders CSS `borderWidth`, `borderColor`, or `backgroundColor`.
+      - **Master Property Propagation (`styleSlice.ts` & `layerSlice.ts`)**: Editing stroke width or color in the Inspector propagates to the actual constituent stroke paths (`shapeType === "path"`), rather than the bounding box. Editing fill color or toggling fill updates the fill sub-layer.
 * **Verification**:
-  * 11 dedicated tests in `src/test/interactive_split_mode.test.ts` (including `PolygonLayer` 6-sided hexagon interactive edge selection and complementary path splitting).
-  * All 42 test suites (393 tests) pass cleanly (`npm test`).
+  * 12 dedicated tests in `src/test/interactive_split_mode.test.ts` (including filled solid star edge splitting, fill preservation, stroke propagation to edges without bounding box border, and red/transparent fill updates).
+  * All 42 test suites (394 tests) pass cleanly (`npm test`).
   * Production build passes with 0 errors (`npm run build`).
 
 
