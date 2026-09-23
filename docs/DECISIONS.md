@@ -1119,3 +1119,18 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Verification**:
   * Added unit test cases verifying `getDefaultProjectsDirectory`, `autoSaveDesktopSnapshot`, and filename-to-project-name synchronization.
   * All test suites pass 100% cleanly.
+
+---
+
+### Decision 58: White Canvas Default, Fill Toggle Re-enable Fix, and Inspector Layout Compression
+* **Default Scene Background to White (`#ffffff`)**:
+  * Updated `INITIAL_SCENE` in `src/store/initialScene.ts` and `createProject` in `src/services/projectStorage.ts` to default `settings.backgroundColor` and `screens[0].backgroundColor` to `#ffffff` instead of `#09090b`.
+  * Updated `addScreen` in `src/store/slices/sceneSlice.ts` to automatically inherit the project's background color (`doc.settings.backgroundColor ?? doc.screens[0]?.backgroundColor ?? "#ffffff"`), ensuring newly appended scenes match the project canvas without starting black.
+* **Fill Checkbox Toggle Re-enable Bug Resolution (`src/components/inspector/design/SceneSettingsCard.tsx`)**:
+  * **Root Cause**: When unchecking Fill, `backgroundColor` was set to `"transparent"`. In JavaScript, `("transparent" || "#ffffff")` evaluates to `"transparent"` because `"transparent"` is a truthy string. Consequently, attempting to re-check Fill repeatedly evaluated `nextFill` as `"transparent"`, permanently preventing the fill checkbox from being checked again.
+  * **Fix**: Re-evaluated `hasSceneFill` as `screenBg !== "transparent" && Boolean(screenBg)`. When enabling fill from a transparent state, `restoreColor` safely falls back to `#ffffff` if `settings.backgroundColor` is `"transparent"`, guaranteeing reliable, infinite toggle capability.
+* **Canvas Format Header Compression (`src/components/inspector/design/SceneSettingsCard.tsx`)**:
+  * Compressed the multi-line, broken layout into a clean, single-row header containing only `Canvas Format` and a lock icon `<Lock />` when not on the primary scene (`!isFirstScene`), completely eliminating horizontal text wrapping and clutter.
+* **Verification**:
+  * Added unit tests in `src/test/color_picker_and_scene_fill.test.ts` for default white background and bidirectional fill toggling.
+  * All tests pass cleanly.

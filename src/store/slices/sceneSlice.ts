@@ -53,11 +53,13 @@ export const createSceneSlice = (
       return Math.max(max, sx + sw);
     }, 0);
     const defaultX = rightmostX > 0 ? rightmostX + 120 : 0;
+    const defaultBg = doc.settings?.backgroundColor ?? doc.screens[0]?.backgroundColor ?? "#ffffff";
     const newScreen: Screen = {
       id: newId,
       name: `Scene ${doc.screens.length + 1}`,
       duration: 5.0,
       layers: [],
+      backgroundColor: customScreen?.backgroundColor ?? defaultBg,
       x: customScreen?.x ?? defaultX,
       y: customScreen?.y ?? 0,
       ...customScreen,

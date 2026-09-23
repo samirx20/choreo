@@ -154,7 +154,7 @@ export function createProject(options: CreateProjectOptions): { id: string; docu
   const height = options.height || 1080;
   const fps = options.fps || 60;
   const duration = options.duration || 5.0;
-  const backgroundColor = options.backgroundColor || "#09090b";
+  const backgroundColor = options.backgroundColor || "#ffffff";
 
   const doc: SceneDocument = {
     version: "1.0",

@@ -61,8 +61,9 @@ export const SceneSettingsCard: React.FC = () => {
     ? "4:5 Portrait"
     : "Custom";
 
-  const currentBg = activeScreen.backgroundColor ?? settings.backgroundColor ?? "#ffffff";
-  const hasSceneFill = activeScreen.backgroundColor !== "transparent" && Boolean(currentBg);
+  const screenBg = activeScreen.backgroundColor ?? settings.backgroundColor;
+  const hasSceneFill = screenBg !== "transparent" && Boolean(screenBg);
+  const currentBg = hasSceneFill ? screenBg! : "#ffffff";
 
   return (
     <div className="p-4 space-y-4 text-foreground text-xs select-none">
@@ -157,19 +158,15 @@ export const SceneSettingsCard: React.FC = () => {
 
       {/* Layout Section */}
       <div className="space-y-2.5">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between h-5">
           <div className="flex items-center gap-1.5">
             <h4 className="text-xs font-semibold text-foreground">Canvas Format</h4>
             {!isFirstScene && (
-              <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/80 px-1.5 py-0.5 rounded font-medium">
-                <Lock className="h-2.5 w-2.5 text-muted-foreground" />
-                <span>Project (Scene 1)</span>
+              <span title="Locked to Project Canvas Format">
+                <Lock className="h-3 w-3 text-muted-foreground" />
               </span>
             )}
           </div>
-          <span className="text-[11px] text-muted-foreground">
-            Scene {sceneIndex + 1} of {doc.screens.length}
-          </span>
         </div>
 
         {/* Format dropdown */}
@@ -230,12 +227,26 @@ export const SceneSettingsCard: React.FC = () => {
       <div className="pt-3 border-t border-border space-y-2.5">
         <div
           onClick={() => {
-            const nextFill = hasSceneFill ? "transparent" : (settings.backgroundColor || "#ffffff");
-            if (applyToAllScenes) {
-              doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: nextFill }));
-              updateSettings({ backgroundColor: nextFill });
+            if (hasSceneFill) {
+              // Disabling fill -> set transparent
+              if (applyToAllScenes) {
+                doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: "transparent" }));
+                updateSettings({ backgroundColor: "transparent" });
+              } else {
+                updateScreen(activeScreen.id, { backgroundColor: "transparent" });
+              }
             } else {
-              updateScreen(activeScreen.id, { backgroundColor: nextFill });
+              // Enabling fill -> restore a valid non-transparent color (never "transparent")
+              const restoreColor =
+                settings.backgroundColor && settings.backgroundColor !== "transparent"
+                  ? settings.backgroundColor
+                  : "#ffffff";
+              if (applyToAllScenes) {
+                doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: restoreColor }));
+                updateSettings({ backgroundColor: restoreColor });
+              } else {
+                updateScreen(activeScreen.id, { backgroundColor: restoreColor });
+              }
             }
           }}
           className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
@@ -243,15 +254,6 @@ export const SceneSettingsCard: React.FC = () => {
           <span className="text-xs font-semibold text-foreground">Fill</span>
           <Checkbox
             checked={hasSceneFill}
-            onCheckedChange={() => {
-              const nextFill = hasSceneFill ? "transparent" : (settings.backgroundColor || "#ffffff");
-              if (applyToAllScenes) {
-                doc.screens.forEach((s) => updateScreen(s.id, { backgroundColor: nextFill }));
-                updateSettings({ backgroundColor: nextFill });
-              } else {
-                updateScreen(activeScreen.id, { backgroundColor: nextFill });
-              }
-            }}
             className="pointer-events-none"
           />
         </div>

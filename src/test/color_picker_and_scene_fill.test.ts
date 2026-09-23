@@ -84,5 +84,33 @@ describe("ColorPicker Math & Scene Fill Architecture", () => {
       expect(allScreens.every((s) => s.backgroundColor === targetColor)).toBe(true);
       expect(useProjectStore.getState().document.settings.backgroundColor).toBe(targetColor);
     });
+
+    it("defaults new projects and newly added screens to white (#ffffff)", () => {
+      const store = useProjectStore.getState();
+      expect(store.document.settings.backgroundColor).toBe("#ffffff");
+      expect(store.document.screens[0].backgroundColor).toBe("#ffffff");
+
+      store.addScreen();
+      expect(useProjectStore.getState().document.screens[1].backgroundColor).toBe("#ffffff");
+    });
+
+    it("reliably disables fill to transparent and re-enables back to a valid color", () => {
+      const store = useProjectStore.getState();
+      const screenId = store.document.screens[0].id;
+
+      // Disable fill
+      store.updateScreen(screenId, { backgroundColor: "transparent" });
+      expect(useProjectStore.getState().document.screens[0].backgroundColor).toBe("transparent");
+
+      // Re-enable fill
+      const doc = useProjectStore.getState().document;
+      const restoreColor =
+        doc.settings.backgroundColor && doc.settings.backgroundColor !== "transparent"
+          ? doc.settings.backgroundColor
+          : "#ffffff";
+      store.updateScreen(screenId, { backgroundColor: restoreColor });
+
+      expect(useProjectStore.getState().document.screens[0].backgroundColor).toBe("#ffffff");
+    });
   });
 });

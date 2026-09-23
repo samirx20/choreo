@@ -8,7 +8,7 @@ export const INITIAL_SCENE: SceneDocument = {
     height: 1080,
     fps: 60,
     duration: 5.0,
-    backgroundColor: "#09090b",
+    backgroundColor: "#ffffff",
     palette: [
       "#000000",
       "#ffffff",
@@ -33,6 +33,7 @@ export const INITIAL_SCENE: SceneDocument = {
       id: "screen_1",
       name: "Scene 1",
       duration: 5.0,
+      backgroundColor: "#ffffff",
       layers: [],
     },
   ],
