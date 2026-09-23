@@ -271,4 +271,69 @@ describe("Element Individuality & Physical Coherence Matrix", () => {
       expect(css.boxShadow).toContain("inset 0 1px 1px");
     });
   });
+
+  describe("Tactile UX & Dynamic Scrubbing Sensitivity (Precision Tool Principle)", () => {
+    it("dynamically gears micro-precision for tight ranges (stroke width, star points)", async () => {
+      const { calculateScrubDelta } = await import("@/components/ui/scrubbable-input");
+
+      // Tight range: 3 to 20 points (range = 17 <= 24)
+      // Moving 10px produces exactly 1.0 unit change (0.1 unit/px)
+      const starDelta = calculateScrubDelta(10, 5, { min: 3, max: 20, step: 1 });
+      expect(starDelta).toBeCloseTo(1.0, 2);
+
+      // Stroke width range: 1 to 24
+      const strokeDelta = calculateScrubDelta(10, 2, { min: 1, max: 24, step: 1 });
+      expect(strokeDelta).toBeCloseTo(1.0, 2);
+    });
+
+    it("gears moderate sensitivity for standard percentage ranges (opacity, blur, corner radius)", async () => {
+      const { calculateScrubDelta } = await import("@/components/ui/scrubbable-input");
+
+      // Range: 0 to 100 (opacity, blur, etc.) -> 0.3 units/px
+      // 10px drag produces 3.0 units change
+      const opacityDelta = calculateScrubDelta(10, 50, { min: 0, max: 100, step: 1 });
+      expect(opacityDelta).toBeCloseTo(3.0, 2);
+    });
+
+    it("gears high responsive sensitivity for large canvas coordinates and dimensions", async () => {
+      const { calculateScrubDelta } = await import("@/components/ui/scrubbable-input");
+
+      // Open coordinate: startVal = 960 (canvas center)
+      // 10px drag produces 10.0 units change (1:1 ratio)
+      const coordDelta = calculateScrubDelta(10, 960, { step: 1 });
+      expect(coordDelta).toBeCloseTo(10.0, 2);
+    });
+
+    it("respects Shift (10x) and Alt (0.1x) keyboard modifiers", async () => {
+      const { calculateScrubDelta } = await import("@/components/ui/scrubbable-input");
+
+      // Base delta on 0-100 range for 10px is 3.0
+      const shiftDelta = calculateScrubDelta(10, 50, { min: 0, max: 100, step: 1, shiftKey: true });
+      expect(shiftDelta).toBeCloseTo(30.0, 2);
+
+      const altDelta = calculateScrubDelta(10, 50, { min: 0, max: 100, step: 1, altKey: true });
+      expect(altDelta).toBeCloseTo(0.3, 2);
+    });
+
+    it("smoothly accelerates on long deliberate drags while keeping micro-nudges stable", async () => {
+      const { calculateScrubDelta } = await import("@/components/ui/scrubbable-input");
+
+      // Short drag (20px < 40px) has accel multiplier = 1.0
+      const shortDrag = calculateScrubDelta(20, 500, { step: 1 });
+      expect(shortDrag).toBe(20);
+
+      // Long drag (100px > 40px) accelerates
+      const longDrag = calculateScrubDelta(100, 500, { step: 1 });
+      expect(longDrag).toBeGreaterThan(100);
+    });
+
+    it("honors custom sensitivity prop override when provided", async () => {
+      const { calculateScrubDelta } = await import("@/components/ui/scrubbable-input");
+
+      // Explicit sensitivity = 0.05
+      const customDelta = calculateScrubDelta(20, 50, { step: 1, sensitivity: 0.05 });
+      expect(customDelta).toBeCloseTo(1.0, 2);
+    });
+  });
 });
+

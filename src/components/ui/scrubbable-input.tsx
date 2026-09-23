@@ -17,6 +17,88 @@ export interface ScrubbableInputProps {
   className?: string;
   tooltip?: string;
   defaultValue?: number;
+  sensitivity?: number;
+}
+
+export interface ScrubOptions {
+  min?: number;
+  max?: number;
+  step?: number;
+  sensitivity?: number;
+  shiftKey?: boolean;
+  altKey?: boolean;
+}
+
+/**
+ * Calculates dynamic sensitivity and distance acceleration for scrubbable inputs.
+ * Gearing dynamically adapts:
+ * - Tight ranges (stroke 1-24, star points 3-20): 10px per unit for micro-precision.
+ * - Standard bounded ranges (opacity 0-100%, trim path, corner radius): ~3-4px per unit.
+ * - Angular ranges (0-360 deg): ~1.5px per degree.
+ * - Open coordinates & large dimensions: 1px per unit for fast manipulation.
+ */
+export function calculateScrubDelta(
+  deltaX: number,
+  startVal: number,
+  options: ScrubOptions = {}
+): number {
+  const {
+    min = -Infinity,
+    max = Infinity,
+    step = 1,
+    sensitivity,
+    shiftKey = false,
+    altKey = false,
+  } = options;
+
+  let multiplier = 1;
+  if (shiftKey) multiplier = 10;
+  if (altKey) multiplier = 0.1;
+
+  let baseUnitsPerPixel: number;
+
+  if (sensitivity !== undefined && sensitivity > 0) {
+    baseUnitsPerPixel = sensitivity * step;
+  } else if (step < 1) {
+    // Fractional steps (e.g. 0.01, 0.1) already indicate high-precision editing
+    baseUnitsPerPixel = step * 0.25;
+  } else if (Number.isFinite(min) && Number.isFinite(max)) {
+    const range = max - min;
+    if (range <= 24) {
+      // Very tight integer range (stroke widths 1-24, star points 3-20, polygon sides 3-12)
+      baseUnitsPerPixel = 0.1 * step;
+    } else if (range <= 100) {
+      // Moderate bounded ranges (opacity 0-100%, trim path 0-100%, corner radius 0-100)
+      baseUnitsPerPixel = 0.3 * step;
+    } else if (range <= 360) {
+      // Angular ranges (0-360 deg)
+      baseUnitsPerPixel = 0.6 * step;
+    } else {
+      // Wide finite ranges
+      baseUnitsPerPixel = Math.max(0.5, Math.min(2.0, range / 500)) * step;
+    }
+  } else {
+    // Open-ended / unbounded properties (min/max infinite)
+    const absVal = Math.abs(startVal);
+    if (absVal <= 30) {
+      // Small magnitude values (blur, small margins, strokes)
+      baseUnitsPerPixel = 0.15 * step;
+    } else if (absVal <= 150) {
+      // Medium magnitude values (icon sizes, moderate paddings)
+      baseUnitsPerPixel = 0.4 * step;
+    } else {
+      // Large dimensions & positions (e.g. width 1920, height 1080, X 500)
+      baseUnitsPerPixel = 1.0 * step;
+    }
+  }
+
+  // Smooth acceleration for long intentional sweeps:
+  // Short micro-adjustments (< 40px) stay at 1.0x (ultra stable)
+  // Long deliberate drags gradually ramp up to 2.5x
+  const absDelta = Math.abs(deltaX);
+  const accel = absDelta > 40 ? Math.min(2.5, 1 + (absDelta - 40) / 120) : 1;
+
+  return deltaX * baseUnitsPerPixel * accel * multiplier;
 }
 
 /**
@@ -83,6 +165,7 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
   className,
   tooltip,
   defaultValue,
+  sensitivity,
 }) => {
   const displaySuffix = suffix || unit || "";
   const stepDecimals = step.toString().includes(".") ? step.toString().split(".")[1].length : 0;
@@ -142,13 +225,15 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
       }
 
       if (hasDragged) {
-        // Modifier multipliers: Shift = 10x, Alt = 0.1x
-        let multiplier = 1;
-        if (moveEvent.shiftKey) multiplier = 10;
-        if (moveEvent.altKey) multiplier = 0.1;
-
-        // Linear and predictable scrubbing proportional to step
-        const stepDelta = deltaX * step * multiplier;
+        // Dynamic gearing: adapt sensitivity based on range and magnitude
+        const stepDelta = calculateScrubDelta(deltaX, startVal, {
+          min,
+          max,
+          step,
+          sensitivity,
+          shiftKey: moveEvent.shiftKey,
+          altKey: moveEvent.altKey,
+        });
 
         currentVal = clampAndRound(startVal + stepDelta);
         onChange(currentVal);

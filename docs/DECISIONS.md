@@ -1223,3 +1223,35 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * Added comprehensive test suite `src/test/element_individuality_matrix.test.ts` (13 tests).
   * All 39 test suites (342 tests) pass 100% cleanly (`npm test`).
   * Production build passes with 0 errors (`npm run build`).
+
+---
+
+### Decision 63: Tactile UX — Dynamic Sensitivity, Gearing & Zero-Value Preservation for Scrubbable Inputs
+* **The Problem**:
+  * **Zero-Value Checkbox Collapse**: Scrubbing properties with single numerical values (stroke width, shadow distance/blur, sticker border, layer blur, background blur) down to `0` previously triggered an immediate unchecking of their master toggle checkboxes and collapsed the inspector section. In creative tools, a value of `0` is a valid authored setting (e.g. zero blur, 0px border, or 0% opacity), not an instruction to delete or deactivate the property.
+  * **High Scrubbing Sensitivity & Runaway Increments**: Mouse hold-and-drag scrubbing in `ScrubbableInput` previously mapped 1 mouse pixel directly to 1 full unit (`stepDelta = deltaX * step * multiplier`). For small ranges (e.g. stroke width 1..24, star points 3..20, blurs 0..30), tiny mouse twitches or normal hand movements caused massive, uncontrolled jumps (e.g. moving 20px immediately added +20 to stroke width, shooting from 2px to 22px).
+* **The Solution**:
+  * **Zero-Value Preservation (`AppearanceCard.tsx`)**:
+    * Decoupled master checkbox activation from numerical value checks (`hasStroke`, `hasShadow`, `hasStickerBorder`, `hasLayerBlur`, `hasBgBlur`).
+    * Scrubbing any property down to `0` leaves the master checkbox checked and the section open, allowing seamless micro-tuning from 0 upward without UI collapse.
+  * **Dynamic Sensitivity & Precision Gearing (`src/components/ui/scrubbable-input.tsx`)**:
+    * Implemented `calculateScrubDelta(deltaX, startVal, options)` with automatic range- and magnitude-based gearing:
+      1. **Tight Ranges ($range \le 24$, e.g. stroke width 1..24, star points 3..20, polygon sides 3..12)**:
+         $baseUnitsPerPixel = 0.1 \times step$ (~10px of drag per 1 unit increment) for ultra-fine micro-precision.
+      2. **Standard Bounded Ranges ($range \le 100$, e.g. opacity 0..100%, trim path 0..100%, corner radius 0..100)**:
+         $baseUnitsPerPixel = 0.3 \times step$ (~3.3px of drag per 1 unit increment).
+      3. **Angular Ranges ($range \le 360$, e.g. 0°..360° light angle, rotation)**:
+         $baseUnitsPerPixel = 0.6 \times step$ (~1.6px of drag per 1 degree).
+      4. **Large Open Dimensions ($|startVal| > 150$, e.g. canvas coordinates, 1920 width, 1080 height)**:
+         $baseUnitsPerPixel = 1.0 \times step$ (1px per unit) for responsive positioning.
+      5. **Fractional Steps ($step < 1$, e.g. 0.01, 0.1)**:
+         $baseUnitsPerPixel = step \times 0.25$ for high-precision sub-unit control.
+    * **Subtle Non-Linear Acceleration**:
+      Micro-adjustments ($\le 40\text{px}$) stay locked at $1.0\times$ acceleration for stable nudging. Long deliberate sweeps smoothly ramp up to $2.5\times$, preventing fatigue during large edits.
+    * **Keyboard Modifiers**: Retained industry-standard `Shift` ($10\times$ fast scrub) and `Alt` ($0.1\times$ micro-precision).
+    * **Explicit Sensitivity Prop**: Added optional `sensitivity?: number` prop to `ScrubbableInputProps` for custom overrides.
+* **Verification**:
+  * Added 6 unit tests in `src/test/element_individuality_matrix.test.ts` verifying dynamic sensitivity across ranges, coordinates, modifiers, acceleration, and custom overrides (19 total tests in file).
+  * All 39 test suites (348 tests) pass cleanly (`npm test`).
+  * Production build compiles cleanly with 0 errors in 10.17s (`npm run build`).
+
