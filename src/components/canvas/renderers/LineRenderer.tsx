@@ -70,6 +70,27 @@ export const LineRenderer: React.FC<LineRendererProps> = ({
   const x2 = (layer as LineLayer).x2 ?? Math.max(0, widthNum - markerPadEnd);
   const y2 = (layer as LineLayer).y2 ?? heightNum / 2;
 
+  // Trim Path calculations
+  const lineLength = Math.max(1, Math.round(Math.hypot(x2 - x1, y2 - y1) || widthNum));
+  const tStart = ((layer as any).trimStart ?? 0) / 100;
+  const tEnd = ((layer as any).trimEnd ?? 100) / 100;
+  const tOffset = ((layer as any).trimOffset ?? 0) / 100;
+  const hasTrim =
+    ((layer as any).trimStart !== undefined && (layer as any).trimStart > 0) ||
+    ((layer as any).trimEnd !== undefined && (layer as any).trimEnd < 100) ||
+    (layer as any).trimOffset !== undefined;
+
+  let effectiveDashArray = dashArray;
+  let effectiveDashOffset: number | undefined = undefined;
+
+  if (hasTrim) {
+    const visibleLength = Math.max(0, (tEnd - tStart) * lineLength);
+    effectiveDashArray = `${visibleLength} ${lineLength}`;
+    effectiveDashOffset = -((tStart + tOffset) * lineLength);
+  }
+
+  const strokeCap = (layer as any).strokeCap || "round";
+
   return (
     <div
       id={`layer-${layer.id}`}
@@ -129,8 +150,9 @@ export const LineRenderer: React.FC<LineRendererProps> = ({
           y2={y2}
           stroke={strokeColor}
           strokeWidth={strokeWidth}
-          strokeDasharray={dashArray}
-          strokeLinecap="round"
+          strokeDasharray={effectiveDashArray}
+          strokeDashoffset={effectiveDashOffset}
+          strokeLinecap={strokeCap}
           markerStart={
             arrowStart === "arrow"
               ? `url(#arrow-start-${layer.id})`

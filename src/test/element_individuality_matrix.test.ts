@@ -235,4 +235,40 @@ describe("Element Individuality & Physical Coherence Matrix", () => {
       expect(mismatchIssues.length).toBe(1);
     });
   });
+
+  describe("Renderer Physics & Property Fidelity (Glass, Shadow, Trim Path)", () => {
+    it("renders polar drop shadow even when shadowAngle is unspecified", async () => {
+      const { layerStyleToCss } = await import("@/components/canvas/renderers/styleUtils");
+      const style = {
+        width: 100,
+        height: 100,
+        shadowDistance: 8,
+        shadowBlur: 16,
+        shadowColor: "#000000",
+        shadowOpacity: 0.25,
+      };
+
+      const css = layerStyleToCss(style);
+      expect(css.boxShadow).toBeDefined();
+      expect(css.boxShadow).toContain("8.0px 16px 0px #000000");
+    });
+
+    it("renders Glass effect non-destructively without wiping background color", async () => {
+      const { layerStyleToCss } = await import("@/components/canvas/renderers/styleUtils");
+      const style = {
+        width: 100,
+        height: 100,
+        backgroundColor: "#3b82f6",
+        isGlass: true,
+      } as any;
+
+      const css = layerStyleToCss(style);
+      // Authored background color is completely preserved
+      expect(css.backgroundColor).toBe("#3b82f6");
+      // Backdrop blur is applied
+      expect(css.backdropFilter).toBe("blur(20px)");
+      // Glass specular highlight is present
+      expect(css.boxShadow).toContain("inset 0 1px 1px");
+    });
+  });
 });

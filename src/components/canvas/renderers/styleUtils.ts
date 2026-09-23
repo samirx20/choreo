@@ -176,15 +176,21 @@ export function layerStyleToCss(
   // Shadows: Polar Drop Shadow, Custom Shadows, & 2.5D Elevation
   const isHardShadow = style.shadowMode === "hard";
 
-  if (typeof style.shadowAngle === "number" && typeof style.shadowDistance === "number") {
-    const rad = (style.shadowAngle * Math.PI) / 180;
-    const dist = style.shadowDistance;
+  const hasPolarShadow =
+    typeof style.shadowAngle === "number" ||
+    typeof style.shadowDistance === "number" ||
+    typeof style.shadowBlur === "number";
+
+  if (hasPolarShadow) {
+    const angle = style.shadowAngle ?? 90;
+    const rad = (angle * Math.PI) / 180;
+    const dist = style.shadowDistance ?? 8;
     const dx = Math.cos(rad) * dist;
     const dy = Math.sin(rad) * dist;
-    const blur = isHardShadow ? 0 : (style.shadowBlur ?? 8);
+    const blur = isHardShadow ? 0 : (style.shadowBlur ?? 16);
     const spread = style.shadowSpread ?? 0;
     const col = style.shadowColor ?? "#000000";
-    const alpha = style.shadowOpacity ?? 0.5;
+    const alpha = style.shadowOpacity ?? 0.25;
     const alphaHex = Math.max(0, Math.min(255, Math.round(alpha * 255))).toString(16).padStart(2, "0");
     css.boxShadow = `${dx.toFixed(1)}px ${dy.toFixed(1)}px ${blur}px ${spread}px ${col}${alphaHex}`;
   } else if (style.shadows && style.shadows.length > 0) {
@@ -224,7 +230,14 @@ export function layerStyleToCss(
     css.filter = filters.join(" ");
   }
 
-  if (typeof style.backdropBlur === "number" && style.backdropBlur > 0) {
+  const isGlass = (style as any).isGlass === true;
+  if (isGlass) {
+    const frost = typeof style.backdropBlur === "number" && style.backdropBlur > 0 ? style.backdropBlur : 20;
+    css.backdropFilter = `blur(${frost}px)`;
+    css.WebkitBackdropFilter = `blur(${frost}px)`;
+    const glassHighlights = "inset 0 1px 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 1px 0 rgba(0, 0, 0, 0.1)";
+    css.boxShadow = css.boxShadow ? `${css.boxShadow}, ${glassHighlights}` : glassHighlights;
+  } else if (typeof style.backdropBlur === "number" && style.backdropBlur > 0) {
     css.backdropFilter = `blur(${style.backdropBlur}px)`;
     css.WebkitBackdropFilter = `blur(${style.backdropBlur}px)`;
   }

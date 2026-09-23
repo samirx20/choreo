@@ -30,13 +30,14 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
   const hasStroke = Boolean(style.borderWidth && style.borderWidth > 0);
   const hasShadow = Boolean(
     (style.shadowBlur !== undefined && style.shadowBlur > 0) ||
+    (style.shadowDistance !== undefined && style.shadowDistance > 0) ||
     (style.shadows && style.shadows.length > 0) ||
     style.shadowMode === "hard"
   );
   const hasStickerBorder = Boolean(style.stickerBorder && style.stickerBorder.width > 0);
   const hasLayerBlur = Boolean(style.filterBlur && style.filterBlur > 0);
   const hasBgBlur = Boolean(style.backdropBlur && style.backdropBlur > 0);
-  const hasGlass = (selectedLayer as any).isGlass === true;
+  const hasGlass = (selectedLayer as any).isGlass === true || (style as any).isGlass === true;
 
   return (
     <div className="border-t border-border divide-y divide-border/50">
@@ -230,15 +231,10 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
             updateLayerStyle(selectedLayer.id, {
               shadowBlur: nextShadow ? (style.shadowMode === "hard" ? 0 : 16) : 0,
               shadowDistance: nextShadow ? 8 : 0,
-              shadowColor: "#000000",
-              shadowOpacity: nextShadow ? 0.25 : 0,
+              shadowAngle: nextShadow ? (style.shadowAngle ?? 90) : undefined,
+              shadowColor: style.shadowColor || "#000000",
+              shadowOpacity: nextShadow ? (style.shadowOpacity ?? 0.25) : 0,
               shadowMode: nextShadow ? (style.shadowMode || "soft") : undefined,
-              ...(nextShadow
-                ? {
-                    borderWidth: 0,
-                    borderColor: "transparent",
-                  }
-                : {}),
             });
           }}
           className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
@@ -300,8 +296,6 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
                     onChange={(val) =>
                       updateLayerStyle(selectedLayer.id, {
                         shadowBlur: val,
-                        borderWidth: 0,
-                        borderColor: "transparent",
                       })
                     }
                     className="w-20"
@@ -320,8 +314,6 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
                   onChange={(val) =>
                     updateLayerStyle(selectedLayer.id, {
                       shadowDistance: val,
-                      borderWidth: 0,
-                      borderColor: "transparent",
                     })
                   }
                   className="w-20"
@@ -470,32 +462,14 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
       )}
 
       {/* 7. Glass Checkbox */}
+      {/* 7. Glass Checkbox */}
       {canHaveGlass(selectedLayer) && (
         <div className="py-2.5 space-y-2">
           <div
             onClick={() => {
               const nextGlass = !hasGlass;
               updateLayer(selectedLayer.id, { isGlass: nextGlass } as any);
-              if (nextGlass) {
-                updateLayerStyle(selectedLayer.id, {
-                  backgroundColor: "rgba(255, 255, 255, 0.2)",
-                  backdropBlur: 20,
-                  borderColor: "rgba(255, 255, 255, 0.4)",
-                  borderWidth: 1,
-                  shadowBlur: 0,
-                  shadowDistance: 0,
-                  shadowOpacity: 0,
-                  elevation: 0,
-                  shadows: [],
-                });
-              } else {
-                updateLayerStyle(selectedLayer.id, {
-                  backgroundColor: "#B3B3B3",
-                  backdropBlur: 0,
-                  borderColor: "transparent",
-                  borderWidth: 0,
-                });
-              }
+              updateLayerStyle(selectedLayer.id, { isGlass: nextGlass } as any);
             }}
             className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
           >

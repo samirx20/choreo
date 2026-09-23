@@ -171,6 +171,8 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             strokeWidth={hasStroke ? strokeWidth : 0}
             strokeLinejoin={(layer.strokeJoin as any) || "round"}
             strokeLinecap={(layer.strokeCap as any) || "round"}
+            strokeDasharray={hasTrim ? `${Math.max(0, (tEnd - tStart) * 280)} 280` : (layer.strokeDashArray ? layer.strokeDashArray.join(" ") : undefined)}
+            strokeDashoffset={hasTrim ? -((tStart + tOffset) * 280) : undefined}
           />
         </svg>
       )}
@@ -186,6 +188,8 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             strokeWidth={hasStroke ? strokeWidth : 0}
             strokeLinejoin={(layer.strokeJoin as any) || "round"}
             strokeLinecap={(layer.strokeCap as any) || "round"}
+            strokeDasharray={hasTrim ? `${Math.max(0, (tEnd - tStart) * 280)} 280` : (layer.strokeDashArray ? layer.strokeDashArray.join(" ") : undefined)}
+            strokeDashoffset={hasTrim ? -((tStart + tOffset) * 280) : undefined}
           />
         </svg>
       )}
@@ -215,6 +219,8 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             stroke={lineStrokeColor}
             strokeWidth={lineWidth}
             strokeLinecap={(layer.strokeCap as any) || "round"}
+            strokeDasharray={hasTrim ? `${Math.max(0, (tEnd - tStart) * widthNum)} ${widthNum}` : (layer.strokeDashArray ? layer.strokeDashArray.join(" ") : undefined)}
+            strokeDashoffset={hasTrim ? -((tStart + tOffset) * widthNum) : undefined}
             markerEnd={layer.shapeType === "arrow" && layer.arrowEnd !== false ? `url(#arrow-head-${layer.id})` : undefined}
           />
         </svg>

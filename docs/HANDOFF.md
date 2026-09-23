@@ -9,13 +9,16 @@
 ## 1. Current Verified Baseline
 
 The repository is in a pristine, fully verified, production-ready state:
-* **Automated Unit & Integration Tests**: All **39 test suites (340 tests)** passing via Vitest (`npm test`).
+* **Automated Unit & Integration Tests**: All **39 test suites (342 tests)** passing via Vitest (`npm test`).
 * **Production Build**: Compiles cleanly with **0 TypeScript / Vite bundling errors** (`npm run build`).
 * **Git Status**: Clean working tree on `main`, synchronized with GitHub remote.
 * **Recent Deliverables Completed (Decisions 57–62)**:
   * **Element Individuality, Form Truth & Physics Guardrails (Decision 62 - Completed)**:
     * Pruned nonsensical properties across all layer types in Inspector (Fill/4-corner radii on Lines, 4-corner radii on Circles/Stars/Polygons, outer box borders on Icons).
-    * Added dedicated single-metric inputs (`Length` for lines, `Diameter` for circles) and parametric controls (Star points/inner ratio, Line caps/patterns/reverse, Trim Paths, Media fit mode).
+    * Non-destructive Glass effect: eliminated color-swapping and stroke-checking macro; Glass now behaves as a non-destructive optical shader preserving authored colors and borders.
+    * Shadow default angle & border preservation: defaulted `shadowAngle: 90` so shadows immediately render upon toggling, and removed border-wiping side effects.
+    * Vector Line & Shape Trim Path rendering: wired `trimStart`, `trimEnd`, and `trimOffset` into `LineRenderer.tsx` and `ShapeRenderer.tsx` across lines, arrows, rectangles, circles, stars, and polygons.
+    * Dedicated single-metric inputs (`Length` for lines, `Diameter` for circles) and parametric controls (Star points/inner ratio, Line caps/patterns/reverse, Media fit mode).
     * Implemented 2-endpoint vector manipulation handles for 1D lines and arrows in canvas viewport, replacing 8-point bounding boxes.
     * Added context-menu actions tailored per element type (Reverse Direction, Toggle Arrowhead for lines; Toggle Auto-Width for text; Cover/Contain for media).
     * Math evaluator guardrails: clamped RGB channels to $[0, 255]$ and blur to $\ge 0$ under non-monotonic spring curves; clamped circle iris radii to prevent negative clip paths.

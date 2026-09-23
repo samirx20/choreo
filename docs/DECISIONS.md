@@ -1215,8 +1215,11 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Agent Tools & AST Pre-Flight Linter (`src/tools/applyAnimation.ts`, `src/tools/placeElement.ts`, `src/engine/perception/linter.ts`)**:
   * `applyAnimation`: Sanitizes presets and easings via `sanitizeAnimationForLayer` with constructive notices.
   * `placeElement`: Sanitizes styles and adds notices for lines (strips `fontSize`, `borderRadius`, `fillColor`), polygons, and circles.
-  * `linter.ts`: Added `INVALID_LAYER_PROPERTY` and `ANIMATION_TYPE_MISMATCH` rules.
+* **Non-Destructive Glass, Shadow Default Angle & Border Preservation, and Trim Path Rendering (`AppearanceCard.tsx`, `styleUtils.ts`, `LineRenderer.tsx`, `ShapeRenderer.tsx`)**:
+  * **Non-Destructive Glass**: Completely eliminated the invasive color-swapping and stroke-turning macro. Glass is now a pure optical shader/effect that adds frosted backdrop blur and specular bevel highlights compoundable with authored drop shadows, without touching or overriding the user's authored background color, borders, or shadows.
+  * **Polar Drop Shadow Reliability**: Removed the strict requirement for explicit `shadowAngle`, defaulting `shadowAngle: 90` (straight down) so shadows immediately render upon toggling. Removed the toxic side-effect that cleared `borderWidth: 0, borderColor: "transparent"` on shadow toggle and scrubbing, restoring the ability to have both border and shadow.
+  * **Vector Line & Shape Trim Path Rendering**: Connected `trimStart`, `trimEnd`, and `trimOffset` to SVG `strokeDasharray` and `strokeDashoffset` in `LineRenderer.tsx` and `ShapeRenderer.tsx` (across lines, arrows, stars, polygons, rectangles, and circles), and connected `strokeCap` (`round`, `butt`, `square`), enabling real-time visual trimming on vector paths.
 * **Verification**:
-  * Added comprehensive test suite `src/test/element_individuality_matrix.test.ts` (11 tests).
-  * All 39 test suites (340 tests) pass 100% cleanly (`npm test`).
+  * Added comprehensive test suite `src/test/element_individuality_matrix.test.ts` (13 tests).
+  * All 39 test suites (342 tests) pass 100% cleanly (`npm test`).
   * Production build passes with 0 errors (`npm run build`).
