@@ -463,5 +463,135 @@ describe("Element Individuality & Physical Coherence Matrix", () => {
       expect(fixedCss.height).toBe("250px");
     });
   });
+
+  describe("Directional De-Duplication & Typography Motion Presets Suite", () => {
+    it("consolidates directional presets to single slide and wipe cards in catalog", async () => {
+      const {
+        SHAPE_ENTRANCE_PRESETS,
+        MEDIA_ENTRANCE_PRESETS,
+        LINE_ENTRANCE_PRESETS,
+        EXIT_PRESETS,
+      } = await import("@/components/inspector/motion/AnimationCatalogSheet");
+
+      // Verify shape catalog has exactly 1 slide and 1 wipe preset
+      const shapeSlides = SHAPE_ENTRANCE_PRESETS.filter((p) => p.id.startsWith("slide"));
+      expect(shapeSlides.length).toBe(1);
+      expect(shapeSlides[0].id).toBe("slide");
+
+      const shapeWipes = SHAPE_ENTRANCE_PRESETS.filter((p) => p.id.includes("wipe") || p.id === "mask_reveal");
+      expect(shapeWipes.length).toBe(1);
+      expect(shapeWipes[0].id).toBe("wipe");
+
+      // Verify media catalog has 1 slide and 1 wipe
+      const mediaSlides = MEDIA_ENTRANCE_PRESETS.filter((p) => p.id.startsWith("slide"));
+      expect(mediaSlides.length).toBe(1);
+      expect(mediaSlides[0].id).toBe("slide");
+
+      // Verify line catalog has 1 slide and 1 wipe
+      const lineSlides = LINE_ENTRANCE_PRESETS.filter((p) => p.id.startsWith("slide"));
+      expect(lineSlides.length).toBe(1);
+
+      // Verify exit presets has 1 slide out
+      const exitSlides = EXIT_PRESETS.filter((p) => p.id.startsWith("slide"));
+      expect(exitSlides.length).toBe(1);
+      expect(exitSlides[0].id).toBe("slide");
+    });
+
+    it("evaluates consolidated slide preset across all 4 directions for entrance and exit", async () => {
+      const { evaluateAnimationConfig } = await import("@/engine/evaluator");
+
+      // Entrance Up: starts below (+dist), ends at 0
+      const inUpStart = evaluateAnimationConfig({ preset: "slide", direction: "up", start: 0, duration: 1, easing: "linear" }, 0, "in");
+      const inUpEnd = evaluateAnimationConfig({ preset: "slide", direction: "up", start: 0, duration: 1, easing: "linear" }, 1, "in");
+      expect(inUpStart.transform.y).toBe(60);
+      expect(inUpEnd.transform.y).toBe(0);
+
+      // Entrance Down: starts above (-dist), ends at 0
+      const inDownStart = evaluateAnimationConfig({ preset: "slide", direction: "down", start: 0, duration: 1, easing: "linear" }, 0, "in");
+      const inDownEnd = evaluateAnimationConfig({ preset: "slide", direction: "down", start: 0, duration: 1, easing: "linear" }, 1, "in");
+      expect(inDownStart.transform.y).toBe(-60);
+      expect(inDownEnd.transform.y).toBe(0);
+
+      // Entrance Left: starts right (+dist), ends at 0
+      const inLeftStart = evaluateAnimationConfig({ preset: "slide", direction: "left", start: 0, duration: 1, easing: "linear" }, 0, "in");
+      const inLeftEnd = evaluateAnimationConfig({ preset: "slide", direction: "left", start: 0, duration: 1, easing: "linear" }, 1, "in");
+      expect(inLeftStart.transform.x).toBe(60);
+      expect(inLeftEnd.transform.x).toBe(0);
+
+      // Entrance Right: starts left (-dist), ends at 0
+      const inRightStart = evaluateAnimationConfig({ preset: "slide", direction: "right", start: 0, duration: 1, easing: "linear" }, 0, "in");
+      const inRightEnd = evaluateAnimationConfig({ preset: "slide", direction: "right", start: 0, duration: 1, easing: "linear" }, 1, "in");
+      expect(inRightStart.transform.x).toBe(-60);
+      expect(inRightEnd.transform.x).toBe(0);
+
+      // Exit Up: starts at 0, slides up (-dist), finishes with opacity 0
+      const outUpStart = evaluateAnimationConfig({ preset: "slide", direction: "up", start: 0, duration: 1, easing: "linear" }, 0, "out");
+      const outUpMid = evaluateAnimationConfig({ preset: "slide", direction: "up", start: 0, duration: 1, easing: "linear" }, 0.5, "out");
+      const outUpEnd = evaluateAnimationConfig({ preset: "slide", direction: "up", start: 0, duration: 1, easing: "linear" }, 1, "out");
+      expect(outUpStart.transform.y).toBe(0);
+      expect(outUpMid.transform.y).toBeCloseTo(-30, 1);
+      expect(outUpEnd.opacity).toBe(0);
+
+      // Exit Down: starts at 0, slides down (+dist), finishes with opacity 0
+      const outDownStart = evaluateAnimationConfig({ preset: "slide", direction: "down", start: 0, duration: 1, easing: "linear" }, 0, "out");
+      const outDownMid = evaluateAnimationConfig({ preset: "slide", direction: "down", start: 0, duration: 1, easing: "linear" }, 0.5, "out");
+      const outDownEnd = evaluateAnimationConfig({ preset: "slide", direction: "down", start: 0, duration: 1, easing: "linear" }, 1, "out");
+      expect(outDownStart.transform.y).toBe(0);
+      expect(outDownMid.transform.y).toBeCloseTo(30, 1);
+      expect(outDownEnd.opacity).toBe(0);
+    });
+
+    it("distinguishes Headline & Display vs Paragraph & Reading typography presets", async () => {
+      const {
+        TEXT_HEADLINE_PRESETS,
+        TEXT_PARAGRAPH_PRESETS,
+      } = await import("@/components/inspector/motion/AnimationCatalogSheet");
+
+      // Headline presents single-word & short punchy entrances
+      const headlineIds = TEXT_HEADLINE_PRESETS.map((p) => p.id);
+      expect(headlineIds).toContain("baselineRise");
+      expect(headlineIds).toContain("blurFocusPop");
+      expect(headlineIds).toContain("trackingExpansion");
+      expect(headlineIds).toContain("elasticScalePop");
+      expect(headlineIds).toContain("textShimmer");
+
+      // Paragraph presents reading and multi-word rhythmic reveals
+      const paragraphIds = TEXT_PARAGRAPH_PRESETS.map((p) => p.id);
+      expect(paragraphIds).toContain("wordCascade");
+      expect(paragraphIds).toContain("lineReveal");
+      expect(paragraphIds).toContain("typewriter");
+      expect(paragraphIds).toContain("highlightDraw");
+    });
+
+    it("evaluates modern typography presets with physical and optical accuracy", async () => {
+      const { evaluateAnimationConfig } = await import("@/engine/evaluator");
+
+      // Baseline Rise: reveals upward from baseline
+      const baseStart = evaluateAnimationConfig({ preset: "baselineRise", start: 0, duration: 1, easing: "linear" }, 0, "in");
+      const baseEnd = evaluateAnimationConfig({ preset: "baselineRise", start: 0, duration: 1, easing: "linear" }, 1, "in");
+      expect(baseStart.transform.y).toBe(40);
+      expect(baseEnd.transform.y).toBe(0);
+
+      // Blur Focus Pop: starts blurred & scaled down, finishes sharp at scale 1.0
+      const blurStart = evaluateAnimationConfig({ preset: "blurFocusPop", start: 0, duration: 1, easing: "linear" }, 0, "in");
+      const blurEnd = evaluateAnimationConfig({ preset: "blurFocusPop", start: 0, duration: 1, easing: "linear" }, 1, "in");
+      expect(blurStart.filter).toContain("blur");
+      expect(blurStart.transform.scaleX).toBeCloseTo(0.92, 2);
+      expect(blurEnd.transform.scaleX).toBeCloseTo(1.0, 2);
+
+      // Line Reveal: unmasks line by line from below
+      const lineStart = evaluateAnimationConfig({ preset: "lineReveal", start: 0, duration: 1, easing: "linear" }, 0, "in");
+      const lineEnd = evaluateAnimationConfig({ preset: "lineReveal", start: 0, duration: 1, easing: "linear" }, 1, "in");
+      expect(lineStart.transform.y).toBe(36);
+      expect(lineEnd.transform.y).toBe(0);
+
+      // Word Cascade: staggered spring rise
+      const cascadeStart = evaluateAnimationConfig({ preset: "wordCascade", start: 0, duration: 1, easing: "linear" }, 0, "in");
+      const cascadeEnd = evaluateAnimationConfig({ preset: "wordCascade", start: 0, duration: 1, easing: "linear" }, 1, "in");
+      expect(cascadeStart.transform.y).toBe(28);
+      expect(cascadeEnd.transform.y).toBe(0);
+    });
+  });
 });
+
 

@@ -242,7 +242,7 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
           );
         }
 
-        // Find active split/stagger clip (e.g. Letters, Words, Lines, baselineReveal)
+        // Find active split/stagger clip (e.g. Letters, Words, Lines, baselineReveal, wordCascade, lineReveal)
         const splitClip = clips.find(
           (c) =>
             c.splitBy === "character" ||
@@ -250,15 +250,70 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
             c.splitBy === "line" ||
             (c as any).animateBy === "character" ||
             (c as any).animateBy === "word" ||
-            c.preset === "baselineReveal"
+            c.preset === "baselineReveal" ||
+            c.preset === "baselineRise" ||
+            c.preset === "wordCascade" ||
+            c.preset === "lineReveal"
         );
 
         if (splitClip) {
           const anim = splitClip;
           const mode = anim.type === "out" ? ("out" as const) : ("in" as const);
-          const splitBy = anim.splitBy || (anim as any).animateBy || (anim.preset === "baselineReveal" ? "word" : "character");
-          const stagger = anim.staggerDelay ?? (anim as any).stagger ?? (splitBy === "character" ? 0.04 : 0.08);
+          const isBaseline = anim.preset === "baselineReveal" || anim.preset === "baselineRise";
+          const isCascade = anim.preset === "wordCascade";
+          const isLineReveal = anim.preset === "lineReveal";
+          const splitBy =
+            anim.splitBy ||
+            (anim as any).animateBy ||
+            (isLineReveal ? "line" : isBaseline || isCascade ? "word" : "character");
+          const stagger =
+            anim.staggerDelay ??
+            (anim as any).stagger ??
+            (splitBy === "line" ? 0.14 : splitBy === "character" ? 0.04 : 0.08);
           const order = anim.params?.order || "Forward";
+
+          if (splitBy === "line") {
+            const lines = layer.content.split("\n");
+            const totalLines = lines.length;
+            return lines.map((lineText, lineIdx) => {
+              let orderIdx = lineIdx;
+              if (order === "Backward") orderIdx = totalLines - 1 - lineIdx;
+              else if (order === "From center") orderIdx = Math.abs(lineIdx - Math.floor(totalLines / 2));
+              else if (order === "To center") orderIdx = Math.floor(totalLines / 2) - Math.abs(lineIdx - Math.floor(totalLines / 2));
+              else if (order === "Random") orderIdx = ((lineIdx * 7) % totalLines);
+
+              const lineStart = anim.start + orderIdx * stagger;
+              const lineEval = evaluateAnimationConfig(
+                { ...anim, start: lineStart },
+                currentTime,
+                mode
+              );
+
+              return (
+                <span
+                  key={lineIdx}
+                  style={{
+                    display: "block",
+                    overflow: isLineReveal || isBaseline ? "hidden" : "visible",
+                    paddingBottom: isLineReveal || isBaseline ? "0.28em" : undefined,
+                    marginBottom: isLineReveal || isBaseline ? "-0.28em" : undefined,
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "block",
+                      opacity: lineEval.opacity,
+                      transform: compileTransform(lineEval.transform),
+                      filter: lineEval.filter,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {lineText || "\u00A0"}
+                  </span>
+                </span>
+              );
+            });
+          }
 
           if (splitBy === "character") {
             const chars = Array.from(layer.content);
@@ -281,13 +336,23 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
                   key={i}
                   style={{
                     display: "inline-block",
-                    opacity: charEval.opacity,
-                    transform: compileTransform(charEval.transform),
-                    filter: charEval.filter,
-                    whiteSpace: "pre",
+                    overflow: isBaseline ? "hidden" : "visible",
+                    verticalAlign: "bottom",
+                    paddingBottom: isBaseline ? "0.28em" : undefined,
+                    marginBottom: isBaseline ? "-0.28em" : undefined,
                   }}
                 >
-                  {char}
+                  <span
+                    style={{
+                      display: "inline-block",
+                      opacity: charEval.opacity,
+                      transform: compileTransform(charEval.transform),
+                      filter: charEval.filter,
+                      whiteSpace: "pre",
+                    }}
+                  >
+                    {char}
+                  </span>
                 </span>
               );
             });
@@ -320,8 +385,6 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
                 mode
               );
 
-              const isBaseline = anim.preset === "baselineReveal";
-
               return (
                 <span
                   key={idx}
@@ -329,15 +392,15 @@ export const TextRenderer: React.FC<TextRendererProps> = ({
                     display: "inline-block",
                     overflow: isBaseline ? "hidden" : "visible",
                     verticalAlign: "bottom",
+                    paddingBottom: isBaseline ? "0.28em" : undefined,
+                    marginBottom: isBaseline ? "-0.28em" : undefined,
                   }}
                 >
                   <span
                     style={{
                       display: "inline-block",
                       opacity: wordEval.opacity,
-                      transform: isBaseline
-                        ? `translateY(${(1 - (mode === "in" ? Math.min(1, Math.max(0, (currentTime - wordStart) / Math.max(anim.duration, 0.05))) : 0)) * 100}%)`
-                        : compileTransform(wordEval.transform),
+                      transform: compileTransform(wordEval.transform),
                       filter: wordEval.filter,
                       whiteSpace: "pre",
                     }}

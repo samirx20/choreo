@@ -1302,10 +1302,47 @@ The engine provides first-class, motion-first reactive primitives for each eleme
        * Double-clicking South/North handle toggles between `auto-height` (wrapping text) and `fixed` (fixed box).
        * Dragging East/West handle sets `textSizing: "auto-height"` with fixed width and auto-growing height.
        * `styleUtils.ts` prioritizes `textSizing === "auto-height"` before `boxMode === "area"`, guaranteeing dynamic text wrapping.
+---
+
+### Decision 66: Directional Preset Consolidation & Element-Specific Typography Motion Presets Suite
+* **The Problem**:
+  * In the animation catalog, directional presets (e.g., `slideUp`, `slideDown`, `slideLeft`, `slideRight`) repeated 4 times across cards, creating unnecessary catalog bloat and visual clutter. Direction is a parameter, not an entirely separate preset.
+  * In `AnimationCatalogSheet.tsx`, Text animations lacked distinct categorization between **Headline & Display (Single Word / Short Titles)** and **Paragraph & Reading (Multi-Word / Body Copy)**, forcing users to sift through generic presets.
+  * In `TextRenderer.tsx`, text baseline reveals previously used a linear calculation `(currentTime - wordStart) / duration` without the clip's analytical easing curve, and risked chopping typographic descenders ('g', 'y', 'p', 'q', 'j').
+* **The Solution**:
+  1. **Directional Preset Consolidation (`configEvaluator.ts`, `AnimationCatalogSheet.tsx`, `ClipDetailView.tsx`)**:
+     * Consolidated `slideUp`, `slideDown`, `slideLeft`, `slideRight` into a single, unified `Slide` preset card (`id: "slide"`). Direction is chosen in `ClipDetailView` using the 4-way direction selector (`Up`, `Down`, `Left`, `Right`).
+     * Preserved 100% backward compatibility: legacy `slideUp/Down/Left/Right` route directly to the consolidated evaluator.
+     * Evaluates `slide` across all 4 directions with analytical physical accuracy:
+       * Entrance (`in`): `up` ($+y \to 0$), `down` ($-y \to 0$), `left` ($+x \to 0$), `right` ($-x \to 0$).
+       * Exit (`out`): `up` ($0 \to -y$), `down` ($0 \to +y$), `left` ($0 \to -x$), `right` ($0 \to +x$).
+     * Consolidated `mask_reveal` and `maskWipe` into a single `Wipe Mask` preset card (`id: "wipe"`) with directional edge unmasking.
+     * Consolidated Exit presets: single `Slide Out` card replaces 4 separate exit slides.
+  2. **High-Craft Typography Motion Presets Catalog (`AnimationCatalogSheet.tsx`)**:
+     * When a text layer is selected, the catalog dynamically groups entrance presets into two distinct sections:
+       * **Headline & Display (Single Word / Short)**:
+         * `baselineRise`: Unmasks upward from the typographic baseline.
+         * `blurFocusPop`: Optical telephoto rack focus ($20\text{px} \to 0\text{px}$ blur, $0.92 \to 1.0$ scale).
+         * `trackingExpansion`: Cinematic typographic letter-spacing expansion ($-3\text{px} \to 0\text{px}$).
+         * `elasticScalePop`: Punchy spring entrance with harmonic recoil ($k=180, c=12$).
+         * `textShimmer`: Keynote specular light beam sweeping across glyphs at $115^\circ$.
+         * `slide`: Consolidated directional slide.
+         * `fade`: Soft optical alpha reveal.
+       * **Paragraph & Reading (Multi-Word / Body Copy)**:
+         * `wordCascade`: Rhythmic word-by-word spring stagger entrance ($70\text{ms}$ delay, order support).
+         * `lineReveal`: Editorial line-by-line unmasking from below with metric descender protection.
+         * `typewriter`: Characters reveal sequentially with blinking caret cursor.
+         * `highlightDraw`: Kinetic marker accent drawing behind copy.
+         * `slide`: Consolidated directional slide.
+         * `fade`: Soft optical alpha reveal.
+  3. **Baseline Descender Protection & Analytical Eased Transform (`TextRenderer.tsx`)**:
+     * Replaced the linear `(currentTime - wordStart) / duration` with `compileTransform(wordEval.transform)`, guaranteeing full analytical spring physics.
+     * Added typographic descender protection: wrapped tokens/lines in `paddingBottom: "0.28em", marginBottom: "-0.28em"` with `verticalAlign: "bottom"`, ensuring letters with deep descenders ('g', 'y', 'p', 'q', 'j') are never cut off.
+     * Added line-by-line unmasking (`splitBy: "line"`).
 * **Verification**:
-  * Added 5 new unit tests in `src/test/element_individuality_matrix.test.ts` verifying category filtering, `drawOn` clip evaluation, `custom_trim` compounding, and text sizing CSS generation (24 tests total in file).
-  * All 39 test suites (353 tests) pass cleanly (`npm test`).
-  * Production build compiles cleanly with 0 errors in 10.61s (`npm run build`).
+  * Added 4 unit tests in `src/test/element_individuality_matrix.test.ts` verifying directional de-duplication, 4-way entrance & exit slide evaluation, typography catalog categorization, and analytical preset evaluations (28 tests total in file).
+  * All 39 test suites (357 tests) pass cleanly (`npm test`).
+  * Production build compiles cleanly with 0 errors in 9.94s (`npm run build`).
 
 
 

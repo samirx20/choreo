@@ -104,12 +104,41 @@ export function evaluateAnimationConfig(
         clipPath = "inset(30% 0% 30% 0%)";
       } else if (preset === "fade" || preset === "fadeIn") {
         initOpacity = 0;
-      } else if (preset === "mask_reveal" || preset === "maskWipe") {
+      } else if (preset === "wipe" || preset === "mask_reveal" || preset === "maskWipe") {
         initOpacity = 1;
         const maskDir = typeof config.direction === "string" && ["up", "down", "left", "right"].includes(config.direction) ? config.direction : (params.direction || "up");
         clipPath = evalMaskInset(0, maskDir as any);
       } else if (preset === "circleReveal") {
         clipPath = `circle(0% at ${params.origin || "50% 50%"})`;
+      } else if (preset === "baselineRise" || preset === "baselineReveal") {
+        initOpacity = 0;
+        tState.y = clipDist ?? 40;
+      } else if (preset === "blurFocusPop") {
+        filter = `blur(${(params.blurRadius ?? 20).toFixed(1)}px)`;
+        tState.scaleX = 0.92;
+        tState.scaleY = 0.92;
+        initOpacity = 0;
+      } else if (preset === "trackingExpansion") {
+        tState.scaleX = 0.98;
+        tState.scaleY = 0.98;
+        initOpacity = 0;
+      } else if (preset === "elasticScalePop") {
+        tState.scaleX = 0;
+        tState.scaleY = 0;
+        initOpacity = 0;
+      } else if (preset === "textShimmer") {
+        initOpacity = 0.3;
+      } else if (preset === "wordCascade") {
+        tState.y = clipDist ?? 28;
+        tState.scaleX = 0.95;
+        tState.scaleY = 0.95;
+        initOpacity = 0;
+      } else if (preset === "lineReveal") {
+        tState.y = clipDist ?? 36;
+        initOpacity = 0;
+      } else if (preset === "highlightDraw") {
+        clipPath = "inset(0 100% 0 0)";
+        initOpacity = 0;
       }
 
       return {
@@ -179,42 +208,113 @@ export function evaluateAnimationConfig(
         opacity = effectiveProgress;
         break;
 
-      case "slideUp": {
+      case "slide":
+      case "slideUp":
+      case "slideDown":
+      case "slideLeft":
+      case "slideRight": {
         const dist = clipDist ?? 60;
+        const dir =
+          config.direction ||
+          params.direction ||
+          (preset === "slideDown"
+            ? "down"
+            : preset === "slideLeft"
+            ? "left"
+            : preset === "slideRight"
+            ? "right"
+            : "up");
+        if (mode === "in") {
+          if (dir === "down") tState.y = (-(1 - effectiveProgress) * dist) || 0;
+          else if (dir === "left") tState.x = ((1 - effectiveProgress) * dist) || 0;
+          else if (dir === "right") tState.x = (-(1 - effectiveProgress) * dist) || 0;
+          else tState.y = ((1 - effectiveProgress) * dist) || 0;
+          opacity = allowFade ? effectiveProgress : 1;
+        } else {
+          // Out exit: element slides away in the specified direction
+          if (dir === "down") tState.y = ((1 - effectiveProgress) * dist) || 0;
+          else if (dir === "left") tState.x = (-(1 - effectiveProgress) * dist) || 0;
+          else if (dir === "right") tState.x = ((1 - effectiveProgress) * dist) || 0;
+          else tState.y = (-(1 - effectiveProgress) * dist) || 0;
+          opacity = allowFade ? effectiveProgress : 1;
+        }
+        break;
+      }
+
+      case "baselineRise":
+      case "baselineReveal": {
+        const dist = clipDist ?? 40;
         tState.y = (1 - effectiveProgress) * dist;
         opacity = allowFade ? effectiveProgress : 1;
         break;
       }
 
-      case "slideDown": {
-        const dist = clipDist ?? 60;
-        tState.y = -(1 - effectiveProgress) * dist;
+      case "blurFocusPop": {
+        const maxBlur = params.blurRadius ?? 20;
+        const blur = (1 - effectiveProgress) * maxBlur;
+        if (blur > 0.1) {
+          filter = `blur(${blur.toFixed(1)}px)`;
+        }
+        const s = 0.92 + 0.08 * effectiveProgress;
+        tState.scaleX = s;
+        tState.scaleY = s;
+        opacity = effectiveProgress;
+        break;
+      }
+
+      case "trackingExpansion": {
+        opacity = effectiveProgress;
+        const s = 0.98 + 0.02 * effectiveProgress;
+        tState.scaleX = s;
+        tState.scaleY = s;
+        break;
+      }
+
+      case "elasticScalePop": {
+        const springVal = evaluateSpring(
+          effectiveProgress,
+          1.0,
+          params.stiffness ?? 180,
+          params.damping ?? 12
+        );
+        tState.scaleX = springVal;
+        tState.scaleY = springVal;
+        opacity = Math.min(effectiveProgress * 1.5, 1);
+        break;
+      }
+
+      case "textShimmer": {
+        const p = effectiveProgress;
+        opacity = 0.4 + 0.6 * p;
+        const gleam = Math.sin(p * Math.PI);
+        if (gleam > 0.05) {
+          filter = `brightness(${(1 + gleam * 0.6).toFixed(2)}) drop-shadow(0 0 ${(gleam * 8).toFixed(1)}px rgba(255,255,255,0.8))`;
+        }
+        break;
+      }
+
+      case "wordCascade": {
+        const dist = clipDist ?? 28;
+        tState.y = (1 - effectiveProgress) * dist;
+        const s = 0.95 + 0.05 * effectiveProgress;
+        tState.scaleX = s;
+        tState.scaleY = s;
         opacity = allowFade ? effectiveProgress : 1;
         break;
       }
 
-      case "slideLeft": {
-        const dist = clipDist ?? 80;
-        tState.x = (1 - effectiveProgress) * dist;
+      case "lineReveal": {
+        const dist = clipDist ?? 36;
+        tState.y = (1 - effectiveProgress) * dist;
         opacity = allowFade ? effectiveProgress : 1;
         break;
       }
 
-      case "slideRight": {
-        const dist = clipDist ?? 80;
-        tState.x = -(1 - effectiveProgress) * dist;
-        opacity = allowFade ? effectiveProgress : 1;
-        break;
-      }
-
-      case "slide": {
-        const dist = clipDist ?? 60;
-        const dir = config.direction || params.direction || "up";
-        if (dir === "down") tState.y = -(1 - effectiveProgress) * dist;
-        else if (dir === "left") tState.x = (1 - effectiveProgress) * dist;
-        else if (dir === "right") tState.x = -(1 - effectiveProgress) * dist;
-        else tState.y = (1 - effectiveProgress) * dist;
-        opacity = allowFade ? effectiveProgress : 1;
+      case "highlightDraw": {
+        const p = effectiveProgress;
+        tState.scaleX = 0.95 + 0.05 * p;
+        opacity = allowFade ? p : 1;
+        clipPath = `inset(0 ${(1 - p) * 100}% 0 0)`;
         break;
       }
 
@@ -374,6 +474,8 @@ export function evaluateAnimationConfig(
         break;
       }
 
+      case "wipe":
+      case "mask_reveal":
       case "maskWipe": {
         const maskDir = typeof config.direction === "string" && ["up", "down", "left", "right"].includes(config.direction) ? config.direction : (params.direction || "up");
         clipPath = evalMaskInset(effectiveProgress, maskDir as any);

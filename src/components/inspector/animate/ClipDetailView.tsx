@@ -117,6 +117,9 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
     selectedClip.preset.toLowerCase().includes("slide") ||
     selectedClip.preset.toLowerCase().includes("move") ||
     selectedClip.preset.toLowerCase().includes("drop") ||
+    selectedClip.preset.toLowerCase().includes("wipe") ||
+    selectedClip.preset === "mask_reveal" ||
+    selectedClip.preset === "maskWipe" ||
     selectedClip.direction !== undefined;
 
   const isScaleBased =
@@ -124,6 +127,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
     selectedClip.preset.toLowerCase().includes("grow") ||
     selectedClip.preset.toLowerCase().includes("shrink") ||
     selectedClip.preset.toLowerCase().includes("scale") ||
+    selectedClip.preset === "elasticScalePop" ||
     selectedClip.scaleAmount !== undefined;
 
   const isRotationBased =
@@ -154,6 +158,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
   const isBlurBased =
     selectedClip.preset === "custom_blur" ||
     selectedClip.preset === "blurIn" ||
+    selectedClip.preset === "blurFocusPop" ||
     (selectedClip.params?.blur !== undefined && !selectedClip.preset.includes("backdrop"));
 
   const isBackdropBlurBased =

@@ -53,54 +53,58 @@ interface AnimationCatalogSheetProps {
 }
 
 // ---------------------------------------------------------------------------
-// PRESETS CATALOG: Specialized for Text vs Shapes
+// PRESETS CATALOG: Specialized for Text vs Shapes vs Media vs Lines
 // ---------------------------------------------------------------------------
-const TEXT_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
-  { id: "typewriter", name: "Typewriter", duration: 1.2, easing: "linear", type: "in", desc: "Characters reveal sequentially" },
-  { id: "baselineReveal", name: "Baseline Reveal", duration: 0.8, easing: "snappy", type: "in", desc: "Rises up from behind baseline" },
+export const TEXT_HEADLINE_PRESETS: AnimationCatalogPreset[] = [
+  { id: "baselineRise", name: "Baseline Rise", duration: 0.8, easing: "snappy", type: "in", desc: "Unmasks upward from font baseline without clipping descenders" },
+  { id: "blurFocusPop", name: "Blur Focus Pop", duration: 0.8, easing: "smooth", type: "in", desc: "Rack focus from optical blur into crisp sharpness", params: { blurRadius: 20 } },
+  { id: "trackingExpansion", name: "Tracking Drift", duration: 0.9, easing: "smooth", type: "in", desc: "Cinematic typographic letter-spacing expansion" },
+  { id: "elasticScalePop", name: "Elastic Pop", duration: 0.7, easing: "elastic", type: "in", desc: "Snappy spring pop with harmonic recoil" },
+  { id: "textShimmer", name: "Specular Shimmer", duration: 1.0, easing: "smooth", type: "in", desc: "Luminous Keynote specular light sweep across glyphs" },
+  { id: "slide", name: "Slide", duration: 0.8, easing: "snappy", type: "in", desc: "Kinetic directional entrance", params: { direction: "up", distance: 60 } },
   { id: "fade", name: "Fade In", duration: 0.8, easing: "smooth", type: "in", desc: "Soft optical alpha reveal" },
-  { id: "slideUp", name: "Slide Up", duration: 0.8, easing: "snappy", type: "in", desc: "Kinetic upward rise" },
-  { id: "slideDown", name: "Slide Down", duration: 0.8, easing: "snappy", type: "in", desc: "Downward entrance trajectory" },
-  { id: "slideLeft", name: "Slide Left", duration: 0.8, easing: "snappy", type: "in", desc: "Horizontal slide from right" },
-  { id: "slideRight", name: "Slide Right", duration: 0.8, easing: "snappy", type: "in", desc: "Horizontal slide from left" },
-  { id: "pop", name: "Pop", duration: 0.6, easing: "bouncy", type: "in", desc: "Overshoot spring pop" },
-  { id: "blurIn", name: "Blur In", duration: 0.8, easing: "smooth", type: "in", desc: "Gaussian optical de-blur" },
-  { id: "grow", name: "Grow", duration: 0.8, easing: "bouncy", type: "in", desc: "Smooth scale expansion" },
-  { id: "shrink", name: "Shrink", duration: 0.8, easing: "smooth", type: "in", desc: "Scale compression into frame" },
-  { id: "dropIn", name: "Drop In", duration: 0.8, easing: "bouncy", type: "in", desc: "Gravity descent from top" },
 ];
 
-const SHAPE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+export const TEXT_PARAGRAPH_PRESETS: AnimationCatalogPreset[] = [
+  { id: "wordCascade", name: "Word Cascade", duration: 1.0, easing: "snappy", type: "in", desc: "Rhythmic word-by-word spring stagger entrance", params: { splitBy: "word", staggerDelay: 0.08 } },
+  { id: "lineReveal", name: "Line Reveal", duration: 1.0, easing: "snappy", type: "in", desc: "Editorial line-by-line unmasking from below", params: { splitBy: "line", staggerDelay: 0.14 } },
+  { id: "typewriter", name: "Typewriter", duration: 1.2, easing: "linear", type: "in", desc: "Characters reveal sequentially with caret cursor", params: { splitBy: "character", staggerDelay: 0.04 } },
+  { id: "highlightDraw", name: "Highlight Draw", duration: 0.8, easing: "snappy", type: "in", desc: "Kinetic marker accent drawing behind copy" },
+  { id: "slide", name: "Slide", duration: 0.8, easing: "snappy", type: "in", desc: "Kinetic directional entrance", params: { direction: "up", distance: 60 } },
+  { id: "fade", name: "Fade In", duration: 0.8, easing: "smooth", type: "in", desc: "Soft optical alpha reveal" },
+];
+
+export const TEXT_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+  ...TEXT_HEADLINE_PRESETS,
+  ...TEXT_PARAGRAPH_PRESETS.filter((p) => p.id !== "slide" && p.id !== "fade"),
+];
+
+export const SHAPE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
   { id: "drawOn", name: "Draw Path (Trim)", duration: 0.8, easing: "snappy", type: "in", desc: "Stroke reveals along perimeter contour" },
   { id: "pop", name: "Pop", duration: 0.6, easing: "bouncy", type: "in", desc: "Snappy overshoot scale" },
-  { id: "slideUp", name: "Slide Up", duration: 0.8, easing: "snappy", type: "in", desc: "Kinetic upward rise" },
-  { id: "slideDown", name: "Slide Down", duration: 0.8, easing: "snappy", type: "in", desc: "Downward entrance trajectory" },
-  { id: "slideLeft", name: "Slide Left", duration: 0.8, easing: "snappy", type: "in", desc: "Horizontal slide from right" },
-  { id: "slideRight", name: "Slide Right", duration: 0.8, easing: "snappy", type: "in", desc: "Horizontal slide from left" },
+  { id: "slide", name: "Slide", duration: 0.8, easing: "snappy", type: "in", desc: "Kinetic directional entrance", params: { direction: "up", distance: 60 } },
+  { id: "wipe", name: "Wipe Mask", duration: 0.8, easing: "smooth", type: "in", desc: "Directional clip mask wipe", params: { direction: "up" } },
   { id: "fade", name: "Fade In", duration: 0.8, easing: "smooth", type: "in", desc: "Soft optical alpha reveal" },
   { id: "grow", name: "Grow", duration: 0.8, easing: "bouncy", type: "in", desc: "Smooth scale expansion" },
   { id: "shrink", name: "Shrink", duration: 0.8, easing: "smooth", type: "in", desc: "Scale compression into frame" },
   { id: "spin", name: "Spin In", duration: 1.0, easing: "smooth", type: "in", desc: "360° axial entrance" },
   { id: "twist", name: "Twist", duration: 0.8, easing: "snappy", type: "in", desc: "Diagonal rotational snap" },
-  { id: "mask_reveal", name: "Mask Reveal", duration: 0.8, easing: "smooth", type: "in", desc: "Directional clip mask wipe" },
   { id: "circleIris", name: "Circle Iris", duration: 0.8, easing: "smooth", type: "in", desc: "Radial circular aperture" },
   { id: "dropIn", name: "Drop In", duration: 0.8, easing: "bouncy", type: "in", desc: "Gravity descent from top" },
   { id: "blurIn", name: "Blur In", duration: 0.8, easing: "smooth", type: "in", desc: "Gaussian optical de-blur" },
 ];
 
-const MEDIA_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+export const MEDIA_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
   { id: "fade", name: "Fade In", duration: 0.8, easing: "smooth", type: "in", desc: "Cinematic optical dissolve" },
   { id: "grow", name: "Zoom In", duration: 1.0, easing: "smooth", type: "in", desc: "Gentle telephoto zoom entrance" },
   { id: "shrink", name: "Zoom Out", duration: 1.0, easing: "smooth", type: "in", desc: "Wide scale settling into frame" },
-  { id: "slideUp", name: "Pan Up", duration: 0.8, easing: "snappy", type: "in", desc: "Upward camera pan reveal" },
-  { id: "slideDown", name: "Pan Down", duration: 0.8, easing: "snappy", type: "in", desc: "Downward camera pan reveal" },
-  { id: "slideLeft", name: "Pan Left", duration: 0.8, easing: "snappy", type: "in", desc: "Horizontal slide from right" },
-  { id: "slideRight", name: "Pan Right", duration: 0.8, easing: "snappy", type: "in", desc: "Horizontal slide from left" },
+  { id: "slide", name: "Pan / Slide", duration: 0.8, easing: "snappy", type: "in", desc: "Directional camera pan reveal", params: { direction: "up", distance: 60 } },
+  { id: "wipe", name: "Wipe Reveal", duration: 0.8, easing: "smooth", type: "in", desc: "Directional edge wipe unmask", params: { direction: "left" } },
   { id: "blurIn", name: "Blur In", duration: 0.8, easing: "smooth", type: "in", desc: "Soft focus optical reveal" },
   { id: "dropIn", name: "Drop In", duration: 0.8, easing: "bouncy", type: "in", desc: "Physical descent from top" },
 ];
 
-const ICON_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+export const ICON_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
   { id: "pop", name: "Pop", duration: 0.6, easing: "bouncy", type: "in", desc: "Snappy overshoot spring pop" },
   { id: "bounce", name: "Bounce In", duration: 0.8, easing: "bouncy", type: "in", desc: "Elastic vertical bounce" },
   { id: "spin", name: "Spin In", duration: 0.8, easing: "smooth", type: "in", desc: "360° axial glyph spin" },
@@ -111,22 +115,18 @@ const ICON_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
   { id: "grow", name: "Scale Up", duration: 0.6, easing: "bouncy", type: "in", desc: "Scale expansion" },
 ];
 
-const LINE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+export const LINE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
   { id: "drawOn", name: "Draw Path (Trim)", duration: 0.8, easing: "snappy", type: "in", desc: "Vector path draws sequentially along stroke" },
-  { id: "slideRight", name: "Slide Right", duration: 0.8, easing: "snappy", type: "in", desc: "Path extension from left" },
-  { id: "slideLeft", name: "Slide Left", duration: 0.8, easing: "snappy", type: "in", desc: "Path extension from right" },
-  { id: "mask_reveal", name: "Wipe In", duration: 0.8, easing: "smooth", type: "in", desc: "Directional path wipe" },
+  { id: "slide", name: "Slide / Extend", duration: 0.8, easing: "snappy", type: "in", desc: "Directional path extension", params: { direction: "right", distance: 60 } },
+  { id: "wipe", name: "Wipe In", duration: 0.8, easing: "smooth", type: "in", desc: "Directional path unmask", params: { direction: "right" } },
   { id: "fade", name: "Fade In", duration: 0.6, easing: "smooth", type: "in", desc: "Clean alpha dissolve" },
   { id: "pop", name: "Pop", duration: 0.6, easing: "bouncy", type: "in", desc: "Elastic scale snap" },
   { id: "grow", name: "Expand", duration: 0.8, easing: "snappy", type: "in", desc: "Axis extension" },
 ];
 
-const EXIT_PRESETS: AnimationCatalogPreset[] = [
+export const EXIT_PRESETS: AnimationCatalogPreset[] = [
   { id: "fade", name: "Fade Out", duration: 0.8, easing: "smooth", type: "out", desc: "Smooth dissolve to transparent" },
-  { id: "slideDown", name: "Slide Down", duration: 0.8, easing: "snappy", type: "out", desc: "Downward exit trajectory" },
-  { id: "slideUp", name: "Slide Up", duration: 0.8, easing: "snappy", type: "out", desc: "Upward ascent out of view" },
-  { id: "slideLeft", name: "Slide Left", duration: 0.8, easing: "snappy", type: "out", desc: "Slide out towards left" },
-  { id: "slideRight", name: "Slide Right", duration: 0.8, easing: "snappy", type: "out", desc: "Slide out towards right" },
+  { id: "slide", name: "Slide Out", duration: 0.8, easing: "snappy", type: "out", desc: "Directional exit trajectory", params: { direction: "down", distance: 60 } },
   { id: "pop", name: "Pop Out", duration: 0.6, easing: "snappy", type: "out", desc: "Snappy shrink to zero" },
   { id: "blurIn", name: "Blur Out", duration: 0.8, easing: "smooth", type: "out", desc: "Gaussian dissolution" },
 ];
@@ -333,10 +333,23 @@ const AnimationCard: React.FC<{
   const getAnimationName = (presetId: string) => {
     switch (presetId) {
       case "fade": return "anim-preview-fade";
+      case "slide":
       case "slideUp": return "anim-preview-slideUp";
       case "slideDown": return "anim-preview-slideDown";
       case "slideLeft": return "anim-preview-slideLeft";
       case "slideRight": return "anim-preview-slideRight";
+      case "wipe":
+      case "maskWipe":
+      case "mask_reveal": return "anim-preview-maskReveal";
+      case "baselineRise":
+      case "baselineReveal": return "anim-preview-baseline";
+      case "blurFocusPop": return "anim-preview-blurFocusPop";
+      case "trackingExpansion": return "anim-preview-tracking";
+      case "elasticScalePop": return "anim-preview-pop";
+      case "textShimmer": return "anim-preview-shimmer";
+      case "wordCascade": return "anim-preview-cascade";
+      case "lineReveal": return "anim-preview-lineReveal";
+      case "highlightDraw": return "anim-preview-highlightDraw";
       case "pop": return "anim-preview-pop";
       case "grow": return "anim-preview-grow";
       case "shrink": return "anim-preview-shrink";
@@ -352,8 +365,6 @@ const AnimationCard: React.FC<{
       case "shake": return "anim-preview-shake";
       case "breathe": return "anim-preview-breathe";
       case "typewriter": return "anim-preview-typewriter";
-      case "baselineReveal": return "anim-preview-baseline";
-      case "mask_reveal": return "anim-preview-maskReveal";
       case "circleIris": return "anim-preview-circleIris";
       case "drawOn":
       case "custom_trim": return "anim-preview-drawOn";
@@ -624,6 +635,12 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
         @keyframes anim-preview-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         @keyframes anim-preview-twist { 0%, 100% { transform: rotate(-30deg) scale(0.6); opacity: 0.2; } 50% { transform: rotate(10deg) scale(1.1); opacity: 1; } 70% { transform: rotate(0deg) scale(1); opacity: 1; } }
         @keyframes anim-preview-blurIn { 0%, 100% { filter: blur(5px); opacity: 0.2; } 50% { filter: blur(0px); opacity: 1; } }
+        @keyframes anim-preview-blurFocusPop { 0%, 100% { filter: blur(4px); transform: scale(0.92); opacity: 0.2; } 50% { filter: blur(0px); transform: scale(1); opacity: 1; } }
+        @keyframes anim-preview-tracking { 0%, 100% { letter-spacing: -2px; opacity: 0.2; } 50% { letter-spacing: 2px; opacity: 1; } }
+        @keyframes anim-preview-shimmer { 0%, 100% { opacity: 0.5; filter: brightness(1); } 50% { opacity: 1; filter: brightness(1.6); } }
+        @keyframes anim-preview-cascade { 0%, 100% { transform: translateY(8px); opacity: 0.2; } 50% { transform: translateY(0); opacity: 1; } }
+        @keyframes anim-preview-lineReveal { 0%, 100% { clip-path: inset(100% 0 0 0); } 50% { clip-path: inset(0 0 0 0); } }
+        @keyframes anim-preview-highlightDraw { 0%, 100% { clip-path: inset(0 100% 0 0); } 50% { clip-path: inset(0 0 0 0); } }
         @keyframes anim-preview-dropIn { 0%, 100% { transform: translateY(-22px); opacity: 0; } 50% { transform: translateY(0); opacity: 1; } 65% { transform: translateY(-5px); } 80% { transform: translateY(0); } }
         @keyframes anim-preview-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
         @keyframes anim-preview-bounce { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-16px); } 60% { transform: translateY(0); } 75% { transform: translateY(-6px); } 90% { transform: translateY(0); } }
@@ -720,23 +737,65 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
           <div className="flex-1 overflow-y-auto p-3 space-y-4">
             {/* Entrance Group */}
             {(filterCategory === "all" || filterCategory === "in") && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#71717a] uppercase tracking-wider">
-                  <Sparkles className="h-3 w-3 text-emerald-600" />
-                  <span>Entrance (In)</span>
+              isText ? (
+                <>
+                  {/* Headline & Display Subgroup */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#71717a] uppercase tracking-wider">
+                      <Type className="h-3 w-3 text-purple-600" />
+                      <span>Headline & Display (Single Word / Short)</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {TEXT_HEADLINE_PRESETS.map((p) => (
+                        <AnimationCard
+                          key={`headline-${p.id}`}
+                          preset={p}
+                          layerType={layerType}
+                          isSelected={isPresetSelected(p)}
+                          onApply={onApplyPreset}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Paragraph & Reading Subgroup */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#71717a] uppercase tracking-wider">
+                      <Sparkles className="h-3 w-3 text-emerald-600" />
+                      <span>Paragraph & Reading (Multi-Word / Body)</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {TEXT_PARAGRAPH_PRESETS.map((p) => (
+                        <AnimationCard
+                          key={`paragraph-${p.id}`}
+                          preset={p}
+                          layerType={layerType}
+                          isSelected={isPresetSelected(p)}
+                          onApply={onApplyPreset}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#71717a] uppercase tracking-wider">
+                    <Sparkles className="h-3 w-3 text-emerald-600" />
+                    <span>Entrance (In)</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {entrancePresets.map((p) => (
+                      <AnimationCard
+                        key={`in-${p.id}`}
+                        preset={p}
+                        layerType={layerType}
+                        isSelected={isPresetSelected(p)}
+                        onApply={onApplyPreset}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2.5">
-                  {entrancePresets.map((p) => (
-                    <AnimationCard
-                      key={`in-${p.id}`}
-                      preset={p}
-                      layerType={layerType}
-                      isSelected={isPresetSelected(p)}
-                      onApply={onApplyPreset}
-                    />
-                  ))}
-                </div>
-              </div>
+              )
             )}
 
             {/* Action Group */}
