@@ -27,16 +27,19 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
     : Boolean(style.backgroundColor !== undefined && style.backgroundColor !== "transparent");
 
   const hasBgFill = Boolean(style.backgroundColor && style.backgroundColor !== "transparent");
-  const hasStroke = Boolean(style.borderWidth && style.borderWidth > 0);
+  const hasStroke = isVectorLine(selectedLayer) || (
+    typeof style.borderWidth === "number" &&
+    (style.borderWidth > 0 || (style.borderColor !== undefined && style.borderColor !== "transparent"))
+  );
   const hasShadow = Boolean(
-    (style.shadowBlur !== undefined && style.shadowBlur > 0) ||
-    (style.shadowDistance !== undefined && style.shadowDistance > 0) ||
+    typeof style.shadowBlur === "number" ||
+    typeof style.shadowDistance === "number" ||
     (style.shadows && style.shadows.length > 0) ||
     style.shadowMode === "hard"
   );
-  const hasStickerBorder = Boolean(style.stickerBorder && style.stickerBorder.width > 0);
-  const hasLayerBlur = Boolean(style.filterBlur && style.filterBlur > 0);
-  const hasBgBlur = Boolean(style.backdropBlur && style.backdropBlur > 0);
+  const hasStickerBorder = Boolean(style.stickerBorder);
+  const hasLayerBlur = typeof style.filterBlur === "number";
+  const hasBgBlur = typeof style.backdropBlur === "number";
   const hasGlass = (selectedLayer as any).isGlass === true || (style as any).isGlass === true;
 
   return (
@@ -174,12 +177,12 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
                 <div className="flex items-center gap-1.5 w-36 justify-end">
                   <ScrubbableInput
                     value={
-                      typeof style.borderWidth === "number" && style.borderWidth > 0
+                      typeof style.borderWidth === "number"
                         ? style.borderWidth
-                        : (selectedLayer as any).strokeWidth || 2
+                        : (selectedLayer as any).strokeWidth ?? 2
                     }
                     step={1}
-                    min={1}
+                    min={0}
                     onChange={(val) => {
                       updateLayerStyle(selectedLayer.id, {
                         borderWidth: val,
@@ -272,11 +275,11 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
           onClick={() => {
             const nextShadow = !hasShadow;
             updateLayerStyle(selectedLayer.id, {
-              shadowBlur: nextShadow ? (style.shadowMode === "hard" ? 0 : 16) : 0,
-              shadowDistance: nextShadow ? (style.shadowDistance || 8) : 0,
+              shadowBlur: nextShadow ? (style.shadowMode === "hard" ? 0 : (style.shadowBlur ?? 16)) : undefined,
+              shadowDistance: nextShadow ? (style.shadowDistance ?? 8) : undefined,
               shadowAngle: nextShadow ? (style.shadowAngle ?? 90) : undefined,
-              shadowColor: style.shadowColor || "#000000",
-              shadowOpacity: nextShadow ? (style.shadowOpacity ?? 0.25) : 0,
+              shadowColor: nextShadow ? (style.shadowColor || "#000000") : undefined,
+              shadowOpacity: nextShadow ? (style.shadowOpacity ?? 0.25) : undefined,
               shadowMode: nextShadow ? (style.shadowMode || "soft") : undefined,
             });
           }}
@@ -438,7 +441,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
             const nextSticker = !hasStickerBorder;
             updateLayerStyle(selectedLayer.id, {
               stickerBorder: nextSticker
-                ? { width: 4, color: "#ffffff" }
+                ? { width: style.stickerBorder?.width ?? 4, color: style.stickerBorder?.color || "#ffffff" }
                 : undefined,
             });
           }}
@@ -454,9 +457,9 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
               <span className="text-xs text-muted-foreground">Width</span>
               <div className="w-36 flex justify-end">
                 <ScrubbableInput
-                  value={style.stickerBorder?.width || 4}
+                  value={style.stickerBorder?.width ?? 4}
                   step={1}
-                  min={1}
+                  min={0}
                   max={24}
                   onChange={(val) =>
                     updateLayerStyle(selectedLayer.id, {
@@ -479,7 +482,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
                   onChange={(e) =>
                     updateLayerStyle(selectedLayer.id, {
                       stickerBorder: {
-                        width: style.stickerBorder?.width || 4,
+                        width: style.stickerBorder?.width ?? 4,
                         color: `#${e.target.value}`,
                       },
                     })
@@ -491,7 +494,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
                   onChange={(c) =>
                     updateLayerStyle(selectedLayer.id, {
                       stickerBorder: {
-                        width: style.stickerBorder?.width || 4,
+                        width: style.stickerBorder?.width ?? 4,
                         color: c,
                       },
                     })
@@ -509,7 +512,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
         <div
           onClick={() =>
             updateLayerStyle(selectedLayer.id, {
-              filterBlur: hasLayerBlur ? 0 : 8,
+              filterBlur: hasLayerBlur ? undefined : (style.filterBlur ?? 8),
             })
           }
           className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
@@ -523,7 +526,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
             <span className="text-xs text-muted-foreground">Blur</span>
             <div className="w-36 flex justify-end">
               <ScrubbableInput
-                value={style.filterBlur || 8}
+                value={style.filterBlur ?? 0}
                 step={1}
                 min={0}
                 onChange={(val) => updateLayerStyle(selectedLayer.id, { filterBlur: val })}
@@ -540,7 +543,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
           <div
             onClick={() =>
               updateLayerStyle(selectedLayer.id, {
-                backdropBlur: hasBgBlur ? 0 : 16,
+                backdropBlur: hasBgBlur ? undefined : (style.backdropBlur ?? 16),
               })
             }
             className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
@@ -554,7 +557,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
               <span className="text-xs text-muted-foreground">Blur</span>
               <div className="w-36 flex justify-end">
                 <ScrubbableInput
-                  value={style.backdropBlur || 16}
+                  value={style.backdropBlur ?? 0}
                   step={1}
                   min={0}
                   onChange={(val) => updateLayerStyle(selectedLayer.id, { backdropBlur: val })}
