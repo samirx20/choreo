@@ -33,12 +33,18 @@ export function clearActiveFileHandle(): void {
 }
 
 /**
- * Returns true if running within the Tauri native desktop container
+ * Returns true if running within the Tauri native desktop container.
+ * Checks multiple signals: withGlobalTauri injects window.__TAURI__,
+ * the IPC bridge injects __TAURI_INTERNALS__, and the custom protocol
+ * scheme 'tauri://' appears in window.location.
  */
 export function isTauriEnvironment(): boolean {
+  if (typeof window === "undefined") return false;
   return (
-    typeof window !== "undefined" &&
-    ("__TAURI_INTERNALS__" in window || "__TAURI__" in window)
+    "__TAURI__" in window ||
+    "__TAURI_INTERNALS__" in window ||
+    window.location.protocol === "tauri:" ||
+    window.location.protocol === "https:" && window.location.hostname === "tauri.localhost"
   );
 }
 
