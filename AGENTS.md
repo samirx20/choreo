@@ -106,6 +106,14 @@ Never generate or suggest cheap SaaS cliches, decorative gimmicks, or lazy UI tr
 * **Always Push to Remote**: After completing a task or milestone, push commits to GitHub (`git push origin <branch>`). Do not leave commits unpushed or code untracked.
 * **Codebase Hygiene**: Never commit or leave temporary scratch scripts, debug logs, or binary dumps on disk.
 
+### Rule 12: Element Individuality & Form Truth (Ontological Purity)
+* **No Cross-Element Property Pollution**: Every layer type has a distinct physical and ontological identity. Never assign or expose properties that violate the physical form:
+  * 1D lines and arrows do not have area fills, font sizes, or border radii.
+  * Circles and ellipses have fixed radial geometry and do not expose 4-corner radii inputs.
+  * Icons do not have competing outer box borders; text layers do not receive card box strokes unless explicitly wrapped in a card frame.
+* **Non-Spatial Channel Monotonicity**: Easing curves applied to non-spatial property channels (opacity, colors, blurs, trim paths) must be monotonic. Never apply overshooting/elastic spring curves to color or opacity channels to prevent numerical explosion or visual clipping.
+* **Constructive Agent Tool Sanitization**: When an agent invokes `place_element` or `apply_animation`, tools must constructively sanitize and strip invalid properties/presets with clear learning notices instead of silently accepting corrupted states.
+
 ---
 
 ## 3. The Agent Workflow Pattern
@@ -131,6 +139,7 @@ Before completing any generation or refactoring, verify against this checklist:
 - [ ] **Grid Validity**: Are all elements positioned on the aspect-ratio grid within safe margins?
 - [ ] **No Overflows**: Does text auto-fit inside its assigned grid cell?
 - [ ] **Velocity Continuity ($C^1$)**: Are transitions between beats using smooth spring momentum hand-offs?
+- [ ] **Element Individuality**: Are all elements free from cross-property pollution (e.g., no fills on lines, no 4-corner radii on circles)?
 - [ ] **Corner Radius**: Are card corners cleanly and intentionally rounded without arbitrary magic curvature?
 - [ ] **Metric-Aligned Text**: Are text reveals clipping along the baseline without chopping descenders ("g", "y", "p")?
 - [ ] **Zero Layout Shift on Split**: Does text splitting maintain 0.0px visual shift from unsplit resting state?

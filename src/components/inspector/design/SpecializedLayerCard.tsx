@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { icons, Smile, Sparkles } from "lucide-react";
+import { icons, Smile, Sparkles, ArrowLeftRight } from "lucide-react";
 import { Layer } from "@/types/scene";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ScrubbableInput } from "@/components/ui/scrubbable-input";
@@ -18,6 +18,7 @@ import {
   DropdownMenuContent,
 } from "@/components/ui/dropdown-menu";
 import { IconPickerPopover } from "@/components/canvas/IconPickerPopover";
+import { isStar, isMedia, canHaveTrimPath } from "@/utils/layerCapabilities";
 
 interface SpecializedLayerCardProps {
   selectedLayer: Layer;
@@ -42,7 +43,7 @@ export const SpecializedLayerCard: React.FC<SpecializedLayerCardProps> = ({
 
   return (
     <>
-      {/* Frame Container Section */}
+      {/* Frame Container & Auto-Layout Section */}
       {selectedLayer.type === "frame" && (
         <div className="pt-3 border-t border-border space-y-2">
           <div className="flex items-center justify-between">
@@ -53,6 +54,87 @@ export const SpecializedLayerCard: React.FC<SpecializedLayerCardProps> = ({
                 updateLayer(selectedLayer.id, { clipContent: Boolean(checked) } as any)
               }
             />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Direction</span>
+            <div className="w-28">
+              <Select
+                value={(selectedLayer as any).layout?.flexDirection || "row"}
+                onValueChange={(val) =>
+                  updateLayer(selectedLayer.id, {
+                    layout: {
+                      ...(selectedLayer as any).layout,
+                      display: "flex",
+                      flexDirection: val as "row" | "column",
+                    },
+                  } as any)
+                }
+              >
+                <SelectTrigger className="w-28 h-7">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="row">Horizontal</SelectItem>
+                  <SelectItem value="column">Vertical</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Gap</span>
+            <div className="w-28 flex justify-end">
+              <ScrubbableInput
+                value={(selectedLayer as any).layout?.gap ?? 0}
+                step={1}
+                min={0}
+                onChange={(val) =>
+                  updateLayer(selectedLayer.id, {
+                    layout: {
+                      ...(selectedLayer as any).layout,
+                      gap: Math.round(val),
+                    },
+                  } as any)
+                }
+                className="w-20"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Star Parametric Section */}
+      {isStar(selectedLayer) && (
+        <div className="pt-3 border-t border-border space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground">Points</span>
+            <div className="w-36 flex justify-end">
+              <ScrubbableInput
+                value={(selectedLayer as any).points ?? 5}
+                step={1}
+                min={3}
+                max={20}
+                onChange={(val) =>
+                  updateLayer(selectedLayer.id, { points: Math.round(val) } as any)
+                }
+                className="w-16"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Inner ratio</span>
+            <div className="w-36 flex justify-end">
+              <ScrubbableInput
+                value={Math.round(((selectedLayer as any).innerRadiusRatio ?? 0.382) * 100)}
+                step={1}
+                min={10}
+                max={90}
+                suffix="%"
+                onChange={(val) =>
+                  updateLayer(selectedLayer.id, { innerRadiusRatio: val / 100 } as any)
+                }
+                className="w-20"
+              />
+            </div>
           </div>
         </div>
       )}
@@ -90,7 +172,7 @@ export const SpecializedLayerCard: React.FC<SpecializedLayerCardProps> = ({
         </div>
       )}
 
-      {/* Line & Arrow Marker Controls */}
+      {/* Line & Arrow Controls */}
       {isLine && (
         <div className="pt-3 border-t border-border space-y-2">
           <div className="flex items-center justify-between">
@@ -132,6 +214,154 @@ export const SpecializedLayerCard: React.FC<SpecializedLayerCardProps> = ({
                   <SelectItem value="none">None</SelectItem>
                   <SelectItem value="arrow">Arrow</SelectItem>
                   <SelectItem value="circle">Circle</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Line Cap</span>
+            <div className="w-28">
+              <Select
+                value={(selectedLayer as any).strokeCap || "round"}
+                onValueChange={(val) =>
+                  updateLayer(selectedLayer.id, { strokeCap: val } as any)
+                }
+              >
+                <SelectTrigger className="w-28 h-7">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="round">Round</SelectItem>
+                  <SelectItem value="butt">Butt</SelectItem>
+                  <SelectItem value="square">Square</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Pattern</span>
+            <div className="w-28">
+              <Select
+                value={
+                  !(selectedLayer as any).strokeDashArray || (selectedLayer as any).strokeDashArray.length === 0
+                    ? "solid"
+                    : (selectedLayer as any).strokeDashArray[0] > 4
+                    ? "dashed"
+                    : "dotted"
+                }
+                onValueChange={(val) => {
+                  const dash = val === "dashed" ? [8, 6] : val === "dotted" ? [2, 4] : [];
+                  updateLayer(selectedLayer.id, { strokeDashArray: dash } as any);
+                }}
+              >
+                <SelectTrigger className="w-28 h-7">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="solid">Solid</SelectItem>
+                  <SelectItem value="dashed">Dashed</SelectItem>
+                  <SelectItem value="dotted">Dotted</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const start = (selectedLayer as any).arrowStart || "none";
+              const end =
+                (selectedLayer as any).arrowEnd ||
+                ((selectedLayer as any).shapeType === "arrow" ? "arrow" : "none");
+              updateLayer(selectedLayer.id, {
+                arrowStart: end,
+                arrowEnd: start,
+              } as any);
+            }}
+            className="w-full h-7 mt-1 flex items-center justify-center gap-1.5 bg-muted hover:bg-muted/80 text-foreground text-xs font-medium rounded border border-border transition-colors cursor-pointer"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5" />
+            Reverse Direction
+          </button>
+        </div>
+      )}
+
+      {/* Vector Trim Path Section */}
+      {canHaveTrimPath(selectedLayer) && (
+        <div className="pt-3 border-t border-border space-y-2">
+          <h4 className="text-xs font-semibold text-foreground">Trim Path</h4>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Start</span>
+            <div className="w-36 flex justify-end">
+              <ScrubbableInput
+                value={(selectedLayer as any).trimStart ?? 0}
+                step={1}
+                min={0}
+                max={100}
+                suffix="%"
+                onChange={(val) =>
+                  updateLayer(selectedLayer.id, { trimStart: Math.round(val) } as any)
+                }
+                className="w-20"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">End</span>
+            <div className="w-36 flex justify-end">
+              <ScrubbableInput
+                value={(selectedLayer as any).trimEnd ?? 100}
+                step={1}
+                min={0}
+                max={100}
+                suffix="%"
+                onChange={(val) =>
+                  updateLayer(selectedLayer.id, { trimEnd: Math.round(val) } as any)
+                }
+                className="w-20"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Offset</span>
+            <div className="w-36 flex justify-end">
+              <ScrubbableInput
+                value={(selectedLayer as any).trimOffset ?? 0}
+                step={1}
+                min={0}
+                max={100}
+                suffix="%"
+                onChange={(val) =>
+                  updateLayer(selectedLayer.id, { trimOffset: Math.round(val) } as any)
+                }
+                className="w-20"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media (Image & Video) Controls */}
+      {isMedia(selectedLayer) && (
+        <div className="pt-3 border-t border-border space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground">Fit</span>
+            <div className="w-28">
+              <Select
+                value={(selectedLayer as any).objectFit || (selectedLayer as any).fit || "cover"}
+                onValueChange={(val) =>
+                  updateLayer(selectedLayer.id, {
+                    objectFit: val,
+                    fit: val,
+                  } as any)
+                }
+              >
+                <SelectTrigger className="w-28 h-7">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  <SelectItem value="cover">Cover</SelectItem>
+                  <SelectItem value="contain">Contain</SelectItem>
+                  <SelectItem value="fill">Fill</SelectItem>
                 </SelectContent>
               </Select>
             </div>

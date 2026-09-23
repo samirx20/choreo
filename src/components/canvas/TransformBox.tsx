@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Layer, LayerStyle } from "@/types/scene";
 import { useProjectStore, findParentGroupInTree } from "@/store/useProjectStore";
 import { calculateSnapping, SnapGuide } from "./snapping";
+import { isVectorLine } from "@/utils/layerCapabilities";
 
 const getParentWorldOffset = (targetId: string): { x: number; y: number } => {
   let curX = 0;
@@ -43,7 +44,9 @@ type HandleType =
   | "s"
   | "sw"
   | "w"
-  | "rotate";
+  | "rotate"
+  | "endpoint-start"
+  | "endpoint-end";
 
 interface DragSession {
   handle: HandleType;
@@ -353,6 +356,49 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         }
 
         updateLayerStyle(session.targetLayerId, { rotation: Math.round(deg) });
+      } else if (session.handle === "endpoint-end") {
+        // Direct vector endpoint dragging for line end
+        const originX = session.initialX;
+        const originY = session.initialY + session.initialHeight / 2;
+        const dx = mouseCanvas.x - originX;
+        const dy = mouseCanvas.y - originY;
+        const rawLength = Math.max(10, Math.hypot(dx, dy));
+        let deg = (Math.atan2(dy, dx) * 180) / Math.PI;
+        deg = ((deg % 360) + 360) % 360;
+
+        if (e.shiftKey) {
+          deg = Math.round(deg / 15) * 15;
+          deg = ((deg % 360) + 360) % 360;
+        }
+
+        updateLayerStyle(session.targetLayerId, {
+          width: Math.round(rawLength),
+          rotation: Math.round(deg),
+        });
+      } else if (session.handle === "endpoint-start") {
+        // Direct vector endpoint dragging for line start with fixed end
+        const initRad = (session.initialRotation * Math.PI) / 180;
+        const p2X = session.initialX + session.initialWidth * Math.cos(initRad);
+        const p2Y = session.initialY + session.initialHeight / 2 + session.initialWidth * Math.sin(initRad);
+
+        const dx = p2X - mouseCanvas.x;
+        const dy = p2Y - mouseCanvas.y;
+        const rawLength = Math.max(10, Math.hypot(dx, dy));
+        let deg = (Math.atan2(dy, dx) * 180) / Math.PI;
+        deg = ((deg % 360) + 360) % 360;
+
+        if (e.shiftKey) {
+          deg = Math.round(deg / 15) * 15;
+          deg = ((deg % 360) + 360) % 360;
+        }
+
+        const parentOffset = getParentWorldOffset(session.targetLayerId);
+        updateLayerStyle(session.targetLayerId, {
+          x: Math.round(mouseCanvas.x - parentOffset.x),
+          y: Math.round(mouseCanvas.y - session.initialHeight / 2 - parentOffset.y),
+          width: Math.round(rawLength),
+          rotation: Math.round(deg),
+        });
       } else {
         // Rotated Invariant Resizing
         const rad = (session.initialRotation * Math.PI) / 180;
@@ -583,73 +629,100 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
             onPointerDown={(e) => handlePointerDown("move", e)}
           />
 
-          {/* Rotation Lever & Handles (Single-Selection Only) */}
-          {!isMulti && (
+          {/* If Line/Arrow (Single Selection): Render 2 Vector Endpoint Handles instead of 8 box handles & rotation lever */}
+          {!isMulti && isVectorLine(layer) ? (
             <>
+              {/* Start Endpoint Pin (P1) */}
               <div
-                style={{ left: "50%", top: "-24px" }}
-                className={`absolute -translate-x-1/2 flex flex-col items-center ${
-                  isPanMode ? "pointer-events-none" : "cursor-grab active:cursor-grabbing pointer-events-auto"
+                style={{ left: 0, top: "50%", transform: "translate(-50%, -50%)" }}
+                className={`absolute w-3.5 h-3.5 bg-white border-2 border-[#7c3aed] rounded-full shadow-md hover:scale-125 transition-transform z-30 cursor-crosshair ${
+                  isPanMode ? "pointer-events-none" : "pointer-events-auto"
                 }`}
-                onPointerDown={(e) => handlePointerDown("rotate", e)}
-              >
-                <div className="w-2.5 h-2.5 rounded-full bg-[#7c3aed] border-2 border-background shadow" />
-                <div className="w-0.5 h-3.5 bg-[#7c3aed]" />
-              </div>
+                onPointerDown={(e) => handlePointerDown("endpoint-start", e)}
+                title="Drag to reposition line start (Hold Shift to snap angle)"
+              />
 
-              {/* 4 Outer Corner Rotation Hit Areas (Figma Style) */}
+              {/* End Endpoint Pin (P2) */}
+              <div
+                style={{ left: "100%", top: "50%", transform: "translate(-50%, -50%)" }}
+                className={`absolute w-3.5 h-3.5 bg-white border-2 border-[#7c3aed] rounded-full shadow-md hover:scale-125 transition-transform z-30 cursor-crosshair ${
+                  isPanMode ? "pointer-events-none" : "pointer-events-auto"
+                }`}
+                onPointerDown={(e) => handlePointerDown("endpoint-end", e)}
+                title="Drag to aim and lengthen line (Hold Shift to snap angle)"
+              />
+            </>
+          ) : (
+            <>
+              {/* Rotation Lever & Handles (Single-Selection Only) */}
+              {!isMulti && (
+                <>
+                  <div
+                    style={{ left: "50%", top: "-24px" }}
+                    className={`absolute -translate-x-1/2 flex flex-col items-center ${
+                      isPanMode ? "pointer-events-none" : "cursor-grab active:cursor-grabbing pointer-events-auto"
+                    }`}
+                    onPointerDown={(e) => handlePointerDown("rotate", e)}
+                  >
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#7c3aed] border-2 border-background shadow" />
+                    <div className="w-0.5 h-3.5 bg-[#7c3aed]" />
+                  </div>
+
+                  {/* 4 Outer Corner Rotation Hit Areas (Figma Style) */}
+                  {[
+                    { id: "rot-nw", style: { top: -20, left: -20 } },
+                    { id: "rot-ne", style: { top: -20, right: -20 } },
+                    { id: "rot-se", style: { bottom: -20, right: -20 } },
+                    { id: "rot-sw", style: { bottom: -20, left: -20 } },
+                  ].map((rz) => (
+                    <div
+                      key={rz.id}
+                      style={{
+                        ...rz.style,
+                        width: 20,
+                        height: 20,
+                        cursor: ROTATE_CURSOR,
+                      }}
+                      className={`absolute z-10 ${isPanMode ? "pointer-events-none" : "pointer-events-auto"}`}
+                      onPointerDown={(e) => handlePointerDown("rotate", e)}
+                      title="Click and drag to rotate (Hold Shift for 15° snap)"
+                    />
+                  ))}
+                </>
+              )}
+
+              {/* 8 Bounding Box Resize Handles (Single & Multi-Selection) */}
               {[
-                { id: "rot-nw", style: { top: -20, left: -20 } },
-                { id: "rot-ne", style: { top: -20, right: -20 } },
-                { id: "rot-se", style: { bottom: -20, right: -20 } },
-                { id: "rot-sw", style: { bottom: -20, left: -20 } },
-              ].map((rz) => (
+                { pos: "nw", style: { top: -4, left: -4 } },
+                { pos: "n", style: { top: -4, left: "50%", transform: "translateX(-50%)" } },
+                { pos: "ne", style: { top: -4, right: -4 } },
+                { pos: "e", style: { top: "50%", right: -4, transform: "translateY(-50%)" } },
+                { pos: "se", style: { bottom: -4, right: -4 } },
+                { pos: "s", style: { bottom: -4, left: "50%", transform: "translateX(-50%)" } },
+                { pos: "sw", style: { bottom: -4, left: -4 } },
+                { pos: "w", style: { top: "50%", left: -4, transform: "translateY(-50%)" } },
+              ].map((h) => (
                 <div
-                  key={rz.id}
-                  style={{
-                    ...rz.style,
-                    width: 20,
-                    height: 20,
-                    cursor: ROTATE_CURSOR,
+                  key={h.pos}
+                  style={{ ...h.style, cursor: getRotatedCursor(h.pos, rotation) }}
+                  className={`absolute w-2 h-2 bg-white border border-[#7c3aed] rounded-xs shadow-xs hover:scale-125 transition-transform z-20 ${
+                    isPanMode ? "pointer-events-none" : "pointer-events-auto"
+                  }`}
+                  onPointerDown={(e) => handlePointerDown(h.pos as HandleType, e)}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    if (!isMulti && (layer.type === "text" || layer.type === "chunk")) {
+                      const currentMode = layer.style.boxMode ?? "point";
+                      const nextMode = currentMode === "point" ? "area" : "point";
+                      updateLayerStyle(layer.id, {
+                        boxMode: nextMode,
+                      });
+                    }
                   }}
-                  className={`absolute z-10 ${isPanMode ? "pointer-events-none" : "pointer-events-auto"}`}
-                  onPointerDown={(e) => handlePointerDown("rotate", e)}
-                  title="Click and drag to rotate (Hold Shift for 15° snap)"
                 />
               ))}
             </>
           )}
-
-          {/* 8 Bounding Box Resize Handles (Single & Multi-Selection) */}
-          {[
-            { pos: "nw", style: { top: -4, left: -4 } },
-            { pos: "n", style: { top: -4, left: "50%", transform: "translateX(-50%)" } },
-            { pos: "ne", style: { top: -4, right: -4 } },
-            { pos: "e", style: { top: "50%", right: -4, transform: "translateY(-50%)" } },
-            { pos: "se", style: { bottom: -4, right: -4 } },
-            { pos: "s", style: { bottom: -4, left: "50%", transform: "translateX(-50%)" } },
-            { pos: "sw", style: { bottom: -4, left: -4 } },
-            { pos: "w", style: { top: "50%", left: -4, transform: "translateY(-50%)" } },
-          ].map((h) => (
-            <div
-              key={h.pos}
-              style={{ ...h.style, cursor: getRotatedCursor(h.pos, rotation) }}
-              className={`absolute w-2 h-2 bg-white border border-[#7c3aed] rounded-xs shadow-xs hover:scale-125 transition-transform z-20 ${
-                isPanMode ? "pointer-events-none" : "pointer-events-auto"
-              }`}
-              onPointerDown={(e) => handlePointerDown(h.pos as HandleType, e)}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                if (!isMulti && (layer.type === "text" || layer.type === "chunk")) {
-                  const currentMode = layer.style.boxMode ?? "point";
-                  const nextMode = currentMode === "point" ? "area" : "point";
-                  updateLayerStyle(layer.id, {
-                    boxMode: nextMode,
-                  });
-                }
-              }}
-            />
-          ))}
         </>
       )}
 
@@ -672,6 +745,8 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
             }`
           : activeHandle === "rotate"
           ? `Rotation: ${rotation}°`
+          : isVectorLine(layer)
+          ? `Length: ${Math.round(visualW)}px (${rotation}°)`
           : isAnimateMode
           ? `Destination Pose (${Math.round(visualX)}, ${Math.round(visualY)})`
           : isMulti

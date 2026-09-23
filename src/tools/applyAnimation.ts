@@ -1,6 +1,7 @@
 import { useProjectStore, findLayerInTree } from "@/store/useProjectStore";
 import { LayerAnimation, AnimationConfig } from "@/types/scene";
 import { ApplyAnimationInput, ApplyAnimationInputSchema, ToolResult } from "@/types/agentTools";
+import { sanitizeAnimationForLayer } from "@/engine/physics/animationGuardrails";
 
 /**
  * Self-healing Agent Tool: apply_animation.
@@ -51,12 +52,22 @@ export function applyAnimation(
     duration = 10.0;
   }
 
-  // 3. Construct Animation Action
+  // 3. Physical & Semantic Compatibility Guardrails
+  const sanitized = sanitizeAnimationForLayer(
+    targetLayer.type,
+    input.preset,
+    (input.easing as any) || "snappy"
+  );
+  if (sanitized.notices.length > 0) {
+    notices.push(...sanitized.notices);
+  }
+
+  // 4. Construct Animation Action
   const action: AnimationConfig = {
-    preset: input.preset,
+    preset: sanitized.preset,
     duration,
     start: input.delay ?? 0,
-    easing: (input.easing as any) || "snappy",
+    easing: sanitized.easing as any,
     direction: input.direction,
     springStiffness: input.spring?.stiffness,
     springDamping: input.spring?.damping,

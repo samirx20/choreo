@@ -11,8 +11,12 @@ import {
   ChevronsDown,
   ChevronUp,
   ChevronDown,
+  ArrowLeftRight,
+  ArrowUpRight,
+  Maximize2,
 } from "lucide-react";
 import { useProjectStore, findLayerInTree } from "@/store/useProjectStore";
+import { isVectorLine, isMedia } from "@/utils/layerCapabilities";
 
 interface CanvasContextMenuProps {
   x: number;
@@ -47,6 +51,8 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
     sendToBack,
     bringForward,
     sendBackward,
+    updateLayer,
+    updateLayerStyle,
   } = useProjectStore();
 
   const menuRef = useRef<HTMLDivElement>(null);
@@ -143,6 +149,88 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
         </span>
         <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+D</kbd>
       </button>
+
+      {/* Element-Specific Context Actions */}
+      {isVectorLine(layer) && (
+        <>
+          <div className="h-px bg-border my-1" />
+          <button
+            onClick={() => {
+              const start = (layer as any).arrowStart || "none";
+              const end =
+                (layer as any).arrowEnd ||
+                ((layer as any).shapeType === "arrow" ? "arrow" : "none");
+              updateLayer(layer.id, {
+                arrowStart: end,
+                arrowEnd: start,
+              } as any);
+              onClose();
+            }}
+            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+          >
+            <span className="flex items-center gap-2">
+              <ArrowLeftRight className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Reverse Direction</span>
+            </span>
+          </button>
+          <button
+            onClick={() => {
+              const curEnd = (layer as any).arrowEnd;
+              updateLayer(layer.id, {
+                arrowEnd: curEnd === "arrow" ? "none" : "arrow",
+              } as any);
+              onClose();
+            }}
+            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+          >
+            <span className="flex items-center gap-2">
+              <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Toggle Arrowhead</span>
+            </span>
+          </button>
+        </>
+      )}
+
+      {isText && (
+        <>
+          <div className="h-px bg-border my-1" />
+          <button
+            onClick={() => {
+              const curMode = layer.style.boxMode ?? "point";
+              updateLayerStyle(layer.id, {
+                boxMode: curMode === "point" ? "area" : "point",
+              });
+              onClose();
+            }}
+            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+          >
+            <span className="flex items-center gap-2">
+              <Maximize2 className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>{layer.style.boxMode === "area" ? "Switch to Auto-Width" : "Switch to Fixed Box"}</span>
+            </span>
+          </button>
+        </>
+      )}
+
+      {isMedia(layer) && (
+        <>
+          <div className="h-px bg-border my-1" />
+          <button
+            onClick={() => {
+              const curFit = (layer as any).objectFit || "cover";
+              const nextFit = curFit === "cover" ? "contain" : "cover";
+              updateLayer(layer.id, { objectFit: nextFit, fit: nextFit } as any);
+              onClose();
+            }}
+            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+          >
+            <span className="flex items-center gap-2">
+              <Maximize2 className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Toggle Fit (Cover / Contain)</span>
+            </span>
+          </button>
+        </>
+      )}
 
       {/* Group / Ungroup */}
       {isGroup ? (

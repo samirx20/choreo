@@ -4,6 +4,7 @@ import { Layer } from "@/types/scene";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ScrubbableInput } from "@/components/ui/scrubbable-input";
 import { cn } from "@/lib/utils";
+import { canHaveBorderRadius, isVectorLine, isCircle } from "@/utils/layerCapabilities";
 
 interface TransformCardProps {
   selectedLayer: Layer;
@@ -54,26 +55,50 @@ export const TransformCard: React.FC<TransformCardProps> = ({ selectedLayer }) =
           </div>
         </div>
 
-        {/* Size W & H */}
+        {/* Size / Dimensions */}
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Size</span>
+          <span className="text-xs text-muted-foreground">
+            {isVectorLine(selectedLayer) ? "Length" : isCircle(selectedLayer) ? "Diameter" : "Size"}
+          </span>
           <div className="flex items-center gap-1.5 w-36">
-            <ScrubbableInput
-              label="W"
-              value={width}
-              step={1}
-              min={1}
-              onChange={(val) => updateLayerStyle(selectedLayer.id, { width: val })}
-              className="w-full"
-            />
-            <ScrubbableInput
-              label="H"
-              value={height}
-              step={1}
-              min={1}
-              onChange={(val) => updateLayerStyle(selectedLayer.id, { height: val })}
-              className="w-full"
-            />
+            {isVectorLine(selectedLayer) ? (
+              <ScrubbableInput
+                label="L"
+                value={width}
+                step={1}
+                min={1}
+                onChange={(val) => updateLayerStyle(selectedLayer.id, { width: val })}
+                className="w-full"
+              />
+            ) : isCircle(selectedLayer) ? (
+              <ScrubbableInput
+                label="D"
+                value={width}
+                step={1}
+                min={1}
+                onChange={(val) => updateLayerStyle(selectedLayer.id, { width: val, height: val })}
+                className="w-full"
+              />
+            ) : (
+              <>
+                <ScrubbableInput
+                  label="W"
+                  value={width}
+                  step={1}
+                  min={1}
+                  onChange={(val) => updateLayerStyle(selectedLayer.id, { width: val })}
+                  className="w-full"
+                />
+                <ScrubbableInput
+                  label="H"
+                  value={height}
+                  step={1}
+                  min={1}
+                  onChange={(val) => updateLayerStyle(selectedLayer.id, { height: val })}
+                  className="w-full"
+                />
+              </>
+            )}
           </div>
         </div>
 
@@ -120,7 +145,7 @@ export const TransformCard: React.FC<TransformCardProps> = ({ selectedLayer }) =
       </div>
 
       {/* Corner Section (for shapes/cards) */}
-      {!isText && (
+      {canHaveBorderRadius(selectedLayer) && (
         <div className="pt-2.5 space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-foreground">Corner</span>

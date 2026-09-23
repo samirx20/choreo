@@ -22,6 +22,7 @@ import {
   Smile,
 } from "lucide-react";
 import { Layer } from "@/types/scene";
+import { LayerIcon } from "@/components/common/LayerIcon";
 import {
   useProjectStore,
   findLayerInTree,
@@ -116,54 +117,7 @@ export const LeftSidebar: React.FC = () => {
       "h-3.5 w-3.5 shrink-0",
       isSelected ? "text-white" : "text-[#71717a]"
     );
-
-    switch (layer.type) {
-      case "text":
-      case "chunk":
-        return <Type className={iconClass} />;
-      case "group":
-        return <Folder className={iconClass} />;
-      case "frame":
-        return <BoxSelect className={iconClass} />;
-      case "line":
-        return (layer as any).arrowEnd === "arrow" ? (
-          <ArrowUpRight className={iconClass} />
-        ) : (
-          <Minus className={iconClass} />
-        );
-      case "polygon":
-        return (layer as any).sides === 3 ? (
-          <Triangle className={iconClass} />
-        ) : (
-          <Hexagon className={iconClass} />
-        );
-      case "shape":
-        if (layer.shapeType === "circle" || layer.shapeType === "ellipse") {
-          return <Circle className={iconClass} />;
-        }
-        if (layer.shapeType === "star") {
-          return <Star className={iconClass} />;
-        }
-        if (layer.shapeType === "triangle") {
-          return <Triangle className={iconClass} />;
-        }
-        if (layer.shapeType === "line") {
-          return <Minus className={iconClass} />;
-        }
-        if (layer.shapeType === "arrow") {
-          return <ArrowUpRight className={iconClass} />;
-        }
-        return <Square className={iconClass} />;
-      case "image":
-        return <ImageIcon className={iconClass} />;
-      case "icon": {
-        const IconComp =
-          (icons as Record<string, React.FC<any>>)[(layer as any).iconName] || Smile;
-        return <IconComp className={iconClass} />;
-      }
-      default:
-        return <Square className={iconClass} />;
-    }
+    return <LayerIcon layer={layer} className={iconClass} />;
   };
 
   // Render a single layer item in the tree

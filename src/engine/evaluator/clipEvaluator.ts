@@ -288,9 +288,9 @@ function parseHex(c: string): [number, number, number] {
 function lerpColor(c1: string, c2: string, t: number): string {
   const [r1, g1, b1] = parseHex(c1);
   const [r2, g2, b2] = parseHex(c2);
-  const r = Math.round(r1 + (r2 - r1) * t);
-  const g = Math.round(g1 + (g2 - g1) * t);
-  const b = Math.round(b1 + (b2 - b1) * t);
+  const r = Math.min(255, Math.max(0, Math.round(r1 + (r2 - r1) * t)));
+  const g = Math.min(255, Math.max(0, Math.round(g1 + (g2 - g1) * t)));
+  const b = Math.min(255, Math.max(0, Math.round(b1 + (b2 - b1) * t)));
   return `rgb(${r}, ${g}, ${b})`;
 }
 
@@ -376,13 +376,13 @@ export function applyCustomPresetDelta(
     case "custom_blur": {
       const fromB = from.blur ?? params.fromBlur ?? 0;
       const toB = params.toBlur ?? params.blur ?? 10;
-      d.blur = fromB + (toB - fromB) * factor;
+      d.blur = Math.max(0, fromB + (toB - fromB) * factor);
       break;
     }
     case "custom_backdrop_blur": {
       const fromBb = from.backdropBlur ?? from.blur ?? params.fromBackdropBlur ?? params.fromBlur ?? 0;
       const toBb = params.toBackdropBlur ?? params.toBlur ?? params.backdropBlur ?? params.blur ?? 16;
-      const bb = fromBb + (toBb - fromBb) * factor;
+      const bb = Math.max(0, fromBb + (toBb - fromBb) * factor);
       d.backdropFilter = `blur(${bb.toFixed(1)}px)`;
       break;
     }
@@ -391,7 +391,7 @@ export function applyCustomPresetDelta(
       const toBb = params.toBackdropBlur ?? params.backdropBlur ?? 20;
       const fromOp = from.opacity ?? params.fromOpacity ?? 1;
       const toOp = params.toOpacity ?? (params.opacity ?? 0.8);
-      const bb = fromBb + (toBb - fromBb) * factor;
+      const bb = Math.max(0, fromBb + (toBb - fromBb) * factor);
       d.backdropFilter = `blur(${bb.toFixed(1)}px)`;
       d.opacity = Math.max(0, Math.min(1, fromOp + (toOp - fromOp) * factor));
       break;

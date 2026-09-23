@@ -30,9 +30,10 @@ export function lintStoryboard(
   const warnings: LintIssue[] = [];
   const suggestions: string[] = [];
 
-  const targetScreens = options?.sceneId
-    ? doc.screens.filter((s) => s.id === options.sceneId)
-    : doc.screens;
+  const screens: Screen[] = doc.screens || (doc as any).scenes || [];
+  const targetScreens: Screen[] = options?.sceneId
+    ? screens.filter((s) => s.id === options.sceneId)
+    : screens;
 
   if (targetScreens.length === 0) {
     errors.push({
@@ -165,7 +166,68 @@ function auditLayer(
     );
   }
 
-  // C. Grid / Coordinate validity
+  // C. Element Individuality: Property Validity per Layer Type
+  if (layer.type === "line") {
+    if ((style as any).fontSize) {
+      warnings.push({
+        code: "INVALID_LAYER_PROPERTY",
+        severity: "warning",
+        sceneId: screen.id,
+        layerId: layer.id,
+        message: `Line layer "${layer.name}" has typographic 'fontSize' property. Lines are 1D vector strokes without font properties.`,
+        rule: "Rule 2: Element Individuality - Strict Property Scope",
+      });
+      suggestions.push(`Remove 'fontSize' from line layer "${layer.name}".`);
+    }
+    if ((style as any).fillColor && (style as any).fillColor !== "transparent") {
+      warnings.push({
+        code: "INVALID_LAYER_PROPERTY",
+        severity: "warning",
+        sceneId: screen.id,
+        layerId: layer.id,
+        message: `Line layer "${layer.name}" has 2D 'fillColor' property. Lines are strokes only without area fills.`,
+        rule: "Rule 2: Element Individuality - Strict Property Scope",
+      });
+      suggestions.push(`Use 'strokeColor' or 'borderColor' instead of 'fillColor' for "${layer.name}".`);
+    }
+  }
+
+  // D. Animation Coherence per Layer Physical Form
+  if (layer.animation) {
+    const presetsToCheck = [
+      layer.animation.in?.preset,
+      layer.animation.out?.preset,
+      layer.animation.emphasis?.preset,
+    ].filter(Boolean) as string[];
+
+    const isTextLayer = layer.type === "text" || layer.type === "chunk" || layer.type === "counter";
+    for (const preset of presetsToCheck) {
+      if (["typewriter", "baselineReveal"].includes(preset) && !isTextLayer) {
+        errors.push({
+          code: "ANIMATION_TYPE_MISMATCH",
+          severity: "error",
+          sceneId: screen.id,
+          layerId: layer.id,
+          message: `Layer "${layer.name}" (type: ${layer.type}) uses text-only animation preset "${preset}".`,
+          rule: "Rule 2: Motion Truth - Animation to Element Suitability",
+        });
+        suggestions.push(`Replace "${preset}" on "${layer.name}" with a spatial preset such as 'fade', 'slide', or 'wipe'.`);
+      }
+      if (layer.type === "line" && ["circleIris", "circleReveal", "jellySquash"].includes(preset)) {
+        errors.push({
+          code: "ANIMATION_TYPE_MISMATCH",
+          severity: "error",
+          sceneId: screen.id,
+          layerId: layer.id,
+          message: `Line layer "${layer.name}" uses 2D radial deformation preset "${preset}". 1D lines require axial wipes or slides.`,
+          rule: "Rule 2: Motion Truth - Animation to Element Suitability",
+        });
+        suggestions.push(`Replace "${preset}" on line "${layer.name}" with 'slideRight' or 'fade'.`);
+      }
+    }
+  }
+
+  // E. Grid / Coordinate validity
   if (layer.grid) {
     if (layer.grid.col < 0 || layer.grid.row < 0) {
       errors.push({

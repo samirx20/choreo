@@ -9,10 +9,18 @@
 ## 1. Current Verified Baseline
 
 The repository is in a pristine, fully verified, production-ready state:
-* **Automated Unit & Integration Tests**: All **38 test suites (329 tests)** passing via Vitest (`npm test`).
+* **Automated Unit & Integration Tests**: All **39 test suites (340 tests)** passing via Vitest (`npm test`).
 * **Production Build**: Compiles cleanly with **0 TypeScript / Vite bundling errors** (`npm run build`).
 * **Git Status**: Clean working tree on `main`, synchronized with GitHub remote.
-* **Recent Deliverables Completed (Decisions 57–61)**:
+* **Recent Deliverables Completed (Decisions 57–62)**:
+  * **Element Individuality, Form Truth & Physics Guardrails (Decision 62 - Completed)**:
+    * Pruned nonsensical properties across all layer types in Inspector (Fill/4-corner radii on Lines, 4-corner radii on Circles/Stars/Polygons, outer box borders on Icons).
+    * Added dedicated single-metric inputs (`Length` for lines, `Diameter` for circles) and parametric controls (Star points/inner ratio, Line caps/patterns/reverse, Trim Paths, Media fit mode).
+    * Implemented 2-endpoint vector manipulation handles for 1D lines and arrows in canvas viewport, replacing 8-point bounding boxes.
+    * Added context-menu actions tailored per element type (Reverse Direction, Toggle Arrowhead for lines; Toggle Auto-Width for text; Cover/Contain for media).
+    * Math evaluator guardrails: clamped RGB channels to $[0, 255]$ and blur to $\ge 0$ under non-monotonic spring curves; clamped circle iris radii to prevent negative clip paths.
+    * Agent tools & AST pre-flight linter: added self-healing property sanitizers and linter rules `INVALID_LAYER_PROPERTY` and `ANIMATION_TYPE_MISMATCH`.
+    * Unified layer icon resolution in layer trees and timelines via `LayerIcon.tsx`.
   * **Interactive Drag-to-Create Elements (Decision 61)**:
     * Implemented interactive click-and-drag creation across all canvas tools (`Rectangle`, `Circle`, `Star`, `Triangle`, `Polygon`, `Line`, `Arrow`, `Frame`, `Text`).
     * Real-time creation ghost preview overlay with live dimension badge (`340 × 180`) and rotated vector angle badge (`280px (45°)`).

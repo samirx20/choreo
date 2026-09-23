@@ -335,7 +335,7 @@ export function evaluateAnimationConfig(
       }
 
       case "scaleReveal": {
-        const p = effectiveProgress;
+        const p = Math.max(0, Math.min(1, effectiveProgress));
         const insetPercent = ((1 - p) * 50).toFixed(1);
         clipPath = `inset(${insetPercent}% ${insetPercent}% ${insetPercent}% ${insetPercent}%)`;
         const s = 0.85 + 0.15 * p;
@@ -346,7 +346,8 @@ export function evaluateAnimationConfig(
       }
 
       case "circleIris": {
-        const radiusPercent = (effectiveProgress * 75).toFixed(1);
+        const clampedP = Math.max(0, Math.min(1.5, effectiveProgress));
+        const radiusPercent = (clampedP * 75).toFixed(1);
         clipPath = `circle(${radiusPercent}% at ${params.origin || "50% 50%"})`;
         opacity = 1;
         break;
@@ -363,7 +364,7 @@ export function evaluateAnimationConfig(
       }
 
       case "glitchDisintegrate": {
-        const p = effectiveProgress;
+        const p = Math.max(0, Math.min(1, effectiveProgress));
         const jitterX = Math.sin(p * 45) * (1 - p) * 15;
         tState.x = Number(jitterX.toFixed(1));
         const topSlice = ((1 - p) * 30).toFixed(1);
@@ -381,7 +382,8 @@ export function evaluateAnimationConfig(
       }
 
       case "circleReveal": {
-        const radiusPercent = (effectiveProgress * 75).toFixed(1);
+        const clampedP = Math.max(0, Math.min(1.5, effectiveProgress));
+        const radiusPercent = (clampedP * 75).toFixed(1);
         clipPath = `circle(${radiusPercent}% at ${params.origin || "50% 50%"})`;
         opacity = 1;
         break;

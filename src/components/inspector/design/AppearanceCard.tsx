@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { cn } from "@/lib/utils";
+import { canHaveFill, canHaveGlass, isVectorLine } from "@/utils/layerCapabilities";
 
 interface AppearanceCardProps {
   selectedLayer: Layer;
@@ -39,59 +40,61 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
 
   return (
     <div className="border-t border-border divide-y divide-border/50">
-      {/* 1. Fill Checkbox */}
-      <div className="py-2.5 space-y-2">
-        <div
-          onClick={() => {
-            if (isText || isIcon) {
-              updateLayerStyle(selectedLayer.id, {
-                color: hasFill ? "transparent" : (style.color && style.color !== "transparent" ? style.color : "#18181b"),
-              });
-            } else {
-              updateLayerStyle(selectedLayer.id, {
-                backgroundColor: hasFill ? "transparent" : (style.backgroundColor && style.backgroundColor !== "transparent" ? style.backgroundColor : "#B3B3B3"),
-              });
-            }
-          }}
-          className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
-        >
-          <span className="text-xs font-semibold text-foreground">{isText ? "Text Color" : "Fill"}</span>
-          <Checkbox checked={hasFill} className="pointer-events-none" />
-        </div>
+      {/* 1. Fill Checkbox (Omitted for 1D Vector Lines) */}
+      {canHaveFill(selectedLayer) && (
+        <div className="py-2.5 space-y-2">
+          <div
+            onClick={() => {
+              if (isText || isIcon) {
+                updateLayerStyle(selectedLayer.id, {
+                  color: hasFill ? "transparent" : (style.color && style.color !== "transparent" ? style.color : "#18181b"),
+                });
+              } else {
+                updateLayerStyle(selectedLayer.id, {
+                  backgroundColor: hasFill ? "transparent" : (style.backgroundColor && style.backgroundColor !== "transparent" ? style.backgroundColor : "#B3B3B3"),
+                });
+              }
+            }}
+            className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
+          >
+            <span className="text-xs font-semibold text-foreground">{isText ? "Text Color" : "Fill"}</span>
+            <Checkbox checked={hasFill} className="pointer-events-none" />
+          </div>
 
-        {hasFill && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Color</span>
-            <div className="flex items-center gap-1.5 w-36 justify-end">
-              <Input
-                type="text"
-                value={
-                  (((isText || isIcon) ? style.color : style.backgroundColor) || "#B3B3B3").includes("gradient")
-                    ? "Gradient"
-                    : (((isText || isIcon) ? style.color : style.backgroundColor) || "#B3B3B3").replace("#", "").toUpperCase()
-                }
-                readOnly={Boolean((((isText || isIcon) ? style.color : style.backgroundColor) || "").includes("gradient"))}
-                onChange={(e) => {
-                  const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
-                  if (clean.length === 6 || clean.length === 3) {
-                    const c = `#${clean}`;
+          {hasFill && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Color</span>
+              <div className="flex items-center gap-1.5 w-36 justify-end">
+                <Input
+                  type="text"
+                  value={
+                    (((isText || isIcon) ? style.color : style.backgroundColor) || "#B3B3B3").includes("gradient")
+                      ? "Gradient"
+                      : (((isText || isIcon) ? style.color : style.backgroundColor) || "#B3B3B3").replace("#", "").toUpperCase()
+                  }
+                  readOnly={Boolean((((isText || isIcon) ? style.color : style.backgroundColor) || "").includes("gradient"))}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
+                    if (clean.length === 6 || clean.length === 3) {
+                      const c = `#${clean}`;
+                      if (isText || isIcon) updateLayerStyle(selectedLayer.id, { color: c });
+                      else updateLayerStyle(selectedLayer.id, { backgroundColor: c });
+                    }
+                  }}
+                  className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
+                />
+                <ColorPicker
+                  value={((isText || isIcon) ? style.color : style.backgroundColor) || "#B3B3B3"}
+                  onChange={(c) => {
                     if (isText || isIcon) updateLayerStyle(selectedLayer.id, { color: c });
                     else updateLayerStyle(selectedLayer.id, { backgroundColor: c });
-                  }
-                }}
-                className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
-              />
-              <ColorPicker
-                value={((isText || isIcon) ? style.color : style.backgroundColor) || "#B3B3B3"}
-                onChange={(c) => {
-                  if (isText || isIcon) updateLayerStyle(selectedLayer.id, { color: c });
-                  else updateLayerStyle(selectedLayer.id, { backgroundColor: c });
-                }}
-              />
+                  }}
+                />
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* 1b. Background Fill for Text / Chunks / Badges */}
       {isText && (
@@ -140,62 +143,87 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
         </div>
       )}
 
-      {/* 2. Stroke Checkbox */}
-      <div className="py-2.5 space-y-2">
-        <div
-          onClick={() => {
-            const nextStroke = !hasStroke;
-            updateLayerStyle(selectedLayer.id, {
-              borderWidth: nextStroke ? 2 : 0,
-              borderColor: nextStroke ? "#18181b" : "transparent",
-              ...(nextStroke
-                ? {
-                    shadowBlur: 0,
-                    shadowDistance: 0,
-                    shadowOpacity: 0,
-                    elevation: 0,
-                    shadows: [],
-                  }
-                : {}),
-            });
-          }}
-          className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
-        >
-          <span className="text-xs font-semibold text-foreground">Stroke</span>
-          <Checkbox checked={hasStroke} className="pointer-events-none" />
-        </div>
-
-        {hasStroke && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Width</span>
-            <div className="flex items-center gap-1.5 w-36 justify-end">
-              <ScrubbableInput
-                value={style.borderWidth || 2}
-                step={1}
-                min={1}
-                onChange={(val) =>
-                  updateLayerStyle(selectedLayer.id, {
-                    borderWidth: val,
-                    shadowBlur: 0,
-                    shadowDistance: 0,
-                    shadowOpacity: 0,
-                    elevation: 0,
-                    shadows: [],
-                  })
-                }
-                className="w-16"
-              />
-              <ColorPicker
-                value={style.borderColor || "#18181b"}
-                onChange={(c) => updateLayerStyle(selectedLayer.id, { borderColor: c })}
-              />
-            </div>
+      {/* 2. Stroke Checkbox / Line Width & Color */}
+      {!isIcon && (
+        <div className="py-2.5 space-y-2">
+          <div
+            onClick={() => {
+              if (isVectorLine(selectedLayer)) return;
+              const nextStroke = !hasStroke;
+              updateLayerStyle(selectedLayer.id, {
+                borderWidth: nextStroke ? 2 : 0,
+                borderColor: nextStroke ? "#18181b" : "transparent",
+                ...(nextStroke
+                  ? {
+                      shadowBlur: 0,
+                      shadowDistance: 0,
+                      shadowOpacity: 0,
+                      elevation: 0,
+                      shadows: [],
+                    }
+                  : {}),
+              });
+            }}
+            className={cn(
+              "flex items-center justify-between py-1.5 px-2 -mx-2 rounded select-none transition-colors",
+              isVectorLine(selectedLayer) ? "cursor-default" : "hover:bg-muted cursor-pointer"
+            )}
+          >
+            <span className="text-xs font-semibold text-foreground">
+              {isVectorLine(selectedLayer) ? "Line Stroke" : "Stroke"}
+            </span>
+            <Checkbox checked={isVectorLine(selectedLayer) ? true : hasStroke} className="pointer-events-none" />
           </div>
-        )}
-      </div>
+
+          {(hasStroke || isVectorLine(selectedLayer)) && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Width</span>
+              <div className="flex items-center gap-1.5 w-36 justify-end">
+                <ScrubbableInput
+                  value={
+                    typeof style.borderWidth === "number" && style.borderWidth > 0
+                      ? style.borderWidth
+                      : (selectedLayer as any).strokeWidth || 2
+                  }
+                  step={1}
+                  min={1}
+                  onChange={(val) => {
+                    updateLayerStyle(selectedLayer.id, {
+                      borderWidth: val,
+                      shadowBlur: 0,
+                      shadowDistance: 0,
+                      shadowOpacity: 0,
+                      elevation: 0,
+                      shadows: [],
+                    });
+                    if (selectedLayer.type === "line") {
+                      updateLayer(selectedLayer.id, { strokeWidth: val } as any);
+                    }
+                  }}
+                  className="w-16"
+                />
+                <ColorPicker
+                  value={
+                    style.borderColor && style.borderColor !== "transparent"
+                      ? style.borderColor
+                      : (selectedLayer as any).strokeColor || "#18181b"
+                  }
+                  onChange={(c) => {
+                    updateLayerStyle(selectedLayer.id, { borderColor: c, backgroundColor: "transparent" });
+                    if (selectedLayer.type === "line") {
+                      updateLayer(selectedLayer.id, { strokeColor: c } as any);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 3. Shadow Checkbox */}
-      <div className="py-2.5 space-y-2">
+      {!isVectorLine(selectedLayer) && (
+        <div className="py-2.5 space-y-2">
         <div
           onClick={() => {
             const nextShadow = !hasShadow;
@@ -303,9 +331,11 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
           </div>
         )}
       </div>
+      )}
 
       {/* 4. Sticker / Die-Cut Border Checkbox */}
-      <div className="py-2.5 space-y-2">
+      {!isVectorLine(selectedLayer) && !isIcon && !isText && (
+        <div className="py-2.5 space-y-2">
         <div
           onClick={() => {
             const nextSticker = !hasStickerBorder;
@@ -375,6 +405,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
           </div>
         )}
       </div>
+      )}
 
       {/* 5. Layer Blur Checkbox */}
       <div className="py-2.5 space-y-2">
@@ -407,68 +438,72 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
       </div>
 
       {/* 6. Background Blur Checkbox */}
-      <div className="py-2.5 space-y-2">
-        <div
-          onClick={() =>
-            updateLayerStyle(selectedLayer.id, {
-              backdropBlur: hasBgBlur ? 0 : 16,
-            })
-          }
-          className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
-        >
-          <span className="text-xs font-semibold text-foreground">Background blur</span>
-          <Checkbox checked={hasBgBlur} className="pointer-events-none" />
-        </div>
-
-        {hasBgBlur && (
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Blur</span>
-            <div className="w-36 flex justify-end">
-              <ScrubbableInput
-                value={style.backdropBlur || 16}
-                step={1}
-                min={0}
-                onChange={(val) => updateLayerStyle(selectedLayer.id, { backdropBlur: val })}
-                className="w-20"
-              />
-            </div>
+      {canHaveGlass(selectedLayer) && (
+        <div className="py-2.5 space-y-2">
+          <div
+            onClick={() =>
+              updateLayerStyle(selectedLayer.id, {
+                backdropBlur: hasBgBlur ? 0 : 16,
+              })
+            }
+            className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
+          >
+            <span className="text-xs font-semibold text-foreground">Background blur</span>
+            <Checkbox checked={hasBgBlur} className="pointer-events-none" />
           </div>
-        )}
-      </div>
+
+          {hasBgBlur && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Blur</span>
+              <div className="w-36 flex justify-end">
+                <ScrubbableInput
+                  value={style.backdropBlur || 16}
+                  step={1}
+                  min={0}
+                  onChange={(val) => updateLayerStyle(selectedLayer.id, { backdropBlur: val })}
+                  className="w-20"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 7. Glass Checkbox */}
-      <div className="py-2.5 space-y-2">
-        <div
-          onClick={() => {
-            const nextGlass = !hasGlass;
-            updateLayer(selectedLayer.id, { isGlass: nextGlass } as any);
-            if (nextGlass) {
-              updateLayerStyle(selectedLayer.id, {
-                backgroundColor: "rgba(255, 255, 255, 0.2)",
-                backdropBlur: 20,
-                borderColor: "rgba(255, 255, 255, 0.4)",
-                borderWidth: 1,
-                shadowBlur: 0,
-                shadowDistance: 0,
-                shadowOpacity: 0,
-                elevation: 0,
-                shadows: [],
-              });
-            } else {
-              updateLayerStyle(selectedLayer.id, {
-                backgroundColor: "#B3B3B3",
-                backdropBlur: 0,
-                borderColor: "transparent",
-                borderWidth: 0,
-              });
-            }
-          }}
-          className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
-        >
-          <span className="text-xs font-semibold text-foreground">Glass</span>
-          <Checkbox checked={hasGlass} className="pointer-events-none" />
+      {canHaveGlass(selectedLayer) && (
+        <div className="py-2.5 space-y-2">
+          <div
+            onClick={() => {
+              const nextGlass = !hasGlass;
+              updateLayer(selectedLayer.id, { isGlass: nextGlass } as any);
+              if (nextGlass) {
+                updateLayerStyle(selectedLayer.id, {
+                  backgroundColor: "rgba(255, 255, 255, 0.2)",
+                  backdropBlur: 20,
+                  borderColor: "rgba(255, 255, 255, 0.4)",
+                  borderWidth: 1,
+                  shadowBlur: 0,
+                  shadowDistance: 0,
+                  shadowOpacity: 0,
+                  elevation: 0,
+                  shadows: [],
+                });
+              } else {
+                updateLayerStyle(selectedLayer.id, {
+                  backgroundColor: "#B3B3B3",
+                  backdropBlur: 0,
+                  borderColor: "transparent",
+                  borderWidth: 0,
+                });
+              }
+            }}
+            className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
+          >
+            <span className="text-xs font-semibold text-foreground">Glass</span>
+            <Checkbox checked={hasGlass} className="pointer-events-none" />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -22,6 +22,7 @@ import {
 } from "@/store/useProjectStore";
 import { Layer, AnimationClip, getLayerClips } from "@/types/scene";
 import { DraggableClip } from "./DraggableClip";
+import { LayerIcon } from "@/components/common/LayerIcon";
 import { animationClock } from "@/engine/clock/AnimationClock";
 import { useContextMenuStore } from "@/store/useContextMenuStore";
 import { buildTimelineTrackMenu } from "@/components/contextmenu/contextMenuBuilders";
@@ -513,17 +514,6 @@ export const TimelinePanel: React.FC = () => {
               const { clipLanes, totalSubLanes } = calculateSubLanes(clips);
               const trackHeight = Math.max(32, totalSubLanes * 24 + 8);
 
-              let LayerIcon = Type;
-              if (layer.type === "shape") {
-                LayerIcon = (layer as any).shapeType === "circle" ? Circle : Square;
-              } else if (layer.type === "group") {
-                LayerIcon = Folder;
-              } else if (layer.type === "image") {
-                LayerIcon = ImageIcon;
-              } else if (layer.type === "icon") {
-                LayerIcon = ((icons as any)[(layer as any).iconName]) || Smile;
-              }
-
               return (
                 <div
                   key={layer.id}
@@ -598,7 +588,7 @@ export const TimelinePanel: React.FC = () => {
                         />
                       ) : (
                         <>
-                          <LayerIcon className="w-3.5 h-3.5 text-[#71717a] shrink-0" />
+                          <LayerIcon layer={layer} className="w-3.5 h-3.5 text-[#71717a] shrink-0" />
                           <span
                             onDoubleClick={(e) => {
                               e.stopPropagation();

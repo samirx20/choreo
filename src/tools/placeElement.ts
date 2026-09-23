@@ -205,6 +205,15 @@ export function placeElement(
     }
 
     case "line": {
+      if (input.style?.fontSize) {
+        notices.push("Property 'fontSize' is invalid for 'line' layers and was omitted.");
+      }
+      if (input.style?.borderRadius) {
+        notices.push("Property 'borderRadius' is invalid for 1D 'line' layers and was omitted.");
+      }
+      if (input.style?.fillColor) {
+        notices.push("Property 'fillColor' is invalid for 1D 'line' layers and was omitted.");
+      }
       const lineLayer: LineLayer = {
         id: layerId,
         name: input.name,
@@ -216,20 +225,35 @@ export function placeElement(
         strokeWidth: input.style?.borderWidth || 2,
         strokeColor: input.style?.borderColor || input.style?.color || "#ffffff",
         grid: resolvedGrid,
-        style: baseStyle,
+        style: {
+          ...baseStyle,
+          fillColor: undefined,
+          backgroundColor: "transparent",
+          borderRadius: 0,
+          borderWidth: input.style?.borderWidth || 2,
+          borderColor: input.style?.borderColor || input.style?.color || "#ffffff",
+          shadowBlur: 0,
+          shadowDistance: 0,
+        },
       };
       createdLayer = lineLayer;
       break;
     }
 
     case "polygon": {
+      if (input.style?.borderRadius) {
+        notices.push("Property 'borderRadius' on polygon vertices is not supported as CSS box radius; omitted.");
+      }
       const polygonLayer: PolygonLayer = {
         id: layerId,
         name: input.name,
         type: "polygon",
         sides: 3,
         grid: resolvedGrid,
-        style: baseStyle,
+        style: {
+          ...baseStyle,
+          borderRadius: 0,
+        },
       };
       createdLayer = polygonLayer;
       break;
@@ -237,13 +261,17 @@ export function placeElement(
 
     case "shape":
     default: {
+      const isCirc = input.shapeType === "circle" || (input.shapeType as string) === "ellipse";
+      if (isCirc && input.style?.borderRadius) {
+        notices.push("Property 'borderRadius' is redundant on circular shapes and was normalized to continuous 50%.");
+      }
       const shapeLayer: ShapeLayer = {
         id: layerId,
         name: input.name,
         type: "shape",
         shapeType: input.shapeType || "rectangle",
         grid: resolvedGrid,
-        style: baseStyle,
+        style: isCirc ? { ...baseStyle, borderRadius: 9999 } : baseStyle,
       };
       createdLayer = shapeLayer;
       break;

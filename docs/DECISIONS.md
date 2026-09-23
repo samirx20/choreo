@@ -1188,3 +1188,35 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Verification**:
   * Added unit test suite in `src/test/canvas_interaction_matrix.test.ts` (Domain K) verifying custom bounds creation across shapes, frames, text, lines, and click fallbacks.
   * All 38 test suites (329 tests) pass 100% cleanly.
+
+---
+
+### Decision 62: Element Individuality, Form Truth & Physics Guardrails
+* **Layer Icon Resolution & Timeline/Sidebar Unification (`src/components/common/LayerIcon.tsx`, `TimelinePanel.tsx`, `LeftSidebar.tsx`)**:
+  * Unified layer icon resolution across all 12 layer types (`Line` $\to$ `Minus`, `Arrow` $\to$ `ArrowUpRight`, `Frame` $\to$ `BoxSelect`, `Video` $\to$ `Film`, `Counter` $\to$ `Timer`, `3D Mockup` $\to$ `Box`, `Star` $\to$ `Star`, `Polygon` $\to$ `Hexagon`, `Circle` $\to$ `Circle`, `Text` $\to$ `Type`).
+  * Fixed legacy bug where lines, frames, polygons, and media defaulted to rendering the `Type` (`T`) text icon.
+* **Design Inspector Pruning & Missing Controls (`src/utils/layerCapabilities.ts`, `TransformCard.tsx`, `AppearanceCard.tsx`, `SpecializedLayerCard.tsx`)**:
+  * Established pure capability predicates (`canHaveBorderRadius`, `canHaveFill`, `canHaveGlass`, `canHaveTrimPath`, `isVectorLine`, `isCircle`, `isStar`, `isPolygon`, `isMedia`, `isFrame`).
+  * **TransformCard**: Pruned 4-corner radii inputs on 1D lines, arrows, circles, stars, polygons, and icons. Replaced Width/Height with direct single-metric inputs (`Length` [L] for lines, `Diameter` [D] for circles).
+  * **AppearanceCard**: Pruned nonsensical Area Fill on 1D lines and arrows; pruned competing CSS box stroke on icons; adapted Stroke to "Line Stroke" for lines; strictly guarded Shadow, Sticker Border, Background Blur, and Glass so they only render for supported surface types.
+  * **SpecializedLayerCard**: Added parametric controls for Stars (`points` 3–20, `innerRadiusRatio` 10%–90%); added Vector Trim Paths (`trimStart`, `trimEnd`, `trimOffset`); added Line Cap (`round`, `butt`, `square`), Pattern (`solid`, `dashed`, `dotted`), and Reverse Direction action; added Media Fit mode (`cover`, `contain`); added Frame Auto-Layout direction and gap.
+* **Direct Vector Endpoint Manipulation in Canvas Gizmos (`src/components/canvas/TransformBox.tsx`)**:
+  * Suppressed the 8 rectangular bounding box resize handles and rotation lever when selecting 1D vector lines or arrows.
+  * Rendered 2 direct circular vector endpoint handles ($P_1$ Start, $P_2$ End) enabling direct aiming and resizing.
+  * Dragging endpoints calculates vector length and angle in real time with `Shift` snapping (45° increments).
+  * Canvas HUD dynamically displays `Length: {W}px ({Angle}°)`.
+* **Context Menu Specialization (`src/components/canvas/CanvasContextMenu.tsx`)**:
+  * Added element-specific context menu actions for Lines (Reverse Direction, Toggle Arrowhead), Text (Toggle Auto-Width / Fixed Box), and Media (Toggle Cover / Contain).
+* **Math Physics Clamping & Guardrails (`src/engine/evaluator/clipEvaluator.ts`, `configEvaluator.ts`, `src/engine/physics/animationGuardrails.ts`)**:
+  * Clamped RGB channels in `lerpColor` to $[0, 255]$ to prevent color blowout or negative channels on overshooting spring curves.
+  * Clamped `blur` and `backdropBlur` to $\ge 0\text{px}$.
+  * Clamped `radiusPercent` in `circleIris` and `circleReveal` to prevent negative radii CSS clip-path crashes.
+  * Created `animationGuardrails.ts` enforcing channel-easing compatibility (e.g. non-spatial channels must be monotonic) and layer-preset compatibility.
+* **Agent Tools & AST Pre-Flight Linter (`src/tools/applyAnimation.ts`, `src/tools/placeElement.ts`, `src/engine/perception/linter.ts`)**:
+  * `applyAnimation`: Sanitizes presets and easings via `sanitizeAnimationForLayer` with constructive notices.
+  * `placeElement`: Sanitizes styles and adds notices for lines (strips `fontSize`, `borderRadius`, `fillColor`), polygons, and circles.
+  * `linter.ts`: Added `INVALID_LAYER_PROPERTY` and `ANIMATION_TYPE_MISMATCH` rules.
+* **Verification**:
+  * Added comprehensive test suite `src/test/element_individuality_matrix.test.ts` (11 tests).
+  * All 39 test suites (340 tests) pass 100% cleanly (`npm test`).
+  * Production build passes with 0 errors (`npm run build`).
