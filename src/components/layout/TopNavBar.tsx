@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Download,
@@ -55,6 +55,13 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(doc.name);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setTitleInput(doc.name || "Untitled Project");
+    if (typeof document !== "undefined") {
+      document.title = `${doc.name || "Untitled"} — Motion Studio`;
+    }
+  }, [doc.name]);
 
   const handleTitleSubmit = () => {
     if (titleInput.trim()) {

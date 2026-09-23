@@ -81,13 +81,68 @@ export function sanitizeProjectFileName(name: string): string {
 }
 
 /**
+ * Resolves the default projects directory for desktop app (Documents/Motion Studio).
+ * Creates the directory if it does not already exist.
+ */
+export async function getDefaultProjectsDirectory(): Promise<string | null> {
+  if (!isTauriEnvironment()) return null;
+  try {
+    const { documentDir, join } = await import("@tauri-apps/api/path");
+    const docDir = await documentDir();
+    if (!docDir) return null;
+
+    const motionDir = await join(docDir, "Motion Studio");
+    const { exists, mkdir } = await import("@tauri-apps/plugin-fs");
+    if (!(await exists(motionDir))) {
+      await mkdir(motionDir, { recursive: true });
+    }
+    return motionDir;
+  } catch (err) {
+    console.warn("Failed to resolve or create Documents/Motion Studio directory:", err);
+    return null;
+  }
+}
+
+/**
+ * Automatically persists a background snapshot of the active project in the default
+ * Documents/Motion Studio/Autosaves directory on disk (Tauri only).
+ */
+export async function autoSaveDesktopSnapshot(
+  doc: SceneDocument,
+  meta: ProjectMeta
+): Promise<{ ok: boolean; path?: string }> {
+  if (!isTauriEnvironment()) return { ok: false };
+  try {
+    const defaultFolder = await getDefaultProjectsDirectory();
+    if (!defaultFolder) return { ok: false };
+
+    const { join } = await import("@tauri-apps/api/path");
+    const { exists, mkdir, writeTextFile } = await import("@tauri-apps/plugin-fs");
+    const autosaveDir = await join(defaultFolder, "Autosaves");
+    if (!(await exists(autosaveDir))) {
+      await mkdir(autosaveDir, { recursive: true });
+    }
+
+    const safeName = sanitizeProjectFileName(meta.name || doc.name);
+    const autosaveFile = await join(autosaveDir, `${safeName}_${meta.id}${MOTION_FILE_EXTENSION}`);
+    const filePackage = createMotionStudioFilePackage(doc, meta);
+    await writeTextFile(autosaveFile, JSON.stringify(filePackage, null, 2));
+
+    return { ok: true, path: autosaveFile };
+  } catch (err) {
+    console.warn("Background auto-save snapshot failed:", err);
+    return { ok: false };
+  }
+}
+
+/**
  * Saves a project document directly to disk via File System Access API or browser download fallback.
  */
 export async function saveProjectToFile(
   doc: SceneDocument,
   meta: ProjectMeta,
   options?: { forceSaveAs?: boolean }
-): Promise<{ ok: boolean; fileName?: string; error?: string }> {
+): Promise<{ ok: boolean; fileName?: string; filePath?: string; error?: string }> {
   try {
     const filePackage = createMotionStudioFilePackage(doc, meta);
     const jsonString = JSON.stringify(filePackage, null, 2);
@@ -101,8 +156,19 @@ export async function saveProjectToFile(
 
         let targetPath = currentFilePath;
         if (!targetPath || options?.forceSaveAs) {
+          let defaultSavePath = suggestedName;
+          try {
+            const defaultFolder = await getDefaultProjectsDirectory();
+            if (defaultFolder) {
+              const { join } = await import("@tauri-apps/api/path");
+              defaultSavePath = await join(defaultFolder, suggestedName);
+            }
+          } catch (e) {
+            console.warn("Could not form default save path:", e);
+          }
+
           const selected = await save({
-            defaultPath: suggestedName,
+            defaultPath: defaultSavePath,
             filters: [{ name: "Motion Studio Project (*.mtn)", extensions: ["mtn"] }],
           });
           if (!selected) {
@@ -114,9 +180,10 @@ export async function saveProjectToFile(
         await writeTextFile(targetPath, jsonString);
         currentFilePath = targetPath;
         const fileName = targetPath.split(/[\\/]/).pop() || suggestedName;
-        return { ok: true, fileName };
+        return { ok: true, fileName, filePath: targetPath };
       } catch (err: any) {
-        console.warn("Tauri native save failed, falling back:", err);
+        console.error("Tauri native save failed:", err);
+        return { ok: false, error: err?.message || "Native save failed" };
       }
     }
 
@@ -156,7 +223,7 @@ export async function saveProjectToFile(
       }
     }
 
-    // 4. Fallback: Browser download
+    // 4. Fallback: Browser download (web fallback only)
     triggerBrowserDownload(jsonString, suggestedName);
     return { ok: true, fileName: suggestedName };
   } catch (err: any) {
@@ -187,6 +254,7 @@ export async function openProjectFromFile(): Promise<{
   ok: boolean;
   file?: MotionStudioFile;
   fileName?: string;
+  filePath?: string;
   error?: string;
 }> {
   // 1. Tauri Native Desktop Container Open
@@ -195,8 +263,19 @@ export async function openProjectFromFile(): Promise<{
       const { open } = await import("@tauri-apps/plugin-dialog");
       const { readTextFile } = await import("@tauri-apps/plugin-fs");
 
+      let defaultOpenPath: string | undefined = undefined;
+      try {
+        const defaultFolder = await getDefaultProjectsDirectory();
+        if (defaultFolder) {
+          defaultOpenPath = defaultFolder;
+        }
+      } catch (e) {
+        // ignore
+      }
+
       const selected = await open({
         multiple: false,
+        defaultPath: defaultOpenPath,
         filters: [{ name: "Motion Studio Project (*.mtn)", extensions: ["mtn", "motion", "json"] }],
       });
 
@@ -222,9 +301,11 @@ export async function openProjectFromFile(): Promise<{
         ok: true,
         file: parseResult.file,
         fileName,
+        filePath: selectedPath,
       };
     } catch (err: any) {
-      console.warn("Tauri native open failed, falling back:", err);
+      console.error("Tauri native open failed:", err);
+      return { ok: false, error: err?.message || "Desktop open failed" };
     }
   }
 

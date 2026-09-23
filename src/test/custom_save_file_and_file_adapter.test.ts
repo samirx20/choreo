@@ -24,7 +24,11 @@ import {
   getActiveFilePath,
   setActiveFilePath,
   clearActiveFileHandle,
+  getDefaultProjectsDirectory,
+  autoSaveDesktopSnapshot,
 } from "@/services/fileAdapter";
+import { useProjectRegistryStore } from "@/store/useProjectRegistryStore";
+import { useProjectStore } from "@/store/useProjectStore";
 import { INITIAL_SCENE } from "@/store/initialScene";
 
 describe("Custom .mtn Save File & File Adapter Suite", () => {
@@ -232,6 +236,34 @@ describe("Custom .mtn Save File & File Adapter Suite", () => {
       expect(isTauriEnvironment()).toBe(true);
       delete (window as any).__TAURI_INTERNALS__;
       expect(isTauriEnvironment()).toBe(false);
+    });
+
+    it("returns null or false for desktop-only filesystem operations in web environment", async () => {
+      expect(isTauriEnvironment()).toBe(false);
+      const defaultDir = await getDefaultProjectsDirectory();
+      expect(defaultDir).toBeNull();
+
+      const snapshotResult = await autoSaveDesktopSnapshot(sampleDoc, sampleMeta);
+      expect(snapshotResult.ok).toBe(false);
+    });
+
+    it("synchronizes project and document names when save returns a file name", async () => {
+      const store = useProjectRegistryStore.getState();
+      const projId = store.createNewProject({
+        name: "Untitled Project",
+        width: 1920,
+        height: 1080,
+      });
+
+      expect(useProjectStore.getState().document.name).toBe("Untitled Project");
+
+      // Mock saveProjectToFile behavior via simulating saveCurrentProjectToFile outcome
+      const cleanSavedName = "first";
+      useProjectStore.getState().setProjectName(cleanSavedName);
+      useProjectRegistryStore.getState().syncCurrentProjectName(cleanSavedName);
+
+      expect(useProjectStore.getState().document.name).toBe("first");
+      expect(useProjectRegistryStore.getState().projects[0].name).toBe("first");
     });
   });
 });

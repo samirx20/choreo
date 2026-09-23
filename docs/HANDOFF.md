@@ -28,10 +28,13 @@ The repository is in a clean, fully verified, production-ready state:
     * Downward-expanding Radix Popover card anchored to the top-right Export button, replacing the modal.
     * Precision two-decision interface: Background (`With Background` vs `Transparent`) and Scope (`All Scenes` vs `Current Scene`).
     * In-card real-time render progress: frame counter, gradient progress bar, rolling ETA, and cancel/abort button.
-  * **Official `.mtn` Custom Save File & File System Adapter**:
+  * **Official `.mtn` Custom Save File, Native Desktop Storage & Autosave**:
     * Strictly validated `MotionStudioFileSchema` (v1) with Zod, wrapping project metadata and `SceneDocument`.
     * Dual-format auto-normalization (`validateAndNormalizeProjectFile`) supporting both `.mtn` packages and legacy raw JSON / `.motion` files with 100% backward compatibility.
     * Native File System Access API integration (`showSaveFilePicker`, `showOpenFilePicker`) with file handle caching for instant `Ctrl+S` disk writes.
+    * **Desktop Natural Storage (`Documents/Motion Studio`)**: Native save dialog opens directly into the user's `Documents\Motion Studio\` directory.
+    * **Background Disk Autosave**: Background snapshots mirrored to `Documents/Motion Studio/Autosaves/` (debounced at 1200ms) ensuring physical `.mtn` file persistence on disk even without explicit manual saving.
+    * **Bidirectional File Name <-> Project Name Sync**: Saving or opening `first.mtn` immediately updates the active document and project registry name to `first`, updating the TopNavBar title and window title.
     * Upgraded TopNavBar project title into a high-productivity File Dropdown Menu (Save, Save As, Open, Rename, Export, Back).
     * Global keyboard shortcuts (`Ctrl+S`, `Ctrl+Shift+S`, `Ctrl+O`).
     * Omnipresent Drag-and-Drop Dropzone overlay across both Workspace and Canvas Editor.

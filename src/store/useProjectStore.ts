@@ -66,13 +66,15 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   ...createAnimationSlice(set, get),
 }));
 
-// Automatic LocalStorage Persistence for Document
+// Automatic Persistence for Document (LocalStorage + Background Desktop Snapshot)
 if (
   typeof window !== "undefined" &&
   typeof window.localStorage !== "undefined" &&
   process.env.NODE_ENV !== "test"
 ) {
   let prevDoc: SceneDocument | null = null;
+  let autoSaveTimeout: ReturnType<typeof setTimeout> | null = null;
+
   useProjectStore.subscribe((state) => {
     if (state.document !== prevDoc) {
       prevDoc = state.document;
@@ -84,6 +86,34 @@ if (
         }
       } catch (e) {
         console.warn("Failed to auto-save scene to localStorage:", e);
+      }
+
+      // Background disk auto-save snapshot for Tauri desktop
+      if ("__TAURI__" in window || "__TAURI_INTERNALS__" in window) {
+        if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(async () => {
+          try {
+            const { autoSaveDesktopSnapshot } = await import("@/services/fileAdapter");
+            const activeId = window.localStorage.getItem("motion_studio_active_project_id") || "default";
+            autoSaveDesktopSnapshot(state.document, {
+              id: activeId,
+              name: state.document.name || "Untitled Project",
+              width: state.document.settings?.width || 1920,
+              height: state.document.settings?.height || 1080,
+              fps: state.document.settings?.fps || 60,
+              duration: state.document.settings?.duration || 5.0,
+              screenCount: state.document.screens?.length || 1,
+              backgroundColor:
+                state.document.settings?.backgroundColor ||
+                state.document.screens?.[0]?.backgroundColor ||
+                "#09090b",
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            });
+          } catch {
+            // background auto-save ignored
+          }
+        }, 1200);
       }
     }
   });

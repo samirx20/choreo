@@ -1099,7 +1099,23 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * Verified Cargo compilation completes with 0 errors (`Finished dev profile [unoptimized + debuginfo] target(s) in 1m 11s`).
   * 38 test suites passing cleanly (`npm test`).
 
+---
 
-
-
-
+### Decision 57: Desktop Natural Storage, File-Project Name Synchronization, and Tauri Capability Scopes
+* **Window Label & Capability Matching (`tauri.conf.json` & `capabilities/default.json`)**:
+  * Configured explicit `"label": "main"` on the primary window in `tauri.conf.json`, matching `"windows": ["main"]` in `capabilities/default.json`.
+  * Added `core:path:default` for cross-platform path resolution (`documentDir()`, `join()`).
+  * Configured explicit filesystem permissions and allow scopes in `capabilities/default.json` for `$DOCUMENT/**`, `$HOME/**`, `$DESKTOP/**`, `$DOWNLOAD/**`, and `$APPDATA/**`, resolving permission denials on Windows paths.
+* **Natural Default Desktop Storage & Autosave (`src/services/fileAdapter.ts`)**:
+  * Added `getDefaultProjectsDirectory()` targeting `Documents/Motion Studio`. Automatically creates the directory on demand.
+  * When saving for the first time or via Save As (`Ctrl+Shift+S`), the native OS dialog now opens directly into `Documents\Motion Studio\` with suggested `.mtn` filename pre-filled.
+  * Added `autoSaveDesktopSnapshot()` to continuously mirror active projects as `.mtn` files into `Documents/Motion Studio/Autosaves/` (debounced at 1200ms), ensuring no work is ever lost even if the user never presses `Ctrl+S`.
+  * Isolated Tauri desktop saving from browser download fallbacks: desktop save errors now return clean failure notices rather than leaking downloads into the user's `Downloads` folder.
+* **File Name <-> Project Name Bidirectional Synchronization**:
+  * In `useProjectRegistryStore.ts` (`saveCurrentProjectToFile`): saving a file (e.g. `first.mtn`) immediately strips the extension and updates the project title to `first` in `useProjectStore`, the document AST, and the project registry.
+  * In `useProjectRegistryStore.ts` (`openProjectFromFilePicker`): opening `first.mtn` names the active project and document `first`.
+  * In `TopNavBar.tsx`: added reactive `useEffect` syncing the title input and `document.title` (`${doc.name} — Motion Studio`) with `doc.name`.
+  * When editing the title in TopNavBar, subsequent saves default to the updated title name.
+* **Verification**:
+  * Added unit test cases verifying `getDefaultProjectsDirectory`, `autoSaveDesktopSnapshot`, and filename-to-project-name synchronization.
+  * All test suites pass 100% cleanly.

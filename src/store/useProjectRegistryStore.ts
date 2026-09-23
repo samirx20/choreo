@@ -211,6 +211,16 @@ export const useProjectRegistryStore = create<ProjectRegistryState>((set, get) =
 
     const result = await saveProjectToFile(currentDoc, meta, options);
     if (result.ok && activeId) {
+      // 1. Sync project name and document name from saved file name
+      if (result.fileName) {
+        const cleanName = result.fileName.replace(/\.mtn$/i, "").replace(/_+/g, " ").trim();
+        if (cleanName && cleanName !== currentDoc.name) {
+          useProjectStore.getState().setProjectName(cleanName);
+          currentDoc.name = cleanName;
+          storageRenameProject(activeId, cleanName);
+        }
+      }
+
       saveProjectDocument(activeId, currentDoc);
       const updatedList = sortProjects(getProjectRegistry(), get().sortBy);
       set({ projects: updatedList });
@@ -225,8 +235,12 @@ export const useProjectRegistryStore = create<ProjectRegistryState>((set, get) =
     }
 
     const doc = result.file.document;
+    const cleanName = result.fileName
+      ? result.fileName.replace(/\.mtn$/i, "").replace(/_+/g, " ").trim()
+      : result.file.metadata?.name || doc.name || "Opened Project";
+
     const { id } = storageCreateProject({
-      name: result.file.metadata?.name || doc.name || "Opened Project",
+      name: cleanName,
       width: doc.settings?.width || 1920,
       height: doc.settings?.height || 1080,
       fps: doc.settings?.fps || 60,
@@ -234,8 +248,10 @@ export const useProjectRegistryStore = create<ProjectRegistryState>((set, get) =
       backgroundColor: doc.settings?.backgroundColor || "#09090b",
     });
 
+    doc.name = cleanName;
     saveProjectDocument(id, doc);
     useProjectStore.getState().loadDocument(doc);
+    useProjectStore.getState().setProjectName(cleanName);
     setActiveProjectId(id);
 
     const updatedList = sortProjects(getProjectRegistry(), get().sortBy);
