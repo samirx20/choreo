@@ -423,6 +423,7 @@ const AnimationCard: React.FC<{
           </div>
         )}
 
+        {/* Render preview element based on preset characteristics */}
         {isText ? (
           <span
             style={animStyle}
@@ -433,6 +434,121 @@ const AnimationCard: React.FC<{
           >
             Ag
           </span>
+        ) : preset.id === "drawOn" || preset.id === "custom_trim" ? (
+          isLine ? (
+            <svg className="w-8 h-3 overflow-visible" viewBox="0 0 32 8">
+              <line
+                x1="2"
+                y1="4"
+                x2="30"
+                y2="4"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+                style={{
+                  strokeDasharray: 32,
+                  animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
+                }}
+              />
+            </svg>
+          ) : (
+            <svg className="w-7 h-7 overflow-visible" viewBox="0 0 28 28">
+              <rect
+                x="2"
+                y="2"
+                width="24"
+                height="24"
+                rx="4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+                style={{
+                  strokeDasharray: 96,
+                  animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
+                }}
+              />
+            </svg>
+          )
+        ) : preset.id === "arrowShoot" ? (
+          <svg className="w-8 h-4 overflow-visible" viewBox="0 0 32 16">
+            <line
+              x1="2"
+              y1="8"
+              x2="24"
+              y2="8"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+              style={{
+                strokeDasharray: 24,
+                animation: "anim-preview-arrowStem 1.8s ease-in-out infinite",
+              }}
+            />
+            <polyline
+              points="18,3 25,8 18,13"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+              style={{
+                animation: "anim-preview-arrowHead 1.8s ease-in-out infinite",
+              }}
+            />
+          </svg>
+        ) : preset.id === "dashFlow" ? (
+          <svg className="w-8 h-3 overflow-visible" viewBox="0 0 32 8">
+            <line
+              x1="2"
+              y1="4"
+              x2="30"
+              y2="4"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeDasharray="6 3"
+              className="text-[#71717a] group-hover:text-[#6d28d9] transition-colors"
+              style={{
+                animation: "anim-preview-dashFlow 1.2s linear infinite",
+              }}
+            />
+          </svg>
+        ) : preset.id === "glassIris" ? (
+          <div className="relative w-9 h-7 flex items-center justify-center">
+            {/* Background colorful elements so frosted blur is prominently visible */}
+            <div className="absolute -left-1 -top-1 w-3.5 h-3.5 rounded-full bg-[#8b5cf6]/80" />
+            <div className="absolute -right-1 -bottom-1 w-3.5 h-3.5 rounded-full bg-[#f59e0b]/80" />
+            <div
+              style={{
+                animation: "anim-preview-glass 2s ease-in-out infinite",
+              }}
+              className="w-8 h-6 rounded-md bg-white/45 border border-white/90 shadow-2xs relative z-10"
+            />
+          </div>
+        ) : preset.id === "cardSettlePop" ? (
+          <div
+            style={{
+              animation: "anim-preview-cardSettle 1.8s cubic-bezier(0.34, 1.56, 0.64, 1) infinite",
+            }}
+            className="w-8 h-6 rounded-md bg-white border border-[#d4d4d8] shadow-xs group-hover:border-[#6d28d9]/60 flex flex-col justify-center gap-0.5 px-1.5"
+          >
+            <div className="w-full h-1 bg-[#6d28d9]/40 rounded-full" />
+            <div className="w-2/3 h-0.5 bg-[#a1a1aa] rounded-full" />
+          </div>
+        ) : preset.id === "elevationRise" ? (
+          <div
+            style={{
+              animation: "anim-preview-elevation 2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite",
+            }}
+            className="w-8 h-6 rounded-md bg-white border border-[#e4e4e7] group-hover:border-[#6d28d9]/60 flex flex-col justify-center gap-0.5 px-1.5"
+          >
+            <div className="w-full h-1 bg-[#71717a]/30 rounded-full" />
+            <div className="w-2/3 h-0.5 bg-[#a1a1aa]/60 rounded-full" />
+          </div>
         ) : isIcon ? (
           <Sparkles
             style={animStyle}
@@ -451,7 +567,10 @@ const AnimationCard: React.FC<{
         ) : (
           <div
             style={animStyle}
-            className="h-5 w-5 rounded-[4px] bg-[#71717a] group-hover:bg-[#6d28d9] transition-colors"
+            className={cn(
+              "h-5 w-5 rounded-[4px] bg-[#71717a] group-hover:bg-[#6d28d9] transition-colors",
+              preset.id === "circleIris" && "rounded-full"
+            )}
           />
         )}
       </div>
@@ -641,12 +760,83 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
     >
       {/* Scoped CSS Keyframes for live thumbnail previews */}
       <style>{`
-        @keyframes anim-preview-fade { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
-        @keyframes anim-preview-drawOn { 0%, 100% { transform: scaleX(0.1); opacity: 0.2; } 50% { transform: scaleX(1); opacity: 1; } }
-        @keyframes anim-preview-slideUp { 0%, 100% { transform: translateY(12px); opacity: 0.15; } 50% { transform: translateY(0); opacity: 1; } }
-        @keyframes anim-preview-slideDown { 0%, 100% { transform: translateY(-12px); opacity: 0.15; } 50% { transform: translateY(0); opacity: 1; } }
-        @keyframes anim-preview-slideLeft { 0%, 100% { transform: translateX(12px); opacity: 0.15; } 50% { transform: translateX(0); opacity: 1; } }
-        @keyframes anim-preview-slideRight { 0%, 100% { transform: translateX(-12px); opacity: 0.15; } 50% { transform: translateX(0); opacity: 1; } }
+        /* 1. Opacity / Alpha Reveal (Stationary, flat) */
+        @keyframes anim-preview-fade { 0% { opacity: 0.08; } 45%, 80% { opacity: 1; } 100% { opacity: 0.08; } }
+
+        /* 2. Vector Stroke Draw Path (Trim) */
+        @keyframes anim-preview-drawOn-stroke {
+          0% { stroke-dashoffset: 96; opacity: 0.2; }
+          15% { opacity: 1; }
+          50%, 75% { stroke-dashoffset: 0; opacity: 1; }
+          90%, 100% { stroke-dashoffset: 96; opacity: 0.2; }
+        }
+
+        /* 3. Directional Slides (Pure Translation, 22px travel, zero scale, zero shadow) */
+        @keyframes anim-preview-slideUp { 0% { transform: translateY(22px); opacity: 0; } 45%, 80% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(22px); opacity: 0; } }
+        @keyframes anim-preview-slideDown { 0% { transform: translateY(-22px); opacity: 0; } 45%, 80% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-22px); opacity: 0; } }
+        @keyframes anim-preview-slideLeft { 0% { transform: translateX(22px); opacity: 0; } 45%, 80% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(22px); opacity: 0; } }
+        @keyframes anim-preview-slideRight { 0% { transform: translateX(-22px); opacity: 0; } 45%, 80% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-22px); opacity: 0; } }
+
+        /* 4. Card Settle (Spring scale overshoot + elastic recoil + settling shadow) */
+        @keyframes anim-preview-cardSettle {
+          0% { transform: scale(0.65) translateY(6px); opacity: 0.2; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+          40% { transform: scale(1.14) translateY(-2px); opacity: 1; box-shadow: 0 10px 20px -3px rgba(0,0,0,0.16); }
+          65% { transform: scale(0.96) translateY(1px); opacity: 1; box-shadow: 0 3px 6px rgba(0,0,0,0.08); }
+          80%, 90% { transform: scale(1) translateY(0); opacity: 1; box-shadow: 0 2px 4px rgba(0,0,0,0.06); }
+          100% { transform: scale(0.65) translateY(6px); opacity: 0.2; }
+        }
+
+        /* 5. Elevation Rise (Z-axis lift-off + blooming deep soft purple-tinted elevation shadow) */
+        @keyframes anim-preview-elevation {
+          0% { transform: translateY(5px) scale(0.94); box-shadow: 0 1px 2px rgba(0,0,0,0.04); opacity: 0.3; }
+          45%, 75% { transform: translateY(-6px) scale(1.08); box-shadow: 0 18px 24px -4px rgba(109, 40, 217, 0.40), 0 8px 12px -2px rgba(0,0,0,0.12); opacity: 1; }
+          100% { transform: translateY(5px) scale(0.94); box-shadow: 0 1px 2px rgba(0,0,0,0.04); opacity: 0.3; }
+        }
+
+        /* 6. Frosted Glass Iris (Aperture expand + optical backdrop blur revealing colored backing) */
+        @keyframes anim-preview-glass {
+          0% { transform: scale(0.35); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); opacity: 0; }
+          45%, 75% { transform: scale(1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); opacity: 1; }
+          100% { transform: scale(0.35); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(0px); opacity: 0; }
+        }
+
+        /* 7. Arrow Shoot (Shaft draws forward + head snaps in) */
+        @keyframes anim-preview-arrowStem {
+          0% { stroke-dashoffset: 24; opacity: 0.2; }
+          20% { opacity: 1; }
+          50%, 75% { stroke-dashoffset: 0; opacity: 1; }
+          100% { stroke-dashoffset: 24; opacity: 0.2; }
+        }
+        @keyframes anim-preview-arrowHead {
+          0%, 35% { transform: translateX(-12px); opacity: 0; }
+          50%, 75% { transform: translateX(0); opacity: 1; }
+          100% { transform: translateX(-12px); opacity: 0; }
+        }
+
+        /* 8. Dash Flow (Continuous stroke offset marching) */
+        @keyframes anim-preview-dashFlow { 0% { stroke-dashoffset: 18; } 100% { stroke-dashoffset: 0; } }
+
+        /* 9. Media & Camera Keyframes */
+        @keyframes anim-preview-kenBurns { 0% { transform: scale(1) translate(-2px, 2px); } 50% { transform: scale(1.22) translate(2px, -2px); } 100% { transform: scale(1) translate(-2px, 2px); } }
+        @keyframes anim-preview-focusPull { 0% { filter: blur(7px); transform: scale(1.08); opacity: 0.3; } 45%, 80% { filter: blur(0px); transform: scale(1); opacity: 1; } 100% { filter: blur(7px); transform: scale(1.08); opacity: 0.3; } }
+
+        /* 10. Icon Keyframes */
+        @keyframes anim-preview-iconPop {
+          0% { transform: scale(0.25) rotate(-22deg); opacity: 0.15; }
+          45% { transform: scale(1.25) rotate(6deg); opacity: 1; }
+          65% { transform: scale(0.96) rotate(-2deg); opacity: 1; }
+          80%, 90% { transform: scale(1) rotate(0deg); opacity: 1; }
+          100% { transform: scale(0.25) rotate(-22deg); opacity: 0.15; }
+        }
+        @keyframes anim-preview-stampSettle {
+          0% { transform: translateY(-20px); opacity: 0.15; }
+          40% { transform: translateY(0) scaleY(0.75) scaleX(1.25); opacity: 1; }
+          55% { transform: translateY(-5px) scaleY(1.1) scaleX(0.95); opacity: 1; }
+          70%, 90% { transform: translateY(0) scale(1); opacity: 1; }
+          100% { transform: translateY(-20px); opacity: 0.15; }
+        }
+
+        /* 11. Generic Transforms */
         @keyframes anim-preview-pop { 0%, 100% { transform: scale(0.35); opacity: 0.2; } 50% { transform: scale(1.22); opacity: 1; } 70% { transform: scale(0.96); opacity: 1; } 85% { transform: scale(1); opacity: 1; } }
         @keyframes anim-preview-grow { 0%, 100% { transform: scale(0.35); opacity: 0.3; } 50% { transform: scale(1.15); opacity: 1; } }
         @keyframes anim-preview-shrink { 0%, 100% { transform: scale(1.4); opacity: 0.3; } 50% { transform: scale(0.7); opacity: 1; } }
@@ -659,15 +849,6 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
         @keyframes anim-preview-cascade { 0%, 100% { transform: translateY(8px); opacity: 0.2; } 50% { transform: translateY(0); opacity: 1; } }
         @keyframes anim-preview-lineReveal { 0%, 100% { clip-path: inset(100% 0 0 0); } 50% { clip-path: inset(0 0 0 0); } }
         @keyframes anim-preview-highlightDraw { 0%, 100% { clip-path: inset(0 100% 0 0); } 50% { clip-path: inset(0 0 0 0); } }
-        @keyframes anim-preview-cardSettle { 0%, 100% { transform: scale(0.88); opacity: 0.3; } 50% { transform: scale(1.04); opacity: 1; } 75% { transform: scale(1); opacity: 1; } }
-        @keyframes anim-preview-elevation { 0%, 100% { transform: translateY(8px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); opacity: 0.3; } 50% { transform: translateY(0); box-shadow: 0 12px 24px rgba(109,40,217,0.3); opacity: 1; } }
-        @keyframes anim-preview-glass { 0%, 100% { backdrop-filter: blur(0px); opacity: 0.3; } 50% { backdrop-filter: blur(12px); opacity: 1; } }
-        @keyframes anim-preview-kenBurns { 0%, 100% { transform: scale(1) translateX(0); } 50% { transform: scale(1.1) translateX(4px); } }
-        @keyframes anim-preview-focusPull { 0%, 100% { filter: blur(5px); transform: scale(1.05); opacity: 0.3; } 50% { filter: blur(0px); transform: scale(1); opacity: 1; } }
-        @keyframes anim-preview-arrowShoot { 0%, 100% { transform: scaleX(0.1); opacity: 0.2; } 50% { transform: scaleX(1); opacity: 1; } }
-        @keyframes anim-preview-dashFlow { 0% { stroke-dashoffset: 20; } 100% { stroke-dashoffset: 0; } }
-        @keyframes anim-preview-iconPop { 0%, 100% { transform: scale(0.3) rotate(-15deg); opacity: 0.2; } 50% { transform: scale(1.25) rotate(5deg); opacity: 1; } 75% { transform: scale(1) rotate(0deg); opacity: 1; } }
-        @keyframes anim-preview-stampSettle { 0%, 100% { transform: translateY(-16px); opacity: 0.2; } 50% { transform: translateY(0); opacity: 1; } 65% { transform: translateY(-3px); } 80% { transform: translateY(0); } }
         @keyframes anim-preview-dropIn { 0%, 100% { transform: translateY(-22px); opacity: 0; } 50% { transform: translateY(0); opacity: 1; } 65% { transform: translateY(-5px); } 80% { transform: translateY(0); } }
         @keyframes anim-preview-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
         @keyframes anim-preview-bounce { 0%, 100% { transform: translateY(0); } 30% { transform: translateY(-16px); } 60% { transform: translateY(0); } 75% { transform: translateY(-6px); } 90% { transform: translateY(0); } }
