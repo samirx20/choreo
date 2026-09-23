@@ -10,7 +10,18 @@
     "beforeBuildCommand": "npm run build"
   },
   "app": {
-    "windows": [],
+    "windows": [
+      {
+        "title": "Motion Studio",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "center": true,
+        "visible": true,
+        "decorations": true,
+        "focus": true
+      }
+    ],
     "security": {
       "csp": null
     }

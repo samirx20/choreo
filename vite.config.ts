@@ -15,7 +15,7 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    host: true,
+    host: '127.0.0.1',
     watch: {
       // Prevent Vite from watching Cargo build artifacts and locking DLLs
       ignored: ['**/src-tauri/**'],
