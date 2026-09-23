@@ -25,6 +25,14 @@ import {
 } from "lucide-react";
 import { Layer, AnimationClipType, getLayerClips } from "@/types/scene";
 import { cn } from "@/lib/utils";
+import {
+  canHaveBorderRadius,
+  isVectorLine,
+  isCircle,
+  isStar,
+  isPolygon,
+  canHaveTrimPath,
+} from "@/utils/layerCapabilities";
 
 export interface AnimationCatalogPreset {
   id: string;
@@ -63,6 +71,7 @@ const TEXT_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
 ];
 
 const SHAPE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+  { id: "drawOn", name: "Draw Path (Trim)", duration: 0.8, easing: "snappy", type: "in", desc: "Stroke reveals along perimeter contour" },
   { id: "pop", name: "Pop", duration: 0.6, easing: "bouncy", type: "in", desc: "Snappy overshoot scale" },
   { id: "slideUp", name: "Slide Up", duration: 0.8, easing: "snappy", type: "in", desc: "Kinetic upward rise" },
   { id: "slideDown", name: "Slide Down", duration: 0.8, easing: "snappy", type: "in", desc: "Downward entrance trajectory" },
@@ -103,7 +112,8 @@ const ICON_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
 ];
 
 const LINE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
-  { id: "slideRight", name: "Draw / Slide Right", duration: 0.8, easing: "snappy", type: "in", desc: "Path extension from left" },
+  { id: "drawOn", name: "Draw Path (Trim)", duration: 0.8, easing: "snappy", type: "in", desc: "Vector path draws sequentially along stroke" },
+  { id: "slideRight", name: "Slide Right", duration: 0.8, easing: "snappy", type: "in", desc: "Path extension from left" },
   { id: "slideLeft", name: "Slide Left", duration: 0.8, easing: "snappy", type: "in", desc: "Path extension from right" },
   { id: "mask_reveal", name: "Wipe In", duration: 0.8, easing: "smooth", type: "in", desc: "Directional path wipe" },
   { id: "fade", name: "Fade In", duration: 0.6, easing: "smooth", type: "in", desc: "Clean alpha dissolve" },
@@ -185,6 +195,18 @@ export const CUSTOM_CATEGORIES: CustomCategoryGroup[] = [
         preset: { id: "custom_color", name: "Color", type: "action", duration: 0.8, easing: "smooth", params: { color: "#6d28d9" } },
       },
       {
+        id: "custom_stroke",
+        name: "Stroke",
+        icon: Square,
+        preset: { id: "custom_stroke", name: "Stroke", type: "action", duration: 0.8, easing: "snappy", params: { strokeWidth: 4, strokeColor: "#6d28d9" } },
+      },
+      {
+        id: "custom_trim",
+        name: "Trim Path",
+        icon: Square,
+        preset: { id: "custom_trim", name: "Trim Path", type: "action", duration: 0.8, easing: "snappy", params: { trimStart: 0, trimEnd: 100 } },
+      },
+      {
         id: "custom_shadow",
         name: "Shadow",
         icon: BoxSelect,
@@ -241,12 +263,6 @@ export const CUSTOM_CATEGORIES: CustomCategoryGroup[] = [
         name: "Corner Radius",
         icon: CornerUpRight,
         preset: { id: "custom_radius", name: "Corner Radius", type: "action", duration: 0.8, easing: "snappy", params: { radius: 24 } },
-      },
-      {
-        id: "custom_stroke",
-        name: "Stroke",
-        icon: Square,
-        preset: { id: "custom_stroke", name: "Stroke", type: "action", duration: 0.8, easing: "snappy", params: { strokeWidth: 4, strokeColor: "#6d28d9" } },
       },
     ],
   },
@@ -339,6 +355,8 @@ const AnimationCard: React.FC<{
       case "baselineReveal": return "anim-preview-baseline";
       case "mask_reveal": return "anim-preview-maskReveal";
       case "circleIris": return "anim-preview-circleIris";
+      case "drawOn":
+      case "custom_trim": return "anim-preview-drawOn";
       case "custom_move": return "anim-preview-slideUp";
       case "custom_scale": return "anim-preview-grow";
       case "custom_rotate": return "anim-preview-spin";
@@ -424,18 +442,78 @@ const AnimationCard: React.FC<{
   );
 };
 
-export function getFilteredCustomCategories(layerType?: string): CustomCategoryGroup[] {
+export function getFilteredCustomCategories(
+  targetLayer?: Layer | string | null
+): CustomCategoryGroup[] {
+  const layerObj = typeof targetLayer === "object" ? targetLayer : null;
+  const layerType = layerObj ? layerObj.type : typeof targetLayer === "string" ? targetLayer : undefined;
+
   return CUSTOM_CATEGORIES.map((section) => {
     const items = section.items.filter((item) => {
-      if (layerType === "text" || layerType === "chunk") {
-        if (["custom_morph", "custom_radius", "custom_stroke"].includes(item.id)) return false;
-      } else if (layerType === "line") {
-        if (["custom_radius", "custom_morph", "custom_backdrop_blur", "custom_glass", "custom_resize"].includes(item.id)) return false;
-      } else if (layerType === "icon") {
-        if (["custom_radius", "custom_morph", "custom_backdrop_blur", "custom_glass", "custom_resize"].includes(item.id)) return false;
-      } else if (layerType === "image" || layerType === "video") {
-        if (["custom_morph", "custom_stroke", "custom_color"].includes(item.id)) return false;
+      // 1. Corner radius only on true rectangular containers (Rectangle, Frame, Image, Video, Text Card)
+      if (item.id === "custom_radius") {
+        if (layerObj) {
+          if (!canHaveBorderRadius(layerObj)) return false;
+        } else if (layerType && ["line", "icon", "circle", "star", "polygon"].includes(layerType)) {
+          return false;
+        }
       }
+
+      // 2. Vector line purity
+      const isLine = layerObj ? isVectorLine(layerObj) : layerType === "line";
+      if (isLine) {
+        if ([
+          "custom_radius",
+          "custom_morph",
+          "custom_backdrop_blur",
+          "custom_glass",
+          "custom_resize",
+        ].includes(item.id)) {
+          return false;
+        }
+      }
+
+      // 3. Trim path only for elements with stroke/vector lines
+      if (item.id === "custom_trim") {
+        if (layerObj) {
+          if (!canHaveTrimPath(layerObj)) return false;
+        } else if (layerType && !["line", "shape"].includes(layerType)) {
+          return false;
+        }
+      }
+
+      // 4. Circles, Stars, Polygons have fixed radial/vertex geometry
+      if (layerObj && (isCircle(layerObj) || isStar(layerObj) || isPolygon(layerObj))) {
+        if (["custom_radius", "custom_morph"].includes(item.id)) return false;
+      }
+
+      // 5. Text elements
+      if (layerType === "text" || layerType === "chunk") {
+        if (["custom_morph", "custom_stroke", "custom_trim"].includes(item.id)) return false;
+        if (item.id === "custom_radius" && (!layerObj || !canHaveBorderRadius(layerObj))) return false;
+      }
+
+      // 6. Icons
+      if (layerType === "icon") {
+        if ([
+          "custom_radius",
+          "custom_morph",
+          "custom_backdrop_blur",
+          "custom_glass",
+          "custom_resize",
+          "custom_trim",
+        ].includes(item.id)) {
+          return false;
+        }
+      }
+
+      // 7. Media (Image/Video)
+      if (layerType === "image" || layerType === "video") {
+        if (["custom_morph", "custom_stroke", "custom_color", "custom_trim"].includes(item.id)) {
+          return false;
+        }
+      }
+
       return true;
     });
     return { ...section, items };
@@ -510,6 +588,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
   }, [isOpen, onClose]);
 
   const layerType = targetLayer?.type;
+  const isLine = targetLayer ? isVectorLine(targetLayer) : layerType === "line";
   const entrancePresets =
     layerType === "text" || layerType === "chunk"
       ? TEXT_ENTRANCE_PRESETS
@@ -517,13 +596,13 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
       ? MEDIA_ENTRANCE_PRESETS
       : layerType === "icon"
       ? ICON_ENTRANCE_PRESETS
-      : layerType === "line"
+      : isLine
       ? LINE_ENTRANCE_PRESETS
       : SHAPE_ENTRANCE_PRESETS;
 
   const filteredCustomCategories = useMemo(() => {
-    return getFilteredCustomCategories(layerType);
-  }, [layerType]);
+    return getFilteredCustomCategories(targetLayer);
+  }, [targetLayer]);
 
   return (
     <div
@@ -534,6 +613,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
       {/* Scoped CSS Keyframes for live thumbnail previews */}
       <style>{`
         @keyframes anim-preview-fade { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
+        @keyframes anim-preview-drawOn { 0%, 100% { transform: scaleX(0.1); opacity: 0.2; } 50% { transform: scaleX(1); opacity: 1; } }
         @keyframes anim-preview-slideUp { 0%, 100% { transform: translateY(12px); opacity: 0.15; } 50% { transform: translateY(0); opacity: 1; } }
         @keyframes anim-preview-slideDown { 0%, 100% { transform: translateY(-12px); opacity: 0.15; } 50% { transform: translateY(0); opacity: 1; } }
         @keyframes anim-preview-slideLeft { 0%, 100% { transform: translateX(12px); opacity: 0.15; } 50% { transform: translateX(0); opacity: 1; } }

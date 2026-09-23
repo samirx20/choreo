@@ -26,6 +26,9 @@ export interface EvaluatedDelta {
   backdropFilter?: string;
   widthDelta?: number;
   heightDelta?: number;
+  trimStart?: number;
+  trimEnd?: number;
+  trimOffset?: number;
 }
 
 export function evaluateClipDelta(
@@ -54,6 +57,11 @@ export function evaluateClipDelta(
 
   // 1. PRE-WINDOW
   if (t < start) {
+    if (preset === "drawOn" || preset === "trimPath") {
+      d.trimEnd = type === "out" ? 100 : 0;
+      d.opacity = type === "out" ? 1 : 0;
+      return d;
+    }
     if (type === "in") {
       if (preset.startsWith("custom_")) {
         const preDelta = applyCustomPresetDelta(clip, 0, d);
@@ -81,6 +89,11 @@ export function evaluateClipDelta(
 
   // 2. POST-WINDOW
   if (t >= start + safeDur && !loop) {
+    if (preset === "drawOn" || preset === "trimPath") {
+      d.trimEnd = type === "out" ? 0 : 100;
+      d.opacity = type === "out" ? 0 : 1;
+      return d;
+    }
     if (type === "out") {
       if (preset.startsWith("custom_")) {
         const postDelta = applyCustomPresetDelta(clip, 1, d);
@@ -127,6 +140,14 @@ export function evaluateClipDelta(
         : undefined;
     const easeFn = getEasing(easing, bezierPoints, params.overshootAmount, springConfig);
     progress = easeFn(rawProgress);
+  }
+
+  if (preset === "drawOn" || preset === "trimPath") {
+    d.trimEnd = type === "out"
+      ? Math.max(0, Math.min(100, (1 - progress) * 100))
+      : Math.max(0, Math.min(100, progress * 100));
+    d.opacity = 1;
+    return d;
   }
 
   if (preset.startsWith("custom_")) {
@@ -435,6 +456,18 @@ export function applyCustomPresetDelta(
       d.borderColor = fromSc ? (factor >= 1 ? toSc : lerpColor(fromSc, toSc, factor)) : toSc;
       break;
     }
+    case "custom_trim": {
+      const fromTe = from.trimEnd ?? params.fromTrimEnd ?? (clip.type === "out" ? 100 : 0);
+      const toTe = params.toTrimEnd ?? params.trimEnd ?? (clip.type === "out" ? 0 : 100);
+      const fromTs = from.trimStart ?? params.fromTrimStart ?? 0;
+      const toTs = params.toTrimStart ?? params.trimStart ?? 0;
+      const fromTo = from.trimOffset ?? params.fromTrimOffset ?? 0;
+      const toTo = params.toTrimOffset ?? params.trimOffset ?? 0;
+      d.trimStart = Math.max(0, Math.min(100, fromTs + (toTs - fromTs) * factor));
+      d.trimEnd = Math.max(0, Math.min(100, fromTe + (toTe - fromTe) * factor));
+      d.trimOffset = fromTo + (toTo - fromTo) * factor;
+      break;
+    }
   }
   return d;
 }
@@ -458,6 +491,9 @@ export function compoundLayerAnimations(
   backdropFilter?: string;
   widthDelta?: number;
   heightDelta?: number;
+  trimStart?: number;
+  trimEnd?: number;
+  trimOffset?: number;
 } {
   const clips = getLayerClips(layer);
 
@@ -530,6 +566,9 @@ export function compoundLayerAnimations(
   let activeBackdropFilter: string | undefined;
   let totalWidthDelta = 0;
   let totalHeightDelta = 0;
+  let activeTrimStart: number | undefined;
+  let activeTrimEnd: number | undefined;
+  let activeTrimOffset: number | undefined;
 
   for (const clip of clips) {
     const adjustedClip = { ...clip, start: clip.start + groupStartOffset };
@@ -560,6 +599,9 @@ export function compoundLayerAnimations(
     if (delta.backdropFilter) activeBackdropFilter = delta.backdropFilter;
     if (delta.widthDelta !== undefined) totalWidthDelta += delta.widthDelta;
     if (delta.heightDelta !== undefined) totalHeightDelta += delta.heightDelta;
+    if (delta.trimStart !== undefined) activeTrimStart = delta.trimStart;
+    if (delta.trimEnd !== undefined) activeTrimEnd = delta.trimEnd;
+    if (delta.trimOffset !== undefined) activeTrimOffset = delta.trimOffset;
   }
 
   opacity = Math.max(0, Math.min(1, opacity));
@@ -578,5 +620,8 @@ export function compoundLayerAnimations(
     backdropFilter: activeBackdropFilter,
     widthDelta: totalWidthDelta !== 0 ? totalWidthDelta : undefined,
     heightDelta: totalHeightDelta !== 0 ? totalHeightDelta : undefined,
+    trimStart: activeTrimStart,
+    trimEnd: activeTrimEnd,
+    trimOffset: activeTrimOffset,
   };
 }

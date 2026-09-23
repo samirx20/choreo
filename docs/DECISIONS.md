@@ -1277,4 +1277,35 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 39 test suites (348 tests) pass cleanly (`npm test`).
   * Production build compiles cleanly with 0 errors in 9.91s (`npm run build`).
 
+---
+
+### Decision 65: Animation Catalog Purity, Native Draw-On Trim Path, & Direct Manipulation Star/Text Gizmos (Options 1 & 3)
+* **The Problem**:
+  * In `AnimationCatalogSheet.tsx`, custom animation channels and entrance presets were not properly filtered per element type, exposing corner radius to circles, stars, polygons, lines, and unboxed text; exposing fill colors and blur to 1D lines; and lacking a first-class trim path draw-on animation.
+  * In the Canvas Viewport (`TransformBox.tsx`), stars lacked on-canvas direct manipulation for inner radius sharpening, and text layers lacked intuitive edge double-click toggle handlers (`auto-width` point text vs `auto-height` wrapping vs `fixed` box).
+* **The Solution**:
+  1. **Animation Catalog Purity & Draw-On Preset (`AnimationCatalogSheet.tsx`)**:
+     * Upgraded `getFilteredCustomCategories(targetLayer)` to strictly evaluate capabilities via `canHaveBorderRadius`, `isVectorLine`, `isCircle`, `isStar`, `isPolygon`, and `canHaveTrimPath`.
+     * Pruned Corner Radius from circles, stars, polygons, 1D lines, and unboxed text.
+     * Pruned Area Fill, Glass, and Background Blur from 1D lines; pruned box properties from icons.
+     * Added native `drawOn` ("Draw Path (Trim)") entrance preset for vector lines and stroked shapes.
+     * Added `custom_trim` ("Trim Path") under Style custom channels.
+     * Added animated thumbnail preview for `drawOn` / `custom_trim` using `@keyframes anim-preview-drawOn`.
+  2. **Physics & Trim Evaluation (`clipEvaluator.ts`, `evaluator.ts`, `ShapeRenderer.tsx`, `LineRenderer.tsx`)**:
+     * Added `trimStart`, `trimEnd`, and `trimOffset` to `EvaluatedDelta`.
+     * Evaluates `drawOn` entrance clips from 0% to 100% trim progression across clip window, with 0% pre-window and 100% post-window settlement.
+     * Compounded trim properties into evaluated CSS and wired `ShapeRenderer` & `LineRenderer` to read `computedStyle.trimStart`, `trimEnd`, and `trimOffset`.
+  3. **Canvas Direct Manipulation Gizmos (`TransformBox.tsx`)**:
+     * **Parametric Star Inner Radius Handle**: Rendered at the star's inner vertex in the viewport. Dragging calculates unprojected polar distance from center and dynamically updates `innerRadiusRatio` clamped to `[0.10, 0.95]`, with real-time HUD percentage readout (`Inner Radius: {pct}%`).
+     * **Text Sizing Mode Edge Toggles & Handlers**:
+       * Double-clicking East/West handle toggles between `auto-width` (point text) and `auto-height` (wrapping text).
+       * Double-clicking South/North handle toggles between `auto-height` (wrapping text) and `fixed` (fixed box).
+       * Dragging East/West handle sets `textSizing: "auto-height"` with fixed width and auto-growing height.
+       * `styleUtils.ts` prioritizes `textSizing === "auto-height"` before `boxMode === "area"`, guaranteeing dynamic text wrapping.
+* **Verification**:
+  * Added 5 new unit tests in `src/test/element_individuality_matrix.test.ts` verifying category filtering, `drawOn` clip evaluation, `custom_trim` compounding, and text sizing CSS generation (24 tests total in file).
+  * All 39 test suites (353 tests) pass cleanly (`npm test`).
+  * Production build compiles cleanly with 0 errors in 10.61s (`npm run build`).
+
+
 

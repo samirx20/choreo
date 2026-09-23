@@ -335,5 +335,133 @@ describe("Element Individuality & Physical Coherence Matrix", () => {
       expect(customDelta).toBeCloseTo(1.0, 2);
     });
   });
+
+  describe("Animation Catalog Purity & Draw-On Trim Path (Option 1)", () => {
+    it("filters corner radius from circle, star, polygon, and 1D line in animation catalog", async () => {
+      const { getFilteredCustomCategories } = await import(
+        "@/components/inspector/motion/AnimationCatalogSheet"
+      );
+
+      const circleLayer = { id: "c1", type: "shape", shapeType: "circle", style: {} } as any;
+      const starLayer = { id: "s1", type: "shape", shapeType: "star", style: {} } as any;
+      const lineLayer = { id: "l1", type: "line", style: {} } as any;
+      const rectLayer = { id: "r1", type: "shape", shapeType: "rectangle", style: {} } as any;
+
+      const circleCats = getFilteredCustomCategories(circleLayer);
+      const starCats = getFilteredCustomCategories(starLayer);
+      const lineCats = getFilteredCustomCategories(lineLayer);
+      const rectCats = getFilteredCustomCategories(rectLayer);
+
+      const hasRadius = (cats: any[]) =>
+        cats.some((c) => c.items.some((i: any) => i.id === "custom_radius"));
+
+      expect(hasRadius(circleCats)).toBe(false);
+      expect(hasRadius(starCats)).toBe(false);
+      expect(hasRadius(lineCats)).toBe(false);
+      expect(hasRadius(rectCats)).toBe(true);
+    });
+
+    it("filters area fill, glass, and background blur from 1D lines", async () => {
+      const { getFilteredCustomCategories } = await import(
+        "@/components/inspector/motion/AnimationCatalogSheet"
+      );
+
+      const lineLayer = { id: "l1", type: "line", style: {} } as any;
+      const lineCats = getFilteredCustomCategories(lineLayer);
+
+      const itemIds = lineCats.flatMap((c: any) => c.items.map((i: any) => i.id));
+      expect(itemIds).not.toContain("custom_glass");
+      expect(itemIds).not.toContain("custom_backdrop_blur");
+      expect(itemIds).toContain("custom_stroke");
+      expect(itemIds).toContain("custom_trim");
+    });
+
+    it("evaluates drawOn entrance clip with progressive trimEnd from 0% to 100%", async () => {
+      const { evaluateClipDelta } = await import("@/engine/evaluator/clipEvaluator");
+
+      const clip = {
+        id: "clip-draw",
+        layerId: "line-1",
+        type: "in",
+        preset: "drawOn",
+        start: 1.0,
+        duration: 2.0,
+        easing: "linear",
+      } as any;
+
+      // Before clip start: trimEnd = 0, opacity = 0
+      const preDelta = evaluateClipDelta(clip, 0.5);
+      expect(preDelta.trimEnd).toBe(0);
+      expect(preDelta.opacity).toBe(0);
+
+      // Mid-clip (t = 2.0s, progress = 0.5): trimEnd = 50%
+      const midDelta = evaluateClipDelta(clip, 2.0);
+      expect(midDelta.trimEnd).toBeCloseTo(50, 1);
+      expect(midDelta.opacity).toBe(1);
+
+      // Post-clip (t = 3.5s, progress >= 1.0): trimEnd = 100%
+      const postDelta = evaluateClipDelta(clip, 3.5);
+      expect(postDelta.trimEnd).toBe(100);
+      expect(postDelta.opacity).toBe(1);
+    });
+
+    it("evaluates custom_trim action clip with trimStart and trimEnd interpolation", async () => {
+      const { evaluateClipDelta } = await import("@/engine/evaluator/clipEvaluator");
+
+      const clip = {
+        id: "clip-trim",
+        layerId: "shape-1",
+        type: "action",
+        preset: "custom_trim",
+        start: 0,
+        duration: 1.0,
+        easing: "linear",
+        params: { trimStart: 25, trimEnd: 75, trimOffset: 10 },
+      } as any;
+
+      const midDelta = evaluateClipDelta(clip, 0.5);
+      expect(midDelta.trimStart).toBeCloseTo(12.5, 1);
+      expect(midDelta.trimEnd).toBeCloseTo(37.5, 1); // 0 + (75 - 0) * 0.5
+      expect(midDelta.trimOffset).toBeCloseTo(5, 1);
+    });
+  });
+
+  describe("Canvas Direct Manipulation Gizmos & Sizing Modes (Option 3)", () => {
+    it("dynamically configures CSS sizing modes for auto-width, auto-height, and fixed", async () => {
+      const { layerStyleToCss } = await import(
+        "@/components/canvas/renderers/styleUtils"
+      );
+
+      // Auto Width (Point text): max-content width, auto height, no wrapping
+      const autoWidthCss = layerStyleToCss({
+        width: 400,
+        height: 100,
+        textSizing: "auto-width",
+      } as any);
+      expect(autoWidthCss.width).toBe("max-content");
+      expect(autoWidthCss.height).toBe("auto");
+
+      // Auto Height (Wrapping text): fixed width, auto height, pre-wrap
+      const autoHeightCss = layerStyleToCss({
+        width: 350,
+        height: 100,
+        boxMode: "area",
+        textSizing: "auto-height",
+      } as any);
+      expect(autoHeightCss.width).toBe("350px");
+      expect(autoHeightCss.height).toBe("auto");
+      expect(autoHeightCss.whiteSpace).toBe("pre-wrap");
+
+      // Fixed: fixed width and fixed height
+      const fixedCss = layerStyleToCss({
+        width: 500,
+        height: 250,
+        boxMode: "area",
+        textSizing: "fixed",
+      } as any);
+      expect(fixedCss.width).toBe("500px");
+      expect(fixedCss.height).toBe("250px");
+    });
+  });
 });
 

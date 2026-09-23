@@ -43,10 +43,22 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   computedStyle,
   onClick,
 }) => {
+  const widthNum = typeof layer.style.width === "number" ? layer.style.width : 100;
+  const heightNum = typeof layer.style.height === "number" ? layer.style.height : 100;
+
+  // Trim path dash calculations
+  const rectPerimeter = 2 * (widthNum + heightNum);
+  const tStart = (((computedStyle as any)?.trimStart ?? layer.trimStart ?? 0)) / 100;
+  const tEnd = (((computedStyle as any)?.trimEnd ?? layer.trimEnd ?? 100)) / 100;
+  const tOffset = (((computedStyle as any)?.trimOffset ?? layer.trimOffset ?? 0)) / 100;
   const hasTrim =
+    tStart > 0 ||
+    tEnd < 1 ||
+    tOffset > 0 ||
     (layer.trimStart !== undefined && layer.trimStart > 0) ||
     (layer.trimEnd !== undefined && layer.trimEnd < 100) ||
-    layer.trimOffset !== undefined ||
+    (computedStyle as any)?.trimEnd !== undefined ||
+    (computedStyle as any)?.trimStart !== undefined ||
     (layer.strokeDashArray && layer.strokeDashArray.length > 0);
 
   const isSvgShape = ["star", "polygon", "triangle", "line", "arrow"].includes(layer.shapeType);
@@ -97,9 +109,6 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   const hasStroke = (typeof layer.style.borderWidth === "number" && layer.style.borderWidth > 0) ||
     (typeof computedStyle?.borderWidth === "number" && (computedStyle.borderWidth as number) > 0);
 
-  const widthNum = typeof layer.style.width === "number" ? layer.style.width : 100;
-  const heightNum = typeof layer.style.height === "number" ? layer.style.height : 100;
-
   // Dedicated stroke and width resolution for line & arrow shape types
   const lineStrokeColor = (rawBorderColor && rawBorderColor !== "transparent")
     ? rawBorderColor
@@ -111,11 +120,6 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
         ? (computedStyle.borderWidth as number)
         : 3);
 
-  // Trim path dash calculations
-  const rectPerimeter = 2 * (widthNum + heightNum);
-  const tStart = (layer.trimStart ?? 0) / 100;
-  const tEnd = (layer.trimEnd ?? 100) / 100;
-  const tOffset = (layer.trimOffset ?? 0) / 100;
   const trimLen = Math.max(0, (tEnd - tStart) * rectPerimeter);
   const trimDashArray = layer.strokeDashArray
     ? layer.strokeDashArray.join(" ")

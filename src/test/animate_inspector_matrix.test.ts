@@ -663,10 +663,11 @@ describe("Animate Inspector & Motion Matrix Tests", () => {
     expect(allItemIds).toContain("custom_morph");
     expect(allItemIds).toContain("custom_radius");
     expect(allItemIds).toContain("custom_stroke");
-    expect(allItemIds.length).toBe(14);
+    expect(allItemIds).toContain("custom_trim");
+    expect(allItemIds.length).toBe(15);
   });
 
-  it("evaluates all 14 Custom channel presets cleanly in evaluateClipDelta and compounds styles", async () => {
+  it("evaluates all 15 Custom channel presets cleanly in evaluateClipDelta and compounds styles", async () => {
     const { evaluateClipDelta, compoundLayerAnimations, evaluateSceneAtTime } = await import("../engine/evaluator");
 
     const customChannels = [
@@ -675,6 +676,8 @@ describe("Animate Inspector & Motion Matrix Tests", () => {
       { id: "custom_move", params: { distance: 60, direction: "up" } },
       { id: "custom_opacity", params: { opacity: 0 } },
       { id: "custom_color", params: { color: "#ff0077" } },
+      { id: "custom_stroke", params: { strokeWidth: 6, strokeColor: "#00eeff" } },
+      { id: "custom_trim", params: { trimStart: 10, trimEnd: 90 } },
       { id: "custom_shadow", params: { shadowBlur: 20, shadowDistance: 10, shadowColor: "#112233" } },
       { id: "custom_blur", params: { blur: 14 } },
       { id: "custom_backdrop_blur", params: { backdropBlur: 18 } },
@@ -683,7 +686,6 @@ describe("Animate Inspector & Motion Matrix Tests", () => {
       { id: "custom_resize", params: { widthDelta: 40, heightDelta: 30 } },
       { id: "custom_morph", params: { morphAmount: 0.5 } },
       { id: "custom_radius", params: { radius: 32 } },
-      { id: "custom_stroke", params: { strokeWidth: 6, strokeColor: "#00eeff" } },
     ];
 
     customChannels.forEach((ch) => {

@@ -89,6 +89,15 @@ export function evaluateSceneAtTime(
         if (compounded.heightDelta !== undefined && typeof layer.style.height === "number") {
           css.height = `${Math.max(0, layer.style.height + compounded.heightDelta)}px`;
         }
+        if (compounded.trimStart !== undefined) {
+          (css as any).trimStart = compounded.trimStart;
+        }
+        if (compounded.trimEnd !== undefined) {
+          (css as any).trimEnd = compounded.trimEnd;
+        }
+        if (compounded.trimOffset !== undefined) {
+          (css as any).trimOffset = compounded.trimOffset;
+        }
       } else {
         // Legacy single-slot In animation
         if (layer.animation.in) {

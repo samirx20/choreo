@@ -7,6 +7,7 @@ export function layerStyleToCss(
   isTextOrChunk = false
 ): CSSProperties {
   const css: CSSProperties = {};
+  const isText = isTextOrChunk || style.textSizing !== undefined || style.boxMode !== undefined;
 
   // Positioning
   if (!isChildInFlex) {
@@ -18,7 +19,7 @@ export function layerStyleToCss(
   }
 
   // Dimensions
-  if (isTextOrChunk) {
+  if (isText) {
     css.display = "flex";
     css.alignItems =
       style.verticalAlign === "top"
@@ -40,17 +41,17 @@ export function layerStyleToCss(
       css.width = "max-content";
       css.height = "auto";
       css.whiteSpace = style.boxMode === "point" ? "pre" : "nowrap";
-    } else if (style.boxMode === "area") {
-      css.width = typeof style.width === "number" ? `${style.width}px` : "auto";
-      css.height = typeof style.height === "number" ? `${style.height}px` : "auto";
-      css.whiteSpace = "pre-wrap";
-      css.wordBreak = "break-word";
-      css.overflow = "hidden";
     } else if (style.textSizing === "auto-height") {
       css.width = typeof style.width === "number" ? `${style.width}px` : "auto";
       css.height = "auto";
       css.whiteSpace = "pre-wrap";
       css.wordBreak = "break-word";
+    } else if (style.boxMode === "area" || style.textSizing === "fixed") {
+      css.width = typeof style.width === "number" ? `${style.width}px` : "auto";
+      css.height = typeof style.height === "number" ? `${style.height}px` : "auto";
+      css.whiteSpace = "pre-wrap";
+      css.wordBreak = "break-word";
+      css.overflow = "hidden";
     } else {
       // Fixed size: explicit width & height
       css.width = typeof style.width === "number" ? `${style.width}px` : "auto";

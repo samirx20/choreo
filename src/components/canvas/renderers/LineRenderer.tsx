@@ -87,13 +87,18 @@ export const LineRenderer: React.FC<LineRendererProps> = ({
 
   // Trim Path calculations
   const lineLength = Math.max(1, Math.round(Math.hypot(x2 - x1, y2 - y1) || widthNum));
-  const tStart = ((layer as any).trimStart ?? 0) / 100;
-  const tEnd = ((layer as any).trimEnd ?? 100) / 100;
-  const tOffset = ((layer as any).trimOffset ?? 0) / 100;
+  const tStart = (((computedStyle as any)?.trimStart ?? (layer as any).trimStart ?? 0)) / 100;
+  const tEnd = (((computedStyle as any)?.trimEnd ?? (layer as any).trimEnd ?? 100)) / 100;
+  const tOffset = (((computedStyle as any)?.trimOffset ?? (layer as any).trimOffset ?? 0)) / 100;
   const hasTrim =
+    tStart > 0 ||
+    tEnd < 1 ||
+    tOffset > 0 ||
     ((layer as any).trimStart !== undefined && (layer as any).trimStart > 0) ||
     ((layer as any).trimEnd !== undefined && (layer as any).trimEnd < 100) ||
-    (layer as any).trimOffset !== undefined;
+    (layer as any).trimOffset !== undefined ||
+    (computedStyle as any)?.trimEnd !== undefined ||
+    (computedStyle as any)?.trimStart !== undefined;
 
   let effectiveDashArray = dashArray;
   let effectiveDashOffset: number | undefined = undefined;

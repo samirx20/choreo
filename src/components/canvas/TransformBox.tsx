@@ -46,7 +46,8 @@ type HandleType =
   | "w"
   | "rotate"
   | "endpoint-start"
-  | "endpoint-end";
+  | "endpoint-end"
+  | "star-inner-radius";
 
 interface DragSession {
   handle: HandleType;
@@ -108,6 +109,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
 }) => {
   const {
     updateLayerStyle,
+    updateLayer,
     startTransaction,
     commitTransaction,
     setEditingLayerId,
@@ -399,6 +401,28 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
           width: Math.round(rawLength),
           rotation: Math.round(deg),
         });
+      } else if (session.handle === "star-inner-radius") {
+        const rad = (session.initialRotation * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+
+        const centerX = session.initialX + session.initialWidth / 2;
+        const centerY = session.initialY + session.initialHeight / 2;
+
+        const dx = mouseCanvas.x - centerX;
+        const dy = mouseCanvas.y - centerY;
+
+        // Unproject to local rotated star coordinate system
+        const localX = dx * cos + dy * sin;
+        const localY = -dx * sin + dy * cos;
+
+        const currentDist = Math.hypot(localX, localY);
+        const maxR = 0.45 * Math.min(session.initialWidth, session.initialHeight);
+        const ratio = Math.max(0.1, Math.min(0.95, currentDist / Math.max(1, maxR)));
+
+        updateLayer(session.targetLayerId, {
+          innerRadiusRatio: Math.round(ratio * 1000) / 1000,
+        } as any);
       } else {
         // Rotated Invariant Resizing
         const rad = (session.initialRotation * Math.PI) / 180;
@@ -489,15 +513,19 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
           if (isCorner) {
             updates.width = Math.round(newW);
             updates.height = Math.round(newH);
+            updates.textSizing = "fixed";
+            updates.boxMode = "area";
           } else if (session.handle.includes("e") || session.handle.includes("w")) {
             updates.width = Math.round(newW);
             updates.height = Math.round(session.initialHeight);
+            updates.textSizing = "auto-height";
+            updates.boxMode = "area";
           } else {
             updates.width = Math.round(session.initialWidth);
             updates.height = Math.round(newH);
+            updates.textSizing = "fixed";
+            updates.boxMode = "area";
           }
-          updates.textSizing = "fixed";
-          updates.boxMode = "area";
         } else {
           updates.height = Math.round(newH);
         }
@@ -534,6 +562,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
     effectiveScale,
     onGuidesChange,
     updateLayerStyle,
+    updateLayer,
     commitTransaction,
     getCanvasPoint,
   ]);
@@ -543,6 +572,17 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
 
   const renderX = visualX + (screenOffset?.x ?? 0);
   const renderY = visualY + (screenOffset?.y ?? 0);
+
+  // Parametric Star Handle Coordinates
+  const isStar = !isMulti && layer.type === "shape" && (layer as any).shapeType === "star";
+  const starPoints = (layer as any).points || 5;
+  const starRatio = (layer as any).innerRadiusRatio ?? 0.382;
+  const starAngle = Math.PI / starPoints - Math.PI / 2;
+  const starScale = Math.min(curVisualW, curVisualH) / 100;
+  const starOffsetX = (curVisualW - 100 * starScale) / 2;
+  const starOffsetY = (curVisualH - 100 * starScale) / 2;
+  const starHandleX = starOffsetX + (50 + 45 * starRatio * Math.cos(starAngle)) * starScale;
+  const starHandleY = starOffsetY + (50 + 45 * starRatio * Math.sin(starAngle)) * starScale;
 
   return (
     <div
@@ -712,20 +752,49 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     if (!isMulti && (layer.type === "text" || layer.type === "chunk")) {
-                      const currentMode = layer.style.boxMode ?? "point";
-                      const nextMode = currentMode === "point" ? "area" : "point";
-                      updateLayerStyle(layer.id, {
-                        boxMode: nextMode,
-                      });
+                      if (h.pos === "e" || h.pos === "w") {
+                        const isAutoWidth = layer.style.textSizing === "auto-width" || layer.style.boxMode === "point";
+                        updateLayerStyle(layer.id, {
+                          textSizing: isAutoWidth ? "auto-height" : "auto-width",
+                          boxMode: isAutoWidth ? "area" : "point",
+                        });
+                      } else if (h.pos === "s" || h.pos === "n") {
+                        const isAutoHeight = layer.style.textSizing === "auto-height";
+                        updateLayerStyle(layer.id, {
+                          textSizing: isAutoHeight ? "fixed" : "auto-height",
+                          boxMode: "area",
+                        });
+                      } else {
+                        const currentMode = layer.style.boxMode ?? "point";
+                        const nextMode = currentMode === "point" ? "area" : "point";
+                        updateLayerStyle(layer.id, {
+                          boxMode: nextMode,
+                        });
+                      }
                     }
                   }}
                 />
               ))}
+
+              {/* Parametric Star Inner Radius Handle */}
+              {isStar && (
+                <div
+                  style={{
+                    left: `${starHandleX}px`,
+                    top: `${starHandleY}px`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                  className={`absolute w-3 h-3 bg-amber-400 border-2 border-white rounded-full shadow-md hover:scale-125 transition-transform z-30 cursor-pointer ${
+                    isPanMode ? "pointer-events-none" : "pointer-events-auto"
+                  }`}
+                  onPointerDown={(e) => handlePointerDown("star-inner-radius", e)}
+                  title={`Inner Radius: ${Math.round(starRatio * 100)}% (Drag to sharpen/soften points)`}
+                />
+              )}
             </>
           )}
         </>
       )}
-
 
       {/* Live Dimension / Rotation HUD */}
       <div
@@ -735,7 +804,9 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
             : "bg-card border border-border text-foreground"
         }`}
       >
-        {activeHandle?.startsWith("radius-")
+        {activeHandle === "star-inner-radius"
+          ? `Inner Radius: ${Math.round(((layer as any).innerRadiusRatio ?? 0.382) * 100)}%`
+          : activeHandle?.startsWith("radius-")
           ? `Radius: ${
               typeof layer.style.borderRadius === "number"
                 ? `${layer.style.borderRadius}px`
