@@ -28,6 +28,21 @@ export const LineRenderer: React.FC<LineRendererProps> = ({
   );
 
   const combinedStyle = { ...baseCss, ...computedStyle };
+
+  // Convert rectangular CSS box-shadow to SVG line contour drop-shadow
+  if (combinedStyle.boxShadow) {
+    const rawBs = combinedStyle.boxShadow as string;
+    delete combinedStyle.boxShadow;
+    const match = rawBs.match(/([-\d.]+)px\s+([-\d.]+)px\s+([-\d.]+)px(?:\s+[-\d.]+px)?\s+(.+)/);
+    if (match) {
+      const [, dx, dy, blur, col] = match;
+      const dropShadowFilter = `drop-shadow(${dx}px ${dy}px ${blur}px ${col})`;
+      combinedStyle.filter = combinedStyle.filter
+        ? `${combinedStyle.filter} ${dropShadowFilter}`
+        : dropShadowFilter;
+    }
+  }
+
   const rawBorderColor = (computedStyle?.borderColor as string) || layer.style.borderColor;
   const rawBgColor = (computedStyle?.backgroundColor as string) || layer.style.backgroundColor;
   const strokeColor =

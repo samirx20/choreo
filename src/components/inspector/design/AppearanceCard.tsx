@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { cn } from "@/lib/utils";
-import { canHaveFill, canHaveGlass, isVectorLine } from "@/utils/layerCapabilities";
+import { canHaveFill, canHaveGlass, isVectorLine, canHaveTrimPath } from "@/utils/layerCapabilities";
 
 interface AppearanceCardProps {
   selectedLayer: Layer;
@@ -154,15 +154,6 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
               updateLayerStyle(selectedLayer.id, {
                 borderWidth: nextStroke ? 2 : 0,
                 borderColor: nextStroke ? "#18181b" : "transparent",
-                ...(nextStroke
-                  ? {
-                      shadowBlur: 0,
-                      shadowDistance: 0,
-                      shadowOpacity: 0,
-                      elevation: 0,
-                      shadows: [],
-                    }
-                  : {}),
               });
             }}
             className={cn(
@@ -177,46 +168,98 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
           </div>
 
           {(hasStroke || isVectorLine(selectedLayer)) && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Width</span>
-              <div className="flex items-center gap-1.5 w-36 justify-end">
-                <ScrubbableInput
-                  value={
-                    typeof style.borderWidth === "number" && style.borderWidth > 0
-                      ? style.borderWidth
-                      : (selectedLayer as any).strokeWidth || 2
-                  }
-                  step={1}
-                  min={1}
-                  onChange={(val) => {
-                    updateLayerStyle(selectedLayer.id, {
-                      borderWidth: val,
-                      shadowBlur: 0,
-                      shadowDistance: 0,
-                      shadowOpacity: 0,
-                      elevation: 0,
-                      shadows: [],
-                    });
-                    if (selectedLayer.type === "line") {
-                      updateLayer(selectedLayer.id, { strokeWidth: val } as any);
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Width</span>
+                <div className="flex items-center gap-1.5 w-36 justify-end">
+                  <ScrubbableInput
+                    value={
+                      typeof style.borderWidth === "number" && style.borderWidth > 0
+                        ? style.borderWidth
+                        : (selectedLayer as any).strokeWidth || 2
                     }
-                  }}
-                  className="w-16"
-                />
-                <ColorPicker
-                  value={
-                    style.borderColor && style.borderColor !== "transparent"
-                      ? style.borderColor
-                      : (selectedLayer as any).strokeColor || "#18181b"
-                  }
-                  onChange={(c) => {
-                    updateLayerStyle(selectedLayer.id, { borderColor: c, backgroundColor: "transparent" });
-                    if (selectedLayer.type === "line") {
-                      updateLayer(selectedLayer.id, { strokeColor: c } as any);
+                    step={1}
+                    min={1}
+                    onChange={(val) => {
+                      updateLayerStyle(selectedLayer.id, {
+                        borderWidth: val,
+                      });
+                      if (selectedLayer.type === "line") {
+                        updateLayer(selectedLayer.id, { strokeWidth: val } as any);
+                      }
+                    }}
+                    className="w-16"
+                  />
+                  <ColorPicker
+                    value={
+                      style.borderColor && style.borderColor !== "transparent"
+                        ? style.borderColor
+                        : (selectedLayer as any).strokeColor || "#18181b"
                     }
-                  }}
-                />
+                    onChange={(c) => {
+                      updateLayerStyle(selectedLayer.id, { borderColor: c, backgroundColor: "transparent" });
+                      if (selectedLayer.type === "line") {
+                        updateLayer(selectedLayer.id, { strokeColor: c } as any);
+                      }
+                    }}
+                  />
+                </div>
               </div>
+
+              {/* Vector Trim Path Nested Inside Stroke Options */}
+              {canHaveTrimPath(selectedLayer) && (
+                <div className="pt-2 border-t border-border/40 space-y-2">
+                  <span className="text-xs font-semibold text-foreground">Trim Path</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Start</span>
+                    <div className="w-36 flex justify-end">
+                      <ScrubbableInput
+                        value={(selectedLayer as any).trimStart ?? 0}
+                        step={1}
+                        min={0}
+                        max={100}
+                        suffix="%"
+                        onChange={(val) =>
+                          updateLayer(selectedLayer.id, { trimStart: Math.round(val) } as any)
+                        }
+                        className="w-20"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">End</span>
+                    <div className="w-36 flex justify-end">
+                      <ScrubbableInput
+                        value={(selectedLayer as any).trimEnd ?? 100}
+                        step={1}
+                        min={0}
+                        max={100}
+                        suffix="%"
+                        onChange={(val) =>
+                          updateLayer(selectedLayer.id, { trimEnd: Math.round(val) } as any)
+                        }
+                        className="w-20"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Offset</span>
+                    <div className="w-36 flex justify-end">
+                      <ScrubbableInput
+                        value={(selectedLayer as any).trimOffset ?? 0}
+                        step={1}
+                        min={0}
+                        max={100}
+                        suffix="%"
+                        onChange={(val) =>
+                          updateLayer(selectedLayer.id, { trimOffset: Math.round(val) } as any)
+                        }
+                        className="w-20"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -230,7 +273,7 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
             const nextShadow = !hasShadow;
             updateLayerStyle(selectedLayer.id, {
               shadowBlur: nextShadow ? (style.shadowMode === "hard" ? 0 : 16) : 0,
-              shadowDistance: nextShadow ? 8 : 0,
+              shadowDistance: nextShadow ? (style.shadowDistance || 8) : 0,
               shadowAngle: nextShadow ? (style.shadowAngle ?? 90) : undefined,
               shadowColor: style.shadowColor || "#000000",
               shadowOpacity: nextShadow ? (style.shadowOpacity ?? 0.25) : 0,
@@ -285,6 +328,42 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
               </div>
             </div>
 
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Light Angle</span>
+              <div className="w-36 flex justify-end">
+                <ScrubbableInput
+                  value={style.shadowAngle ?? 90}
+                  step={1}
+                  min={0}
+                  max={360}
+                  suffix="°"
+                  onChange={(val) =>
+                    updateLayerStyle(selectedLayer.id, {
+                      shadowAngle: Math.round(val),
+                    })
+                  }
+                  className="w-20"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Distance</span>
+              <div className="w-36 flex justify-end">
+                <ScrubbableInput
+                  value={style.shadowDistance ?? 8}
+                  step={1}
+                  min={0}
+                  onChange={(val) =>
+                    updateLayerStyle(selectedLayer.id, {
+                      shadowDistance: val,
+                    })
+                  }
+                  className="w-20"
+                />
+              </div>
+            </div>
+
             {style.shadowMode !== "hard" && (
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Blur</span>
@@ -305,15 +384,41 @@ export const AppearanceCard: React.FC<AppearanceCardProps> = ({ selectedLayer })
             )}
 
             <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">Distance</span>
+              <span className="text-xs text-muted-foreground">Color</span>
+              <div className="flex items-center gap-1.5 w-36 justify-end">
+                <Input
+                  type="text"
+                  value={(style.shadowColor || "#000000").replace("#", "").toUpperCase()}
+                  onChange={(e) =>
+                    updateLayerStyle(selectedLayer.id, {
+                      shadowColor: `#${e.target.value}`,
+                    })
+                  }
+                  className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
+                />
+                <ColorPicker
+                  value={style.shadowColor || "#000000"}
+                  onChange={(c) =>
+                    updateLayerStyle(selectedLayer.id, {
+                      shadowColor: c,
+                    })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">Opacity</span>
               <div className="w-36 flex justify-end">
                 <ScrubbableInput
-                  value={style.shadowDistance || 8}
+                  value={Math.round((style.shadowOpacity ?? 0.25) * 100)}
                   step={1}
                   min={0}
+                  max={100}
+                  suffix="%"
                   onChange={(val) =>
                     updateLayerStyle(selectedLayer.id, {
-                      shadowDistance: val,
+                      shadowOpacity: Math.max(0, Math.min(1, val / 100)),
                     })
                   }
                   className="w-20"

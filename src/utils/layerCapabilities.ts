@@ -109,9 +109,6 @@ export function canHaveGlass(layer?: Layer | null): boolean {
 export function canHaveTrimPath(layer?: Layer | null): boolean {
   if (!layer) return false;
   if (isVectorLine(layer)) return true;
-  if (layer.type === "shape") {
-    const st = (layer as any).shapeType;
-    return st === "rectangle" || st === "circle" || st === "ellipse";
-  }
+  if (layer.type === "shape") return true;
   return false;
 }

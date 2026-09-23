@@ -62,6 +62,21 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   }
 
   const combinedStyle = { ...baseCss, ...computedStyle };
+
+  // For SVG shapes (star, polygon, triangle, line, arrow), convert rectangular box-shadow to SVG contour drop-shadow
+  if (isSvgShape && combinedStyle.boxShadow) {
+    const rawBs = combinedStyle.boxShadow as string;
+    delete combinedStyle.boxShadow;
+    const match = rawBs.match(/([-\d.]+)px\s+([-\d.]+)px\s+([-\d.]+)px(?:\s+[-\d.]+px)?\s+(.+)/);
+    if (match) {
+      const [, dx, dy, blur, col] = match;
+      const dropShadowFilter = `drop-shadow(${dx}px ${dy}px ${blur}px ${col})`;
+      combinedStyle.filter = combinedStyle.filter
+        ? `${combinedStyle.filter} ${dropShadowFilter}`
+        : dropShadowFilter;
+    }
+  }
+
   // Author-intended fill must NOT read baseCss.backgroundColor because baseCss is forced to transparent for the outer wrapper div
   const rawFill = (computedStyle?.backgroundColor as string) || layer.style.backgroundColor;
   const fill = (!rawFill || rawFill === "transparent" || rawFill === "none")

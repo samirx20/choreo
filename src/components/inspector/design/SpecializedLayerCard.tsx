@@ -18,7 +18,7 @@ import {
   DropdownMenuContent,
 } from "@/components/ui/dropdown-menu";
 import { IconPickerPopover } from "@/components/canvas/IconPickerPopover";
-import { isStar, isMedia, canHaveTrimPath } from "@/utils/layerCapabilities";
+import { isStar, isMedia } from "@/utils/layerCapabilities";
 
 interface SpecializedLayerCardProps {
   selectedLayer: Layer;
@@ -285,60 +285,6 @@ export const SpecializedLayerCard: React.FC<SpecializedLayerCardProps> = ({
         </div>
       )}
 
-      {/* Vector Trim Path Section */}
-      {canHaveTrimPath(selectedLayer) && (
-        <div className="pt-3 border-t border-border space-y-2">
-          <h4 className="text-xs font-semibold text-foreground">Trim Path</h4>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Start</span>
-            <div className="w-36 flex justify-end">
-              <ScrubbableInput
-                value={(selectedLayer as any).trimStart ?? 0}
-                step={1}
-                min={0}
-                max={100}
-                suffix="%"
-                onChange={(val) =>
-                  updateLayer(selectedLayer.id, { trimStart: Math.round(val) } as any)
-                }
-                className="w-20"
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">End</span>
-            <div className="w-36 flex justify-end">
-              <ScrubbableInput
-                value={(selectedLayer as any).trimEnd ?? 100}
-                step={1}
-                min={0}
-                max={100}
-                suffix="%"
-                onChange={(val) =>
-                  updateLayer(selectedLayer.id, { trimEnd: Math.round(val) } as any)
-                }
-                className="w-20"
-              />
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Offset</span>
-            <div className="w-36 flex justify-end">
-              <ScrubbableInput
-                value={(selectedLayer as any).trimOffset ?? 0}
-                step={1}
-                min={0}
-                max={100}
-                suffix="%"
-                onChange={(val) =>
-                  updateLayer(selectedLayer.id, { trimOffset: Math.round(val) } as any)
-                }
-                className="w-20"
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Media (Image & Video) Controls */}
       {isMedia(selectedLayer) && (
