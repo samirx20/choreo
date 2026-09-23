@@ -1147,3 +1147,20 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Verification**:
   * Added unit test suite in `src/test/color_picker_and_scene_fill.test.ts` verifying sequential inheritance across multiple scenes (white $\to$ black $\to$ gradient).
   * All 38 test suites (322 tests) pass 100% cleanly.
+
+---
+
+### Decision 60: Triangle/Star Fill Bug Resolution and Line Shape Creation & Rendering
+* **Triangle & Star Fill & Stroke Disentanglement (`src/components/canvas/renderers/ShapeRenderer.tsx`)**:
+  * **Root Cause**: To avoid rendering a rectangular box behind SVG shapes (stars, triangles, polygons), `ShapeRenderer` set `baseCss.backgroundColor = "transparent"`. However, the inner SVG `<polygon fill={fill}>` evaluated `fill = combinedStyle.backgroundColor || ...`. Since `"transparent"` is truthy in JavaScript, `fill` became `"transparent"`. Thus, shapes rendered completely invisible with zero stroke, and with a hollow interior when a stroke was added. Changing the fill color in the inspector had zero visual effect.
+  * **Fix**: Disentangled outer container CSS from the SVG fill. The SVG `<polygon>` now directly resolves `rawFill = (computedStyle?.backgroundColor as string) || layer.style.backgroundColor`. If `rawFill` is `"transparent"` or `"none"`, it safely renders `fill="none"`; otherwise it renders the authored fill color (`#3b82f6`, `#ffffff`, etc.). Adding a stroke now renders the border around the solid filled shape, and toggling fill turns it on/off seamlessly.
+* **Line Shape Creation & Rendering Parity (`src/components/canvas/helpers/toolCreationHelpers.ts`, `LineRenderer.tsx`, `ShapeRenderer.tsx`, `PixiStage.ts`)**:
+  * **Root Cause 1**: `LineRenderer` cleared box-borders via `baseCss.borderWidth = 0`. It then resolved `strokeWidth = typeof combinedStyle.borderWidth === "number" ? combinedStyle.borderWidth : ...`. Because `0` is a number, `strokeWidth` evaluated to `0`, causing the SVG `<line>` to render at 0px thickness (completely invisible).
+  * **Root Cause 2**: In `toolCreationHelpers.ts`, the line creation helper created a line layer with undefined `borderWidth`, `borderColor`, and `backgroundColor`, leaving the inspector controls uninitialized and stroke width unconfigured.
+  * **Fix**:
+    * In `LineRenderer.tsx` and `ShapeRenderer.tsx`, resolved `strokeWidth` and `strokeColor` directly from `layer.style` or `computedStyle` without being masked by `baseCss.borderWidth = 0`.
+    * In `toolCreationHelpers.ts`, initialized lines with default `strokeWidth: 3`, `borderWidth: 3`, `borderColor: THEME_TOKENS.accent.primary`, and `backgroundColor: THEME_TOKENS.accent.primary`, allowing users to adjust color via either Fill or Stroke controls in the inspector.
+    * In `PixiStage.ts`, updated `drawShape` to draw lines with explicit stroke and only apply fills when `hasFill` is truthy and not a line shape.
+* **Verification**:
+  * Added unit test suite in `src/test/design_and_motion_truth_matrix.test.ts` verifying triangle/star fill preservation, hollow toggling, line creation, and stroke resolution.
+  * All 38 test suites (324 tests) pass 100% cleanly.

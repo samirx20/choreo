@@ -50,9 +50,10 @@ export const PolygonRenderer: React.FC<PolygonRendererProps> = ({
   );
 
   const combinedStyle = { ...baseCss, ...computedStyle };
-  const fill = layer.style.backgroundColor || "#3b82f6";
-  const strokeColor = layer.style.borderColor || "transparent";
-  const strokeWidth = layer.style.borderWidth || 0;
+  const rawFill = (computedStyle?.backgroundColor as string) || layer.style.backgroundColor;
+  const fill = (!rawFill || rawFill === "transparent" || rawFill === "none") ? "none" : rawFill;
+  const strokeColor = (computedStyle?.borderColor as string) || layer.style.borderColor || "transparent";
+  const strokeWidth = typeof computedStyle?.borderWidth === "number" ? computedStyle.borderWidth : (layer.style.borderWidth || 0);
 
   const widthNum = typeof layer.style.width === "number" ? layer.style.width : 100;
   const heightNum = typeof layer.style.height === "number" ? layer.style.height : 100;

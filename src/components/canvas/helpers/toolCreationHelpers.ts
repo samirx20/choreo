@@ -125,6 +125,9 @@ export function createLayerForTool(
         height: 20,
         rotation: 0,
         opacity: 1,
+        backgroundColor: THEME_TOKENS.accent.primary,
+        borderColor: THEME_TOKENS.accent.primary,
+        borderWidth: 3,
       },
       animation: {
         in: {

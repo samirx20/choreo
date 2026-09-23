@@ -28,19 +28,21 @@ export const LineRenderer: React.FC<LineRendererProps> = ({
   );
 
   const combinedStyle = { ...baseCss, ...computedStyle };
+  const rawBorderColor = (computedStyle?.borderColor as string) || layer.style.borderColor;
+  const rawBgColor = (computedStyle?.backgroundColor as string) || layer.style.backgroundColor;
   const strokeColor =
-    (combinedStyle.borderColor as string) ||
-    (combinedStyle.color as string) ||
+    (rawBorderColor && rawBorderColor !== "transparent" ? rawBorderColor : undefined) ||
+    (rawBgColor && rawBgColor !== "transparent" ? rawBgColor : undefined) ||
     (layer as LineLayer).strokeColor ||
-    layer.style.borderColor ||
-    layer.style.backgroundColor ||
+    (computedStyle?.color as string) ||
     "#3b82f6";
+
   const strokeWidth =
-    typeof combinedStyle.borderWidth === "number"
-      ? combinedStyle.borderWidth
-      : typeof combinedStyle.borderWidth === "string"
-      ? parseFloat(combinedStyle.borderWidth) || ((layer as LineLayer).strokeWidth || layer.style.borderWidth || 2)
-      : (layer as LineLayer).strokeWidth || layer.style.borderWidth || 2;
+    typeof computedStyle?.borderWidth === "number" && (computedStyle.borderWidth as number) > 0
+      ? (computedStyle.borderWidth as number)
+      : typeof layer.style.borderWidth === "number" && (layer.style.borderWidth as number) > 0
+      ? layer.style.borderWidth
+      : (layer as LineLayer).strokeWidth || 3;
 
   const widthNum = typeof layer.style.width === "number" ? layer.style.width : 200;
   const heightNum = typeof layer.style.height === "number" ? layer.style.height : 20;

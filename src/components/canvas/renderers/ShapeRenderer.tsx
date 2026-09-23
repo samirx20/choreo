@@ -62,12 +62,39 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   }
 
   const combinedStyle = { ...baseCss, ...computedStyle };
-  const fill = (combinedStyle.backgroundColor as string) || (combinedStyle.color as string) || layer.style.backgroundColor || "#3b82f6";
-  const strokeColor = (combinedStyle.borderColor as string) || layer.style.borderColor || fill;
-  const strokeWidth = typeof combinedStyle.borderWidth === "number" ? combinedStyle.borderWidth : (typeof combinedStyle.borderWidth === "string" ? parseFloat(combinedStyle.borderWidth) || (layer.style.borderWidth || 2) : (layer.style.borderWidth || 2));
-  const hasStroke = (typeof layer.style.borderWidth === "number" && layer.style.borderWidth > 0) || (typeof combinedStyle.borderWidth === "number" && combinedStyle.borderWidth > 0);
+  // Author-intended fill must NOT read baseCss.backgroundColor because baseCss is forced to transparent for the outer wrapper div
+  const rawFill = (computedStyle?.backgroundColor as string) || layer.style.backgroundColor;
+  const fill = (!rawFill || rawFill === "transparent" || rawFill === "none")
+    ? "none"
+    : rawFill;
+
+  const rawBorderColor = (computedStyle?.borderColor as string) || layer.style.borderColor;
+  const strokeColor = (rawBorderColor && rawBorderColor !== "transparent")
+    ? rawBorderColor
+    : (fill !== "none" ? fill : "#3b82f6");
+
+  const strokeWidth = typeof computedStyle?.borderWidth === "number" && (computedStyle.borderWidth as number) > 0
+    ? (computedStyle.borderWidth as number)
+    : (typeof layer.style.borderWidth === "number" && layer.style.borderWidth > 0
+        ? layer.style.borderWidth
+        : 2);
+
+  const hasStroke = (typeof layer.style.borderWidth === "number" && layer.style.borderWidth > 0) ||
+    (typeof computedStyle?.borderWidth === "number" && (computedStyle.borderWidth as number) > 0);
+
   const widthNum = typeof layer.style.width === "number" ? layer.style.width : 100;
   const heightNum = typeof layer.style.height === "number" ? layer.style.height : 100;
+
+  // Dedicated stroke and width resolution for line & arrow shape types
+  const lineStrokeColor = (rawBorderColor && rawBorderColor !== "transparent")
+    ? rawBorderColor
+    : (rawFill && rawFill !== "transparent" && rawFill !== "none" ? rawFill : "#3b82f6");
+
+  const lineWidth = (typeof layer.style.borderWidth === "number" && layer.style.borderWidth > 0)
+    ? layer.style.borderWidth
+    : (typeof computedStyle?.borderWidth === "number" && (computedStyle.borderWidth as number) > 0
+        ? (computedStyle.borderWidth as number)
+        : 3);
 
   // Trim path dash calculations
   const rectPerimeter = 2 * (widthNum + heightNum);
@@ -164,9 +191,9 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       )}
       {(layer.shapeType === "line" || layer.shapeType === "arrow") && (
         <svg
-          viewBox="0 0 100 20"
+          viewBox={`0 0 ${widthNum} ${heightNum}`}
           preserveAspectRatio="none"
-          className="w-full h-full overflow-visible"
+          className="w-full h-full overflow-visible pointer-events-none"
         >
           <defs>
             <marker
@@ -177,16 +204,16 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
               refY="4"
               orient="auto"
             >
-              <polygon points="0 0, 8 4, 0 8" fill={strokeColor} />
+              <polygon points="0 0, 8 4, 0 8" fill={lineStrokeColor} />
             </marker>
           </defs>
           <line
             x1="0"
-            y1="10"
-            x2={layer.shapeType === "arrow" && layer.arrowEnd !== false ? "90" : "100"}
-            y2="10"
-            stroke={strokeColor}
-            strokeWidth={layer.style.borderWidth || 3}
+            y1={heightNum / 2}
+            x2={layer.shapeType === "arrow" && layer.arrowEnd !== false ? Math.max(0, widthNum - 10) : widthNum}
+            y2={heightNum / 2}
+            stroke={lineStrokeColor}
+            strokeWidth={lineWidth}
             strokeLinecap={(layer.strokeCap as any) || "round"}
             markerEnd={layer.shapeType === "arrow" && layer.arrowEnd !== false ? `url(#arrow-head-${layer.id})` : undefined}
           />

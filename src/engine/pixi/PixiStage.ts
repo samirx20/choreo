@@ -390,9 +390,19 @@ export class PixiStage {
       }
     }
 
-    g.fill({ color: fillColor, alpha: s.opacity ?? 1 });
+    const isLine = layer.shapeType === "line" || layer.shapeType === "arrow";
+    const hasFill = Boolean(s.backgroundColor && s.backgroundColor !== "transparent" && s.backgroundColor !== "none");
 
-    if (s.borderWidth && s.borderWidth > 0 && s.borderColor) {
+    if (!isLine && hasFill) {
+      g.fill({ color: fillColor, alpha: s.opacity ?? 1 });
+    }
+
+    if (isLine) {
+      const lineStrokeHex = s.borderColor || s.backgroundColor || "#3b82f6";
+      const strokeColor = parseInt(lineStrokeHex.replace("#", ""), 16) || 0x3b82f6;
+      const lineWidth = s.borderWidth && s.borderWidth > 0 ? s.borderWidth : 3;
+      g.stroke({ color: strokeColor, width: lineWidth });
+    } else if (s.borderWidth && s.borderWidth > 0 && s.borderColor && s.borderColor !== "transparent") {
       const strokeColor = parseInt(s.borderColor.replace("#", ""), 16) || 0xffffff;
       g.stroke({ color: strokeColor, width: s.borderWidth });
     }

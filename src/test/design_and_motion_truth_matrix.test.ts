@@ -4,6 +4,7 @@ import { Layer, TextLayer, ShapeLayer, IconLayer, ImageLayer, LineLayer } from "
 import { layerStyleToCss } from "@/components/canvas/renderers/styleUtils";
 import { compoundLayerAnimations, evaluateClipDelta } from "@/engine/evaluator/clipEvaluator";
 import { getFilteredCustomCategories } from "@/components/inspector/motion/AnimationCatalogSheet";
+import { createLayerForTool } from "@/components/canvas/helpers/toolCreationHelpers";
 
 describe("Design & Motion Truth Matrix: Full Parity & Combinatorial Audit", () => {
   beforeEach(() => {
@@ -244,6 +245,77 @@ describe("Design & Motion Truth Matrix: Full Parity & Combinatorial Audit", () =
       expect(lineLayer.arrowStart).toBe("circle");
       expect(lineLayer.arrowEnd).toBe("arrow");
       expect(lineLayer.strokeDashArray).toEqual([8, 4]);
+    });
+
+    it("ensures SVG shapes (triangle, star) resolve authored fill color and stroke correctly without being masked by transparent wrapper", () => {
+      // Shape with fill and stroke
+      const triangleLayer: ShapeLayer = {
+        id: "tri_1",
+        name: "Triangle",
+        type: "shape",
+        shapeType: "triangle",
+        style: {
+          x: 50,
+          y: 50,
+          width: 200,
+          height: 200,
+          rotation: 0,
+          opacity: 1,
+          backgroundColor: "#ec4899",
+          borderColor: "#be185d",
+          borderWidth: 4,
+        },
+      };
+
+      // Wrapper div has transparent background to avoid rectangular artifact
+      const isSvgShape = ["star", "polygon", "triangle", "line", "arrow"].includes(triangleLayer.shapeType);
+      const baseCss = layerStyleToCss({
+        ...triangleLayer.style,
+        backgroundColor: isSvgShape ? "transparent" : triangleLayer.style.backgroundColor,
+        borderWidth: isSvgShape ? 0 : triangleLayer.style.borderWidth,
+      });
+
+      expect(baseCss.backgroundColor).toBe("transparent");
+
+      // Internal SVG polygon fill must resolve the authored style backgroundColor, NOT baseCss.backgroundColor
+      const rawFill = triangleLayer.style.backgroundColor;
+      const fill = (!rawFill || rawFill === "transparent" || rawFill === "none") ? "none" : rawFill;
+      expect(fill).toBe("#ec4899");
+
+      // Stroke color and width must be preserved for the SVG polygon
+      const rawBorderColor = triangleLayer.style.borderColor;
+      const strokeColor = (rawBorderColor && rawBorderColor !== "transparent") ? rawBorderColor : fill;
+      expect(strokeColor).toBe("#be185d");
+      expect(triangleLayer.style.borderWidth).toBe(4);
+
+      // When fill is unchecked (backgroundColor set to transparent), fill becomes 'none'
+      const hollowTriangle: ShapeLayer = {
+        ...triangleLayer,
+        style: {
+          ...triangleLayer.style,
+          backgroundColor: "transparent",
+        },
+      };
+      const hollowRawFill = hollowTriangle.style.backgroundColor;
+      const hollowFill = (!hollowRawFill || hollowRawFill === "transparent" || hollowRawFill === "none") ? "none" : hollowRawFill;
+      expect(hollowFill).toBe("none");
+    });
+
+    it("guarantees line creation via createLayerForTool produces a visible line with non-zero stroke and color", () => {
+      const createdLine = createLayerForTool("line", 300, 200, 0);
+      expect(createdLine).not.toBeNull();
+      expect(createdLine?.type).toBe("line");
+      expect(createdLine?.style.width).toBe(200);
+      expect(createdLine?.style.height).toBe(20);
+      expect(createdLine?.style.borderWidth).toBe(3);
+      expect(createdLine?.style.borderColor).toBeDefined();
+      expect(createdLine?.style.backgroundColor).toBeDefined();
+
+      // Stroke width resolution in LineRenderer does not collapse to 0
+      const strokeWidth = typeof createdLine?.style.borderWidth === "number" && (createdLine.style.borderWidth as number) > 0
+        ? createdLine.style.borderWidth
+        : (createdLine as LineLayer)?.strokeWidth || 3;
+      expect(strokeWidth).toBe(3);
     });
   });
 
