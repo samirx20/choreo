@@ -11,9 +11,15 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  clearScreen: false,
   server: {
     port: 5173,
+    strictPort: true,
     host: true,
+    watch: {
+      // Prevent Vite from watching Cargo build artifacts and locking DLLs
+      ignored: ['**/src-tauri/**'],
+    },
   },
   test: {
     globals: true,
