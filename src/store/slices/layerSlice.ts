@@ -1099,8 +1099,10 @@ export const createLayerSlice = (
     const layer = findLayerInTree(activeScreen.layers, layerId);
     if (!layer) return;
 
-    if (layer.type === "shape") {
-      const shape = layer as ShapeLayer;
+    if (layer.type === "shape" || layer.type === "polygon") {
+      const shape: ShapeLayer = layer.type === "polygon"
+        ? ({ ...layer, shapeType: "polygon" } as any)
+        : (layer as ShapeLayer);
       const edges = getShapeEdges(shape);
       const isRect = !shape.shapeType || shape.shapeType === "rectangle";
       const defaultEdges = isRect
@@ -1194,8 +1196,11 @@ export const createLayerSlice = (
 
     let splitGroup: GroupLayer | null = null;
 
-    if (splitModeState.type === "shape" && targetLayer.type === "shape") {
-      const res = splitShapeByEdges(targetLayer as ShapeLayer, splitModeState.selectedEdges);
+    if (splitModeState.type === "shape" && (targetLayer.type === "shape" || targetLayer.type === "polygon")) {
+      const shape: ShapeLayer = targetLayer.type === "polygon"
+        ? ({ ...targetLayer, shapeType: "polygon" } as any)
+        : (targetLayer as ShapeLayer);
+      const res = splitShapeByEdges(shape, splitModeState.selectedEdges);
       splitGroup = res.group;
     } else if (splitModeState.type === "line" && targetLayer.type === "line") {
       if (splitModeState.detachArrowhead) {

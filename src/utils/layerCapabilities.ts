@@ -60,6 +60,18 @@ export function isFrame(layer?: Layer | null): boolean {
 }
 
 /**
+ * Checks if a layer is a 2D geometric shape (rectangle, triangle, polygon, star, circle, path).
+ */
+export function isShapeLayer(layer?: Layer | null): boolean {
+  if (!layer) return false;
+  return (
+    layer.type === "polygon" ||
+    (layer.type === "shape" &&
+      !["line", "arrow"].includes((layer as any).shapeType))
+  );
+}
+
+/**
  * Physical form check: Does this layer have 2D rectangular corners that can be rounded?
  * - True: Rectangles, Frames, Images, Videos, or Text with background card.
  * - False: 1D Lines, Arrows, Circles (100% fixed), Stars, Polygons, Icons.

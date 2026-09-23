@@ -1,4 +1,4 @@
-import { ShapeLayer } from "@/types/scene";
+import { ShapeLayer, PolygonLayer } from "@/types/scene";
 
 export interface ShapeEdge {
   id: string;
@@ -17,13 +17,13 @@ export interface ShapeEdge {
  * - star: 2*points sides based on layer.points and innerRadiusRatio
  * - circle/ellipse: 4 quadrant arcs
  */
-export function getShapeEdges(layer: ShapeLayer): ShapeEdge[] {
+export function getShapeEdges(layer: ShapeLayer | PolygonLayer | any): ShapeEdge[] {
   const widthNum = typeof layer.style.width === "number" ? layer.style.width : 200;
   const heightNum = typeof layer.style.height === "number" ? layer.style.height : 150;
   const W = widthNum;
   const H = heightNum;
 
-  const shapeType = layer.shapeType || "rectangle";
+  const shapeType = layer.shapeType || (layer.type === "polygon" ? "polygon" : "rectangle");
 
   // For shapes rendered with viewBox="0 0 100 100" (triangle, polygon, star):
   // SVG scales uniformly via xMidYMid meet:

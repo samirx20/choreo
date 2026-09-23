@@ -2,7 +2,7 @@ import React from "react";
 import { ContextMenuItem } from "@/store/useContextMenuStore";
 import { ProjectStoreState } from "@/store/useProjectStore";
 import { AnimationClip, Layer } from "@/types/scene";
-import { isVectorLine } from "@/utils/layerCapabilities";
+import { isVectorLine, isShapeLayer } from "@/utils/layerCapabilities";
 import {
   Scissors,
   Copy,
@@ -332,7 +332,7 @@ export function buildCanvasElementMenu(params: {
         divider: true,
       }
     );
-  } else if (layer.type === "shape") {
+  } else if (isShapeLayer(layer)) {
     items.push(
       {
         id: "enter-split-mode",

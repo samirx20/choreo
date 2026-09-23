@@ -1269,9 +1269,9 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         )}
 
         {/* Interactive Split Mode Overlays */}
-        {splitTargetLayer && splitTargetLayer.type === "shape" && (
+        {splitTargetLayer && (splitTargetLayer.type === "shape" || splitTargetLayer.type === "polygon") && (
           <ShapeSplitOverlay
-            layer={splitTargetLayer as any}
+            layer={(splitTargetLayer.type === "polygon" ? { ...splitTargetLayer, shapeType: "polygon" } : splitTargetLayer) as any}
             canvasWidth={activeScreen.width ?? doc.settings.width}
             canvasHeight={activeScreen.height ?? doc.settings.height}
             effectiveScale={effectiveScale}

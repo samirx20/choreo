@@ -185,6 +185,42 @@ describe("Interactive Split Mode & Locked Compound Entities", () => {
       expect(p2.shapeType).toBe("path");
     });
 
+    it("enters split mode on PolygonLayer (type: 'polygon') with N actual edges and splits into 2 complementary paths", () => {
+      const polygonLayer = {
+        id: "poly-hex-1",
+        name: "Hexagon",
+        type: "polygon" as const,
+        sides: 6,
+        style: { x: 80, y: 80, width: 300, height: 300, borderWidth: 2, borderColor: "#3b82f6", rotation: 0, opacity: 1 },
+      };
+
+      useProjectStore.getState().addLayer(polygonLayer as any);
+      useProjectStore.getState().enterSplitMode(polygonLayer.id);
+
+      const splitState = useProjectStore.getState().splitModeState;
+      expect(splitState).not.toBeNull();
+      expect(splitState?.type).toBe("shape");
+      // 6-sided polygon has 6 edges (edge-0..edge-5), default selection selects 3 (floor(6/2))
+      expect(splitState?.selectedEdges).toEqual(["edge-0", "edge-1", "edge-2"]);
+
+      // Toggle edge-3 on
+      useProjectStore.getState().toggleSplitEdge("edge-3");
+      expect(useProjectStore.getState().splitModeState?.selectedEdges).toEqual(["edge-0", "edge-1", "edge-2", "edge-3"]);
+
+      useProjectStore.getState().confirmSplit();
+
+      expect(useProjectStore.getState().splitModeState).toBeNull();
+      const screen = useProjectStore.getState().document.screens[0];
+      const splitGroup = screen.layers.find((l) => (l as any).isCompound) as any;
+      expect(splitGroup).toBeDefined();
+      expect(splitGroup.children).toHaveLength(2);
+      const [p1, p2] = splitGroup.children;
+      expect(p1.shapeType).toBe("path");
+      expect(p2.shapeType).toBe("path");
+      expect(p1.d).toContain("M ");
+      expect(p2.d).toContain("M ");
+    });
+
     it("preserves uniform 1:1 aspect ratio and centering on non-square Star (W != H)", () => {
       const wideStar: ShapeLayer = {
         id: "star-wide",

@@ -1535,8 +1535,8 @@ The engine provides first-class, motion-first reactive primitives for each eleme
      - Applied uniform $S = \min(W, H)/100$ scale and centering offsets ($offsetX, offsetY$) matching SVG `viewBox="0 0 100 100"` (`xMidYMid meet`), preventing distortion or skew on non-square shapes.
      - Formulated closed-loop corner junctions ($J_0, J_1, J_2, J_3$) ensuring zero missing corner arcs and 0.0000px gap.
 * **Verification**:
-  * 10 dedicated tests in `src/test/interactive_split_mode.test.ts`.
-  * All 42 test suites (392 tests) pass cleanly (`npm test`).
+  * 11 dedicated tests in `src/test/interactive_split_mode.test.ts` (including `PolygonLayer` 6-sided hexagon interactive edge selection and complementary path splitting).
+  * All 42 test suites (393 tests) pass cleanly (`npm test`).
   * Production build passes with 0 errors (`npm run build`).
 
 
