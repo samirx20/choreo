@@ -62,6 +62,10 @@ export function evaluateClipDelta(
       d.opacity = type === "out" ? 1 : 0;
       return d;
     }
+    if (preset === "morphIn" || (preset === "morph" && type === "in")) {
+      d.opacity = 0;
+      return d;
+    }
     if (type === "in") {
       if (preset.startsWith("custom_")) {
         const preDelta = applyCustomPresetDelta(clip, 0, d);
@@ -153,6 +157,30 @@ export function evaluateClipDelta(
   if (preset === "dashFlow") {
     d.trimOffset = Math.round(progress * 100);
     d.opacity = 1;
+    return d;
+  }
+
+  if (preset === "morph") {
+    if (type === "out") {
+      d.opacity = Math.max(0, 1 - progress);
+      d.scaleX = 1 - progress * 0.08;
+      d.scaleY = 1 - progress * 0.08;
+      d.blur = progress * 3;
+      return d;
+    } else {
+      d.opacity = Math.min(1, progress);
+      d.scaleX = 0.95 + progress * 0.05;
+      d.scaleY = 0.95 + progress * 0.05;
+      d.blur = (1 - progress) * 3;
+      return d;
+    }
+  }
+
+  if (preset === "morphIn") {
+    d.opacity = Math.min(1, progress);
+    d.scaleX = 0.95 + progress * 0.05;
+    d.scaleY = 0.95 + progress * 0.05;
+    d.blur = (1 - progress) * 3;
     return d;
   }
 

@@ -29,9 +29,13 @@ import {
   CornerUpRight,
   Square,
   Sparkles,
+  Check,
+  Type,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Layer, AnimationClip } from "@/types/scene";
-import { useProjectStore } from "@/store/useProjectStore";
+import { useProjectStore, findLayerInTree } from "@/store/useProjectStore";
+import { MorphStyle, MorphParticleShape } from "@/types/animation";
 import { ScrubbableInput } from "@/components/ui/scrubbable-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ColorPicker } from "@/components/ui/color-picker";
@@ -75,6 +79,20 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
   const [clipNameInput, setClipNameInput] = useState(selectedClip.name || selectedClip.preset);
 
   const isTextLayer = clipLayer.type === "text" || clipLayer.type === "chunk";
+
+  const doc = useProjectStore((s) => s.document);
+  const activeScreenId = useProjectStore((s) => s.activeScreenId);
+  const activeScreen = doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
+  const candidateLayers = (activeScreen?.layers || []).filter((l) => l.id !== clipLayer.id);
+
+  const targetLayer = selectedClip.params?.targetLayerId
+    ? findLayerInTree(activeScreen?.layers || [], selectedClip.params.targetLayerId)
+    : null;
+
+  const currentMorphStyle: MorphStyle = selectedClip.params?.morphStyle || "stardust";
+  const currentParticleCount: number = selectedClip.params?.particleCount ?? 80;
+  const currentChaos: number = selectedClip.params?.chaos ?? 30;
+  const currentParticleShape: MorphParticleShape = selectedClip.params?.particleShape || "star";
 
   // Helpers for Initial value (From) and To value bindings
   const hasInitialValue = (key: string): boolean => {
@@ -184,7 +202,11 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
 
   const isMorphBased =
     selectedClip.preset === "custom_morph" ||
+    selectedClip.preset === "morph" ||
+    selectedClip.preset === "morphIn" ||
     selectedClip.params?.morphAmount !== undefined;
+
+  const isCrossMorph = selectedClip.preset === "morph" || selectedClip.preset === "morphIn";
 
   const isStrokeBased =
     selectedClip.preset === "custom_stroke" ||
@@ -1317,8 +1339,194 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
         </div>
       )}
 
-      {/* Morph */}
-      {isMorphBased && (
+      {/* Cross-Element Morph Transition Properties */}
+      {isCrossMorph && (
+        <div className="space-y-3 py-3 border-b border-border/60">
+          {/* Target Element */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] text-muted-foreground font-medium">Target Element</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-[11px] font-bold text-[#6d28d9] hover:underline cursor-pointer"
+                  >
+                    Change
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  {candidateLayers.map((l) => {
+                    const lTitle =
+                      l.name ||
+                      (l.type === "text" && (l as any).text
+                        ? (l as any).text.slice(0, 18)
+                        : l.type.charAt(0).toUpperCase() + l.type.slice(1));
+                    const isCurrent = l.id === selectedClip.params?.targetLayerId;
+                    return (
+                      <DropdownMenuItem
+                        key={l.id}
+                        onClick={() =>
+                          updateAnimationClip(clipLayer.id, selectedClip.id, {
+                            params: { ...selectedClip.params, targetLayerId: l.id },
+                          })
+                        }
+                        className="flex items-center justify-between text-xs cursor-pointer"
+                      >
+                        <span className="truncate">{lTitle}</span>
+                        {isCurrent && <Check className="w-3.5 h-3.5 text-[#6d28d9]" />}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="p-2 rounded-lg bg-[#f8f8fa] border border-[#e5e5e7] flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-6 h-6 rounded bg-white shadow-2xs flex items-center justify-center text-[#7c3aed] shrink-0">
+                  <Shapes className="w-3.5 h-3.5" />
+                </div>
+                <span className="text-xs font-semibold text-[#18181b] truncate">
+                  {targetLayer
+                    ? targetLayer.name ||
+                      (targetLayer.type === "text" && (targetLayer as any).text
+                        ? (targetLayer as any).text.slice(0, 20)
+                        : targetLayer.type.charAt(0).toUpperCase() + targetLayer.type.slice(1))
+                    : "No target selected"}
+                </span>
+              </div>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">
+                {targetLayer?.type || "none"}
+              </span>
+            </div>
+          </div>
+
+          {/* Morph Effect Style */}
+          <div className="space-y-1.5">
+            <span className="text-[13px] text-muted-foreground font-medium">Effect Style</span>
+            <div className="grid grid-cols-3 gap-1 bg-[#ebebef] p-1 rounded-lg">
+              {(
+                [
+                  { id: "stardust", label: "✦ Stardust" },
+                  { id: "liquid", label: "💧 Liquid" },
+                  { id: "voronoi", label: "💎 Voronoi" },
+                  { id: "laser", label: "⚡ Laser" },
+                  { id: "singularity", label: "🌀 Singularity" },
+                  { id: "spline", label: "〰️ Spline" },
+                ] as const
+              ).map((style) => (
+                <button
+                  key={style.id}
+                  type="button"
+                  onClick={() =>
+                    updateAnimationClip(clipLayer.id, selectedClip.id, {
+                      params: { ...selectedClip.params, morphStyle: style.id },
+                    })
+                  }
+                  className={cn(
+                    "py-1.5 text-[10px] font-bold rounded-md transition-all text-center flex items-center justify-center cursor-pointer",
+                    currentMorphStyle === style.id
+                      ? "bg-white text-[#18181b] shadow-xs"
+                      : "text-[#71717a] hover:text-[#18181b]"
+                  )}
+                >
+                  {style.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Particle Density */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[13px] text-muted-foreground font-medium">Particle Count</span>
+              <span className="text-xs font-mono font-medium text-foreground">{currentParticleCount}</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1 bg-[#ebebef] p-1 rounded-lg">
+              {[
+                { count: 40, label: "Light (40)" },
+                { count: 80, label: "Medium (80)" },
+                { count: 160, label: "Dense (160)" },
+              ].map((opt) => (
+                <button
+                  key={opt.count}
+                  type="button"
+                  onClick={() =>
+                    updateAnimationClip(clipLayer.id, selectedClip.id, {
+                      params: { ...selectedClip.params, particleCount: opt.count },
+                    })
+                  }
+                  className={cn(
+                    "py-1 text-[10px] font-bold rounded-md transition-all text-center flex items-center justify-center cursor-pointer",
+                    currentParticleCount === opt.count
+                      ? "bg-white text-[#18181b] shadow-xs"
+                      : "text-[#71717a] hover:text-[#18181b]"
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Turbulence / Chaos */}
+          <div className="py-1 flex items-center justify-between">
+            <span className="text-[13px] text-muted-foreground font-medium">Turbulence</span>
+            <div className="w-24">
+              <ScrubbableInput
+                label=""
+                unit="%"
+                value={currentChaos}
+                min={0}
+                max={100}
+                step={5}
+                decimals={0}
+                onChange={(val) =>
+                  updateAnimationClip(clipLayer.id, selectedClip.id, {
+                    params: { ...selectedClip.params, chaos: val },
+                  })
+                }
+              />
+            </div>
+          </div>
+
+          {/* Particle Shape */}
+          <div className="space-y-1.5">
+            <span className="text-[13px] text-muted-foreground font-medium">Particle Shape</span>
+            <div className="grid grid-cols-3 gap-1 bg-[#ebebef] p-1 rounded-lg">
+              {(
+                [
+                  { id: "star", label: "Stars" },
+                  { id: "dot", label: "Dots" },
+                  { id: "square", label: "Squares" },
+                ] as const
+              ).map((shape) => (
+                <button
+                  key={shape.id}
+                  type="button"
+                  onClick={() =>
+                    updateAnimationClip(clipLayer.id, selectedClip.id, {
+                      params: { ...selectedClip.params, particleShape: shape.id },
+                    })
+                  }
+                  className={cn(
+                    "py-1 text-[10px] font-bold rounded-md transition-all text-center flex items-center justify-center cursor-pointer",
+                    currentParticleShape === shape.id
+                      ? "bg-white text-[#18181b] shadow-xs"
+                      : "text-[#71717a] hover:text-[#18181b]"
+                  )}
+                >
+                  {shape.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Morph (Custom Property) */}
+      {!isCrossMorph && isMorphBased && (
         <div className="py-3 flex items-center justify-between border-b border-border/60">
           <span className="text-[13px] text-muted-foreground font-medium">Morph Amount</span>
           <div className="w-24">

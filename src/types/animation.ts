@@ -68,7 +68,29 @@ export type AnimationPreset =
   | 'iconPop'
   | 'stampSettle'
   | 'wiggle'
-  | 'heartbeat';
+  | 'heartbeat'
+  | 'morph'
+  | 'morphIn';
+
+export type MorphStyle =
+  | 'stardust'
+  | 'liquid'
+  | 'voronoi'
+  | 'laser'
+  | 'singularity'
+  | 'spline';
+
+export type MorphParticleShape = 'star' | 'dot' | 'square';
+
+export interface MorphClipParams {
+  targetLayerId?: string;
+  sourceLayerId?: string;
+  morphStyle?: MorphStyle;
+  particleCount?: number;
+  chaos?: number;
+  particleShape?: MorphParticleShape;
+  colorBlend?: boolean;
+}
 
 export interface BezierCurve {
   points: [number, number, number, number]; // [x1, y1, x2, y2]

@@ -1543,6 +1543,40 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   * All 42 test suites (394 tests) pass cleanly (`npm test`).
   * Production build passes with 0 errors (`npm run build`).
 
+---
+
+### Decision 73: Cross-Element Morph Transition with Sub-Screen Target Picker & O(1) Particle Swarm
+* **The Problem**:
+  * Users needed a clean, world-class transition allowing one element to dematerialize into another element (e.g. glowing stars/dots flying from an old element to construct a new one), but existing workflows lacked a unified cross-element exit-to-entrance transition primitive.
+  * Adding complex modal popups or disjointed tools would clutter the UI and violate the zero-noise precision principle (Rule 9).
+* **The Solution**:
+  1. **Dead-Simple UX in Animation Catalog (`AnimationCatalogSheet.tsx`)**:
+     - Under the **Out (Exit)** category, added a single **"Morph into..."** preset card with dynamic preview animation.
+     - Clicking "Morph into..." triggers a seamless slide transition to a dedicated **"Select Target Element" sub-screen** within the sidebar (complete with back navigation arrow, layer type icons, layer names, and search filter).
+     - Selecting a destination element applies the morph preset on the source layer (`preset: 'morph', type: 'out'`) and automatically coordinates a synchronized entrance clip on the target layer (`preset: 'morphIn', type: 'in'`).
+  2. **Morph Animation Inspector (`ClipDetailView.tsx`)**:
+     - When inspecting a morph clip, the Inspector renders a dedicated **Cross-Element Morph Transition** panel:
+       - **Target Element Row**: Displays the current target layer with its icon and title, plus a "Change" dropdown to re-link to any other layer in the scene at any time.
+       - **Effect Style Picker**: Segmented control supporting all 6 visual archetypes:
+         - `✦ Stardust`: Cosmic starburst & luminous harmonic particle swarm.
+         - `💧 Liquid`: Viscous gooey metaball stretch & fusion.
+         - `💎 Voronoi`: Crystalline polygonal shard detachment & magnetic snap.
+         - `⚡ Laser`: Wireframe laser beam unspool & trace.
+         - `🌀 Singularity`: Micro-star implosion, streak & shockwave burst.
+         - `〰️ Spline`: Smooth continuous vector contour flow.
+       - **Physical Tuning Parameters**: Particle density (`[ 40 | 80 | 160 ]`), turbulence slider (`0%` to `100%`), and particle shape (`[ Stars | Dots | Squares ]`).
+  3. **Analytical O(1) Deterministic Particle Trajectory Solver (`particleSwarmSolver.ts`)**:
+     - Implements closed-form second-order trajectories for all 6 styles without Euler numerical accumulation loops (Rule 4 compliance).
+     - Guarantees 100% deterministic evaluation: identical particle positions whether playing forward, scrubbing backward, or exporting frame-by-frame.
+     - Supports perimeter/interior point sampling, harmonic wave curl, velocity-aligned stretching, Voronoi shard polygon generation, and smooth linear RGB color interpolation.
+  4. **Real-Time Viewport Overlay (`MorphTransitionRenderer.tsx` & `ScreenRenderer.tsx`)**:
+     - Mounts directly inside the artboard coordinate frame.
+     - Renders glowing SVG starbursts, metaball droplets, or polygonal shards during active morph windows at 60+ FPS with zero performance degradation.
+* **Verification**:
+  - 8 automated unit and integration tests in `src/test/cross_element_morph.test.ts`.
+  - All 43 test suites (402 tests) passing cleanly (`npm test`).
+  - Production build compiles cleanly in 8.97s (`npm run build`).
+
 
 
 

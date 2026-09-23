@@ -252,6 +252,8 @@ export const createAnimationSlice = (
       staggerDelay: clipData.staggerDelay,
       loop: clipData.loop,
       loopCount: clipData.loopCount,
+      params: clipData.params,
+      from: clipData.from,
     };
 
     const nextClips = [...currentClips, newClip].sort((a, b) => a.start - b.start);
@@ -538,6 +540,7 @@ export const createAnimationSlice = (
         duration: preset.duration,
         easing: preset.easing as any,
         loop: preset.params?.loop ?? false,
+        params: { ...(preset.params || {}) },
         ...(preset.params || {}),
       });
       set({
@@ -556,8 +559,27 @@ export const createAnimationSlice = (
       duration: preset.duration,
       easing: preset.easing as any,
       loop: preset.params?.loop ?? false,
+      params: { ...(preset.params || {}) },
       ...(preset.params || {}),
     });
+
+    // If applying a morph exit clip and a targetLayerId is provided,
+    // automatically attach a coordinated morphIn entrance clip to the target element!
+    if (preset.id === "morph" && preset.params?.targetLayerId) {
+      const targetId = preset.params.targetLayerId;
+      state.addAnimationClip(targetId, {
+        name: "Morph In",
+        type: "in",
+        preset: "morphIn",
+        start: playheadTime,
+        duration: preset.duration,
+        easing: preset.easing as any,
+        params: {
+          sourceLayerId: layerId,
+          morphStyle: preset.params.morphStyle || "stardust",
+        },
+      });
+    }
 
     set({
       animationCatalogState: { isOpen: false, selectedClipId: null },

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Screen, ProjectSettings } from "@/types/scene";
 import { LayerRenderer } from "./LayerRenderer";
+import { MorphTransitionRenderer } from "./MorphTransitionRenderer";
 import { SafeZoneOverlay } from "../SafeZoneOverlay";
 import { Play, Sparkles, MoreHorizontal } from "lucide-react";
 import { useContextMenuStore } from "@/store/useContextMenuStore";
@@ -35,6 +36,7 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
   isPanMode = false,
 }) => {
   const updateScreen = useProjectStore((s) => s.updateScreen);
+  const currentTime = useProjectStore((s) => s.currentTime);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(screen.name);
 
@@ -245,6 +247,14 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
             onSelectLayer={onSelectLayer}
           />
         ))}
+
+        {/* Real-time Cross-Element Morph Particle Swarm Overlay */}
+        <MorphTransitionRenderer
+          layers={screen.layers}
+          currentTime={currentTime}
+          width={width}
+          height={height}
+        />
 
         {/* Safe Zone Overlay */}
         {settings.safeZones && (

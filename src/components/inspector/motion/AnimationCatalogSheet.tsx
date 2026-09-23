@@ -38,6 +38,22 @@ import {
   generateStarPoints,
   generatePolygonPoints,
 } from "@/components/canvas/renderers/ShapeRenderer";
+import { useProjectStore } from "@/store/useProjectStore";
+
+function getLayerIcon(layer: Layer) {
+  if (layer.type === "text" || layer.type === "chunk") return Type;
+  if (layer.type === "image" || layer.type === "video") return ImageIcon;
+  if (layer.type === "line") return CornerUpRight;
+  if (layer.type === "shape" || layer.type === "polygon") {
+    const st = (layer as any).shapeType;
+    if (st === "circle") return CircleDot;
+    if (st === "star") return Sparkles;
+    if (st === "polygon" || layer.type === "polygon") return Shapes;
+    if (st === "arrow") return CornerUpRight;
+    return Square;
+  }
+  return Square;
+}
 
 export interface AnimationCatalogPreset {
   id: string;
@@ -138,6 +154,7 @@ export const LINE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
 ];
 
 export const EXIT_PRESETS: AnimationCatalogPreset[] = [
+  { id: "morph", name: "Morph into...", duration: 0.8, easing: "smooth", type: "out", desc: "Dematerializes and reconstructs into another element" },
   { id: "fade", name: "Fade Out", duration: 0.8, easing: "smooth", type: "out", desc: "Smooth dissolve to transparent" },
   { id: "slide", name: "Slide Out", duration: 0.8, easing: "snappy", type: "out", desc: "Directional exit trajectory", params: { direction: "down", distance: 60 } },
   { id: "pop", name: "Pop Out", duration: 0.6, easing: "snappy", type: "out", desc: "Snappy shrink to zero" },
@@ -766,6 +783,7 @@ const AnimationCard: React.FC<{
       case "custom_opacity": return "anim-preview-fade";
       case "custom_color": return "anim-preview-color";
       case "custom_radius": return "anim-preview-radius";
+      case "morph": return "anim-preview-morph";
       default: return "anim-preview-pop";
     }
   };
@@ -918,6 +936,33 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
 
   const isText = targetLayer?.type === "text" || targetLayer?.type === "chunk";
 
+  const [subScreen, setSubScreen] = useState<"catalog" | "select-morph-target">("catalog");
+  const [morphSearch, setMorphSearch] = useState("");
+
+  const doc = useProjectStore((s) => s.document);
+  const activeScreenId = useProjectStore((s) => s.activeScreenId);
+  const activeScreen = doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
+  const candidateLayers = useMemo(() => {
+    if (!activeScreen) return [];
+    return activeScreen.layers.filter((l) => l.id !== targetLayer?.id);
+  }, [activeScreen, targetLayer?.id]);
+
+  const filteredCandidates = useMemo(() => {
+    if (!morphSearch.trim()) return candidateLayers;
+    const q = morphSearch.toLowerCase();
+    return candidateLayers.filter((l) =>
+      (l.name || l.type || "").toLowerCase().includes(q)
+    );
+  }, [candidateLayers, morphSearch]);
+
+  const handleCardClick = (preset: AnimationCatalogPreset) => {
+    if (preset.id === "morph") {
+      setSubScreen("select-morph-target");
+      return;
+    }
+    onApplyPreset(preset);
+  };
+
   // Current clip lookup to support pre-selection & clean replacement
   const currentClip = targetLayer && selectedClipId
     ? getLayerClips(targetLayer).find((c) => c.id === selectedClipId)
@@ -926,6 +971,8 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
   // Auto-sync tab and category when opened to change an existing clip
   useEffect(() => {
     if (!isOpen) return;
+    setSubScreen("catalog");
+    setMorphSearch("");
     if (!currentClip) {
       setActiveTab("PRESETS");
       setFilterCategory("all");
@@ -989,6 +1036,118 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
   const filteredCustomCategories = useMemo(() => {
     return getFilteredCustomCategories(targetLayer);
   }, [targetLayer]);
+
+  if (subScreen === "select-morph-target") {
+    return (
+      <div
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        className="absolute inset-0 z-40 bg-white flex flex-col select-none text-[#18181b] shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
+      >
+        {/* Header */}
+        <div className="h-12 px-3 border-b border-[#e5e5e7] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setSubScreen("catalog")}
+              className="p-1 rounded-md text-[#71717a] hover:text-[#18181b] hover:bg-[#f4f4f6] transition-colors cursor-pointer"
+              title="Back to presets"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <span className="text-sm font-bold text-[#18181b]">
+              Morph Into...
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1 rounded-md text-[#71717a] hover:text-[#18181b] hover:bg-[#f4f4f6] transition-colors cursor-pointer"
+            title="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-3 flex-1 flex flex-col min-h-0 overflow-y-auto">
+          <div className="text-[11px] text-[#71717a] pb-2">
+            Select the destination element to transform into:
+          </div>
+
+          {candidateLayers.length > 5 && (
+            <input
+              type="text"
+              placeholder="Search elements..."
+              value={morphSearch}
+              onChange={(e) => setMorphSearch(e.target.value)}
+              className="mb-2 px-2.5 py-1.5 text-xs bg-[#f4f4f6] border border-[#e5e5e7] rounded-md outline-none focus:border-[#6d28d9]"
+            />
+          )}
+
+          {filteredCandidates.length === 0 ? (
+            <div className="p-6 text-center text-xs text-[#71717a] bg-[#fafafc] rounded-xl border border-dashed border-[#e5e5e7] mt-2">
+              {candidateLayers.length === 0
+                ? "No other elements found in this scene. Create another element first to morph into."
+                : "No matching elements found."}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {filteredCandidates.map((layer) => {
+                const Icon = getLayerIcon(layer);
+                const layerTitle =
+                  layer.name ||
+                  (layer.type === "text" && (layer as any).text
+                    ? (layer as any).text.slice(0, 20)
+                    : layer.type.charAt(0).toUpperCase() + layer.type.slice(1));
+                return (
+                  <button
+                    key={layer.id}
+                    type="button"
+                    onClick={() => {
+                      onApplyPreset({
+                        id: "morph",
+                        name: `Morph into ${layerTitle}`,
+                        type: "out",
+                        duration: 0.8,
+                        easing: "smooth",
+                        params: {
+                          targetLayerId: layer.id,
+                          morphStyle: "stardust",
+                          particleCount: 80,
+                          chaos: 30,
+                          particleShape: "star",
+                        },
+                      });
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 rounded-lg border border-[#e5e5e7] hover:border-[#6d28d9] hover:bg-[#ede9fe]/30 transition-all text-left cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-7 h-7 rounded-md bg-[#f4f4f6] group-hover:bg-[#6d28d9]/10 flex items-center justify-center text-[#71717a] group-hover:text-[#6d28d9] transition-colors shrink-0">
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-[#18181b] truncate group-hover:text-[#6d28d9]">
+                          {layerTitle}
+                        </div>
+                        <div className="text-[10px] text-[#71717a] capitalize truncate">
+                          {layer.type}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-[10px] font-bold text-[#6d28d9] opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                      Select →
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -1100,6 +1259,12 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
         @keyframes anim-preview-circleIris { 0%, 100% { clip-path: circle(0% at 50% 50%); } 50% { clip-path: circle(75% at 50% 50%); } }
         @keyframes anim-preview-color { 0%, 100% { color: #18181b; background-color: #71717a; } 50% { color: #6d28d9; background-color: #6d28d9; } }
         @keyframes anim-preview-radius { 0%, 100% { border-radius: 2px; } 50% { border-radius: 12px; } }
+        @keyframes anim-preview-morph {
+          0% { transform: scale(1) rotate(0deg); opacity: 1; border-radius: 4px; }
+          35% { transform: scale(0.65) rotate(15deg); opacity: 0.35; border-radius: 50%; filter: blur(2px); }
+          65% { transform: scale(1.15) rotate(-10deg); opacity: 0.85; border-radius: 16px; filter: blur(0px); }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; border-radius: 4px; }
+        }
       `}</style>
 
       {/* ROW 1: Dedicated Header with Back button, Title & Close */}
@@ -1198,7 +1363,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                           targetLayer={targetLayer}
                           layerType={layerType}
                           isSelected={isPresetSelected(p)}
-                          onApply={onApplyPreset}
+                          onApply={handleCardClick}
                         />
                       ))}
                     </div>
@@ -1218,7 +1383,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                           targetLayer={targetLayer}
                           layerType={layerType}
                           isSelected={isPresetSelected(p)}
-                          onApply={onApplyPreset}
+                          onApply={handleCardClick}
                         />
                       ))}
                     </div>
@@ -1238,7 +1403,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                         targetLayer={targetLayer}
                         layerType={layerType}
                         isSelected={isPresetSelected(p)}
-                        onApply={onApplyPreset}
+                        onApply={handleCardClick}
                       />
                     ))}
                   </div>
@@ -1261,7 +1426,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                       targetLayer={targetLayer}
                       layerType={layerType}
                       isSelected={isPresetSelected(p)}
-                      onApply={onApplyPreset}
+                      onApply={handleCardClick}
                     />
                   ))}
                 </div>
@@ -1283,7 +1448,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                       targetLayer={targetLayer}
                       layerType={layerType}
                       isSelected={isPresetSelected(p)}
-                      onApply={onApplyPreset}
+                      onApply={handleCardClick}
                     />
                   ))}
                 </div>
@@ -1309,7 +1474,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => onApplyPreset(item.preset)}
+                      onClick={() => handleCardClick(item.preset)}
                       className={cn(
                         "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer group",
                         isSelected
@@ -1355,7 +1520,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                 targetLayer={targetLayer}
                 layerType={layerType}
                 isSelected={isPresetSelected(eff.preset)}
-                onApply={onApplyPreset}
+                onApply={handleCardClick}
               />
             ))}
           </div>
