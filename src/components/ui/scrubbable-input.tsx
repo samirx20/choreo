@@ -341,13 +341,13 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
           onKeyDown={handleKeyDown}
           autoFocus
           onFocus={(e) => e.target.select()}
-          className="w-full h-full bg-transparent text-[#18181b] text-xs font-mono outline-none text-center px-0 cursor-text"
+          className="w-full h-full bg-transparent text-[#18181b] dark:text-zinc-100 text-xs font-mono outline-none text-center px-0 cursor-text"
         />
       ) : (
-        <div className="w-full flex items-center justify-center text-xs text-[#18181b] tabular-nums truncate">
+        <div className="w-full flex items-center justify-center text-xs text-[#18181b] dark:text-zinc-100 tabular-nums truncate">
           <span>{displayPrecision > 0 ? numVal.toFixed(displayPrecision) : numVal}</span>
           {displaySuffix && (
-            <span className="text-[#71717a] text-[10px] ml-0.5">{displaySuffix}</span>
+            <span className="text-[#71717a] dark:text-zinc-400 text-[10px] ml-0.5">{displaySuffix}</span>
           )}
         </div>
       )}

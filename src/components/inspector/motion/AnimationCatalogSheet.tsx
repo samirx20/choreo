@@ -1462,8 +1462,8 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
       {activeTab === "CUSTOM" && (
         <div className="flex-1 overflow-y-auto p-3 space-y-4">
           {filteredCustomCategories.map((section, sIdx) => (
-            <div key={section.category} className={cn(sIdx > 0 && "border-t border-[#e5e5e7] pt-3")}>
-              <h3 className="text-[13px] font-bold text-[#18181b] tracking-tight px-2 pb-1.5">
+            <div key={section.category} className={cn(sIdx > 0 && "border-t border-[#e5e5e7] dark:border-zinc-800 pt-3")}>
+              <h3 className="text-[13px] font-bold text-[#18181b] dark:text-zinc-100 tracking-tight px-2 pb-1.5">
                 {section.category}
               </h3>
               <div className="space-y-0.5">
