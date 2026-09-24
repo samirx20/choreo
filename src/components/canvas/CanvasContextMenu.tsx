@@ -51,9 +51,7 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
     addLayer,
     groupSelection,
     ungroup,
-    decomposeVectorGroup,
     applyBooleanOperation,
-    flattenSelection,
     maskSelection,
     useAsMask,
     unmaskGroup,
@@ -249,46 +247,19 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
 
       {/* Group / Ungroup */}
       {isGroup ? (
-        <>
-          <button
-            onClick={() => {
-              ungroup(layer.id);
-              onClose();
-            }}
-            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
-          >
-            <span className="flex items-center gap-2">
-              <Folder className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Ungroup</span>
-            </span>
-            <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+Shift+G</kbd>
-          </button>
-          <button
-            onClick={() => {
-              decomposeVectorGroup(layer.id);
-              onClose();
-            }}
-            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
-          >
-            <span className="flex items-center gap-2">
-              <Split className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Decompose Vector Paths</span>
-            </span>
-          </button>
-          <button
-            onClick={() => {
-              flattenSelection();
-              onClose();
-            }}
-            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
-          >
-            <span className="flex items-center gap-2">
-              <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Flatten to Vector Path</span>
-            </span>
-            <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+E</kbd>
-          </button>
-        </>
+        <button
+          onClick={() => {
+            ungroup(layer.id);
+            onClose();
+          }}
+          className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+        >
+          <span className="flex items-center gap-2">
+            <Folder className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>Ungroup</span>
+          </span>
+          <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+Shift+G</kbd>
+        </button>
       ) : (
         <button
           onClick={() => {

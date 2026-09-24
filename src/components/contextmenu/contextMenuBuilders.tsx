@@ -21,6 +21,7 @@ import {
   MoveHorizontal,
   CircleDashed,
   ListOrdered,
+  Folder,
 } from "lucide-react";
 import { findParentGroupInTree } from "@/store/helpers/treeHelpers";
 
@@ -354,19 +355,11 @@ export function buildCanvasElementMenu(params: {
   } else if (layer.type === "group" || layer.type === "frame") {
     items.push(
       {
-        id: "decompose-vector-group",
-        label: "Decompose Vector Paths",
-        action: () => store.decomposeVectorGroup(layer.id),
-      },
-      {
-        id: "flatten-selection",
-        label: "Flatten to Vector Path",
-        action: () => store.flattenSelection(),
-      },
-      {
-        id: "detach-group-absolute",
-        label: "Detach to Canvas Layers",
-        action: () => store.detachGroupToAbsolute(layer.id),
+        id: "ungroup",
+        label: "Ungroup",
+        icon: <Folder className="w-3.5 h-3.5" />,
+        shortcut: "Ctrl+Shift+G",
+        action: () => store.ungroup(layer.id),
       },
       {
         id: "divider-group-specific",

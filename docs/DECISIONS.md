@@ -1944,4 +1944,23 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - 17 automated tests in `src/test/interactive_split_mode.test.ts` verifying outliner sub-element selection, parent group unlocking, and independent property customization.
   - All 51 test suites (459 tests) passing; clean production build.
 
+---
+
+### Decision 86: Group Context Menu Distillation & Removal of Redundant Vector/Canvas Layer Clutter
+* **Context & Rationale**:
+  - Right-clicking any group or split compound element previously displayed three confusing, redundant options: *"Decompose Vector Paths"*, *"Flatten to Vector Path"*, and *"Detach to Canvas Layers"*.
+  - *"Detach to Canvas Layers"* was completely redundant with standard *"Ungroup"* (`Ctrl+Shift+G`).
+  - *"Flatten to Vector Path"* only works on Boolean operation groups, and is already prominently available in the right-sidebar Inspector under the Boolean card.
+  - *"Decompose Vector Paths"* only applies to niche multi-path imported SVGs, and was confusing visual noise on ordinary groups and split paths.
+* **Architectural Decisions & Implementation**:
+  1. **Purged Redundant Group Actions (`contextMenuBuilders.tsx`, `CanvasContextMenu.tsx`)**:
+     - Removed *"Decompose Vector Paths"*, *"Flatten to Vector Path"*, and *"Detach to Canvas Layers"* from generic group context menus.
+     - Group context menus now cleanly display standard **Ungroup** (`Ctrl+Shift+G`) when a group is selected, and **Group Selection** (`Ctrl+G`) when multiple elements are selected.
+  2. **Domain-Specific Scoping**:
+     - Vector flattening remains strictly inside `SpecializedLayerCard.tsx` when an actual Boolean group is active.
+* **Verification**:
+  - All 51 test suites (459 tests) passing.
+  - Clean production build (`npm run build`).
+
+
 
