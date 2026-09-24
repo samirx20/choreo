@@ -2400,6 +2400,27 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - Production build (`npm run build`) compiles with zero TypeScript errors or bundle warnings.
   - Stdio MCP server verified with automated JSON-RPC handshake (`initialize`, `tools/list`, and `tools/call`).
 
+---
+
+### Decision 104: Native Desktop Packaging with Tauri v2 (Frameless Window, Window Capabilities, and Ultra-Compact Installers)
+* **Context & Motivation**:
+  - Motion Studio is designed as a standalone, native desktop creative suite for Windows, macOS, and Linux.
+  - To support the custom `DesktopTitleBar` (with MCP toggle and agent setup popover), the desktop window requires `"decorations": false` and explicit Tauri v2 window management capabilities (`core:window:default`) to grant frontend JavaScript authority to minimize, toggle-maximize, and close the OS window.
+* **The Solution**:
+  1. **Window Decorator & Capabilities Alignment**:
+     - Configured `tauri.conf.json` with `"decorations": false`, allowing the custom `DesktopTitleBar` and `data-tauri-drag-region` to act as the primary OS window chrome.
+     - Added `"core:window:default"` to `src-tauri/capabilities/default.json` enabling secure IPC window minimization, maximization, and close operations.
+  2. **Native Packaging**:
+     - Executed `npm run desktop:build` (`tauri build`).
+     - Compiled the release Rust core in 1m 20s with full Link-Time Optimization (LTO).
+     - Generated two Windows distribution bundles in `src-tauri/target/release/bundle/`:
+       - **NSIS Setup Installer**: `Motion Studio_0.1.0_x64-setup.exe` (2.7 MB).
+       - **WiX MSI Installer**: `Motion Studio_0.1.0_x64_en-US.msi` (3.9 MB).
+       - **Standalone Binary**: `src-tauri/target/release/app.exe`.
+* **Verification**:
+  - Release build succeeded with exit code 0.
+  - Both native installer artifacts verified on disk with ultra-compact sizes (<4MB).
+
 
 
 
