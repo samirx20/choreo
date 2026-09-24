@@ -9,6 +9,9 @@ import {
   XCircle,
   Loader2,
   ChevronDown,
+  Volume2,
+  VolumeX,
+  Sparkles,
 } from "lucide-react";
 import { useProjectStore } from "@/store/useProjectStore";
 import { getActivePixiStage } from "@/engine/pixi/pixiRegistry";
@@ -26,8 +29,11 @@ export const ExportPopover: React.FC = () => {
   const { document: doc, activeScreenId } = useProjectStore();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [format, setFormat] = useState<"mp4" | "webm" | "gif">("mp4");
+  const [scale, setScale] = useState<number>(1);
   const [backgroundMode, setBackgroundMode] = useState<"solid" | "transparent">("solid");
   const [scopeMode, setScopeMode] = useState<"all" | "current">("all");
+  const [includeAudio, setIncludeAudio] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [progress, setProgress] = useState<VideoExportProgress | null>(null);
@@ -48,6 +54,36 @@ export const ExportPopover: React.FC = () => {
   }, [doc.screens, activeScreenId]);
 
   const activeDuration = activeScreen?.duration || doc.settings.duration || 5.0;
+
+  // Check if project has an audio track
+  const hasAudioTrack = useMemo(() => {
+    return Boolean(
+      (activeScreen?.audioTracks && activeScreen.audioTracks.length > 0) ||
+        (activeScreen as any)?.audioTrack?.src ||
+        (doc.audioTracks && doc.audioTracks.length > 0) ||
+        doc.screens.some(
+          (s) => (s.audioTracks && s.audioTracks.length > 0) || (s as any)?.audioTrack?.src
+        )
+    );
+  }, [activeScreen, doc.screens, doc.audioTracks]);
+
+  // If transparent is selected, lock format to WebM
+  const handleSelectBackground = (mode: "solid" | "transparent") => {
+    setBackgroundMode(mode);
+    if (mode === "transparent" && format === "mp4") {
+      setFormat("webm");
+    }
+  };
+
+  const handleSelectFormat = (f: "mp4" | "webm" | "gif") => {
+    setFormat(f);
+    if (f !== "webm" && backgroundMode === "transparent") {
+      setBackgroundMode("solid");
+    }
+  };
+
+  const exportWidth = Math.round((doc.settings.width || 1920) * scale);
+  const exportHeight = Math.round((doc.settings.height || 1080) * scale);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -70,15 +106,19 @@ export const ExportPopover: React.FC = () => {
         pixiStage: stage,
         screens: screensToExport,
         settings: doc.settings,
+        format,
+        scale,
         transparent: isTransparent,
+        includeAudio: includeAudio && format !== "gif",
         onProgress: (p) => setProgress(p),
       });
 
       // Generate download file
       const baseName = sanitizeProjectFileName(doc.name || "video");
       const scopeLabel = scopeMode === "all" ? "full" : "scene";
-      const bgLabel = isTransparent ? "alpha" : "render";
-      const fileName = `${baseName}_${scopeLabel}_${bgLabel}.webm`;
+      const bgLabel = isTransparent ? "alpha" : "";
+      const ext = format === "gif" ? "gif" : format === "mp4" ? "mp4" : "webm";
+      const fileName = `${baseName}_${scopeLabel}${bgLabel ? `_${bgLabel}` : ""}.${ext}`;
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -128,7 +168,7 @@ export const ExportPopover: React.FC = () => {
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-80 p-4 bg-[#141417] border border-[#27272a] text-zinc-100 rounded-xl shadow-2xl z-50 select-none"
+        className="w-88 p-4 bg-[#141417] border border-[#27272a] text-zinc-100 rounded-xl shadow-2xl z-50 select-none max-h-[90vh] overflow-y-auto"
       >
         {isExporting ? (
           /* Live Rendering Progress State */
@@ -136,7 +176,9 @@ export const ExportPopover: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
-                <span className="text-xs font-semibold text-white">Exporting Video...</span>
+                <span className="text-xs font-semibold text-white">
+                  Exporting {format.toUpperCase()}...
+                </span>
               </div>
               <span className="text-[11px] font-mono text-zinc-400">
                 {progress ? `${progress.percent}%` : "0%"}
@@ -180,12 +222,14 @@ export const ExportPopover: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-4 gap-2 text-center">
             <CheckCircle2 className="w-8 h-8 text-emerald-400 animate-in zoom-in-75 duration-200" />
             <div className="text-xs font-medium text-white">Export Complete!</div>
-            <div className="text-[11px] text-zinc-400">Video downloaded to your device</div>
+            <div className="text-[11px] text-zinc-400">
+              {format.toUpperCase()} downloaded to your device
+            </div>
           </div>
         ) : (
           /* Normal Option Controls */
-          <div className="flex flex-col gap-4">
-            {/* 1. Header & Dimensions */}
+          <div className="flex flex-col gap-3.5">
+            {/* 1. Header & Live Dimensions */}
             <div className="flex items-center justify-between border-b border-[#222226] pb-2.5">
               <div className="flex items-center gap-2">
                 <Film className="w-4 h-4 text-purple-400" />
@@ -193,12 +237,88 @@ export const ExportPopover: React.FC = () => {
                   Export Video
                 </span>
               </div>
-              <span className="text-[11px] font-mono text-zinc-400 bg-[#1c1c20] px-2 py-0.5 rounded border border-[#27272a]">
-                {doc.settings.width} × {doc.settings.height}
+              <span className="text-[11px] font-mono text-zinc-300 bg-[#1c1c20] px-2 py-0.5 rounded border border-[#27272a]">
+                {exportWidth} × {exportHeight}
               </span>
             </div>
 
-            {/* 2. Background Mode Selection */}
+            {/* 2. Format Selection (MP4 vs WebM vs GIF) */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+                Format
+              </label>
+              <div className="grid grid-cols-3 gap-1.5 p-0.5 bg-[#1a1a1e] border border-[#27272a] rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => handleSelectFormat("mp4")}
+                  className={cn(
+                    "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
+                    format === "mp4"
+                      ? "bg-[#7c3aed] text-white shadow-xs"
+                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  )}
+                  title="Universal MP4 (H.264 + Audio)"
+                >
+                  <span>MP4</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectFormat("webm")}
+                  className={cn(
+                    "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
+                    format === "webm"
+                      ? "bg-[#7c3aed] text-white shadow-xs"
+                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  )}
+                  title="WebM (VP9 + Alpha Support)"
+                >
+                  <span>WebM</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectFormat("gif")}
+                  className={cn(
+                    "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
+                    format === "gif"
+                      ? "bg-[#7c3aed] text-white shadow-xs"
+                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                  )}
+                  title="Animated GIF (Looping)"
+                >
+                  <span>GIF</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 3. Resolution / Scale */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+                Resolution Scale
+              </label>
+              <div className="grid grid-cols-3 gap-1.5 p-0.5 bg-[#1a1a1e] border border-[#27272a] rounded-lg">
+                {[
+                  { val: 0.5, label: "0.5× (Draft)" },
+                  { val: 1.0, label: "1× (1080p)" },
+                  { val: 2.0, label: "2× (4K)" },
+                ].map((item) => (
+                  <button
+                    key={item.val}
+                    type="button"
+                    onClick={() => setScale(item.val)}
+                    className={cn(
+                      "h-7 px-1.5 rounded-md text-[11px] font-medium flex items-center justify-center transition-all cursor-pointer",
+                      scale === item.val
+                        ? "bg-[#7c3aed] text-white shadow-xs"
+                        : "text-zinc-400 hover:text-white hover:bg-white/5"
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Background Mode Selection */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
                 Background
@@ -206,7 +326,7 @@ export const ExportPopover: React.FC = () => {
               <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-[#1a1a1e] border border-[#27272a] rounded-lg">
                 <button
                   type="button"
-                  onClick={() => setBackgroundMode("solid")}
+                  onClick={() => handleSelectBackground("solid")}
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     backgroundMode === "solid"
@@ -219,7 +339,7 @@ export const ExportPopover: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setBackgroundMode("transparent")}
+                  onClick={() => handleSelectBackground("transparent")}
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     backgroundMode === "transparent"
@@ -231,9 +351,14 @@ export const ExportPopover: React.FC = () => {
                   <span>Transparent</span>
                 </button>
               </div>
+              {backgroundMode === "transparent" && (
+                <p className="text-[10px] text-purple-400 font-mono text-center">
+                  Transparent alpha requires WebM format
+                </p>
+              )}
             </div>
 
-            {/* 3. Scope Selection */}
+            {/* 5. Scope Selection */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
                 Scope
@@ -250,7 +375,7 @@ export const ExportPopover: React.FC = () => {
                   )}
                 >
                   <Layers className="w-3 h-3" />
-                  <span>All Scenes ({totalDuration.toFixed(1)}s)</span>
+                  <span>All ({totalDuration.toFixed(1)}s)</span>
                 </button>
                 <button
                   type="button"
@@ -268,22 +393,52 @@ export const ExportPopover: React.FC = () => {
               </div>
             </div>
 
-            {/* 4. Format Footnote */}
-            <div className="text-[11px] text-zinc-500 font-mono text-center">
-              {backgroundMode === "transparent"
-                ? "Format: WebM (VP9 Alpha Channel)"
-                : "Format: WebM / MP4 (Full Quality)"}
+            {/* 6. Audio Track Sync Toggle (Only if audio exists and format supports audio) */}
+            {hasAudioTrack && format !== "gif" && (
+              <div className="flex items-center justify-between p-2 bg-[#1a1a1e] border border-[#27272a] rounded-lg">
+                <div className="flex items-center gap-2">
+                  {includeAudio ? (
+                    <Volume2 className="w-3.5 h-3.5 text-purple-400" />
+                  ) : (
+                    <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
+                  )}
+                  <span className="text-[11px] font-medium text-zinc-200">
+                    Audio Track Sync
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIncludeAudio(!includeAudio)}
+                  className={cn(
+                    "text-[10px] font-medium px-2 py-0.5 rounded border transition-all",
+                    includeAudio
+                      ? "bg-purple-600/20 border-purple-500 text-purple-300 font-semibold"
+                      : "bg-zinc-800 border-zinc-700 text-zinc-400"
+                  )}
+                >
+                  {includeAudio ? "Include" : "Mute"}
+                </button>
+              </div>
+            )}
+
+            {/* 7. Format Footnote */}
+            <div className="text-[10px] text-zinc-500 font-mono text-center">
+              {format === "gif"
+                ? "Animated GIF • Loops Automatically"
+                : backgroundMode === "transparent"
+                ? "WebM • VP9 with Alpha Transparency"
+                : `${format.toUpperCase()} • Full Studio Quality`}
             </div>
 
-            {/* 5. Primary Action Button */}
+            {/* 8. Primary Action Button */}
             <button
               type="button"
               onClick={handleExport}
-              className="w-full h-9 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
+              className="w-full h-9 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer active:scale-[0.98]"
             >
               <Download className="w-4 h-4" />
               <span>
-                Export {scopeMode === "all" ? "Sequence" : "Scene"}
+                Export {format.toUpperCase()} ({scopeMode === "all" ? "Sequence" : "Scene"})
               </span>
             </button>
           </div>

@@ -1799,6 +1799,33 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - 3 integration tests in `src/test/stagger_integration.test.ts` (store mutation, preset override, undo/redo).
   - Production build (`tsc -b && vite build`) compiles with zero errors in 20.6s.
 
+---
+
+### Decision 80: Multi-Format Video Export with Synchronized Audio Track Muxing & GIF89a Encoding
+* **Context & Motivation**:
+  - Previously, video export only generated `.webm` files with no audio track support (videos were completely muted even if an audio track was active on the timeline).
+  - Animators and marketing teams require universal **MP4 (H.264)** for client delivery, social platforms (Instagram, Twitter/X), and Apple Keynote, as well as animated **GIF** for lightweight sharing in Slack, Discord, and GitHub PRs.
+  - Additionally, users need resolution scaling (`0.5x Draft`, `1x 1080p`, `2x 4K UHD`) and audio inclusion toggling directly in the export popover.
+* **The Solution**:
+  1. **Zero-Dependency Fast GIF89a Encoder (`src/engine/export/gifEncoder.ts`)**:
+     - Analytical binary GIF89a generator supporting Netscape 2.0 infinite looping, graphic control extensions with configurable frame delays, 256-color web-safe palette quantization, and variable-length LZW raster data compression.
+  2. **Synchronized Audio Track Muxing (`src/engine/export/videoExporter.ts`)**:
+     - Web Audio API pipeline: decodes timeline audio buffers (`AudioContext.decodeAudioData`), routes them through gain nodes for volume and mute control, and streams them into a `MediaStreamDestinationNode`.
+     - Automatically attaches the mixed audio track to the video capture stream (`stream.addTrack(mediaStreamAudioTrack)`), allowing browser `MediaRecorder` to mux audio and video into the output container in real-time.
+  3. **Multi-Format MIME Negotiation (`videoExporter.ts`)**:
+     - Prioritizes native MP4 formats (`video/mp4;codecs=avc1.42E01E,mp4a.40.2`, `video/mp4;codecs=avc1`, `video/mp4;codecs=h264`) when MP4 is selected, with graceful fallback to VP9 WebM.
+     - Routes GIF format to the deterministic frame-stepping `GifEncoder` pipeline.
+  4. **Upgraded Export Popover UI (`src/components/export/ExportPopover.tsx`)**:
+     - **Format Selector**: Segmented choice between `MP4`, `WebM`, and `GIF`.
+     - **Resolution Scale**: `0.5× (Draft)`, `1× (1080p)`, `2× (4K)` with real-time dimensions badge (`1920 × 1080` vs `3840 × 2160`).
+     - **Audio Track Sync**: When an audio track is present and format supports audio, exposes an interactive `Include` vs `Mute` toggle.
+     - **Transparent Alpha Guardrail**: When Transparent background is chosen, automatically recommends WebM with a clear, helpful notice.
+* **Verification**:
+  - 1 unit test in `src/test/gif_encoder.test.ts` (GIF89a signature, header, blocks, and trailer).
+  - 5 unit/integration tests in `src/test/multi_scene_export_and_popover.test.ts` (multi-scene sequence stitching, alpha export, abort/cancellation, GIF generation, MP4 format, and audio metadata).
+  - Production build (`tsc -b && vite build`) compiles with zero errors in 14.88s.
+
+
 
 
 

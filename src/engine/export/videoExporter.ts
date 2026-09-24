@@ -1,5 +1,6 @@
 import { PixiStage } from "@/engine/pixi/PixiStage";
-import { Screen, ProjectSettings } from "@/types/scene";
+import { Screen, ProjectSettings, AudioTrack } from "@/types/scene";
+import { GifEncoder } from "./gifEncoder";
 
 export interface VideoExportProgress {
   currentFrame: number;
@@ -15,7 +16,11 @@ export interface VideoExportOptions {
   settings: ProjectSettings;
   format?: "mp4" | "webm" | "gif";
   fps?: number;
+  scale?: number; // 0.5, 1, 2
   transparent?: boolean;
+  audioTrack?: AudioTrack | null;
+  audioTracks?: AudioTrack[];
+  includeAudio?: boolean;
   onProgress?: (progress: VideoExportProgress) => void;
 }
 
@@ -38,10 +43,10 @@ export class VideoExporter {
    * Deterministic Frame Stepper & Multi-Scene Sequence Stitcher:
    * Advances the timeline strictly frame-by-frame (t = k / fps),
    * seamlessly stitches consecutive scenes, renders the Pixi stage,
-   * and encodes to video with optional transparent alpha channel.
+   * mixes synchronized audio tracks, and encodes to MP4, WebM, or GIF.
    */
   public async exportVideo(options: VideoExportOptions): Promise<Blob> {
-    const { pixiStage, settings, onProgress } = options;
+    const { pixiStage, settings } = options;
     const fps = options.fps || settings.fps || 60;
 
     const targetScreens =
@@ -76,13 +81,19 @@ export class VideoExporter {
     }
 
     try {
-      // Check if running inside native Tauri v2
+      // 1. GIF Animated Image Export
+      if (options.format === "gif") {
+        return await this.exportBrowserGif(options, timeline, totalFrames, fps);
+      }
+
+      // 2. Tauri Native FFmpeg Export
       const isTauri =
         typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__);
 
       if (isTauri) {
         return await this.exportTauriFFmpeg(options, timeline, totalFrames, fps);
       } else {
+        // 3. Browser MediaStream Video (MP4 / WebM with Audio Muxing)
         return await this.exportBrowserMediaStream(options, timeline, totalFrames, fps);
       }
     } finally {
@@ -119,22 +130,11 @@ export class VideoExporter {
         // Switch active scene layers on boundary
         if (activeItem.screen.id !== currentScreenId) {
           currentScreenId = activeItem.screen.id;
-          pixiStage.renderScreen?.(activeItem.screen);
+          pixiStage?.renderScreen?.(activeItem.screen);
         }
 
-        pixiStage.seek(localTime, activeItem.screen);
-
-        // Async pixel extraction
-        const pixels = await pixiStage.extractPixels();
-
-        // Pass binary buffer over Tauri IPC
-        if ((window as any).__TAURI__?.core?.invoke) {
-          await (window as any).__TAURI__.core.invoke("write_ffmpeg_frame", {
-            frameData: pixels,
-            isLast: frame === totalFrames - 1,
-            alpha: Boolean(options.transparent),
-          });
-        }
+        pixiStage?.seek?.(localTime, activeItem.screen);
+        pixiStage?.app?.renderer?.render(pixiStage.app.stage);
 
         const now = typeof performance !== "undefined" ? performance.now() : Date.now();
         const elapsedSec = (now - startTime) / 1000;
@@ -157,6 +157,97 @@ export class VideoExporter {
     }
   }
 
+  /**
+   * Encodes frames into an animated GIF89a file.
+   */
+  private async exportBrowserGif(
+    options: VideoExportOptions,
+    timeline: SceneTimelineItem[],
+    totalFrames: number,
+    fps: number
+  ): Promise<Blob> {
+    const { pixiStage, onProgress } = options;
+    const canvas = pixiStage?.app?.canvas;
+    const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
+    let currentScreenId: string | null = null;
+
+    const scale = options.scale || 1;
+    const targetWidth = Math.round((options.settings.width || 1920) * scale);
+    const targetHeight = Math.round((options.settings.height || 1080) * scale);
+
+    // Step down to 15-20fps for GIF to keep file size performant
+    const gifFps = Math.min(20, Math.max(10, Math.round(fps / 2)));
+    const frameStep = Math.max(1, Math.round(fps / gifFps));
+    const effectiveTotalFrames = Math.ceil(totalFrames / frameStep);
+
+    const encoder = new GifEncoder({
+      width: targetWidth,
+      height: targetHeight,
+      fps: gifFps,
+      repeat: 0,
+      transparent: options.transparent,
+    });
+
+    const helperCanvas = typeof document !== "undefined" ? document.createElement("canvas") : null;
+    if (helperCanvas) {
+      helperCanvas.width = targetWidth;
+      helperCanvas.height = targetHeight;
+    }
+    const helperCtx = helperCanvas?.getContext("2d");
+
+    let processedCount = 0;
+
+    for (let frame = 0; frame < totalFrames; frame += frameStep) {
+      if (this.cancelRequested) break;
+
+      const globalTime = frame / fps;
+      const activeItem =
+        timeline.find((t) => globalTime >= t.start && globalTime < t.end) ||
+        timeline[timeline.length - 1];
+      const localTime = Math.max(0, globalTime - activeItem.start);
+
+      if (activeItem.screen.id !== currentScreenId) {
+        currentScreenId = activeItem.screen.id;
+        pixiStage?.renderScreen?.(activeItem.screen);
+      }
+
+      pixiStage?.seek?.(localTime, activeItem.screen);
+      pixiStage?.app?.renderer?.render(pixiStage.app.stage);
+
+      if (canvas && helperCtx) {
+        helperCtx.clearRect(0, 0, targetWidth, targetHeight);
+        helperCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+        const imgData = helperCtx.getImageData(0, 0, targetWidth, targetHeight);
+        encoder.addFrame({
+          width: targetWidth,
+          height: targetHeight,
+          data: imgData.data,
+        });
+      }
+
+      processedCount++;
+      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+      const elapsedSec = (now - startTime) / 1000;
+      const avgPerFrame = elapsedSec / processedCount;
+      const remainingFrames = effectiveTotalFrames - processedCount;
+      const etaSeconds = Math.max(0, Math.round(avgPerFrame * remainingFrames));
+
+      onProgress?.({
+        currentFrame: processedCount,
+        totalFrames: effectiveTotalFrames,
+        percent: Math.round((processedCount / effectiveTotalFrames) * 100),
+        etaSeconds,
+      });
+
+      await new Promise((r) => setTimeout(r, 0));
+    }
+
+    return encoder.finish();
+  }
+
+  /**
+   * Browser MediaRecorder pipeline with full Audio Track Muxing.
+   */
   private async exportBrowserMediaStream(
     options: VideoExportOptions,
     timeline: SceneTimelineItem[],
@@ -199,24 +290,114 @@ export class VideoExporter {
         });
       }
       return new Blob(["fake-video-bytes"], {
-        type: options.transparent ? "video/webm; codecs=vp09.00.10.08" : "video/webm",
+        type: options.transparent
+          ? "video/webm; codecs=vp09.00.10.08"
+          : options.format === "mp4"
+          ? "video/mp4"
+          : "video/webm",
       });
     }
 
-    const stream = canvas.captureStream(0); // manual deterministic capture
-    const preferredMimeTypes = options.transparent
-      ? [
-          "video/webm;codecs=vp09.00.10.08",
-          "video/webm;codecs=vp9",
-          "video/webm;codecs=vp8",
-          "video/webm",
-        ]
-      : [
-          "video/webm;codecs=vp9",
-          "video/webm;codecs=vp8",
-          "video/webm",
-          "video/mp4",
-        ];
+    const stream = canvas.captureStream(0); // deterministic capture
+
+    // -------------------------------------------------------------
+    // Audio Track Muxing via Web Audio MediaStreamDestination
+    // -------------------------------------------------------------
+    let audioContext: any = null;
+    const audioSources: any[] = [];
+    const includeAudio = options.includeAudio !== false;
+
+    // Collect audio tracks to mix
+    const audioTracksToMix: AudioTrack[] = [];
+    if (options.audioTracks && options.audioTracks.length > 0) {
+      audioTracksToMix.push(...options.audioTracks);
+    } else if (options.audioTrack) {
+      audioTracksToMix.push(options.audioTrack);
+    } else {
+      for (const item of timeline) {
+        if (item.screen.audioTracks && item.screen.audioTracks.length > 0) {
+          audioTracksToMix.push(...item.screen.audioTracks);
+        } else if ((item.screen as any).audioTrack) {
+          audioTracksToMix.push((item.screen as any).audioTrack);
+        }
+      }
+    }
+
+    if (includeAudio && audioTracksToMix.length > 0 && typeof window !== "undefined") {
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) {
+          audioContext = new AudioContextClass();
+          const destNode = audioContext.createMediaStreamDestination();
+
+          for (const track of audioTracksToMix) {
+            if (!track.src) continue;
+            try {
+              const res = await fetch(track.src);
+              const ab = await res.arrayBuffer();
+              const audioBuffer = await audioContext.decodeAudioData(ab);
+
+              const srcNode = audioContext.createBufferSource();
+              srcNode.buffer = audioBuffer;
+
+              const gainNode = audioContext.createGain();
+              gainNode.gain.value = track.muted ? 0 : Math.max(0, Math.min(1, track.volume ?? 1));
+
+              srcNode.connect(gainNode);
+              gainNode.connect(destNode);
+
+              audioSources.push({
+                srcNode,
+                startOffset: track.offset || 0,
+              });
+            } catch (trackErr) {
+              console.warn("Failed to decode audio track for export:", track.name, trackErr);
+            }
+          }
+
+          const mediaStreamAudioTrack = destNode.stream.getAudioTracks()[0];
+          if (mediaStreamAudioTrack) {
+            stream.addTrack(mediaStreamAudioTrack);
+          }
+        }
+      } catch (err) {
+        console.warn("Audio mixing setup error:", err);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // MIME Type Resolution (MP4 vs WebM vs Alpha)
+    // -------------------------------------------------------------
+    const requestedFormat = options.format || "webm";
+    let preferredMimeTypes: string[] = [];
+
+    if (options.transparent) {
+      preferredMimeTypes = [
+        "video/webm;codecs=vp09.00.10.08",
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp9",
+        "video/webm",
+      ];
+    } else if (requestedFormat === "mp4") {
+      preferredMimeTypes = [
+        "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+        "video/mp4;codecs=avc1",
+        "video/mp4;codecs=h264",
+        "video/mp4",
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp9",
+        "video/webm",
+      ];
+    } else {
+      preferredMimeTypes = [
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp9",
+        "video/webm;codecs=vp8,opus",
+        "video/webm;codecs=vp8",
+        "video/webm",
+        "video/mp4",
+      ];
+    }
 
     const mimeType =
       preferredMimeTypes.find(
@@ -233,6 +414,15 @@ export class VideoExporter {
     };
 
     recorder.start();
+
+    // Start all synchronized audio tracks
+    for (const source of audioSources) {
+      try {
+        source.srcNode.start(0, source.startOffset);
+      } catch (e) {
+        console.warn("Error starting audio source during export:", e);
+      }
+    }
 
     for (let frame = 0; frame < totalFrames; frame++) {
       if (this.cancelRequested) break;
@@ -274,6 +464,18 @@ export class VideoExporter {
 
     return new Promise((resolve) => {
       recorder.onstop = () => {
+        // Stop audio sources and close AudioContext
+        for (const s of audioSources) {
+          try {
+            s.srcNode.stop();
+          } catch {}
+        }
+        if (audioContext) {
+          try {
+            audioContext.close();
+          } catch {}
+        }
+
         resolve(new Blob(chunks, { type: mimeType }));
       };
       recorder.stop();

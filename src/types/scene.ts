@@ -98,6 +98,8 @@ export interface Screen {
   transition?: SceneTransition;
   stepFps?: 'smooth' | number;
   mood?: AestheticMood;
+  audioTrack?: AudioTrack;
+  audioTracks?: AudioTrack[];
 }
 
 export type UiMode = 'design' | 'motion' | '3d' | 'editor' | 'animate';

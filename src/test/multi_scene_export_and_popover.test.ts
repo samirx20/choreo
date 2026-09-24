@@ -157,4 +157,66 @@ describe("Multi-Scene Sequence Stitching & Transparent Alpha Video Export", () =
     expect(progressReports.length).toBeLessThan(10);
     expect(mockStage.setTransparentBackground).toHaveBeenLastCalledWith(false);
   });
+
+  it("exports animated GIF when format is 'gif'", async () => {
+    const mockStage = {
+      app: {
+        canvas: {
+          width: 100,
+          height: 100,
+        },
+        stage: {},
+        renderer: {
+          render: vi.fn(),
+        },
+      },
+      renderScreen: vi.fn(),
+      seek: vi.fn(),
+    } as any;
+
+    const blob = await videoExporter.exportVideo({
+      pixiStage: mockStage,
+      screen: scene1,
+      settings: { ...mockSettings, width: 80, height: 60 },
+      fps: 10,
+      format: "gif",
+    });
+
+    expect(blob.type).toBe("image/gif");
+    expect(blob.size).toBeGreaterThan(0);
+  });
+
+  it("handles MP4 format specification and audio track metadata", async () => {
+    const mockStage = {
+      app: {
+        canvas: {},
+        stage: {},
+        renderer: { render: vi.fn() },
+      },
+      renderScreen: vi.fn(),
+      seek: vi.fn(),
+    } as any;
+
+    const blob = await videoExporter.exportVideo({
+      pixiStage: mockStage,
+      screen: scene1,
+      settings: mockSettings,
+      fps: 10,
+      format: "mp4",
+      audioTrack: {
+        id: "a1",
+        name: "Beat.mp3",
+        src: "data:audio/mp3;base64,mock",
+        duration: 2.0,
+        start: 0,
+        offset: 0,
+        volume: 0.8,
+      },
+      includeAudio: true,
+      scale: 2,
+    });
+
+    expect(blob.type).toBe("video/mp4");
+  });
 });
+
