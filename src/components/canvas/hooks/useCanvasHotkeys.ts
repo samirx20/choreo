@@ -149,6 +149,52 @@ export function useCanvasHotkeys({
             }
           }
         }
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        e.altKey &&
+        (e.key === "u" || e.key === "U") &&
+        !isInput
+      ) {
+        // Ctrl + Alt + U: Union Selection
+        e.preventDefault();
+        store.applyBooleanOperation("union");
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        e.altKey &&
+        (e.key === "s" || e.key === "S") &&
+        !isInput
+      ) {
+        // Ctrl + Alt + S: Subtract Selection
+        e.preventDefault();
+        store.applyBooleanOperation("subtract");
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        e.altKey &&
+        (e.key === "i" || e.key === "I") &&
+        !isInput
+      ) {
+        // Ctrl + Alt + I: Intersect Selection
+        e.preventDefault();
+        store.applyBooleanOperation("intersect");
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        e.altKey &&
+        (e.key === "x" || e.key === "X") &&
+        !isInput
+      ) {
+        // Ctrl + Alt + X: Exclude Selection
+        e.preventDefault();
+        store.applyBooleanOperation("exclude");
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        !e.shiftKey &&
+        (e.key === "e" || e.key === "E") &&
+        !isInput
+      ) {
+        // Ctrl + E: Flatten Selection
+        e.preventDefault();
+        store.flattenSelection();
       } else if (e.shiftKey && e.key === "Enter" && !isInput) {
         // Shift + Enter: Ascend hierarchy to parent group
         if (selectedLayerIds[0]) {

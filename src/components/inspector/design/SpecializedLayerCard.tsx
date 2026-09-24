@@ -1,10 +1,11 @@
 import React, { useState } from "react";
-import { icons, Smile, Sparkles, ArrowLeftRight, CircleDashed } from "lucide-react";
+import { icons, Smile, Sparkles, ArrowLeftRight, CircleDashed, Combine, Layers } from "lucide-react";
 import { Layer } from "@/types/scene";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ScrubbableInput } from "@/components/ui/scrubbable-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectTrigger,
@@ -72,6 +73,48 @@ export const SpecializedLayerCard: React.FC<SpecializedLayerCardProps> = ({
             className="w-full py-1 text-xs rounded border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
           >
             Release Mask
+          </button>
+        </div>
+      )}
+
+      {/* Boolean Group Section */}
+      {selectedLayer.type === "group" && Boolean((selectedLayer as any).isBooleanGroup) && (
+        <div className="pt-3 border-t border-border space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Combine className="w-3.5 h-3.5 text-blue-400" />
+              Boolean Group
+            </span>
+            <span className="text-[10px] text-muted-foreground font-mono uppercase">
+              {(selectedLayer as any).booleanOperation || "union"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-4 gap-1 p-1 bg-muted/40 rounded-lg">
+            {(["union", "subtract", "intersect", "exclude"] as const).map((op) => (
+              <button
+                key={op}
+                type="button"
+                onClick={() => useProjectStore.getState().applyBooleanOperation(op)}
+                className={cn(
+                  "py-1 text-[10px] font-medium rounded transition-all capitalize",
+                  (selectedLayer as any).booleanOperation === op
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {op}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => useProjectStore.getState().flattenSelection()}
+            className="w-full py-1 text-xs rounded border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center justify-center gap-1.5"
+          >
+            <Layers className="w-3 h-3" />
+            Flatten to Vector Path (Ctrl+E)
           </button>
         </div>
       )}

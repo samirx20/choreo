@@ -18,6 +18,11 @@ import {
   Component,
   PenTool,
   Pencil,
+  Combine,
+  MinusCircle,
+  Blend,
+  Split,
+  Layers,
 } from "lucide-react";
 import { useProjectStore, CanvasTool } from "@/store/useProjectStore";
 import { THEME_TOKENS } from "@/theme/tokens";
@@ -47,6 +52,9 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
     addLayer,
     activeScreenId,
     document: doc,
+    selectedLayerIds,
+    applyBooleanOperation,
+    flattenSelection,
   } = useProjectStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -469,6 +477,65 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
           />
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Boolean Operations (Union, Subtract, Intersect, Exclude, Flatten) */}
+      {(selectedLayerIds.length >= 2 ||
+        (selectedLayerIds.length === 1 &&
+          Boolean((activeScreen?.layers.find((l) => l.id === selectedLayerIds[0]) as any)?.isBooleanGroup))) && (
+        <>
+          <div className="h-4 w-px bg-[#3f3f46] mx-0.5" />
+
+          {/* Union */}
+          <button
+            type="button"
+            onClick={() => applyBooleanOperation("union")}
+            className="h-8 w-8 rounded-full flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
+            title="Union Selection (Ctrl+Alt+U)"
+          >
+            <Combine className="h-4 w-4" />
+          </button>
+
+          {/* Subtract */}
+          <button
+            type="button"
+            onClick={() => applyBooleanOperation("subtract")}
+            className="h-8 w-8 rounded-full flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
+            title="Subtract Selection (Ctrl+Alt+S)"
+          >
+            <MinusCircle className="h-4 w-4" />
+          </button>
+
+          {/* Intersect */}
+          <button
+            type="button"
+            onClick={() => applyBooleanOperation("intersect")}
+            className="h-8 w-8 rounded-full flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
+            title="Intersect Selection (Ctrl+Alt+I)"
+          >
+            <Blend className="h-4 w-4" />
+          </button>
+
+          {/* Exclude */}
+          <button
+            type="button"
+            onClick={() => applyBooleanOperation("exclude")}
+            className="h-8 w-8 rounded-full flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
+            title="Exclude Selection (Ctrl+Alt+X)"
+          >
+            <Split className="h-4 w-4" />
+          </button>
+
+          {/* Flatten */}
+          <button
+            type="button"
+            onClick={() => flattenSelection()}
+            className="h-8 w-8 rounded-full flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
+            title="Flatten to Vector Path (Ctrl+E)"
+          >
+            <Layers className="h-4 w-4" />
+          </button>
+        </>
+      )}
 
       {/* Component Library Drawer (⊞) */}
       {onOpenComponentsDrawer && (

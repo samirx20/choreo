@@ -16,6 +16,10 @@ import {
   Maximize2,
   CircleDashed,
   Split,
+  Combine,
+  MinusCircle,
+  Blend,
+  Layers,
 } from "lucide-react";
 import { useProjectStore, findLayerInTree } from "@/store/useProjectStore";
 import { findParentGroupInTree } from "@/store/helpers/treeHelpers";
@@ -47,6 +51,8 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
     groupSelection,
     ungroup,
     decomposeVectorGroup,
+    applyBooleanOperation,
+    flattenSelection,
     maskSelection,
     useAsMask,
     unmaskGroup,
@@ -268,6 +274,19 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
               <span>Decompose Vector Paths</span>
             </span>
           </button>
+          <button
+            onClick={() => {
+              flattenSelection();
+              onClose();
+            }}
+            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+          >
+            <span className="flex items-center gap-2">
+              <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Flatten to Vector Path</span>
+            </span>
+            <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+E</kbd>
+          </button>
         </>
       ) : (
         <button
@@ -283,6 +302,65 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
           </span>
           <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+G</kbd>
         </button>
+      )}
+
+      {/* Boolean Operations for 2+ Selected Layers */}
+      {selectedLayerIds.length >= 2 && (
+        <>
+          <div className="h-px bg-border my-1" />
+          <button
+            onClick={() => {
+              applyBooleanOperation("union");
+              onClose();
+            }}
+            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+          >
+            <span className="flex items-center gap-2">
+              <Combine className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Union Selection</span>
+            </span>
+            <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+Alt+U</kbd>
+          </button>
+          <button
+            onClick={() => {
+              applyBooleanOperation("subtract");
+              onClose();
+            }}
+            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+          >
+            <span className="flex items-center gap-2">
+              <MinusCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Subtract Selection</span>
+            </span>
+            <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+Alt+S</kbd>
+          </button>
+          <button
+            onClick={() => {
+              applyBooleanOperation("intersect");
+              onClose();
+            }}
+            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+          >
+            <span className="flex items-center gap-2">
+              <Blend className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Intersect Selection</span>
+            </span>
+            <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+Alt+I</kbd>
+          </button>
+          <button
+            onClick={() => {
+              applyBooleanOperation("exclude");
+              onClose();
+            }}
+            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+          >
+            <span className="flex items-center gap-2">
+              <Split className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Exclude Selection</span>
+            </span>
+            <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+Alt+X</kbd>
+          </button>
+        </>
       )}
 
       {/* Mask Operations */}

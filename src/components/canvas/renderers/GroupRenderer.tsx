@@ -306,11 +306,18 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
   const isChildrenInFlex = isFlex;
   const isEmpty = !layer.children || layer.children.length === 0;
 
-  const isMaskGroup = Boolean(layer.isMaskGroup) && Boolean(layer.children && layer.children.length > 0);
+  const isBooleanSubtract = Boolean(layer.isBooleanGroup) && layer.booleanOperation === "subtract" && Boolean(layer.children && layer.children.length >= 2);
+  const isBooleanIntersect = Boolean(layer.isBooleanGroup) && layer.booleanOperation === "intersect" && Boolean(layer.children && layer.children.length >= 2);
+  const isBooleanGroup = isBooleanSubtract || isBooleanIntersect;
+  const isMaskGroup = (Boolean(layer.isMaskGroup) && Boolean(layer.children && layer.children.length > 0)) || isBooleanGroup;
+
   const maskChild = isMaskGroup
-    ? layer.children.find((c) => c.isMask) || layer.children[0]
+    ? (isBooleanGroup ? layer.children[1] : (layer.children.find((c) => c.isMask) || layer.children[0]))
     : null;
-  const contentChildren = isMaskGroup && maskChild
+
+  const contentChildren = isBooleanGroup
+    ? [layer.children[0]]
+    : isMaskGroup && maskChild
     ? layer.children.filter((c) => c.id !== maskChild.id)
     : layer.children;
 
@@ -369,7 +376,18 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
                 width="20000"
                 height="20000"
               >
-                {layer.invertMask ? (
+                {isBooleanSubtract ? (
+                  <>
+                    <rect x="-10000" y="-10000" width="20000" height="20000" fill="white" />
+                    {layer.children.slice(1).map((cutout) =>
+                      renderMaskGeometry(cutout, "black", computedLayerStyles[cutout.id])
+                    )}
+                  </>
+                ) : isBooleanIntersect ? (
+                  layer.children.slice(1).map((stencil) =>
+                    renderMaskGeometry(stencil, "white", computedLayerStyles[stencil.id])
+                  )
+                ) : layer.invertMask ? (
                   <>
                     <rect x="-10000" y="-10000" width="20000" height="20000" fill="white" />
                     {renderMaskGeometry(maskChild, "black", computedLayerStyles[maskChild.id])}
@@ -401,29 +419,65 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
             })}
           </div>
 
-          {/* Mask Stencil Hit & Selection Overlay on Canvas */}
-          <div
-            id={`layer-${maskChild.id}`}
-            style={{
-              position: "absolute",
-              left: `${maskX}px`,
-              top: `${maskY}px`,
-              width: `${maskW}px`,
-              height: `${maskH}px`,
-              transform: maskStyle?.transform,
-              pointerEvents: "auto",
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelectLayer(maskChild.id, e);
-            }}
-            className={cn(
-              "cursor-pointer select-none",
-              selectedLayerIds.includes(maskChild.id)
-                ? "ring-1 ring-purple-500/80 ring-offset-1 border border-dashed border-purple-400/60"
-                : "hover:outline hover:outline-1 hover:outline-purple-400/30"
-            )}
-          />
+          {/* Mask / Cutout Stencil Hit & Selection Overlay on Canvas */}
+          {isBooleanGroup ? (
+            layer.children.slice(1).map((child) => {
+              const cStyle = computedLayerStyles[child.id];
+              const cX = cStyle?.left !== undefined ? parseFloat(String(cStyle.left)) : (child.style.x || 0);
+              const cY = cStyle?.top !== undefined ? parseFloat(String(cStyle.top)) : (child.style.y || 0);
+              const cW = cStyle?.width !== undefined ? parseFloat(String(cStyle.width)) : (child.style.width || 200);
+              const cH = cStyle?.height !== undefined ? parseFloat(String(cStyle.height)) : (child.style.height || 200);
+              return (
+                <div
+                  key={child.id}
+                  id={`layer-${child.id}`}
+                  style={{
+                    position: "absolute",
+                    left: `${cX}px`,
+                    top: `${cY}px`,
+                    width: `${cW}px`,
+                    height: `${cH}px`,
+                    transform: cStyle?.transform,
+                    pointerEvents: "auto",
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectLayer(child.id, e);
+                  }}
+                  className={cn(
+                    "cursor-pointer select-none",
+                    selectedLayerIds.includes(child.id)
+                      ? "ring-1 ring-rose-500/80 ring-offset-1 border border-dashed border-rose-400/60"
+                      : "hover:outline hover:outline-1 hover:outline-rose-400/30"
+                  )}
+                  title={`Cutout Stencil: ${child.name}`}
+                />
+              );
+            })
+          ) : (
+            <div
+              id={`layer-${maskChild.id}`}
+              style={{
+                position: "absolute",
+                left: `${maskX}px`,
+                top: `${maskY}px`,
+                width: `${maskW}px`,
+                height: `${maskH}px`,
+                transform: maskStyle?.transform,
+                pointerEvents: "auto",
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectLayer(maskChild.id, e);
+              }}
+              className={cn(
+                "cursor-pointer select-none",
+                selectedLayerIds.includes(maskChild.id)
+                  ? "ring-1 ring-purple-500/80 ring-offset-1 border border-dashed border-purple-400/60"
+                  : "hover:outline hover:outline-1 hover:outline-purple-400/30"
+              )}
+            />
+          )}
         </>
       ) : isEmpty ? (
         <div className="text-[10px] text-zinc-500 font-mono pointer-events-none select-none px-3 py-2 text-center">

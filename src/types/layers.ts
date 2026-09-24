@@ -257,6 +257,8 @@ export interface BaseLayer {
   isMask?: boolean;
 }
 
+export type BooleanOperationType = 'union' | 'subtract' | 'intersect' | 'exclude';
+
 export interface GroupLayer extends BaseLayer {
   type: 'group';
   layout?: LayoutConfig;
@@ -264,6 +266,8 @@ export interface GroupLayer extends BaseLayer {
   clipContent?: boolean;
   isMaskGroup?: boolean;
   invertMask?: boolean;
+  isBooleanGroup?: boolean;
+  booleanOperation?: BooleanOperationType;
   children: Layer[];
   autoLink?: boolean;
   staggerDelay?: number;

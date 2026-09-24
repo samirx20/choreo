@@ -9,6 +9,7 @@ import {
   AnimationClip,
   AnimationClipType,
   AudioTrack,
+  BooleanOperationType,
   UiMode,
 } from "@/types/scene";
 import { RazorSplitResult } from "@/engine/video/razorSplit";
@@ -145,6 +146,8 @@ export interface ProjectStoreState {
   toggleMaskInvert: (groupId: string) => void;
   importSvg: (svgString: string, targetPoint?: { x: number; y: number }, name?: string) => string[] | null;
   decomposeVectorGroup: (groupId: string) => void;
+  applyBooleanOperation: (operation: BooleanOperationType) => void;
+  flattenSelection: () => void;
   splitTextRange: (layerId: string, start: number, end: number) => void;
   splitTextAtCaret: (layerId: string, index: number) => void;
   splitTextIntoWords: (layerId: string) => void;

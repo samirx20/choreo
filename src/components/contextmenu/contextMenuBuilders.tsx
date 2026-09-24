@@ -356,6 +356,11 @@ export function buildCanvasElementMenu(params: {
         action: () => store.decomposeVectorGroup(layer.id),
       },
       {
+        id: "flatten-selection",
+        label: "Flatten to Vector Path",
+        action: () => store.flattenSelection(),
+      },
+      {
         id: "detach-group-absolute",
         label: "Detach to Canvas Layers",
         action: () => store.detachGroupToAbsolute(layer.id),

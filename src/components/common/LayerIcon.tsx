@@ -17,6 +17,7 @@ import {
   Smile,
   icons,
   CircleDashed,
+  Combine,
 } from "lucide-react";
 import type { Layer } from "@/types/layers";
 
@@ -41,6 +42,9 @@ export const LayerIcon: React.FC<LayerIconProps> = ({ layer, className = "h-3.5 
     case "group":
       if ((layer as any).isMaskGroup) {
         return <CircleDashed className={className} />;
+      }
+      if ((layer as any).isBooleanGroup) {
+        return <Combine className={className} />;
       }
       return <Folder className={className} />;
 

@@ -1,5 +1,5 @@
 import { ProjectStoreState, ShapeEdgeId } from "../types";
-import { SceneDocument, Layer, GroupLayer, FrameLayer, ShapeLayer, LineLayer } from "@/types/scene";
+import { SceneDocument, Layer, GroupLayer, FrameLayer, ShapeLayer, LineLayer, BooleanOperationType } from "@/types/scene";
 import {
   findLayerInTree,
   mutateLayerInTree,
@@ -26,6 +26,7 @@ import {
 } from "@/engine/lineSplitter";
 import { parseSvgString } from "@/engine/svg/svgParser";
 import { decomposeVectorGroup as decomposeVectorGroupEngine } from "@/engine/svg/svgDecomposer";
+import { flattenBooleanGroup } from "@/engine/vector/booleanOperations";
 
 export type LayerSlice = Pick<
   ProjectStoreState,
@@ -49,6 +50,8 @@ export type LayerSlice = Pick<
   | "toggleMaskInvert"
   | "importSvg"
   | "decomposeVectorGroup"
+  | "applyBooleanOperation"
+  | "flattenSelection"
   | "splitTextRange"
   | "splitTextAtCaret"
   | "splitTextIntoWords"
@@ -929,6 +932,141 @@ export const createLayerSlice = (
 
     commitDoc(set, nextDoc, {
       selectedLayerIds: decomposedChildren.map((c) => c.id),
+    });
+  },
+
+  applyBooleanOperation: (operation: BooleanOperationType) => {
+    const { document: doc, activeScreenId, selectedLayerIds } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    // Case 1: If 1 group layer is selected, switch its boolean operation
+    if (selectedLayerIds.length === 1) {
+      const existing = findLayerInTree(activeScreen.layers, selectedLayerIds[0]) as GroupLayer | null;
+      if (existing && existing.type === "group") {
+        const updated: GroupLayer = {
+          ...existing,
+          isBooleanGroup: true,
+          booleanOperation: operation,
+          name: `${operation.charAt(0).toUpperCase() + operation.slice(1)} Group`,
+        };
+        const nextLayers = mutateLayerInTree(activeScreen.layers, existing.id, () => updated);
+        const nextDoc: SceneDocument = {
+          ...doc,
+          screens: doc.screens.map((s) =>
+            s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+          ),
+        };
+        commitDoc(set, nextDoc, { selectedLayerIds: [updated.id] });
+        return;
+      }
+    }
+
+    // Case 2: 2+ layers selected, group into a new Boolean Group
+    if (selectedLayerIds.length < 2) return;
+
+    const selectedLayers = selectedLayerIds
+      .map((id) => findLayerInTree(activeScreen.layers, id))
+      .filter((l): l is Layer => l !== null);
+    if (selectedLayers.length < 2) return;
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const l of selectedLayers) {
+      const lx = typeof l.style.x === "number" ? l.style.x : 0;
+      const ly = typeof l.style.y === "number" ? l.style.y : 0;
+      const lw = typeof l.style.width === "number" ? l.style.width : 100;
+      const lh = typeof l.style.height === "number" ? l.style.height : 100;
+      minX = Math.min(minX, lx);
+      minY = Math.min(minY, ly);
+      maxX = Math.max(maxX, lx + lw);
+      maxY = Math.max(maxY, ly + lh);
+    }
+
+    const width = Math.max(1, maxX - minX);
+    const height = Math.max(1, maxY - minY);
+
+    const children = selectedLayers.map((l) => ({
+      ...l,
+      style: {
+        ...l.style,
+        x: (typeof l.style.x === "number" ? l.style.x : 0) - minX,
+        y: (typeof l.style.y === "number" ? l.style.y : 0) - minY,
+      },
+    }));
+
+    const booleanGroup: GroupLayer = {
+      id: `bool_grp_${Date.now()}`,
+      name: `${operation.charAt(0).toUpperCase() + operation.slice(1)} Group`,
+      type: "group",
+      isBooleanGroup: true,
+      booleanOperation: operation,
+      children,
+      style: {
+        x: minX,
+        y: minY,
+        width,
+        height,
+        rotation: 0,
+        opacity: 1,
+      },
+    };
+
+    let replaced = false;
+    const nextLayers = activeScreen.layers
+      .map((l) => {
+        if (selectedLayerIds.includes(l.id)) {
+          if (!replaced) {
+            replaced = true;
+            return booleanGroup;
+          }
+          return null;
+        }
+        return l;
+      })
+      .filter((l): l is Layer => l !== null);
+
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: [booleanGroup.id],
+    });
+  },
+
+  flattenSelection: () => {
+    const { document: doc, activeScreenId, selectedLayerIds } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen || selectedLayerIds.length === 0) return;
+
+    const targetId = selectedLayerIds[0];
+    const targetLayer = findLayerInTree(activeScreen.layers, targetId);
+    if (!targetLayer) return;
+
+    let flattened: ShapeLayer | null = null;
+    if (targetLayer.type === "group") {
+      flattened = flattenBooleanGroup(targetLayer as GroupLayer);
+    }
+
+    if (!flattened) return;
+
+    const nextLayers = mutateLayerInTree(activeScreen.layers, targetId, () => flattened!);
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: [flattened.id],
     });
   },
 

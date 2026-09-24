@@ -1728,6 +1728,39 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 28 tests across the 4 core foundations pass cleanly in 2.5s.
   - Production build (`tsc -b && vite build`) succeeds without errors.
 
+---
+
+### Decision 78: Boolean Operations (Union, Subtract, Intersect, Exclude) & Shape Flattening
+* **Context & Motivation**:
+  - Professional vector motion graphics require the ability to combine and carve simple geometric primitives into complex iconography, logos, cutouts, and brand assets.
+  - Previously, Motion Studio had no shape combination or Boolean grouping mechanisms.
+* **The Solution**:
+  1. **Data Model (`src/types/layers.ts`)**:
+     - Added `BooleanOperationType = 'union' | 'subtract' | 'intersect' | 'exclude'`.
+     - Extended `GroupLayer` with `isBooleanGroup?: boolean;` and `booleanOperation?: BooleanOperationType;`.
+  2. **Live Non-Destructive Viewport Rendering (`GroupRenderer.tsx`)**:
+     - **Subtract Mode**: dynamically punches cutout shapes (`children.slice(1)`) through the base layer (`children[0]`) using an inverted hardware-accelerated SVG `<mask id="...">`.
+     - **Intersect Mode**: dynamically clips the base layer strictly to the intersection stencil of `children.slice(1)`.
+     - Cutout layers render dedicated canvas hit-targets with subtle dashed rose outlines, allowing users to directly select and drag cutout circles/rectangles on canvas with real-time hole movement.
+  3. **Analytical SVG Path Transformation Engine (`src/engine/svg/svgPathTransform.ts`)**:
+     - `transformPath(d, { dx, dy, sx, sy })`: translates and scales arbitrary SVG path command streams (`M, L, H, V, C, S, Q, T, A, Z`) with subpixel mathematical accuracy.
+  4. **Analytical Shape Flattening Engine (`src/engine/vector/booleanOperations.ts`)**:
+     - `layerToLocalSvgPath(layer)`: converts any layer (rectangle, circle, ellipse, triangle, polygon, star, path) into local SVG path data.
+     - `flattenBooleanGroup(group)`: combines transformed child paths into a single compound path with `fillRule: 'evenodd'` (or `'nonzero'` for union), normalizes coordinates to origin, and returns a single first-class `ShapeLayer` (`shapeType: 'path'`) with **0.0000px visual shift invariance**.
+     - Resulting flattened layer is immediately compatible with **Trim Path Draw-On** animations (`trimStart`, `trimEnd`).
+  5. **Store Actions (`src/store/slices/layerSlice.ts` & `src/store/types.ts`)**:
+     - `applyBooleanOperation(op)`: groups 2+ selected layers into a new Boolean Group (or updates the operation on an existing boolean group).
+     - `flattenSelection()`: bakes selected Boolean Group into a single flattened `ShapeLayer` in-place.
+  6. **UI & Keyboard Hotkeys**:
+     - **Floating Design Toolbar (`FloatingDesignToolbar.tsx`)**: shows compact Boolean Operations button group (Union, Subtract, Intersect, Exclude, Flatten) when 2+ layers or a boolean group is selected.
+     - **Canvas Context Menu (`CanvasContextMenu.tsx` & `contextMenuBuilders.tsx`)**: right-click reveals Boolean operations and "Flatten to Vector Path".
+     - **Inspector Panel (`SpecializedLayerCard.tsx`)**: reveals dedicated Boolean Group card with operation switcher tabs and Flatten button.
+     - **Global Shortcuts**: `Ctrl + Alt + U` (Union), `Ctrl + Alt + S` (Subtract), `Ctrl + Alt + I` (Intersect), `Ctrl + Alt + X` (Exclude), `Ctrl + E` (Flatten).
+* **Verification**:
+  - 7 automated unit and integration tests in `src/test/boolean_operations.test.ts`.
+  - All 35 tests across the motion design vector suites pass cleanly in 2.6s.
+  - Production build (`tsc -b && vite build`) succeeds without errors.
+
 
 
 
