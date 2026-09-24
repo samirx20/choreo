@@ -95,6 +95,9 @@ Once connected, you will have access to the Motion Studio tools:
 - link_elements({ sourceId, targetId, mode }): Relational bindings (hugging, reflow, pins).
 - lint_storyboard({ file }): Pre-flight check verifying 0 black frames and physical momentum.
 
+Please register/connect this MCP server, inspect the active project with get_storyboard_state, and let me know when you are ready to begin choreographing!`;
+  };
+
   // Safely resolve the native Tauri window instance
   const getNativeWindow = () => {
     try {
