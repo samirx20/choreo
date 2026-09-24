@@ -1923,3 +1923,25 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - 16 automated tests in `src/test/interactive_split_mode.test.ts` verifying default split locking, unlocked sub-element property editing, manual group non-locking, and canvas selection semantics.
   - All 51 test suites (458 tests) passing; production build clean.
 
+---
+
+### Decision 85: Elimination of Compound Entity Selection Hijacking & Direct Outliner Sub-Element Selection
+* **Context & Root Cause**:
+  - When an element was split into compound sub-elements (e.g. 2 complementary paths, detached arrowhead, separated stroke/fill), users were unable to select the individual sub-elements in the left sidebar outliner tree.
+  - Investigation revealed that `selectLayer` in `selectionSlice.ts` had a legacy check that forcibly redirected any call to `selectLayer(childId)` to `parent.id` whenever `parent.isCompound` was true outside of animate mode.
+  - This hijacked all direct selections originating from the left sidebar outliner tree and canvas drill-in, trapping selection on the compound parent group even when the user deliberately clicked a sub-element in the sidebar tree.
+* **Architectural Decisions & Implementation**:
+  1. **Direct Layer Selection in Store (`selectionSlice.ts`)**:
+     - Removed the `isCompound` redirection from `selectLayer`. The store now strictly selects the requested `layerId`.
+     - Clicking any sub-element in the left sidebar outliner tree immediately selects that sub-element, highlighting it in the tree and populating the inspector.
+  2. **Canvas-Level Grouping Guard (`CanvasViewport.tsx`)**:
+     - Canvas click resolution remains at the viewport interaction layer where it belongs: clicking on the canvas checks `topmostGroup.locked` to select the locked group as a single entity without accidental drill-in, and allows progressive drill-in when unlocked.
+  3. **Inherited Lock Protection & Quick-Unlock Affordance (`DesignInspector.tsx`, `TransformBox.tsx`)**:
+     - When a child layer is selected in the sidebar while its parent group is locked, the inspector detects `parentGroup.locked` and presents a clear amber notice banner: *"Parent group is locked [Unlock Group]"*.
+     - Clicking *[Unlock Group]* immediately sets `locked: false` on the parent group, activating property editing for the sub-element (colors, stroke width, trim paths, opacity).
+     - `TransformBox.tsx` also recognizes `parentGroup.locked`, suppressing canvas drag/resize handles and rendering the locked HUD indicator until the group is unlocked.
+* **Verification**:
+  - 17 automated tests in `src/test/interactive_split_mode.test.ts` verifying outliner sub-element selection, parent group unlocking, and independent property customization.
+  - All 51 test suites (459 tests) passing; clean production build.
+
+

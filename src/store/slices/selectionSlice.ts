@@ -1,5 +1,5 @@
-import { ProjectStoreState, isMotionMode } from "../types";
-import { findLayerInTree, findParentGroupInTree } from "../helpers/treeHelpers";
+import { ProjectStoreState } from "../types";
+import { findLayerInTree } from "../helpers/treeHelpers";
 import { getLayerClips } from "@/types/scene";
 import { initialDoc } from "../historyManager";
 
@@ -39,30 +39,17 @@ export const createSelectionSlice = (
     }),
 
   selectLayer: (layerId, multi = false) => {
-    const { selectedLayerIds, selectedClipIds, document: doc, activeScreenId, editingLayerId, uiMode } = get();
+    const { selectedLayerIds, selectedClipIds, document: doc, activeScreenId, editingLayerId } = get();
     const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
 
-    // If layer belongs to an isCompound entity and not in animate/motion mode, select the compound parent
-    let targetId = layerId;
-    if (activeScreen && !isMotionMode(uiMode)) {
-      let parent = findParentGroupInTree(activeScreen.layers, layerId);
-      while (parent) {
-        if (parent.isCompound) {
-          targetId = parent.id;
-          break;
-        }
-        parent = findParentGroupInTree(activeScreen.layers, parent.id);
-      }
-    }
-
     // If switching layers, exit text editing on previous layer
-    const nextEditingId = editingLayerId === targetId ? editingLayerId : null;
-    const nextTextSelection = editingLayerId === targetId ? get().activeTextSelection : null;
+    const nextEditingId = editingLayerId === layerId ? editingLayerId : null;
+    const nextTextSelection = editingLayerId === layerId ? get().activeTextSelection : null;
 
     // If selecting a single layer, clear selected clips if they don't belong to this layer
     let nextClipIds = selectedClipIds;
     if (!multi && selectedClipIds.length > 0 && activeScreen) {
-      const targetLayer = findLayerInTree(activeScreen.layers, targetId);
+      const targetLayer = findLayerInTree(activeScreen.layers, layerId);
       const layerClips = targetLayer ? getLayerClips(targetLayer) : [];
       const hasAny = selectedClipIds.some((cid) => layerClips.some((c) => c.id === cid));
       if (!hasAny) {
@@ -71,16 +58,16 @@ export const createSelectionSlice = (
     }
 
     if (multi) {
-      if (selectedLayerIds.includes(targetId)) {
+      if (selectedLayerIds.includes(layerId)) {
         set({
-          selectedLayerIds: selectedLayerIds.filter((id) => id !== targetId),
+          selectedLayerIds: selectedLayerIds.filter((id) => id !== layerId),
           selectedClipIds: nextClipIds,
           editingLayerId: nextEditingId,
           activeTextSelection: nextTextSelection,
         });
       } else {
         set({
-          selectedLayerIds: [...selectedLayerIds, targetId],
+          selectedLayerIds: [...selectedLayerIds, layerId],
           selectedClipIds: nextClipIds,
           editingLayerId: nextEditingId,
           activeTextSelection: nextTextSelection,
@@ -88,7 +75,7 @@ export const createSelectionSlice = (
       }
     } else {
       set({
-        selectedLayerIds: [targetId],
+        selectedLayerIds: [layerId],
         selectedClipIds: nextClipIds,
         editingLayerId: nextEditingId,
         activeTextSelection: nextTextSelection,

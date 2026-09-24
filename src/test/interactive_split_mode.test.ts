@@ -338,8 +338,8 @@ describe("Interactive Split Mode & Locked Compound Entities", () => {
     });
   });
 
-  describe("Canvas Compound Entity Move-As-One vs Independent Choreography", () => {
-    it("locks canvas selection to compound parent in Design mode so it moves as one unit", () => {
+  describe("Compound Entity Selection & Independent Choreography", () => {
+    it("allows direct selection of split sub-elements in outliner / left sidebar", () => {
       const rectLayer: ShapeLayer = {
         id: "rect-compound",
         name: "Card",
@@ -355,13 +355,15 @@ describe("Interactive Split Mode & Locked Compound Entities", () => {
       const screen = useProjectStore.getState().document.screens[0];
       const splitGroup = screen.layers.find((l) => (l as any).isCompound)!;
       const childPart1 = (splitGroup as any).children[0];
+      const childPart2 = (splitGroup as any).children[1];
 
-      // Ensure we are in Design mode
-      useProjectStore.getState().setUiMode("design");
-
-      // Clicking directly on childPart1 in canvas must redirect to compound parent
+      // Selecting childPart1 from the left sidebar selects it directly
       useProjectStore.getState().selectLayer(childPart1.id);
-      expect(useProjectStore.getState().selectedLayerIds).toEqual([splitGroup.id]);
+      expect(useProjectStore.getState().selectedLayerIds).toEqual([childPart1.id]);
+
+      // Selecting childPart2 from the left sidebar selects it directly
+      useProjectStore.getState().selectLayer(childPart2.id);
+      expect(useProjectStore.getState().selectedLayerIds).toEqual([childPart2.id]);
     });
 
     it("allows independent sub-layer selection in Animate mode for timeline choreography", () => {
@@ -581,6 +583,52 @@ describe("Interactive Split Mode & Locked Compound Entities", () => {
       const manualGroup = screen.layers.find((l) => l.type === "group" && !(l as any).isCompound) as any;
       expect(manualGroup).toBeDefined();
       expect(manualGroup.locked).toBeFalsy();
+    });
+
+    it("allows selecting either sub-element in the sidebar and unlocks parent group to enable styling", () => {
+      const rectLayer: ShapeLayer = {
+        id: "rect-sidebar-split",
+        name: "Card Frame",
+        type: "shape",
+        shapeType: "rectangle",
+        style: { x: 100, y: 100, width: 300, height: 200, borderWidth: 2, borderColor: "#8b5cf6", rotation: 0, opacity: 1 },
+      };
+
+      useProjectStore.getState().addLayer(rectLayer);
+      useProjectStore.getState().enterSplitMode(rectLayer.id);
+      useProjectStore.getState().confirmSplit();
+
+      const screen = useProjectStore.getState().document.screens[0];
+      const splitGroup = screen.layers.find((l) => (l as any).isCompound) as any;
+      expect(splitGroup.locked).toBe(true);
+      expect(splitGroup.children).toHaveLength(2);
+
+      const [child1, child2] = splitGroup.children;
+
+      // Select child1 directly (as clicked in the left sidebar tree)
+      useProjectStore.getState().selectLayer(child1.id);
+      expect(useProjectStore.getState().selectedLayerIds).toEqual([child1.id]);
+
+      // Select child2 directly (as clicked in the left sidebar tree)
+      useProjectStore.getState().selectLayer(child2.id);
+      expect(useProjectStore.getState().selectedLayerIds).toEqual([child2.id]);
+
+      // Unlock group
+      useProjectStore.getState().updateLayer(splitGroup.id, { locked: false });
+      expect(useProjectStore.getState().document.screens[0].layers.find((l) => l.id === splitGroup.id)?.locked).toBe(false);
+
+      // Now styling child2 works immediately
+      useProjectStore.getState().updateLayer(child2.id, {
+        style: {
+          ...child2.style,
+          borderColor: "#22c55e",
+          borderWidth: 5,
+        },
+      });
+
+      const updatedChild2 = (useProjectStore.getState().document.screens[0].layers.find((l) => l.id === splitGroup.id) as any).children[1];
+      expect(updatedChild2.style.borderColor).toBe("#22c55e");
+      expect(updatedChild2.style.borderWidth).toBe(5);
     });
   });
 });

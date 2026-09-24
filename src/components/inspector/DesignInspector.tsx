@@ -1,6 +1,6 @@
 import React from "react";
 import { Layer } from "@/types/scene";
-import { useProjectStore, findLayerInTree } from "@/store/useProjectStore";
+import { useProjectStore, findLayerInTree, findParentGroupInTree } from "@/store/useProjectStore";
 import { SceneSettingsCard } from "./design/SceneSettingsCard";
 import { LayerHeaderCard } from "./design/LayerHeaderCard";
 import { AlignmentBar } from "./design/AlignmentBar";
@@ -40,7 +40,10 @@ export const DesignInspector: React.FC = () => {
     selectedLayer.type === "chunk" ||
     selectedLayer.type === "counter";
 
-  const isLocked = Boolean(selectedLayer.locked);
+  const parentGroup = activeScreen ? findParentGroupInTree(activeScreen.layers, selectedLayer.id) : null;
+  const isDirectlyLocked = Boolean(selectedLayer.locked);
+  const isParentLocked = Boolean(parentGroup?.locked);
+  const isLocked = isDirectlyLocked || isParentLocked;
 
   return (
     <div className="p-4 space-y-4 text-foreground text-xs select-none">
@@ -50,11 +53,15 @@ export const DesignInspector: React.FC = () => {
         <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-xs">
           <div className="flex items-center gap-1.5">
             <Lock className="w-3.5 h-3.5 shrink-0" />
-            <span className="font-medium">Element is locked</span>
+            <span className="font-medium">
+              {isParentLocked && !isDirectlyLocked ? "Parent group is locked" : "Element is locked"}
+            </span>
           </div>
           <button
             onClick={() => {
-              if (selectedLayers.length > 1) {
+              if (isParentLocked && !isDirectlyLocked && parentGroup) {
+                updateLayer(parentGroup.id, { locked: false });
+              } else if (selectedLayers.length > 1) {
                 selectedLayers.forEach((l) => updateLayer(l.id, { locked: false }));
               } else {
                 updateLayer(selectedLayer.id, { locked: false });
@@ -62,7 +69,7 @@ export const DesignInspector: React.FC = () => {
             }}
             className="text-[11px] font-semibold underline hover:no-underline cursor-pointer"
           >
-            Unlock
+            {isParentLocked && !isDirectlyLocked ? "Unlock Group" : "Unlock"}
           </button>
         </div>
       )}

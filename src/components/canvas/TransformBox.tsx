@@ -121,7 +121,12 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
   } = useProjectStore();
 
   const isMulti = (selectedLayers && selectedLayers.length > 1) || false;
-  const isLocked = !isMulti && Boolean(layer.locked);
+  const activeLayers =
+    useProjectStore.getState().document.screens.find(
+      (s) => s.id === useProjectStore.getState().activeScreenId
+    )?.layers || [];
+  const parentGroup = !isMulti ? findParentGroupInTree(activeLayers, layer.id) : null;
+  const isLocked = !isMulti && Boolean(layer.locked || parentGroup?.locked);
   const isEditing = editingLayerId === layer.id;
   const [activeHandle, setActiveHandle] = useState<HandleType | null>(null);
 
