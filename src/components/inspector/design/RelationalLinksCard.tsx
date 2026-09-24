@@ -80,16 +80,16 @@ export const RelationalLinksCard: React.FC<RelationalLinksCardProps> = ({ select
       <div className="pt-2 pb-2.5 space-y-2.5 border-t border-border/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <Pin className="w-3.5 h-3.5 text-blue-400" />
+            <Pin className="w-3.5 h-3.5 text-foreground" />
             <h4 className="text-xs font-semibold text-foreground">Connector Pinning</h4>
           </div>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono font-medium">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/60 font-mono font-medium">
             1D Dynamic Link
           </span>
         </div>
 
         {/* Pin End Point */}
-        <div className="space-y-2 p-2 rounded-md bg-zinc-900/40 border border-border/30 text-xs">
+        <div className="space-y-2 p-2.5 rounded-md bg-muted/30 border border-border/60 text-xs">
           <div className="flex items-center justify-between">
             <span className="text-muted-foreground text-[11px] font-medium">Pin Endpoint</span>
             <Select
@@ -216,29 +216,29 @@ export const RelationalLinksCard: React.FC<RelationalLinksCardProps> = ({ select
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <Link2 className="w-3.5 h-3.5 text-purple-400" />
+          <Link2 className="w-3.5 h-3.5 text-foreground" />
           <h4 className="text-xs font-semibold text-foreground">Relational Linking</h4>
         </div>
-        <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 font-mono font-medium">
+        <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/60 font-mono font-medium">
           {children?.length} {children?.length === 1 ? "child" : "children"}
         </span>
       </div>
 
-      {/* Link Ways List (Modular Multi-Link Controls) */}
+      {/* Link Modes (Modular Multi-Link Controls) */}
       <div className="space-y-2">
-        {/* Link Way 1: Hug Content Bounds */}
+        {/* Link Mode 1: Hug Content Bounds */}
         <div
           className={cn(
-            "p-2 rounded-md border transition-colors space-y-2",
+            "p-2.5 rounded-lg border transition-all space-y-2.5",
             isHugEnabled
-              ? "bg-purple-500/5 border-purple-500/30"
-              : "bg-zinc-900/30 border-border/30"
+              ? "bg-card border-border shadow-xs"
+              : "bg-muted/20 border-border/50 hover:bg-muted/30"
           )}
         >
           <div className="flex items-center justify-between">
             <label
               htmlFor={`link-hug-${selectedLayer.id}`}
-              className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium"
+              className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-foreground"
             >
               <Checkbox
                 id={`link-hug-${selectedLayer.id}`}
@@ -246,68 +246,36 @@ export const RelationalLinksCard: React.FC<RelationalLinksCardProps> = ({ select
                 onCheckedChange={(checked) => toggleHug(Boolean(checked))}
               />
               <div className="flex items-center gap-1.5">
-                <Maximize2 className="w-3 h-3 text-purple-400" />
+                <Maximize2 className="w-3.5 h-3.5 text-muted-foreground" />
                 <span>Hug Bounds</span>
               </div>
             </label>
-            <span className="font-mono text-[9px] text-muted-foreground uppercase">
-              Auto-Dilation
-            </span>
           </div>
 
           {isHugEnabled && (
-            <div className="pl-6 space-y-2 text-xs pt-1">
+            <div className="pl-6 space-y-2.5 text-xs pt-0.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground">Dimension</span>
-                <div className="flex items-center gap-1 bg-zinc-800/80 p-0.5 rounded border border-border/30 text-[10px]">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateLayerContainerLayout(selectedLayer.id, {
-                        hug: { ...containerLayout?.hug, enabled: true, dimension: "both" },
-                      })
-                    }
-                    className={cn(
-                      "px-1.5 py-0.5 rounded transition-colors",
-                      hugDimension === "both"
-                        ? "bg-[#6d28d9] text-white font-medium"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Both
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateLayerContainerLayout(selectedLayer.id, {
-                        hug: { ...containerLayout?.hug, enabled: true, dimension: "width" },
-                      })
-                    }
-                    className={cn(
-                      "px-1.5 py-0.5 rounded transition-colors",
-                      hugDimension === "width"
-                        ? "bg-[#6d28d9] text-white font-medium"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Width
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateLayerContainerLayout(selectedLayer.id, {
-                        hug: { ...containerLayout?.hug, enabled: true, dimension: "height" },
-                      })
-                    }
-                    className={cn(
-                      "px-1.5 py-0.5 rounded transition-colors",
-                      hugDimension === "height"
-                        ? "bg-[#6d28d9] text-white font-medium"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Height
-                  </button>
+                <span className="text-[10px] text-muted-foreground font-medium">Dimension</span>
+                <div className="flex items-center bg-muted p-0.5 rounded border border-border/40 text-[10px]">
+                  {(["both", "width", "height"] as const).map((dim) => (
+                    <button
+                      key={dim}
+                      type="button"
+                      onClick={() =>
+                        updateLayerContainerLayout(selectedLayer.id, {
+                          hug: { ...containerLayout?.hug, enabled: true, dimension: dim },
+                        })
+                      }
+                      className={cn(
+                        "px-2 py-0.5 rounded transition-all capitalize cursor-pointer",
+                        hugDimension === dim
+                          ? "bg-card text-foreground font-medium shadow-xs"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {dim}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -341,61 +309,47 @@ export const RelationalLinksCard: React.FC<RelationalLinksCardProps> = ({ select
               </div>
 
               <div className="flex items-center justify-between pt-0.5">
-                <span className="text-[10px] text-muted-foreground">Physics</span>
-                <div className="flex items-center gap-1 bg-zinc-800/80 p-0.5 rounded border border-border/30 text-[10px]">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateLayerContainerLayout(selectedLayer.id, {
-                        physics: "spring",
-                        hug: { ...containerLayout?.hug, enabled: true, physics: "spring" },
-                      })
-                    }
-                    className={cn(
-                      "px-2 py-0.5 rounded transition-colors",
-                      hugPhysics !== "instant"
-                        ? "bg-[#6d28d9] text-white font-medium"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Spring
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateLayerContainerLayout(selectedLayer.id, {
-                        physics: "instant",
-                        hug: { ...containerLayout?.hug, enabled: true, physics: "instant" },
-                      })
-                    }
-                    className={cn(
-                      "px-2 py-0.5 rounded transition-colors",
-                      hugPhysics === "instant"
-                        ? "bg-[#6d28d9] text-white font-medium"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Instant
-                  </button>
+                <span className="text-[10px] text-muted-foreground font-medium">Physics</span>
+                <div className="flex items-center bg-muted p-0.5 rounded border border-border/40 text-[10px]">
+                  {(["spring", "instant"] as const).map((phys) => (
+                    <button
+                      key={phys}
+                      type="button"
+                      onClick={() =>
+                        updateLayerContainerLayout(selectedLayer.id, {
+                          physics: phys,
+                          hug: { ...containerLayout?.hug, enabled: true, physics: phys },
+                        })
+                      }
+                      className={cn(
+                        "px-2.5 py-0.5 rounded transition-all capitalize cursor-pointer",
+                        hugPhysics === phys
+                          ? "bg-card text-foreground font-medium shadow-xs"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {phys}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Link Way 2: Reflow Stack */}
+        {/* Link Mode 2: Reflow Stack */}
         <div
           className={cn(
-            "p-2 rounded-md border transition-colors space-y-2",
+            "p-2.5 rounded-lg border transition-all space-y-2.5",
             isStackEnabled
-              ? "bg-emerald-500/5 border-emerald-500/30"
-              : "bg-zinc-900/30 border-border/30"
+              ? "bg-card border-border shadow-xs"
+              : "bg-muted/20 border-border/50 hover:bg-muted/30"
           )}
         >
           <div className="flex items-center justify-between">
             <label
               htmlFor={`link-stack-${selectedLayer.id}`}
-              className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium"
+              className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-foreground"
             >
               <Checkbox
                 id={`link-stack-${selectedLayer.id}`}
@@ -403,54 +357,37 @@ export const RelationalLinksCard: React.FC<RelationalLinksCardProps> = ({ select
                 onCheckedChange={(checked) => toggleStack(Boolean(checked))}
               />
               <div className="flex items-center gap-1.5">
-                <MoveHorizontal className="w-3 h-3 text-emerald-400" />
+                <MoveHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
                 <span>Reflow Stack</span>
               </div>
             </label>
-            <span className="font-mono text-[9px] text-muted-foreground uppercase">
-              Auto-Flow
-            </span>
           </div>
 
           {isStackEnabled && (
-            <div className="pl-6 space-y-2 text-xs pt-1">
+            <div className="pl-6 space-y-2.5 text-xs pt-0.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground">Axis</span>
-                <div className="flex items-center gap-1 bg-zinc-800/80 p-0.5 rounded border border-border/30 text-[10px]">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateLayerContainerLayout(selectedLayer.id, {
-                        stackAxis: "vertical",
-                        stack: { ...containerLayout?.stack, enabled: true, axis: "vertical" },
-                      })
-                    }
-                    className={cn(
-                      "px-2 py-0.5 rounded transition-colors",
-                      stackAxis !== "horizontal"
-                        ? "bg-[#6d28d9] text-white font-medium"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Vertical
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      updateLayerContainerLayout(selectedLayer.id, {
-                        stackAxis: "horizontal",
-                        stack: { ...containerLayout?.stack, enabled: true, axis: "horizontal" },
-                      })
-                    }
-                    className={cn(
-                      "px-2 py-0.5 rounded transition-colors",
-                      stackAxis === "horizontal"
-                        ? "bg-[#6d28d9] text-white font-medium"
-                        : "text-muted-foreground hover:text-foreground"
-                    )}
-                  >
-                    Horizontal
-                  </button>
+                <span className="text-[10px] text-muted-foreground font-medium">Axis</span>
+                <div className="flex items-center bg-muted p-0.5 rounded border border-border/40 text-[10px]">
+                  {(["vertical", "horizontal"] as const).map((ax) => (
+                    <button
+                      key={ax}
+                      type="button"
+                      onClick={() =>
+                        updateLayerContainerLayout(selectedLayer.id, {
+                          stackAxis: ax,
+                          stack: { ...containerLayout?.stack, enabled: true, axis: ax },
+                        })
+                      }
+                      className={cn(
+                        "px-2.5 py-0.5 rounded transition-all capitalize cursor-pointer",
+                        stackAxis === ax
+                          ? "bg-card text-foreground font-medium shadow-xs"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {ax}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -469,7 +406,7 @@ export const RelationalLinksCard: React.FC<RelationalLinksCardProps> = ({ select
                   }
                 />
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] text-muted-foreground">Align</span>
+                  <span className="text-[10px] text-muted-foreground font-medium">Align</span>
                   <Select
                     value={stackAlign}
                     onValueChange={(val: any) =>
@@ -494,18 +431,18 @@ export const RelationalLinksCard: React.FC<RelationalLinksCardProps> = ({ select
           )}
         </div>
 
-        {/* Link Way 3: Clip to Boundary */}
+        {/* Link Mode 3: Clip Content */}
         <div
           className={cn(
-            "p-2 rounded-md border transition-colors flex items-center justify-between",
+            "p-2.5 rounded-lg border transition-all flex items-center justify-between",
             isClipEnabled
-              ? "bg-amber-500/5 border-amber-500/30"
-              : "bg-zinc-900/30 border-border/30"
+              ? "bg-card border-border shadow-xs"
+              : "bg-muted/20 border-border/50 hover:bg-muted/30"
           )}
         >
           <label
             htmlFor={`link-clip-${selectedLayer.id}`}
-            className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium"
+            className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-foreground"
           >
             <Checkbox
               id={`link-clip-${selectedLayer.id}`}
@@ -513,13 +450,10 @@ export const RelationalLinksCard: React.FC<RelationalLinksCardProps> = ({ select
               onCheckedChange={(checked) => toggleClip(Boolean(checked))}
             />
             <div className="flex items-center gap-1.5">
-              <Scissors className="w-3 h-3 text-amber-400" />
+              <Scissors className="w-3.5 h-3.5 text-muted-foreground" />
               <span>Clip Content</span>
             </div>
           </label>
-          <span className="font-mono text-[9px] text-muted-foreground uppercase">
-            Stencil Boundary
-          </span>
         </div>
       </div>
 
@@ -532,20 +466,20 @@ export const RelationalLinksCard: React.FC<RelationalLinksCardProps> = ({ select
           {children?.map((child) => (
             <div
               key={child.id}
-              className="flex items-center justify-between px-2 py-1.5 rounded bg-zinc-900/60 border border-border/30 text-xs"
+              className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-muted/40 border border-border/60 text-xs"
             >
               <div className="flex items-center gap-1.5 min-w-0">
-                <span className="text-[9px] uppercase font-mono px-1 py-0.2 rounded bg-zinc-800 text-zinc-300">
+                <span className="text-[9px] uppercase font-mono px-1.5 py-0.5 rounded bg-card border border-border/60 text-muted-foreground font-semibold">
                   {child.type}
                 </span>
-                <span className="truncate text-foreground font-medium text-[11px]">
+                <span className="truncate text-foreground font-medium text-xs">
                   {child.name}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => detachChildFromParent(child.id)}
-                className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-red-400 hover:bg-red-500/10 px-1.5 py-0.5 rounded transition-colors"
+                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive hover:bg-destructive/10 px-2 py-0.5 rounded transition-colors cursor-pointer"
                 title="Detach and return to root space (0.0000px layout shift)"
               >
                 <Unlink className="w-3 h-3" />
