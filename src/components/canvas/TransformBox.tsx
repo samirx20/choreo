@@ -124,6 +124,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
 
   const parentOffset = getParentWorldOffset(layer.id);
   const domEl = typeof document !== "undefined" ? document.getElementById(`layer-${layer.id}`) : null;
+  const isTextLayer = !isMulti && (layer.type === "text" || layer.type === "chunk");
 
   // For multi-selection, use the enclosing AABB bounds
   // For single-selection, use the canonical local coordinates and unrotated dimensions
@@ -134,12 +135,15 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
       ? layer.style.width
       : domEl?.offsetWidth || 200;
 
+  // Text layers always auto-hug measured DOM content height to eliminate empty void bugs
   const visualH =
     isMulti && bounds
       ? bounds.height
-      : typeof layer.style.height === "number"
+      : isTextLayer && domEl && domEl.offsetHeight > 0
+      ? domEl.offsetHeight
+      : typeof layer.style.height === "number" && !isTextLayer
       ? layer.style.height
-      : domEl?.offsetHeight || 100;
+      : domEl?.offsetHeight || 60;
 
   let visualX = isMulti && bounds ? bounds.x : (layer.style.x || 0) + parentOffset.x;
   let visualY = isMulti && bounds ? bounds.y : (layer.style.y || 0) + parentOffset.y;
@@ -507,25 +511,12 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
           width: Math.round(newW),
         };
 
-        // Dual-Mode Text Scaling vs Edge Reflow
+        // Text wrap reflow: Width controls wrapping boundary; height dynamically auto-hugs text
         if (layer.type === "text" || layer.type === "chunk") {
-          const isCorner = ["nw", "ne", "se", "sw"].includes(session.handle);
-          if (isCorner) {
-            updates.width = Math.round(newW);
-            updates.height = Math.round(newH);
-            updates.textSizing = "fixed";
-            updates.boxMode = "area";
-          } else if (session.handle.includes("e") || session.handle.includes("w")) {
-            updates.width = Math.round(newW);
-            updates.height = Math.round(session.initialHeight);
-            updates.textSizing = "auto-height";
-            updates.boxMode = "area";
-          } else {
-            updates.width = Math.round(session.initialWidth);
-            updates.height = Math.round(newH);
-            updates.textSizing = "fixed";
-            updates.boxMode = "area";
-          }
+          updates.width = Math.max(30, Math.round(newW));
+          updates.height = "auto" as any;
+          updates.textSizing = "auto-height";
+          updates.boxMode = "area";
         } else {
           updates.height = Math.round(newH);
         }
@@ -731,7 +722,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
                 </>
               )}
 
-              {/* 8 Bounding Box Resize Handles (Single & Multi-Selection) */}
+              {/* Bounding Box Resize Handles (Single & Multi-Selection) */}
               {[
                 { pos: "nw", style: { top: -4, left: -4 } },
                 { pos: "n", style: { top: -4, left: "50%", transform: "translateX(-50%)" } },
@@ -741,7 +732,13 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
                 { pos: "s", style: { bottom: -4, left: "50%", transform: "translateX(-50%)" } },
                 { pos: "sw", style: { bottom: -4, left: -4 } },
                 { pos: "w", style: { top: "50%", left: -4, transform: "translateY(-50%)" } },
-              ].map((h) => (
+              ]
+                .filter((h) => {
+                  // For text layers, hide North and South edge handles so users cannot stretch empty height
+                  if (isTextLayer && (h.pos === "n" || h.pos === "s")) return false;
+                  return true;
+                })
+                .map((h) => (
                 <div
                   key={h.pos}
                   style={{ ...h.style, cursor: getRotatedCursor(h.pos, rotation) }}
@@ -753,22 +750,11 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
                     e.stopPropagation();
                     if (!isMulti && (layer.type === "text" || layer.type === "chunk")) {
                       if (h.pos === "e" || h.pos === "w") {
-                        const isAutoWidth = layer.style.textSizing === "auto-width" || layer.style.boxMode === "point";
+                        // Double click width handle to auto-fit to content
                         updateLayerStyle(layer.id, {
-                          textSizing: isAutoWidth ? "auto-height" : "auto-width",
-                          boxMode: isAutoWidth ? "area" : "point",
-                        });
-                      } else if (h.pos === "s" || h.pos === "n") {
-                        const isAutoHeight = layer.style.textSizing === "auto-height";
-                        updateLayerStyle(layer.id, {
-                          textSizing: isAutoHeight ? "fixed" : "auto-height",
-                          boxMode: "area",
-                        });
-                      } else {
-                        const currentMode = layer.style.boxMode ?? "point";
-                        const nextMode = currentMode === "point" ? "area" : "point";
-                        updateLayerStyle(layer.id, {
-                          boxMode: nextMode,
+                          width: domEl ? Math.round(domEl.scrollWidth) : "auto",
+                          height: "auto",
+                          textSizing: "auto-height",
                         });
                       }
                     }

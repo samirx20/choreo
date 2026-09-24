@@ -39,8 +39,8 @@ export function createLayerForTool(
         x,
         y,
         width,
-        height,
-        textSizing: "fixed",
+        height: customBounds ? height : ("auto" as any),
+        textSizing: "auto-height",
         scaleX: 1,
         scaleY: 1,
         pivotX: 0.5,
@@ -52,7 +52,6 @@ export function createLayerForTool(
         fontFamily: "Inter",
         color: THEME_TOKENS.typography.headingColor,
         textAlign: "center",
-        verticalAlign: "middle",
       },
       animation: {
         in: {

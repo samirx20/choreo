@@ -41,7 +41,7 @@ export function layerStyleToCss(
       css.width = "max-content";
       css.height = "auto";
       css.whiteSpace = style.boxMode === "point" ? "pre" : "nowrap";
-    } else if (style.textSizing === "auto-height") {
+    } else if (style.textSizing === "auto-height" || style.height === "auto") {
       css.width = typeof style.width === "number" ? `${style.width}px` : "auto";
       css.height = "auto";
       css.whiteSpace = "pre-wrap";
@@ -53,12 +53,10 @@ export function layerStyleToCss(
       css.wordBreak = "break-word";
       css.overflow = "hidden";
     } else {
-      // Fixed size: explicit width & height
       css.width = typeof style.width === "number" ? `${style.width}px` : "auto";
       css.height = typeof style.height === "number" ? `${style.height}px` : "auto";
       css.whiteSpace = "pre-wrap";
       css.wordBreak = "break-word";
-      css.overflow = "hidden";
     }
   } else {
     if (typeof style.width === "number") {

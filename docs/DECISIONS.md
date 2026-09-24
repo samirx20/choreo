@@ -1825,6 +1825,29 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - 5 unit/integration tests in `src/test/multi_scene_export_and_popover.test.ts` (multi-scene sequence stitching, alpha export, abort/cancellation, GIF generation, MP4 format, and audio metadata).
   - Production build (`tsc -b && vite build`) compiles with zero errors in 14.88s.
 
+---
+
+### Decision 81: Dynamic Auto-Hug Text Sizing Architecture & Canvas Selection Boundary Desync Elimination
+* **Context & Motivation**:
+  - Legacy graphic design modes (`Auto Width`, `Auto Height`, and `Fixed Size`) caused severe layout desynchronization and visual defects on canvas:
+    - Text layers set to `Fixed` with an arbitrary height (e.g. `243px`) left massive empty voids below 1–2 lines of copy.
+    - Dragging handles or resizing created "two disconnected boundaries" where the DOM text rendered at the top while the selection box (`TransformBox`) floated below with empty space.
+    - An omnipresent file drop overlay was capturing internal layer reordering drag events in the editor.
+* **The Solution**:
+  1. **Strict Content-Driven Auto-Hug Height (`styleUtils.ts` & `toolCreationHelpers.ts`)**:
+     - Text layers now strictly default to dynamic auto-hug height (`height: "auto"`, `textSizing: "auto-height"`).
+     - The user controls wrap width by dragging handles; the height automatically recalculates to tightly hug the rendered text lines with zero dead vertical space.
+  2. **Ghost Box Handle Suppression in TransformBox (`TransformBox.tsx`)**:
+     - For text layers, `visualH` derives directly from the measured DOM element (`domEl.offsetHeight`), ensuring the purple selection box tightly encloses the text lines at all times.
+     - Suppressed North (`n`) and South (`s`) handles on text layers so users can never inadvertently drag an artificial empty height void.
+     - Left/Right edge handles (`e`, `w`) and corners smoothly adjust the wrapping width; double-clicking width handles auto-fits width to content.
+  3. **High Signal, Zero Noise Typography Inspector (`TypographyCard.tsx` & `TransformCard.tsx`)**:
+     - Removed the confusing `[Auto W | Auto H | Fixed]` button group and redundant vertical align controls.
+     - In `TransformCard.tsx`, text Height (`H`) is displayed as a read-only auto-hugged indicator, preventing accidental manual keying of corrupting height numbers.
+* **Verification**:
+  - 51 test suites, 454 tests passing via Vitest.
+  - Production build (`tsc -b && vite build`) compiles with zero TypeScript errors in 20.29s.
+
 
 
 

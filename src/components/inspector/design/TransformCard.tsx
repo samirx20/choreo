@@ -79,6 +79,40 @@ export const TransformCard: React.FC<TransformCardProps> = ({ selectedLayer }) =
                 onChange={(val) => updateLayerStyle(selectedLayer.id, { width: val, height: val })}
                 className="w-full"
               />
+            ) : isText ? (
+              <>
+                <ScrubbableInput
+                  label="W"
+                  value={width}
+                  step={1}
+                  min={20}
+                  onChange={(val) =>
+                    updateLayerStyle(selectedLayer.id, {
+                      width: val,
+                      height: "auto" as any,
+                      textSizing: "auto-height",
+                    })
+                  }
+                  className="w-full"
+                />
+                <div
+                  className="w-full relative"
+                  title="Height automatically hugs text content"
+                >
+                  <ScrubbableInput
+                    label="H"
+                    value={
+                      typeof document !== "undefined"
+                        ? document.getElementById(`layer-${selectedLayer.id}`)?.offsetHeight || height
+                        : height
+                    }
+                    step={1}
+                    disabled={true}
+                    onChange={() => {}}
+                    className="w-full opacity-60 cursor-default"
+                  />
+                </div>
+              </>
             ) : (
               <>
                 <ScrubbableInput

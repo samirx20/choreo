@@ -320,12 +320,14 @@ export function buildCanvasElementMenu(params: {
         : []),
       {
         id: "toggle-text-sizing",
-        label: layer.style?.textSizing === "auto-height" ? "Switch to Auto-Width" : "Switch to Auto-Height",
+        label: "Fit Width to Content",
         icon: <Maximize2 className="w-3.5 h-3.5" />,
         action: () => {
-          const cur = layer.style?.textSizing ?? "auto-width";
+          const domEl = typeof document !== "undefined" ? document.getElementById(`layer-${layer.id}`) : null;
           store.updateLayerStyle(layer.id, {
-            textSizing: cur === "auto-height" ? "auto-width" : "auto-height",
+            width: domEl ? Math.round(domEl.scrollWidth) : "auto",
+            height: "auto",
+            textSizing: "auto-height",
           });
         },
       },

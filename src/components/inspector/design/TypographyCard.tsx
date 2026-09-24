@@ -127,8 +127,8 @@ export const TypographyCard: React.FC<TypographyCardProps> = ({ selectedLayer })
         />
       </div>
 
-      {/* 3. Letter Spacing & Sizing Mode */}
-      <div className="grid grid-cols-2 gap-2">
+      {/* 3. Letter Spacing */}
+      <div>
         <ScrubbableInput
           label="Spacing"
           value={typeof style.letterSpacing === "number" ? style.letterSpacing : 0}
@@ -139,38 +139,6 @@ export const TypographyCard: React.FC<TypographyCardProps> = ({ selectedLayer })
           onChange={(val) => updateLayerStyle(selectedLayer.id, { letterSpacing: val })}
           className="w-full"
         />
-
-        {/* Sizing Mode (Auto Width, Auto Height, Fixed) */}
-        <div className="flex items-center gap-0.5 bg-muted p-0.5 rounded border border-border/40">
-          {[
-            { id: "auto-width", label: "Auto W", title: "Auto Width (Point Text)" },
-            { id: "auto-height", label: "Auto H", title: "Auto Height (Multi-line)" },
-            { id: "fixed", label: "Fixed", title: "Fixed Box (Centered)" },
-          ].map((mode) => {
-            const isCurrent = (style.textSizing || "fixed") === mode.id;
-            return (
-              <button
-                key={mode.id}
-                type="button"
-                onClick={() => {
-                  updateLayerStyle(selectedLayer.id, {
-                    textSizing: mode.id as any,
-                    boxMode: mode.id === "auto-width" ? "point" : "area",
-                  });
-                }}
-                className={cn(
-                  "flex-1 py-1 text-[9px] font-medium rounded transition-colors text-center cursor-pointer",
-                  isCurrent
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                title={mode.title}
-              >
-                {mode.label}
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {/* 4. Text Alignment (Left, Center, Right, Justify) */}
@@ -199,36 +167,6 @@ export const TypographyCard: React.FC<TypographyCardProps> = ({ selectedLayer })
                 title={align.title}
               >
                 <Icon className="h-3.5 w-3.5" />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 5. Vertical Alignment (Top, Middle/Center, Bottom) */}
-      <div className="space-y-1">
-        <span className="text-[10px] text-muted-foreground font-medium">Vertical Align</span>
-        <div className="grid grid-cols-3 gap-1 bg-muted p-0.5 rounded border border-border/40">
-          {[
-            { id: "top", label: "Top", title: "Align Top" },
-            { id: "middle", label: "Middle", title: "Align Middle" },
-            { id: "bottom", label: "Bottom", title: "Align Bottom" },
-          ].map((valign) => {
-            const isCurrent = (style.verticalAlign || "middle") === valign.id;
-            return (
-              <button
-                key={valign.id}
-                type="button"
-                onClick={() => updateLayerStyle(selectedLayer.id, { verticalAlign: valign.id as any })}
-                className={cn(
-                  "py-1 text-[10px] font-medium rounded transition-colors text-center cursor-pointer",
-                  isCurrent
-                    ? "bg-card text-foreground shadow-xs font-semibold"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-                title={valign.title}
-              >
-                {valign.label}
               </button>
             );
           })}
