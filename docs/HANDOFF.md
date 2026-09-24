@@ -2,22 +2,25 @@
 
 > **Date**: September 24, 2026  
 > **Branch**: `main` (Latest commit: `d5664b3`, fully pushed to remote)  
-> **Session Baseline**: 51 test suites, 461 automated tests passing via Vitest (`npm test`). Production build succeeds with 0 errors in 10.84s (`npm run build`).
+> **Session Baseline**: 52 test suites, 467 automated tests passing via Vitest (`npm test`). Production build succeeds with 0 errors in 10.60s (`npm run build`).
 
 ---
 
 ## 1. Executive Summary & Current State
 
-In this session, the Cross-Element Morph Transition and Inspector Architecture underwent complete physical and visual refinement:
-1. **Physical 4-Phase Choreography**: Breakup & dematerialization ($t \in [0, 0.20]$), swarm flocking migration ($t \in [0.20, 0.72]$), target contour assembly ($t \in [0.72, 0.88]$), and inward collapse ($t \in [0.88, 1.0]$).
-2. **Transform-Origin & Pivot Invariance**: Vector arrows, lines, and rotated primitives sample contour points around actual `(originX, originY)` (derived from layer `pivotX` and `pivotY`), matching canvas geometry to 0.00px.
-3. **Mid-Flight Window Opacity ($0.18 \le t \le 0.90$)**: Discrete temporal cutoffs eliminate ghosting; source completely vanishes at $progress \ge 0.18$ and target remains strictly at $0\%$ opacity until $progress \ge 0.90$.
-4. **Exact 100% Scale Invariance**: Removed experimental scale overshoots (`108% -> 100%`) and blur pops. Elements reveal cleanly at exact resting scale (`scaleX = 1, scaleY = 1, blur = 0`).
-5. **Impeccable Craft Floor UI Refinements**:
-   - Stripped useless decorative icon boxes before "From" and after "To" in the Connected Elements card.
-   - Cleaned Effect Style button labels to pure typographic tokens: `Stardust`, `Liquid`, `Voronoi`, `Laser`, `Singularity`, `Spline`.
-   - Replaced the dropdown menu with a unified, searchable "Morph Into..." element picker sheet matching initial morph creation.
-   - Built atomic `relinkMorphTarget` in Zustand store to safely re-anchor partner clips on destination swap.
+1. **Multi-Selection Inspector Architecture (`MultiSelectionCard.tsx`, `DesignInspector.tsx`)**:
+   - Single-element cards (Transform, Appearance, Typography, Specialized cards) are suppressed when $\ge 2$ elements are selected, eliminating irrelevant property clutter.
+   - Replaced with dedicated `MultiSelectionCard` presenting:
+     - **Masking**: "Mask Selection" (`Ctrl+Alt+M`) with clear stencil subtext, plus "Release" button if a mask group is present.
+     - **Boolean Operations**: 4 operation buttons (`Union`, `Subtract`, `Intersect`, `Exclude`) and "Flatten to Vector Path" (`Ctrl+E`).
+     - **Grouping**: "Group ({count})" (`Ctrl+G`) and "Ungroup" (`Ctrl+Shift+G`).
+2. **Bottom Floating Toolbar Consolidation (`FloatingDesignToolbar.tsx`)**:
+   - Removed Boolean operation buttons from the floating toolbar, consolidating combination tools into the right sidebar inspector.
+   - Combined Pen (`P`) and Pencil (`Shift+P`) into a single unified Vector Drawing dropdown button matching the Shapes dropdown UX.
+   - Upgraded the Media button into a dropdown supporting raster **Image** (PNG, JPG, WebP) and **Vector SVG** (.svg) with dedicated file pickers.
+3. **Cross-Element Morph Transition & Inspector Refinements**:
+   - Physical 4-phase choreography with transform-origin and resting scale invariance ($100\%$ scale, zero blur/overshoot pops).
+   - Unified "Morph Into..." target element picker sheet.
 
 ---
 

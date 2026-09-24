@@ -2121,6 +2121,42 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 51 test suites (461 tests) pass cleanly.
   - Production build (`npm run build`) succeeds with 0 errors in 10.84s.
 
+---
+
+### Decision 94: Multi-Selection Inspector Architecture & Consolidated Toolbar Dropdowns
+* **Context & Problem**:
+  - When selecting multiple elements on the canvas, the right sidebar previously rendered single-element inspector cards (Transform coordinates, Typography, Appearance fill/stroke) from whatever arbitrary layer was first in the selection (`selectedLayers[0]`).
+  - Boolean operation buttons were awkwardly placed in the bottom floating design toolbar, creating visual clutter and violating the single-inspector paradigm.
+  - Pen (`P`) and Pencil (`Shift+P`) occupied two separate buttons on the bottom toolbar, unlike shapes which used a unified dropdown.
+  - The Media button only triggered generic raster image uploads without explicit discoverability for vector SVG import.
+* **The Solution**:
+  1. **Multi-Selection Inspector Card (`MultiSelectionCard.tsx` & `DesignInspector.tsx`)**:
+     - When $\ge 2$ elements are selected, `DesignInspector` completely hides single-element cards (`TransformCard`, `SpecializedLayerCard`, `TypographyCard`, `AppearanceCard`).
+     - Renders a clean, high-signal [`MultiSelectionCard`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/components/inspector/design/MultiSelectionCard.tsx):
+       - **Masking Section**: "Mask Selection" (`Ctrl+Alt+M`) with subtext explaining that the bottom layer becomes a stencil clipping the layers above it into a `Mask Group`. If a mask group is selected, provides an instant "Release" button.
+       - **Boolean Operations Section**: 4 operation buttons (`Union`, `Subtract`, `Intersect`, `Exclude`) plus a full-width "Flatten to Vector Path" (`Ctrl+E`) action.
+       - **Grouping Section**: "Group ({count})" (`Ctrl+G`) and "Ungroup" (`Ctrl+Shift+G`).
+  2. **Consolidated Vector Drawing Dropdown in Toolbar (`FloatingDesignToolbar.tsx`)**:
+     - Combined Pen (`P`) and Pencil (`Shift+P`) into a single dropdown button matching the Shapes tool pattern.
+     - Displays the currently selected tool icon (`PenTool` or `Pencil`) with `ChevronDown` arrow, enabling seamless toggling and switching between vector anchor paths and Catmull-Rom smoothed freehand curves.
+  3. **Media Dropdown (Image & Vector SVG) in Toolbar**:
+     - Replaced the single Image button with a consolidated Media dropdown:
+       - **Image (Raster: PNG, JPG, WebP)**: opens raster image file picker.
+       - **Vector SVG (.svg)**: opens dedicated SVG file picker with analytical vector path import and decomposition support.
+  4. **Toolbar Boolean Pruning**:
+     - Completely removed the redundant Boolean buttons from the bottom floating toolbar, centralizing all combination and masking workflows directly in the right sidebar.
+* **Verification**:
+  - Created [`src/test/multi_selection_and_toolbar_ux.test.tsx`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/test/multi_selection_and_toolbar_ux.test.tsx) with 6 comprehensive integration tests verifying:
+    - Single-element inspector renders Layout and Fill cards.
+    - Multi-selection renders `MultiSelectionCard` with Masking and Boolean operations while omitting single-element cards.
+    - Mask Selection button click executes `maskSelection()`.
+    - Floating toolbar omits boolean buttons.
+    - Vector tool dropdown toggles Pen and Pencil.
+    - Media dropdown exposes Image and Vector SVG options.
+  - All 52 test suites (467 tests) pass cleanly (`npm test`).
+  - Production build (`npm run build`) succeeds with 0 type errors in 10.60s.
+
+
 
 
 

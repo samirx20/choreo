@@ -18,11 +18,7 @@ import {
   Component,
   PenTool,
   Pencil,
-  Combine,
-  MinusCircle,
-  Blend,
-  Split,
-  Layers,
+  FileCode,
   ListOrdered,
 } from "lucide-react";
 import { useProjectStore, CanvasTool } from "@/store/useProjectStore";
@@ -55,12 +51,12 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
     activeScreenId,
     document: doc,
     selectedLayerIds,
-    applyBooleanOperation,
-    flattenSelection,
   } = useProjectStore();
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const svgInputRef = useRef<HTMLInputElement>(null);
   const [selectedShape, setSelectedShape] = useState<CanvasTool>("rectangle");
+  const [selectedVectorTool, setSelectedVectorTool] = useState<"pen" | "pencil">("pen");
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
   const [isStaggerOpen, setIsStaggerOpen] = useState(false);
 
@@ -120,7 +116,7 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
 
   const handleToolClick = (tool: CanvasTool) => {
     if (tool === "media") {
-      fileInputRef.current?.click();
+      imageInputRef.current?.click();
       return;
     }
     if (tool === "artboard") {
@@ -144,6 +140,13 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
     "arrow",
   ].includes(activeTool);
 
+  const isVectorActive = activeTool === "pen" || activeTool === "pencil";
+
+  const handleSelectVectorTool = (tool: "pen" | "pencil") => {
+    setSelectedVectorTool(tool);
+    setTool(tool);
+  };
+
   const getShapeIcon = (tool: CanvasTool) => {
     switch (tool) {
       case "circle":
@@ -166,6 +169,20 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
   const handleSelectShape = (tool: CanvasTool) => {
     setSelectedShape(tool);
     setTool(tool);
+  };
+
+  const handleSvgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const textReader = new FileReader();
+    textReader.onload = (event) => {
+      const svgText = event.target?.result as string;
+      if (svgText) {
+        useProjectStore.getState().importSvg(svgText, undefined, file.name.replace(/\.[^/.]+$/, ""));
+      }
+    };
+    textReader.readAsText(file);
+    e.target.value = "";
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -262,9 +279,16 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
     >
       <input
         type="file"
-        ref={fileInputRef}
+        ref={imageInputRef}
         onChange={handleImageUpload}
-        accept="image/*,.svg"
+        accept="image/png,image/jpeg,image/webp,image/gif"
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={svgInputRef}
+        onChange={handleSvgUpload}
+        accept=".svg,image/svg+xml"
         className="hidden"
       />
 
@@ -413,47 +437,92 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
 
       <div className="h-4 w-px bg-[#3f3f46] mx-0.5" />
 
-      {/* Pen Tool (P) */}
-      <button
-        type="button"
-        onClick={() => handleToolClick("pen")}
-        className={cn(
-          "h-8 w-8 rounded-full flex items-center justify-center transition-all",
-          activeTool === "pen"
-            ? "bg-[#7c3aed] text-white shadow-xs"
-            : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
-        )}
-        title="Pen Tool - Vector Paths (P)"
-      >
-        <PenTool className="h-4 w-4" />
-      </button>
+      {/* Vector Drawing Dropdown (Pen P, Pencil Shift+P) */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className={cn(
+              "h-8 px-2 rounded-full flex items-center gap-1 transition-all",
+              isVectorActive
+                ? "bg-[#7c3aed] text-white shadow-xs"
+                : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
+            )}
+            title="Vector Drawing (Pen & Pencil)"
+          >
+            {activeTool === "pencil" || (activeTool !== "pen" && selectedVectorTool === "pencil") ? (
+              <Pencil className="h-4 w-4" />
+            ) : (
+              <PenTool className="h-4 w-4" />
+            )}
+            <ChevronDown className="h-3 w-3 opacity-60" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          side="top"
+          sideOffset={10}
+          align="center"
+          className="w-44 bg-[#18181b]/95 border-[#27272a] text-zinc-200 p-1.5 shadow-2xl rounded-xl"
+        >
+          <DropdownMenuItem
+            onClick={() => handleSelectVectorTool("pen")}
+            className="gap-2.5 cursor-pointer hover:bg-white/10 text-xs py-2 px-2.5 rounded-lg"
+          >
+            <PenTool className="h-4 w-4 text-zinc-400" />
+            <span className="flex-1">Pen</span>
+            <span className="text-[10px] text-zinc-500 font-mono">P</span>
+          </DropdownMenuItem>
 
-      {/* Pencil Tool (Shift+P) */}
-      <button
-        type="button"
-        onClick={() => handleToolClick("pencil")}
-        className={cn(
-          "h-8 w-8 rounded-full flex items-center justify-center transition-all",
-          activeTool === "pencil"
-            ? "bg-[#7c3aed] text-white shadow-xs"
-            : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
-        )}
-        title="Pencil Tool - Freehand Drawing (Shift+P)"
-      >
-        <Pencil className="h-4 w-4" />
-      </button>
+          <DropdownMenuItem
+            onClick={() => handleSelectVectorTool("pencil")}
+            className="gap-2.5 cursor-pointer hover:bg-white/10 text-xs py-2 px-2.5 rounded-lg"
+          >
+            <Pencil className="h-4 w-4 text-zinc-400" />
+            <span className="flex-1">Pencil</span>
+            <span className="text-[10px] text-zinc-500 font-mono">Shift+P</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <div className="h-4 w-px bg-[#3f3f46] mx-0.5" />
 
-      {/* Media / Image Tool */}
-      <button
-        type="button"
-        onClick={() => handleToolClick("media")}
-        className="h-8 w-8 rounded-full flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
-        title="Image / Media"
-      >
-        <ImageIcon className="h-4 w-4" />
-      </button>
+      {/* Media Dropdown (Image & Vector SVG) */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="h-8 px-2 rounded-full flex items-center gap-1 text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
+            title="Import Media (Image or SVG)"
+          >
+            <ImageIcon className="h-4 w-4" />
+            <ChevronDown className="h-3 w-3 opacity-60" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          side="top"
+          sideOffset={10}
+          align="center"
+          className="w-48 bg-[#18181b]/95 border-[#27272a] text-zinc-200 p-1.5 shadow-2xl rounded-xl"
+        >
+          <DropdownMenuItem
+            onClick={() => imageInputRef.current?.click()}
+            className="gap-2.5 cursor-pointer hover:bg-white/10 text-xs py-2 px-2.5 rounded-lg"
+          >
+            <ImageIcon className="h-4 w-4 text-zinc-400" />
+            <span className="flex-1">Image</span>
+            <span className="text-[10px] text-zinc-500 font-mono">PNG, JPG</span>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem
+            onClick={() => svgInputRef.current?.click()}
+            className="gap-2.5 cursor-pointer hover:bg-white/10 text-xs py-2 px-2.5 rounded-lg"
+          >
+            <FileCode className="h-4 w-4 text-zinc-400" />
+            <span className="flex-1">Vector SVG</span>
+            <span className="text-[10px] text-zinc-500 font-mono">.svg</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Lucide Icon Library (1,555 icons) */}
       <DropdownMenu open={isIconPickerOpen} onOpenChange={setIsIconPickerOpen}>
@@ -486,65 +555,6 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
           />
         </DropdownMenuContent>
       </DropdownMenu>
-
-      {/* Boolean Operations (Union, Subtract, Intersect, Exclude, Flatten) */}
-      {(selectedLayerIds.length >= 2 ||
-        (selectedLayerIds.length === 1 &&
-          Boolean((activeScreen?.layers.find((l) => l.id === selectedLayerIds[0]) as any)?.isBooleanGroup))) && (
-        <>
-          <div className="h-4 w-px bg-[#3f3f46] mx-0.5" />
-
-          {/* Union */}
-          <button
-            type="button"
-            onClick={() => applyBooleanOperation("union")}
-            className="h-8 w-8 rounded-full flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
-            title="Union Selection (Ctrl+Alt+U)"
-          >
-            <Combine className="h-4 w-4" />
-          </button>
-
-          {/* Subtract */}
-          <button
-            type="button"
-            onClick={() => applyBooleanOperation("subtract")}
-            className="h-8 w-8 rounded-full flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
-            title="Subtract Selection (Ctrl+Alt+S)"
-          >
-            <MinusCircle className="h-4 w-4" />
-          </button>
-
-          {/* Intersect */}
-          <button
-            type="button"
-            onClick={() => applyBooleanOperation("intersect")}
-            className="h-8 w-8 rounded-full flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
-            title="Intersect Selection (Ctrl+Alt+I)"
-          >
-            <Blend className="h-4 w-4" />
-          </button>
-
-          {/* Exclude */}
-          <button
-            type="button"
-            onClick={() => applyBooleanOperation("exclude")}
-            className="h-8 w-8 rounded-full flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
-            title="Exclude Selection (Ctrl+Alt+X)"
-          >
-            <Split className="h-4 w-4" />
-          </button>
-
-          {/* Flatten */}
-          <button
-            type="button"
-            onClick={() => flattenSelection()}
-            className="h-8 w-8 rounded-full flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
-            title="Flatten to Vector Path (Ctrl+E)"
-          >
-            <Layers className="h-4 w-4" />
-          </button>
-        </>
-      )}
 
       {/* Kinetic Stagger Cascade (Shift+S) */}
       {selectedLayerIds.length >= 2 && (

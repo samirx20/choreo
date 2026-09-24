@@ -8,6 +8,7 @@ import { TransformCard } from "./design/TransformCard";
 import { TypographyCard } from "./design/TypographyCard";
 import { AppearanceCard } from "./design/AppearanceCard";
 import { SpecializedLayerCard } from "./design/SpecializedLayerCard";
+import { MultiSelectionCard } from "./design/MultiSelectionCard";
 
 import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,16 +35,21 @@ export const DesignInspector: React.FC = () => {
     return <SceneSettingsCard />;
   }
 
-  // 2. ELEMENT SELECTED
-  const isText =
-    selectedLayer.type === "text" ||
-    selectedLayer.type === "chunk" ||
-    selectedLayer.type === "counter";
-
+  // Check locking state across selected layers
+  const isMultiple = selectedLayers.length > 1;
   const parentGroup = activeScreen ? findParentGroupInTree(activeScreen.layers, selectedLayer.id) : null;
-  const isDirectlyLocked = Boolean(selectedLayer.locked);
+  const isDirectlyLocked = isMultiple
+    ? selectedLayers.some((l) => Boolean(l.locked))
+    : Boolean(selectedLayer.locked);
   const isParentLocked = Boolean(parentGroup?.locked);
   const isLocked = isDirectlyLocked || isParentLocked;
+
+  // Single-layer text check
+  const isText =
+    !isMultiple &&
+    (selectedLayer.type === "text" ||
+      selectedLayer.type === "chunk" ||
+      selectedLayer.type === "counter");
 
   return (
     <div className="p-4 space-y-4 text-foreground text-xs select-none">
@@ -76,10 +82,16 @@ export const DesignInspector: React.FC = () => {
 
       <div className={cn("space-y-4", isLocked && "opacity-50 pointer-events-none")}>
         <AlignmentBar />
-        <TransformCard selectedLayer={selectedLayer} />
-        <SpecializedLayerCard selectedLayer={selectedLayer} />
-        {isText && <TypographyCard selectedLayer={selectedLayer} />}
-        <AppearanceCard selectedLayer={selectedLayer} />
+        {isMultiple ? (
+          <MultiSelectionCard selectedLayers={selectedLayers} />
+        ) : (
+          <>
+            <TransformCard selectedLayer={selectedLayer} />
+            <SpecializedLayerCard selectedLayer={selectedLayer} />
+            {isText && <TypographyCard selectedLayer={selectedLayer} />}
+            <AppearanceCard selectedLayer={selectedLayer} />
+          </>
+        )}
       </div>
     </div>
   );
