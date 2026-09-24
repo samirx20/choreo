@@ -25,13 +25,30 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+export type ResolutionPreset = "480p" | "720p" | "1080p" | "1440p" | "4k";
+
+export interface ResolutionOption {
+  id: ResolutionPreset;
+  label: string;
+  targetP: number;
+}
+
+export const RESOLUTION_OPTIONS: ResolutionOption[] = [
+  { id: "480p", label: "480p", targetP: 480 },
+  { id: "720p", label: "720p", targetP: 720 },
+  { id: "1080p", label: "1080p", targetP: 1080 },
+  { id: "1440p", label: "1440p", targetP: 1440 },
+  { id: "4k", label: "4K", targetP: 2160 },
+];
+
 export const ExportPopover: React.FC = () => {
   const { document: doc, activeScreenId } = useProjectStore();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [format, setFormat] = useState<"mp4" | "webm" | "gif">("mp4");
-  const [scale, setScale] = useState<number>(1);
+  const [resolution, setResolution] = useState<ResolutionPreset>("1080p");
   const [backgroundMode, setBackgroundMode] = useState<"solid" | "transparent">("solid");
+  const [fps, setFps] = useState<number>(doc.settings.fps || 60);
+  const [format, setFormat] = useState<"mp4" | "webm" | "gif">("mp4");
   const [scopeMode, setScopeMode] = useState<"all" | "current">("all");
   const [includeAudio, setIncludeAudio] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
@@ -67,7 +84,7 @@ export const ExportPopover: React.FC = () => {
     );
   }, [activeScreen, doc.screens, doc.audioTracks]);
 
-  // If transparent is selected, lock format to WebM
+  // If transparent is selected, block MP4 and switch to WebM if currently on MP4
   const handleSelectBackground = (mode: "solid" | "transparent") => {
     setBackgroundMode(mode);
     if (mode === "transparent" && format === "mp4") {
@@ -76,14 +93,23 @@ export const ExportPopover: React.FC = () => {
   };
 
   const handleSelectFormat = (f: "mp4" | "webm" | "gif") => {
-    setFormat(f);
-    if (f !== "webm" && backgroundMode === "transparent") {
-      setBackgroundMode("solid");
+    if (backgroundMode === "transparent" && f === "mp4") {
+      return; // Blocked: MP4 does not support alpha transparency
     }
+    setFormat(f);
   };
 
-  const exportWidth = Math.round((doc.settings.width || 1920) * scale);
-  const exportHeight = Math.round((doc.settings.height || 1080) * scale);
+  const selectedResOption =
+    RESOLUTION_OPTIONS.find((r) => r.id === resolution) || RESOLUTION_OPTIONS[2];
+  const baseWidth = doc.settings.width || 1920;
+  const baseHeight = doc.settings.height || 1080;
+  const baseDim = Math.min(baseWidth, baseHeight);
+  const scale = baseDim > 0 ? selectedResOption.targetP / baseDim : selectedResOption.targetP / 1080;
+
+  let exportWidth = Math.round(baseWidth * scale);
+  let exportHeight = Math.round(baseHeight * scale);
+  if (exportWidth % 2 !== 0) exportWidth += 1;
+  if (exportHeight % 2 !== 0) exportHeight += 1;
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -98,15 +124,26 @@ export const ExportPopover: React.FC = () => {
 
     if (!stage) {
       headlessStage = new HeadlessRenderStage();
-      stage = await headlessStage.init(doc.settings);
+      stage = await headlessStage.init({
+        ...doc.settings,
+        width: exportWidth,
+        height: exportHeight,
+        fps,
+      });
     }
 
     try {
       const blob = await videoExporter.exportVideo({
         pixiStage: stage,
         screens: screensToExport,
-        settings: doc.settings,
+        settings: {
+          ...doc.settings,
+          width: exportWidth,
+          height: exportHeight,
+          fps,
+        },
         format,
+        fps,
         scale,
         transparent: isTransparent,
         includeAudio: includeAudio && format !== "gif",
@@ -242,72 +279,25 @@ export const ExportPopover: React.FC = () => {
               </span>
             </div>
 
-            {/* 2. Format Selection (MP4 vs WebM vs GIF) */}
+            {/* 1. Resolution (480p, 720p, 1080p, 1440p, 4K) */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                Format
-              </label>
-              <div className="grid grid-cols-3 gap-1.5 p-0.5 bg-muted/50 border border-border rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => handleSelectFormat("mp4")}
-                  className={cn(
-                    "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
-                    format === "mp4"
-                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                  title="Universal MP4 (H.264 + Audio)"
-                >
-                  <span>MP4</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectFormat("webm")}
-                  className={cn(
-                    "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
-                    format === "webm"
-                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                  title="WebM (VP9 + Alpha Support)"
-                >
-                  <span>WebM</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSelectFormat("gif")}
-                  className={cn(
-                    "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
-                    format === "gif"
-                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                  title="Animated GIF (Looping)"
-                >
-                  <span>GIF</span>
-                </button>
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                  Resolution
+                </label>
+                <span className="text-[10px] font-mono text-muted-foreground">
+                  {exportWidth} × {exportHeight}
+                </span>
               </div>
-            </div>
-
-            {/* 3. Resolution / Scale */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                Resolution Scale
-              </label>
-              <div className="grid grid-cols-3 gap-1.5 p-0.5 bg-muted/50 border border-border rounded-lg">
-                {[
-                  { val: 0.5, label: "0.5× (Draft)" },
-                  { val: 1.0, label: "1× (1080p)" },
-                  { val: 2.0, label: "2× (4K)" },
-                ].map((item) => (
+              <div className="grid grid-cols-5 gap-1 p-0.5 bg-muted/50 border border-border rounded-lg">
+                {RESOLUTION_OPTIONS.map((item) => (
                   <button
-                    key={item.val}
+                    key={item.id}
                     type="button"
-                    onClick={() => setScale(item.val)}
+                    onClick={() => setResolution(item.id)}
                     className={cn(
-                      "h-7 px-1.5 rounded-md text-[11px] font-medium flex items-center justify-center transition-all cursor-pointer",
-                      scale === item.val
+                      "h-7 px-1 rounded-md text-[11px] font-medium flex items-center justify-center transition-all cursor-pointer",
+                      resolution === item.id
                         ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                         : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
@@ -318,7 +308,7 @@ export const ExportPopover: React.FC = () => {
               </div>
             </div>
 
-            {/* 4. Background Mode Selection */}
+            {/* 2. Background (With Background vs Transparent; Transparent blocks MP4) */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 Background
@@ -353,9 +343,100 @@ export const ExportPopover: React.FC = () => {
               </div>
               {backgroundMode === "transparent" && (
                 <p className="text-[10px] text-muted-foreground font-mono text-center">
-                  Transparent alpha requires WebM format
+                  Transparent alpha blocks MP4 (WebM &amp; GIF supported)
                 </p>
               )}
+            </div>
+
+            {/* 3. Frame Rate */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                Frame Rate
+              </label>
+              <div className="grid grid-cols-3 gap-1.5 p-0.5 bg-muted/50 border border-border rounded-lg">
+                {[60, 30, 24].map((fpsVal) => (
+                  <button
+                    key={fpsVal}
+                    type="button"
+                    onClick={() => setFps(fpsVal)}
+                    className={cn(
+                      "h-7 px-1.5 rounded-md text-xs font-medium flex items-center justify-center transition-all cursor-pointer",
+                      fps === fpsVal
+                        ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    )}
+                  >
+                    <span>{fpsVal} fps</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Format Selection (MP4 vs WebM vs GIF; MP4 blocked if Transparent) */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                  Format
+                </label>
+                {backgroundMode === "transparent" && (
+                  <span className="text-[10px] font-mono text-destructive">
+                    MP4 unsupported with alpha
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 p-0.5 bg-muted/50 border border-border rounded-lg">
+                <button
+                  type="button"
+                  disabled={backgroundMode === "transparent"}
+                  onClick={() => handleSelectFormat("mp4")}
+                  className={cn(
+                    "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer relative",
+                    format === "mp4" && backgroundMode !== "transparent"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted",
+                    backgroundMode === "transparent" &&
+                      "opacity-40 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground"
+                  )}
+                  title={
+                    backgroundMode === "transparent"
+                      ? "MP4 does not support transparency (select With Background or use WebM/GIF)"
+                      : "Universal MP4 (H.264 + Audio)"
+                  }
+                >
+                  <span>MP4</span>
+                  {backgroundMode === "transparent" && (
+                    <span className="text-[9px] px-1 rounded bg-muted text-muted-foreground border border-border ml-0.5">
+                      No Alpha
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectFormat("webm")}
+                  className={cn(
+                    "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
+                    format === "webm"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                  title="WebM (VP9 + Alpha Support)"
+                >
+                  <span>WebM</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectFormat("gif")}
+                  className={cn(
+                    "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
+                    format === "gif"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                  title="Animated GIF (Looping)"
+                >
+                  <span>GIF</span>
+                </button>
+              </div>
             </div>
 
             {/* 5. Scope Selection */}
@@ -427,7 +508,7 @@ export const ExportPopover: React.FC = () => {
                 ? "Animated GIF • Loops Automatically"
                 : backgroundMode === "transparent"
                 ? "WebM • VP9 with Alpha Transparency"
-                : `${format.toUpperCase()} • Full Studio Quality`}
+                : `${format.toUpperCase()} • Full Studio Quality (${fps} fps)`}
             </div>
 
             {/* 8. Primary Action Button */}

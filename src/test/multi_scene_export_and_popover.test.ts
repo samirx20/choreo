@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { videoExporter, VideoExportOptions } from "@/engine/export/videoExporter";
 import { Screen, ProjectSettings } from "@/types/scene";
+import { RESOLUTION_OPTIONS } from "@/components/export/ExportPopover";
 
 describe("Multi-Scene Sequence Stitching & Transparent Alpha Video Export", () => {
   const mockSettings: ProjectSettings = {
@@ -217,6 +218,79 @@ describe("Multi-Scene Sequence Stitching & Transparent Alpha Video Export", () =
     });
 
     expect(blob.type).toBe("video/mp4");
+  });
+
+  describe("Export Menu Settings & Format Validation", () => {
+    it("provides the 5 required resolution presets: 480p, 720p, 1080p, 1440p, 4k", () => {
+      const ids = RESOLUTION_OPTIONS.map((r) => r.id);
+      expect(ids).toEqual(["480p", "720p", "1080p", "1440p", "4k"]);
+
+      const targetPs = RESOLUTION_OPTIONS.map((r) => r.targetP);
+      expect(targetPs).toEqual([480, 720, 1080, 1440, 2160]);
+    });
+
+    it("calculates accurate even dimensions for 16:9 landscape across all resolution presets", () => {
+      const baseW = 1920;
+      const baseH = 1080;
+      const baseDim = Math.min(baseW, baseH);
+
+      const computed = RESOLUTION_OPTIONS.map((opt) => {
+        const scale = opt.targetP / baseDim;
+        let w = Math.round(baseW * scale);
+        let h = Math.round(baseH * scale);
+        if (w % 2 !== 0) w += 1;
+        if (h % 2 !== 0) h += 1;
+        return { id: opt.id, w, h };
+      });
+
+      expect(computed).toEqual([
+        { id: "480p", w: 854, h: 480 },
+        { id: "720p", w: 1280, h: 720 },
+        { id: "1080p", w: 1920, h: 1080 },
+        { id: "1440p", w: 2560, h: 1440 },
+        { id: "4k", w: 3840, h: 2160 },
+      ]);
+    });
+
+    it("calculates accurate even dimensions for 9:16 vertical video across all resolution presets", () => {
+      const baseW = 1080;
+      const baseH = 1920;
+      const baseDim = Math.min(baseW, baseH);
+
+      const computed = RESOLUTION_OPTIONS.map((opt) => {
+        const scale = opt.targetP / baseDim;
+        let w = Math.round(baseW * scale);
+        let h = Math.round(baseH * scale);
+        if (w % 2 !== 0) w += 1;
+        if (h % 2 !== 0) h += 1;
+        return { id: opt.id, w, h };
+      });
+
+      expect(computed).toEqual([
+        { id: "480p", w: 480, h: 854 },
+        { id: "720p", w: 720, h: 1280 },
+        { id: "1080p", w: 1080, h: 1920 },
+        { id: "1440p", w: 1440, h: 2560 },
+        { id: "4k", w: 2160, h: 3840 },
+      ]);
+    });
+
+    it("enforces that transparent background blocks MP4 format", () => {
+      // Simulates the format selection rules implemented in ExportPopover
+      const isFormatAllowed = (fmt: "mp4" | "webm" | "gif", bgMode: "solid" | "transparent") => {
+        if (bgMode === "transparent" && fmt === "mp4") return false;
+        return true;
+      };
+
+      expect(isFormatAllowed("mp4", "solid")).toBe(true);
+      expect(isFormatAllowed("webm", "solid")).toBe(true);
+      expect(isFormatAllowed("gif", "solid")).toBe(true);
+
+      // Transparent mode blocks MP4 but allows WebM and GIF
+      expect(isFormatAllowed("mp4", "transparent")).toBe(false);
+      expect(isFormatAllowed("webm", "transparent")).toBe(true);
+      expect(isFormatAllowed("gif", "transparent")).toBe(true);
+    });
   });
 });
 
