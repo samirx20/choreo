@@ -14,7 +14,6 @@
       {
         "label": "main",
         "title": "Motion Studio",
-        "url": "index.html",
         "width": 1280,
         "height": 800,
         "resizable": true,

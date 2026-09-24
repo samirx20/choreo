@@ -27,27 +27,6 @@ pub fn run() {
       toggle_maximize_window,
       close_window
     ])
-    .setup(|app| {
-      use tauri::Manager;
-      eprintln!(">>> [TAURI SETUP] starting");
-      let windows = app.webview_windows();
-      eprintln!(">>> [TAURI SETUP] windows count: {}", windows.len());
-      for (label, win) in &windows {
-        eprintln!(">>> [TAURI SETUP] found window: {} url: {:?}", label, win.url());
-        eprintln!(">>> [TAURI SETUP] is_visible: {:?}", win.is_visible());
-        eprintln!(">>> [TAURI SETUP] is_minimized: {:?}", win.is_minimized());
-        eprintln!(">>> [TAURI SETUP] outer_position: {:?}", win.outer_position());
-        eprintln!(">>> [TAURI SETUP] outer_size: {:?}", win.outer_size());
-        let _ = win.unminimize();
-        if let Err(e) = win.show() {
-          eprintln!(">>> [TAURI SETUP] show() error: {:?}", e);
-        }
-        if let Err(e) = win.set_focus() {
-          eprintln!(">>> [TAURI SETUP] set_focus() error: {:?}", e);
-        }
-      }
-      Ok(())
-    })
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
