@@ -190,11 +190,24 @@ export interface ProjectSettings {
   mood?: AestheticMood;
 }
 
+export interface AudioTrack {
+  id: string;
+  name: string;
+  src: string;
+  duration: number;
+  start: number;
+  offset: number;
+  volume: number;
+  muted?: boolean;
+  waveformData?: number[];
+}
+
 export interface SceneDocument {
   version: string;
   name: string;
   settings: ProjectSettings;
   screens: Screen[];
+  audioTracks?: AudioTrack[];
   shots?: any[];
   threeDShots?: ThreeDShot[];
   editor?: EditorSequence;

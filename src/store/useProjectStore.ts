@@ -15,6 +15,7 @@ import { createSceneSlice } from "./slices/sceneSlice";
 import { createLayerSlice } from "./slices/layerSlice";
 import { createStyleSlice } from "./slices/styleSlice";
 import { createAnimationSlice } from "./slices/animationSlice";
+import { createAudioSlice } from "./slices/audioSlice";
 
 // Re-export types
 export * from "./types";
@@ -55,6 +56,7 @@ export {
  * - Layer CRUD & Grouping (layerSlice)
  * - Style & Alignment (styleSlice)
  * - Animation & Presets (animationSlice)
+ * - Audio & Soundtrack (audioSlice)
  */
 export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   ...createCanvasSlice(set, get),
@@ -64,6 +66,7 @@ export const useProjectStore = create<ProjectStoreState>((set, get) => ({
   ...createLayerSlice(set, get),
   ...createStyleSlice(set, get),
   ...createAnimationSlice(set, get),
+  ...createAudioSlice(set, get),
 }));
 
 // Automatic Persistence for Document (LocalStorage + Background Desktop Snapshot)

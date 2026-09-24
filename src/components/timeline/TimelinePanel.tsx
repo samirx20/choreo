@@ -26,6 +26,7 @@ import { LayerIcon } from "@/components/common/LayerIcon";
 import { animationClock } from "@/engine/clock/AnimationClock";
 import { useContextMenuStore } from "@/store/useContextMenuStore";
 import { buildTimelineTrackMenu } from "@/components/contextmenu/contextMenuBuilders";
+import { AudioTrackRow } from "./AudioTrackRow";
 
 // Greedy sub-lane collision algorithm: assigns overlapping clips on a single layer to stacked sub-lanes
 function calculateSubLanes(clips: AnimationClip[]): {
@@ -504,6 +505,9 @@ export const TimelinePanel: React.FC = () => {
         ref={tracksContainerRef}
         className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col bg-white"
       >
+        {/* Unified Project Audio Track */}
+        <AudioTrackRow maxSec={maxSec} />
+
         <div className="flex-1 divide-y divide-[#f4f4f6]">
           {visibleLayers.length > 0 ? (
             visibleLayers.map((layer) => {

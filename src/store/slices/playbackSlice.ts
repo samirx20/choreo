@@ -1,5 +1,6 @@
 import { ProjectStoreState, isMotionMode } from "../types";
 import { getScreenAtTime } from "../helpers/screenTimingHelpers";
+import { audioPlayerEngine } from "@/engine/audio/AudioPlayerEngine";
 
 export type PlaybackSlice = Pick<
   ProjectStoreState,
@@ -28,18 +29,36 @@ export const createPlaybackSlice = (
   workArea: null,
 
   setCurrentTime: (currentTime) => {
-    const { uiMode, document: doc, activeScreenId } = get();
+    const { uiMode, document: doc, activeScreenId, isPlaying } = get();
     if (isMotionMode(uiMode) && doc.screens.length > 1) {
       const match = getScreenAtTime(doc.screens, currentTime);
       if (match.screen.id !== activeScreenId) {
         set({ currentTime, activeScreenId: match.screen.id });
+        audioPlayerEngine.sync({
+          currentTime,
+          isPlaying,
+          track: doc.audioTracks?.[0],
+        });
         return;
       }
     }
     set({ currentTime });
+    audioPlayerEngine.sync({
+      currentTime,
+      isPlaying,
+      track: doc.audioTracks?.[0],
+    });
   },
 
-  setIsPlaying: (isPlaying) => set({ isPlaying }),
+  setIsPlaying: (isPlaying) => {
+    set({ isPlaying });
+    const { currentTime, document: doc } = get();
+    audioPlayerEngine.sync({
+      currentTime,
+      isPlaying,
+      track: doc.audioTracks?.[0],
+    });
+  },
   setIsLooping: (isLooping) => set({ isLooping }),
   setLoopMode: (loopMode) => set({ loopMode }),
 

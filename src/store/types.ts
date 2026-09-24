@@ -8,6 +8,7 @@ import {
   ElementLinkBinding,
   AnimationClip,
   AnimationClipType,
+  AudioTrack,
   UiMode,
 } from "@/types/scene";
 import { RazorSplitResult } from "@/engine/video/razorSplit";
@@ -159,6 +160,12 @@ export interface ProjectStoreState {
   ) => void;
   distributeSpacing: (direction: "horizontal" | "vertical") => void;
   tidyUpSelection: () => void;
+
+  // Audio Track Actions
+  addAudioTrack: (track: AudioTrack) => void;
+  updateAudioTrack: (trackId: string, updates: Partial<AudioTrack>) => void;
+  removeAudioTrack: (trackId: string) => void;
+  toggleAudioMute: (trackId: string) => void;
 
   // Timeline Clip Selection
   selectedClipIds: string[];

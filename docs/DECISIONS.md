@@ -1614,6 +1614,54 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 44 test suites (408 tests) pass cleanly.
   - Production build succeeds without errors.
 
+---
+
+### Decision 75: Audio Track on Timeline & Waveform Sync
+* **Context & Motivation**:
+  - Precision motion design is inherently rhythmic. Kinetic typography, logo stingers, UI transitions, and video cut points require frame-accurate audio cues (beats, impacts, voiceover pauses, music transients).
+  - Previously, Motion Studio had no audio synchronization or timeline waveform representation.
+* **The Solution**:
+  1. **Data Model (`src/types/scene.ts`)**:
+     - Added `AudioTrack` interface:
+       ```ts
+       export interface AudioTrack {
+         id: string;
+         name: string;
+         src: string;          // blob URL, data URL, or remote asset URI
+         startTime: number;    // timeline offset in seconds
+         duration: number;     // duration in seconds
+         offset: number;       // trim offset into audio file in seconds
+         volume: number;       // 0 to 1
+         muted: boolean;
+         waveform?: number[];  // normalized RMS peak buckets (0..1)
+       }
+       ```
+     - Added `audioTracks?: AudioTrack[];` to `SceneDocument`.
+  2. **Waveform Extraction (`src/engine/audio/audioWaveform.ts`)**:
+     - Web Audio API integration: extracts audio data via `AudioContext.decodeAudioData`, samples RMS energy into normalized peak buckets (default 200 buckets) with linear dynamic range scaling.
+     - Synthetic waveform fallback generator (`generateSyntheticWaveform`) ensures zero errors in test/offline environments or for unresolvable streams.
+  3. **Reactive Playback Synchronization Engine (`src/engine/audio/AudioPlayerEngine.ts`)**:
+     - Manages HTML5 `Audio` elements synced deterministically to `AnimationClock` / `currentTime`.
+     - Handles `sync(currentTime, isPlaying, audioTracks)`: automatically seeks if drift exceeds 0.05s, updates volume/mute states, starts/pauses tracks on timeline entry/exit.
+     - Guarded with robust error handling for jsdom/headless testing environments (safe stubs for `play()`, `pause()`, and `load()`).
+  4. **Store Actions (`src/store/slices/audioSlice.ts` & `src/store/types.ts`)**:
+     - `addAudioTrack(track)`: Registers new audio track and updates document.
+     - `updateAudioTrack(id, partial)`: Updates properties like `startTime`, `volume`, `offset`, etc.
+     - `removeAudioTrack(id)`: Removes track and clears player instance.
+     - `toggleAudioMute(id)`: Convenient mute/unmute toggle.
+     - Hooked into `playbackSlice.ts` so `setCurrentTime` and `setIsPlaying` immediately notify `audioPlayerEngine`.
+  5. **Timeline UI (`src/components/timeline/AudioTrackRow.tsx` & `TimelinePanel.tsx`)**:
+     - Mounted above layer tracks with header controls: music track icon, track name, mute button (`Volume2` / `VolumeX`), file picker button (`Upload`), and delete button.
+     - Canvas/SVG waveform visualization: renders vertical peak bars colored in emerald/cyan accents indicating energy level.
+     - Draggable track clip container reflecting `startTime`, clip width, and playhead position.
+* **Verification**:
+  - Automated test suite in `src/test/audio_track_and_waveform.test.ts` verifying:
+    - Adding, updating, muting, and removing audio tracks in store.
+    - Audio waveform extraction and peak normalization.
+    - `AudioPlayerEngine` playback state and drift synchronization.
+    - Audio track timeline playhead synchronization.
+  - Production build (`tsc -b && vite build`) passes with zero errors.
+
 
 
 
