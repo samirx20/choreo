@@ -41,8 +41,12 @@ export function evaluateSceneAtTime(
     const css: React.CSSProperties = {};
 
     if (layer.animation) {
-      // Modern Multi-Clip evaluation when clips array is populated
-      if (layer.animation.clips && layer.animation.clips.length > 0) {
+      // Modern Multi-Clip evaluation when clips array is populated or has trim animation presets
+      if (
+        (layer.animation.clips && layer.animation.clips.length > 0) ||
+        layer.animation.in?.preset === "drawOn" ||
+        layer.animation.in?.preset === "trimPath"
+      ) {
         const compounded = compoundLayerAnimations(
           layer,
           currentTime,

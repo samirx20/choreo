@@ -1,7 +1,12 @@
+import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
+import { render } from "@testing-library/react";
 import { useProjectStore } from "@/store/useProjectStore";
 import { flattenBooleanGroup, layerToLocalSvgPath } from "@/engine/vector/booleanOperations";
 import { computeBooleanGroupPath } from "@/engine/vector/booleanEngine";
+import { canHaveTrimPath } from "@/utils/layerCapabilities";
+import { evaluateSceneAtTime } from "@/engine/evaluator";
+import { GroupRenderer } from "@/components/canvas/renderers/GroupRenderer";
 import { GroupLayer, ShapeLayer } from "@/types/scene";
 
 describe("Boolean Operations & Shape Flattening (Decision 78)", () => {
@@ -460,6 +465,267 @@ describe("Boolean Operations & Shape Flattening (Decision 78)", () => {
       expect(pathAnimated).toBeTruthy();
       // Path must be different from resting path
       expect(pathAnimated).not.toBe(pathAtRest);
+    });
+  });
+
+  describe("Boolean Group Draw-On & Trim Path Animation", () => {
+    const baseRect: ShapeLayer = {
+      id: "rect_base_anim",
+      name: "Rectangle",
+      type: "shape",
+      shapeType: "rectangle",
+      style: {
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        rotation: 0,
+        opacity: 1,
+        backgroundColor: "transparent",
+        borderColor: "#ffffff",
+        borderWidth: 1,
+      },
+    };
+
+    const overlapCircle: ShapeLayer = {
+      id: "circle_overlap_anim",
+      name: "Circle",
+      type: "shape",
+      shapeType: "circle",
+      style: {
+        x: 50,
+        y: 50,
+        width: 100,
+        height: 100,
+        rotation: 0,
+        opacity: 1,
+        backgroundColor: "transparent",
+        borderColor: "#ffffff",
+        borderWidth: 1,
+      },
+    };
+
+    it("canHaveTrimPath recognizes Boolean Groups as vector stroke surfaces", () => {
+      const boolGroup: GroupLayer = {
+        id: "bool_union_1",
+        name: "Union Group",
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: "union",
+        style: { x: 0, y: 0, width: 200, height: 200, rotation: 0, opacity: 1 },
+        children: [baseRect, overlapCircle],
+      };
+      const normalGroup: GroupLayer = {
+        id: "normal_grp_1",
+        name: "Standard Group",
+        type: "group",
+        style: { x: 0, y: 0, width: 200, height: 200, rotation: 0, opacity: 1 },
+        children: [baseRect, overlapCircle],
+      };
+
+      expect(canHaveTrimPath(boolGroup)).toBe(true);
+      expect(canHaveTrimPath(normalGroup)).toBe(false);
+    });
+
+    it("evaluates progressive trimEnd on a Boolean Union Group animated with drawOn", () => {
+      const boolGroup: GroupLayer = {
+        id: "bool_union_anim",
+        name: "Union Group",
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: "union",
+        style: { x: 0, y: 0, width: 200, height: 200, rotation: 0, opacity: 1 },
+        animation: {
+          clips: [
+            {
+              id: "clip-draw-on",
+              name: "Draw Path (Trim)",
+              type: "in",
+              preset: "drawOn",
+              start: 0,
+              duration: 1.0,
+              easing: "linear",
+            },
+          ],
+        },
+        children: [baseRect, overlapCircle],
+      };
+
+      const frameStart = evaluateSceneAtTime([boolGroup], 0);
+      expect((frameStart["bool_union_anim"] as any).trimEnd).toBe(0);
+
+      const frameMid = evaluateSceneAtTime([boolGroup], 0.5);
+      expect((frameMid["bool_union_anim"] as any).trimEnd).toBeCloseTo(50, 1);
+
+      const frameEnd = evaluateSceneAtTime([boolGroup], 1.0);
+      expect((frameEnd["bool_union_anim"] as any).trimEnd).toBe(100);
+    });
+
+    it("evaluates progressive trimEnd on Boolean Group with legacy animation.in preset", () => {
+      const boolGroup: GroupLayer = {
+        id: "bool_union_legacy",
+        name: "Union Group",
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: "union",
+        style: { x: 0, y: 0, width: 200, height: 200, rotation: 0, opacity: 1 },
+        animation: {
+          in: {
+            preset: "drawOn",
+            start: 0,
+            duration: 1.0,
+            easing: "linear",
+          },
+        },
+        children: [baseRect, overlapCircle],
+      };
+
+      const frameMid = evaluateSceneAtTime([boolGroup], 0.5);
+      expect((frameMid["bool_union_legacy"] as any).trimEnd).toBeCloseTo(50, 1);
+    });
+
+    it("evaluates sub-shapes inside a Boolean Union Group when sub-shape has drawOn", () => {
+      const animatedRect: ShapeLayer = {
+        ...baseRect,
+        animation: {
+          clips: [
+            {
+              id: "clip-rect-draw",
+              name: "Draw Path",
+              type: "in",
+              preset: "drawOn",
+              start: 0,
+              duration: 1.0,
+              easing: "linear",
+            },
+          ],
+        },
+      };
+
+      const boolGroup: GroupLayer = {
+        id: "bool_union_child_anim",
+        name: "Union Group",
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: "union",
+        style: { x: 0, y: 0, width: 200, height: 200, rotation: 0, opacity: 1 },
+        children: [animatedRect, overlapCircle],
+      };
+
+      const frameMid = evaluateSceneAtTime([boolGroup], 0.5);
+      expect((frameMid[animatedRect.id] as any).trimEnd).toBeCloseTo(50, 1);
+    });
+
+    it("preserves drawOn animation and trim settings when flattening a Boolean Group", () => {
+      const boolGroup: GroupLayer = {
+        id: "bool_union_flat_anim",
+        name: "Union Group",
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: "union",
+        trimStart: 10,
+        trimEnd: 90,
+        style: { x: 0, y: 0, width: 100, height: 100, rotation: 0, opacity: 1 },
+        animation: {
+          clips: [
+            {
+              id: "clip-draw-flat",
+              name: "Draw Path",
+              type: "in",
+              preset: "drawOn",
+              start: 0,
+              duration: 1.0,
+              easing: "linear",
+            },
+          ],
+        },
+        children: [baseRect, overlapCircle],
+      };
+
+      const flattened = flattenBooleanGroup(boolGroup);
+      expect(flattened).not.toBeNull();
+      expect(flattened!.animation?.clips?.[0]?.preset).toBe("drawOn");
+      expect(flattened!.trimStart).toBe(10);
+      expect(flattened!.trimEnd).toBe(90);
+    });
+
+    it("GroupRenderer renders SVG path with pathLength=100 and trimDashArray when drawOn is active", () => {
+      const boolGroup: GroupLayer = {
+        id: "bool_union_render_test",
+        name: "Union Group",
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: "union",
+        style: { x: 0, y: 0, width: 200, height: 200, rotation: 0, opacity: 1, backgroundColor: "#3b82f6" },
+        animation: {
+          clips: [
+            {
+              id: "clip-draw",
+              name: "Draw Path",
+              type: "in",
+              preset: "drawOn",
+              start: 0,
+              duration: 1.0,
+              easing: "linear",
+            },
+          ],
+        },
+        children: [baseRect, overlapCircle],
+      };
+
+      const { container } = render(
+        React.createElement(GroupRenderer, {
+          layer: boolGroup,
+          selectedLayerIds: [],
+          computedStyle: { trimEnd: 40 } as any,
+          computedLayerStyles: {},
+          onSelectLayer: () => {},
+          renderChild: () => null,
+        })
+      );
+
+      const path = container.querySelector("svg path");
+      expect(path).not.toBeNull();
+      expect(path?.getAttribute("pathLength")).toBe("100");
+      expect(path?.getAttribute("stroke-dasharray")).toBe("40 100");
+      expect(path?.getAttribute("stroke-dashoffset")).toBe("0");
+      expect(path?.getAttribute("stroke-width")).toBe("1"); // Preserves base shape borderWidth
+      expect(path?.getAttribute("fill-opacity")).toBe("0"); // Delayed fill fade-in while < 60%
+    });
+
+    it("GroupRenderer falls back to stroke-width=2 when shapes have 0 borderWidth during drawOn", () => {
+      const unfilledRect: ShapeLayer = {
+        ...baseRect,
+        style: {
+          ...baseRect.style,
+          borderWidth: 0,
+        },
+      };
+
+      const boolGroup: GroupLayer = {
+        id: "bool_union_fallback_stroke",
+        name: "Union Group",
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: "union",
+        style: { x: 0, y: 0, width: 200, height: 200, rotation: 0, opacity: 1, backgroundColor: "#3b82f6" },
+        children: [unfilledRect],
+      };
+
+      const { container } = render(
+        React.createElement(GroupRenderer, {
+          layer: boolGroup,
+          selectedLayerIds: [],
+          computedStyle: { trimEnd: 40 } as any,
+          computedLayerStyles: {},
+          onSelectLayer: () => {},
+          renderChild: () => null,
+        })
+      );
+
+      const path = container.querySelector("svg path");
+      expect(path).not.toBeNull();
+      expect(path?.getAttribute("stroke-width")).toBe("2"); // Automatic fallback so stroke is visible
     });
   });
 });

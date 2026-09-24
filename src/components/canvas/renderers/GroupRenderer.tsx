@@ -342,13 +342,67 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
   const rawGroupBorder = (computedStyle?.borderColor as string) || layer.style.borderColor;
   const rawChildBorder = (baseChildComp?.borderColor as string) || baseChild?.style?.borderColor;
   const rawStroke = (rawGroupBorder && rawGroupBorder !== "transparent") ? rawGroupBorder : rawChildBorder;
-  const booleanStroke = (rawStroke && rawStroke !== "transparent") ? rawStroke : "#ffffff";
+
+  // Boolean Group Trim Path & Draw-On Resolution
+  const childWithTrim = isBooleanGroup ? layer.children?.find((c) => {
+    const cStyle = computedLayerStyles[c.id];
+    return (
+      (cStyle as any)?.trimEnd !== undefined ||
+      (cStyle as any)?.trimStart !== undefined ||
+      (c as any)?.trimStart !== undefined ||
+      ((c as any)?.trimEnd !== undefined && (c as any).trimEnd < 100) ||
+      Boolean(c.animation?.in?.preset === "drawOn" || c.animation?.clips?.some((clip) => clip.preset === "drawOn" || clip.preset === "custom_trim"))
+    );
+  }) : undefined;
+  const childWithTrimComp = childWithTrim ? computedLayerStyles[childWithTrim.id] : undefined;
+
+  const groupTrimStart = (computedStyle as any)?.trimStart ?? (layer as any).trimStart;
+  const groupTrimEnd = (computedStyle as any)?.trimEnd ?? (layer as any).trimEnd;
+  const groupTrimOffset = (computedStyle as any)?.trimOffset ?? (layer as any).trimOffset;
+
+  const childTrimStart = (childWithTrimComp as any)?.trimStart ?? (childWithTrim as any)?.trimStart;
+  const childTrimEnd = (childWithTrimComp as any)?.trimEnd ?? (childWithTrim as any)?.trimEnd;
+  const childTrimOffset = (childWithTrimComp as any)?.trimOffset ?? (childWithTrim as any)?.trimOffset;
+
+  const rawTrimStart = groupTrimStart !== undefined ? groupTrimStart : childTrimStart;
+  const rawTrimEnd = groupTrimEnd !== undefined ? groupTrimEnd : childTrimEnd;
+  const rawTrimOffset = groupTrimOffset !== undefined ? groupTrimOffset : childTrimOffset;
+
+  const tStart = ((rawTrimStart ?? 0)) / 100;
+  const tEnd = ((rawTrimEnd ?? 100)) / 100;
+  const tOffset = ((rawTrimOffset ?? 0)) / 100;
+
+  const hasGroupDrawOn = Boolean(
+    layer.animation?.in?.preset === "drawOn" ||
+    layer.animation?.clips?.some((c) => c.preset === "drawOn" || c.preset === "custom_trim")
+  );
+  const hasChildDrawOn = Boolean(
+    childWithTrim?.animation?.in?.preset === "drawOn" ||
+    childWithTrim?.animation?.clips?.some((c) => c.preset === "drawOn" || c.preset === "custom_trim")
+  );
+
+  const hasTrim = isBooleanGroup && (
+    tStart > 0 ||
+    tEnd < 1 ||
+    tOffset > 0 ||
+    (rawTrimStart !== undefined && rawTrimStart > 0) ||
+    (rawTrimEnd !== undefined && rawTrimEnd < 100) ||
+    groupTrimEnd !== undefined ||
+    childTrimEnd !== undefined ||
+    hasGroupDrawOn ||
+    hasChildDrawOn
+  );
 
   const rawGroupStrokeWidth = typeof layer.style.borderWidth === "number" ? layer.style.borderWidth : undefined;
   const rawChildStrokeWidth = typeof baseChild?.style?.borderWidth === "number" ? baseChild.style.borderWidth : undefined;
-  const booleanStrokeWidth = rawGroupStrokeWidth !== undefined
+  const rawBaseStrokeWidth = rawGroupStrokeWidth !== undefined
     ? rawGroupStrokeWidth
     : (rawChildStrokeWidth !== undefined ? rawChildStrokeWidth : 0);
+
+  const booleanStrokeWidth = hasTrim && rawBaseStrokeWidth <= 0 ? 2 : rawBaseStrokeWidth;
+  const booleanStroke = (rawStroke && rawStroke !== "transparent")
+    ? rawStroke
+    : (rawFill && rawFill !== "transparent" && rawFill !== "none" ? rawFill : "#ffffff");
 
   const borderStyle = layer.style.borderStyle || baseChild?.style?.borderStyle || "solid";
   let booleanStrokeDasharray: string | undefined = undefined;
@@ -359,6 +413,16 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
   } else if (borderStyle === "dotted") {
     booleanStrokeDasharray = `${booleanStrokeWidth || 2} ${booleanStrokeWidth || 2}`;
   }
+
+  const trimDashArray = hasTrim
+    ? `${Math.max(0, (tEnd - tStart) * 100)} 100`
+    : booleanStrokeDasharray;
+  const trimDashOffset = hasTrim ? -((tStart + tOffset) * 100) : undefined;
+
+  // During draw-on / progressive trim, fade fill in smoothly as stroke draws to completion
+  const booleanFillOpacity = hasTrim && booleanFill !== "none"
+    ? Math.max(0, Math.min(1, (tEnd - 0.6) / 0.4))
+    : 1;
 
   return (
     <div
@@ -402,9 +466,12 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
             <path
               d={booleanPath}
               fill={booleanFill}
+              fillOpacity={booleanFillOpacity}
               stroke={booleanStrokeWidth > 0 ? booleanStroke : "none"}
               strokeWidth={booleanStrokeWidth}
-              strokeDasharray={booleanStrokeDasharray}
+              pathLength="100"
+              strokeDasharray={trimDashArray}
+              strokeDashoffset={trimDashOffset}
               strokeLinecap="round"
               strokeLinejoin="round"
               fillRule="evenodd"

@@ -2292,6 +2292,37 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 52 Vitest test suites (477 unit/integration tests) pass 100%.
   - Production build (`npm run build`) builds cleanly with zero TypeScript errors.
 
+---
+
+### Decision 100: Boolean Group Vector Trim Path & Draw-On Animation Support
+* **Context & Problem**:
+  - When two shapes (e.g. rectangles, circles) were grouped into a Boolean Group (`isBooleanGroup: true`, `booleanOperation: "union" | "subtract" | "intersect" | "exclude"`), applying the `drawOn` (or `trimPath` / `custom_trim`) animation preset failed to reveal the unified vector stroke.
+  - Root causes identified:
+    1. **Physical capability rejection**: `canHaveTrimPath()` in `src/utils/layerCapabilities.ts` only returned `true` for `line` and `shape`, rejecting `group` even when `isBooleanGroup` was `true`. This blocked Trim Path controls in `AppearanceCard.tsx` and filtered out custom trim options in `AnimationCatalogSheet.tsx`.
+    2. **GroupRenderer Path Missing Trim Math**: `GroupRenderer.tsx` rendered the computed boolean SVG `<path>` without extracting `trimStart`, `trimEnd`, or `trimOffset`, lacked SVG `pathLength="100"`, and omitted `strokeDasharray` and `strokeDashoffset`.
+    3. **Zero Stroke Width on Filled Shapes**: When shapes were created with default solid fills and zero border width, `booleanStrokeWidth` evaluated to `0`, causing `stroke="none"` during draw-on so no stroke was ever visible.
+    4. **Premature Solid Fill**: During `drawOn`, solid fills remained at 100% opacity from frame 0, visually obscuring the stroke draw-on.
+    5. **Flattening Loss**: `flattenBooleanGroup` omitted carrying over `animation`, `trimStart`, `trimEnd`, and `trimOffset` when converting a boolean group to a `ShapeLayer`.
+* **The Solution**:
+  1. **Ontological Capability Alignment (`layerCapabilities.ts`)**:
+     - Updated `canHaveTrimPath(layer)` to return `true` when `layer.type === "group" && layer.isBooleanGroup`.
+     - Added optional `trimStart`, `trimEnd`, `trimOffset` properties to `GroupLayer` interface in `src/types/layers.ts`.
+  2. **Live Unified Contour Trim Rendering (`GroupRenderer.tsx`)**:
+     - Resolves trim parameters (`tStart`, `tEnd`, `tOffset`) from the boolean group's `computedStyle` / `layer` or falls back to any animated child shape.
+     - Enforces a visible stroke width fallback (`booleanStrokeWidth = 2`) and stroke color (`booleanStroke = rawStroke || rawFill || "#ffffff"`) when `hasTrim` is active and author border was 0.
+     - Adds `pathLength="100"` to normalize the perimeter to percentage units.
+     - Dynamically computes `strokeDasharray={`${Math.max(0, (tEnd - tStart) * 100)} 100`}` and `strokeDashoffset={-((tStart + tOffset) * 100)}`.
+     - Implements progressive fill fade-in (`fillOpacity = Math.max(0, Math.min(1, (tEnd - 0.6) / 0.4))`) during `drawOn`, adhering to AGENTS.md Rule 7 ("Instant stroke draw-on paired with delayed fill fade-in").
+  3. **Evaluator Single-Slot Fallback (`evaluator.ts`)**:
+     - Ensures both multi-clip and legacy `layer.animation.in?.preset === "drawOn"` routes through `compoundLayerAnimations` so `computedStyle.trimEnd` is populated deterministically.
+  4. **Animation Preservation on Flattening (`booleanOperations.ts`)**:
+     - Preserves `animation`, `trimStart`, `trimEnd`, and `trimOffset` on the generated `ShapeLayer` when `flattenBooleanGroup` is called.
+* **Verification**:
+  - Added 6 new unit and integration tests in `src/test/boolean_operations.test.ts` covering capability checks, progressive `trimEnd` evaluation ($0 \to 50 \to 100\%$), child shape animation inheritance, SVG rendering attributes (`pathLength="100"`, `stroke-dasharray="40 100"`, `stroke-width="2"`, `fill-opacity="0"`), and flattening animation preservation.
+  - Full automated test suite passes 100%: 52 test files, 484 unit/integration tests passing.
+  - Production build (`npm run build`) builds cleanly with zero TypeScript or bundling errors.
+
+
 
 
 

@@ -319,6 +319,9 @@ export interface GroupLayer extends BaseLayer {
   invertMask?: boolean;
   isBooleanGroup?: boolean;
   booleanOperation?: BooleanOperationType;
+  trimStart?: number;
+  trimEnd?: number;
+  trimOffset?: number;
   children: Layer[];
   autoLink?: boolean;
   staggerDelay?: number;

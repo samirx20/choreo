@@ -122,5 +122,6 @@ export function canHaveTrimPath(layer?: Layer | null): boolean {
   if (!layer) return false;
   if (isVectorLine(layer)) return true;
   if (layer.type === "shape") return true;
+  if (layer.type === "group" && (layer as any).isBooleanGroup) return true;
   return false;
 }

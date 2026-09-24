@@ -138,6 +138,10 @@ export function flattenBooleanGroup(group: GroupLayer): ShapeLayer | null {
     fillRule,
     strokeCap: (baseChild as any).strokeCap || "round",
     strokeJoin: (baseChild as any).strokeJoin || "round",
+    animation: group.animation || (baseChild as any).animation,
+    trimStart: (group as any).trimStart ?? (baseChild as any).trimStart,
+    trimEnd: (group as any).trimEnd ?? (baseChild as any).trimEnd,
+    trimOffset: (group as any).trimOffset ?? (baseChild as any).trimOffset,
     style: {
       x: Math.round(absX),
       y: Math.round(absY),
