@@ -4,16 +4,13 @@ import {
   Bot,
   Copy,
   Check,
-  Minus,
-  Square,
-  X,
   Sparkles,
   FileCode,
 } from "lucide-react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useMcpStore } from "@/store/useMcpStore";
 import { useProjectStore } from "@/store/useProjectStore";
 import { useProjectRegistryStore } from "@/store/useProjectRegistryStore";
-import { isTauriEnvironment } from "@/services/fileAdapter";
 import {
   Popover,
   PopoverContent,
@@ -31,37 +28,51 @@ export const DesktopTitleBar: React.FC = () => {
   const [copiedPrompt, setCopiedPrompt] = useState(false);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
-  // Native Tauri Window Handlers
-  const handleMinimize = async () => {
-    if (isTauriEnvironment()) {
-      try {
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
-        await getCurrentWindow().minimize();
-      } catch (err) {
-        console.warn("Failed to minimize window:", err);
+  // Safely resolve the native Tauri window instance
+  const getNativeWindow = () => {
+    try {
+      if (
+        typeof window !== "undefined" &&
+        ((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__)
+      ) {
+        return getCurrentWindow();
       }
+    } catch (err) {
+      console.warn("Could not get Tauri window:", err);
+    }
+    return null;
+  };
+
+  const handleMinimize = async () => {
+    try {
+      const win = getNativeWindow();
+      if (win) {
+        await win.minimize();
+      }
+    } catch (err) {
+      console.error("Failed to minimize window:", err);
     }
   };
 
   const handleToggleMaximize = async () => {
-    if (isTauriEnvironment()) {
-      try {
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
-        await getCurrentWindow().toggleMaximize();
-      } catch (err) {
-        console.warn("Failed to toggle maximize:", err);
+    try {
+      const win = getNativeWindow();
+      if (win) {
+        await win.toggleMaximize();
       }
+    } catch (err) {
+      console.error("Failed to toggle maximize:", err);
     }
   };
 
   const handleClose = async () => {
-    if (isTauriEnvironment()) {
-      try {
-        const { getCurrentWindow } = await import("@tauri-apps/api/window");
-        await getCurrentWindow().close();
-      } catch (err) {
-        console.warn("Failed to close window:", err);
+    try {
+      const win = getNativeWindow();
+      if (win) {
+        await win.close();
       }
+    } catch (err) {
+      console.error("Failed to close window:", err);
     }
   };
 
@@ -108,40 +119,46 @@ Always work iteratively tool-by-tool to construct the storyboard.`;
   return (
     <header
       data-tauri-drag-region
-      className="h-8 w-full bg-card border-b border-border flex items-center justify-between px-3 select-none shrink-0 z-50 text-xs font-sans"
+      className="h-9 w-full bg-card border-b border-border flex items-center justify-between pl-3 pr-0 select-none shrink-0 z-50 text-xs font-sans"
     >
-      {/* 1. Left: Branding & Active Project File */}
-      <div data-tauri-drag-region className="flex items-center gap-2 min-w-0">
-        <Film className="w-3.5 h-3.5 text-foreground shrink-0" />
-        <span className="font-semibold text-foreground tracking-tight shrink-0">
-          Motion Studio
-        </span>
+      {/* 1. Left: Branding + Project File + MCP & Agent Setup */}
+      <div data-tauri-drag-region className="flex items-center gap-2.5 min-w-0">
+        {/* App Wordmark */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Film className="w-3.5 h-3.5 text-foreground shrink-0" />
+          <span className="font-semibold text-foreground tracking-tight shrink-0">
+            Motion Studio
+          </span>
+        </div>
+
+        {/* Project Name Breadcrumb */}
         {currentView !== "workspace" && (
-          <>
-            <span className="text-muted-foreground/40">/</span>
-            <span className="text-muted-foreground truncate max-w-[200px]">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-muted-foreground/40 shrink-0">/</span>
+            <span className="text-muted-foreground truncate max-w-[160px] font-mono text-[11px]">
               {doc.name ? `${doc.name}.mtn` : "Untitled.mtn"}
             </span>
-          </>
+          </div>
         )}
-      </div>
 
-      {/* 2. Center / Draggable Filler */}
-      <div data-tauri-drag-region className="flex-1 h-full mx-2" />
+        {/* Subtle Vertical Divider */}
+        <div className="h-3.5 w-px bg-border/60 mx-1 shrink-0" />
 
-      {/* 3. Right: MCP Controls & Native Window Actions */}
-      <div className="flex items-center gap-2 shrink-0">
-        {/* MCP Toggle Switch */}
+        {/* MCP Toggle Switch on the LEFT */}
         <button
           type="button"
           onClick={toggleMcp}
           className={cn(
-            "flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-medium transition-all cursor-pointer",
+            "flex items-center gap-1.5 px-2 py-0.5 rounded-full border text-[11px] font-medium transition-all cursor-pointer shrink-0",
             isMcpEnabled
               ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15"
               : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
           )}
-          title={isMcpEnabled ? "MCP Agent Server Active (Click to disable)" : "MCP Agent Server Disabled (Click to enable)"}
+          title={
+            isMcpEnabled
+              ? "MCP Agent Server Active (Click to disable)"
+              : "MCP Agent Server Disabled (Click to enable)"
+          }
         >
           <span
             className={cn(
@@ -152,12 +169,12 @@ Always work iteratively tool-by-tool to construct the storyboard.`;
           <span>{isMcpEnabled ? "MCP: Active" : "MCP: Off"}</span>
         </button>
 
-        {/* Copy Agent Setup Popover */}
+        {/* Copy Agent Setup Popover on the LEFT */}
         <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
           <PopoverTrigger asChild>
             <button
               type="button"
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-muted text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-muted text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
               title="Copy Agent MCP Configuration & Instructions"
             >
               <Bot className="w-3.5 h-3.5" />
@@ -165,9 +182,9 @@ Always work iteratively tool-by-tool to construct the storyboard.`;
             </button>
           </PopoverTrigger>
           <PopoverContent
-            align="end"
+            align="start"
             sideOffset={6}
-            className="w-84 p-3 bg-popover border border-border shadow-xl rounded-lg text-popover-foreground"
+            className="w-84 p-3 bg-popover border border-border shadow-xl rounded-lg text-popover-foreground z-50"
           >
             <div className="space-y-3">
               <div>
@@ -181,7 +198,8 @@ Always work iteratively tool-by-tool to construct the storyboard.`;
                   </span>
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                  Connect Claude Desktop, Cursor, or your local agent to edit your <span className="font-mono text-foreground">.mtn</span> files tool-by-tool.
+                  Connect Claude Desktop, Cursor, or your local agent to edit your{" "}
+                  <span className="font-mono text-foreground">.mtn</span> files tool-by-tool.
                 </p>
               </div>
 
@@ -231,37 +249,51 @@ Always work iteratively tool-by-tool to construct the storyboard.`;
             </div>
           </PopoverContent>
         </Popover>
+      </div>
 
-        {/* Vertical Divider */}
-        <div className="h-3.5 w-px bg-border/60 mx-0.5" />
+      {/* 2. Center: Draggable Window Strip */}
+      <div data-tauri-drag-region className="flex-1 h-full mx-2" />
 
-        {/* Native Window Controls */}
-        <div className="flex items-center -mr-1">
-          <button
-            type="button"
-            onClick={handleMinimize}
-            className="w-7 h-6 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors cursor-pointer"
-            title="Minimize"
-          >
-            <Minus className="w-3 h-3" />
-          </button>
-          <button
-            type="button"
-            onClick={handleToggleMaximize}
-            className="w-7 h-6 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted rounded transition-colors cursor-pointer"
-            title="Maximize"
-          >
-            <Square className="w-2.5 h-2.5" />
-          </button>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="w-7 h-6 flex items-center justify-center text-muted-foreground hover:text-white hover:bg-destructive rounded transition-colors cursor-pointer"
-            title="Close"
-          >
-            <X className="w-3 h-3" />
-          </button>
-        </div>
+      {/* 3. Right: Native Window Action Buttons (Full Height, Generous Click Targets) */}
+      <div className="flex items-stretch h-full shrink-0">
+        {/* Minimize Button */}
+        <button
+          type="button"
+          onClick={handleMinimize}
+          className="w-11 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+          title="Minimize"
+          aria-label="Minimize Window"
+        >
+          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 16 16">
+            <rect x="2" y="8" width="12" height="1.5" rx="0.5" />
+          </svg>
+        </button>
+
+        {/* Maximize / Restore Button */}
+        <button
+          type="button"
+          onClick={handleToggleMaximize}
+          className="w-11 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+          title="Maximize"
+          aria-label="Maximize Window"
+        >
+          <svg className="w-3.5 h-3.5 stroke-current fill-none stroke-[1.4]" viewBox="0 0 16 16">
+            <rect x="3" y="3" width="10" height="10" rx="1" />
+          </svg>
+        </button>
+
+        {/* Close Button (Native Red Hover) */}
+        <button
+          type="button"
+          onClick={handleClose}
+          className="w-11 h-full flex items-center justify-center text-muted-foreground hover:text-white hover:bg-[#e81123] transition-colors cursor-pointer"
+          title="Close"
+          aria-label="Close Window"
+        >
+          <svg className="w-4 h-4 stroke-current stroke-[1.5]" viewBox="0 0 16 16">
+            <path d="M 4 4 L 12 12 M 12 4 L 4 12" />
+          </svg>
+        </button>
       </div>
     </header>
   );

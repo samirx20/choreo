@@ -2421,6 +2421,31 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - Release build succeeded with exit code 0.
   - Both native installer artifacts verified on disk with ultra-compact sizes (<4MB).
 
+---
+
+### Decision 105: Native Title Bar Layout Polish (Left-Aligned MCP & Agent Setup, Full-Height 44px Controls, and Explicit Tauri Window Permissions)
+* **Context & Motivation**:
+  - Testing of the installed MSI revealed three issues:
+    1. The minimize, maximize, and close buttons did not execute OS window mutations. Root cause: Tauri v2's permission model isolates window mutations; `core:window:default` only grants read-only window properties, requiring explicit capabilities (`core:window:allow-minimize`, `core:window:allow-maximize`, `core:window:allow-toggle-maximize`, `core:window:allow-close`). Furthermore, `isTauriEnvironment()` omitted matching `http://tauri.localhost` origins on Windows Webview2.
+    2. Window control buttons felt small and cramped (28px) rather than matching standard desktop targets.
+    3. User requested moving the MCP Toggle and Agent Setup button to the left side of the title bar.
+* **The Solution**:
+  1. **Explicit Window Mutation Capabilities (`src-tauri/capabilities/default.json`)**:
+     - Added `core:window:allow-minimize`, `core:window:allow-maximize`, `core:window:allow-toggle-maximize`, `core:window:allow-close`, `core:window:allow-destroy`, and `core:window:allow-start-dragging`.
+     - Updated `src/services/fileAdapter.ts` to recognize `tauri.localhost` under both HTTP and HTTPS.
+     - In `DesktopTitleBar.tsx`, safely resolve `getCurrentWindow()` and await window mutation promises with error logging.
+  2. **Left-Aligned MCP & Agent Setup Architecture**:
+     - Grouped Motion Studio branding, active `.mtn` project breadcrumb, the MCP Toggle pill (`MCP: Active` / `MCP: Off`), and the Agent Setup popover together on the left side of the title bar.
+     - Draggable filler (`data-tauri-drag-region`) spans the center.
+  3. **Full-Height 44px Desktop Window Controls**:
+     - Increased title bar height to `h-9` (36px).
+     - Expanded minimize, maximize, and close buttons to full height (`h-full`) and standard Windows 44px width (`w-11`), with native hover styles (including native `#e81123` red close button hover).
+* **Verification**:
+  - All 55 test files and 586 tests pass cleanly in Vitest.
+  - Rebuilt native release bundles:
+    - `src-tauri/target/release/bundle/msi/Motion Studio_0.1.0_x64_en-US.msi` (3.9 MB)
+    - `src-tauri/target/release/bundle/nsis/Motion Studio_0.1.0_x64-setup.exe` (2.7 MB)
+
 
 
 

@@ -44,7 +44,7 @@ export function isTauriEnvironment(): boolean {
     "__TAURI__" in window ||
     "__TAURI_INTERNALS__" in window ||
     window.location.protocol === "tauri:" ||
-    window.location.protocol === "https:" && window.location.hostname === "tauri.localhost"
+    window.location.hostname === "tauri.localhost"
   );
 }
 
