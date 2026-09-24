@@ -24,9 +24,76 @@ export const DesktopTitleBar: React.FC = () => {
   const currentView = useProjectRegistryStore((s) => s.currentView);
   const doc = useProjectStore((s) => s.document);
 
-  const [copiedConfig, setCopiedConfig] = useState(false);
-  const [copiedPrompt, setCopiedPrompt] = useState(false);
+  const [activeTab, setActiveTab] = useState<"agent" | "cursor" | "claude">("agent");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+
+  const activeProjectName = doc.name ? `${doc.name}.mtn` : "project.mtn";
+  const mcpScriptPath = "C:/Users/Sam/Documents/CODE/MOTION-STUDIO/mcp.js";
+
+  const markCopied = (key: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const getClaudeConfig = () => {
+    return JSON.stringify(
+      {
+        mcpServers: {
+          "motion-studio": {
+            command: "node",
+            args: [mcpScriptPath],
+          },
+        },
+      },
+      null,
+      2
+    );
+  };
+
+  const getCursorMcpJson = () => {
+    return JSON.stringify(
+      {
+        mcpServers: {
+          "motion-studio": {
+            command: "node",
+            args: [mcpScriptPath],
+          },
+        },
+      },
+      null,
+      2
+    );
+  };
+
+  const getCursorCommand = () => {
+    return `node "${mcpScriptPath}"`;
+  };
+
+  const getAgentInstructionsPrompt = () => {
+    return `Connect to Motion Studio via its Model Context Protocol (MCP) server so you can create, inspect, and choreograph animations tool-by-tool.
+
+### 1. How to Connect / Configure MCP Server:
+- Server Name: motion-studio
+- Command: node
+- Script Path: ${mcpScriptPath}
+
+JSON snippet for your MCP settings file (claude_desktop_config.json, .cursor/mcp.json, or agent settings):
+${getClaudeConfig()}
+
+### 2. Active Project:
+- Target File: ${activeProjectName}
+- Working Directory: Project root (or pass the full path to ${activeProjectName} in the "file" argument)
+
+### 3. Your Available Tools:
+Once connected, you will have access to the Motion Studio tools:
+- get_storyboard_state({ file }): Read the scenes, layers, hierarchy, and bounds.
+- create_scene({ name, duration, mood }): Add a scene with timing and aesthetic mood.
+- place_element({ sceneId, name, type, grid, enter, style }): Place elements onto the modular grid with entrance physics.
+- apply_animation({ layerId, preset, duration, easing, type }): Add transitions and motion effects.
+- link_elements({ sourceId, targetId, mode }): Relational bindings (hugging, reflow, pins).
+- lint_storyboard({ file }): Pre-flight check verifying 0 black frames and physical momentum.
 
   // Safely resolve the native Tauri window instance
   const getNativeWindow = () => {
@@ -71,46 +138,6 @@ export const DesktopTitleBar: React.FC = () => {
     } catch (err) {
       console.error("Failed to close window:", err);
     }
-  };
-
-  const getMcpConfigSnippet = () => {
-    return JSON.stringify(
-      {
-        mcpServers: {
-          "motion-studio": {
-            command: "node",
-            args: ["./mcp.js"],
-          },
-        },
-      },
-      null,
-      2
-    );
-  };
-
-  const getAgentInstructionsPrompt = () => {
-    return `You have direct access to Motion Studio through the "motion-studio" MCP server.
-You can create and edit product showcase animations tool-by-tool on the active .mtn project file.
-Available tools:
-- create_scene: Creates a narrative beat with duration, mood, and camera framing.
-- place_element: Places text, shapes, icons, counters, or 3D mockups onto the modular grid.
-- apply_animation: Applies entrance (pop, drawOn, fade, slide) or action transitions.
-- link_elements: Binds elements with reactive hugging, reflow spacing, or tracking pins.
-- get_storyboard_state: Inspects the current project hierarchy, layers, and contact sheet.
-- lint_storyboard: Pre-flight validator ensuring 0 black frames, valid layout, and high aesthetic fidelity.
-Always work iteratively tool-by-tool to construct the storyboard.`;
-  };
-
-  const handleCopyConfig = () => {
-    navigator.clipboard.writeText(getMcpConfigSnippet());
-    setCopiedConfig(true);
-    setTimeout(() => setCopiedConfig(false), 2000);
-  };
-
-  const handleCopyPrompt = () => {
-    navigator.clipboard.writeText(getAgentInstructionsPrompt());
-    setCopiedPrompt(true);
-    setTimeout(() => setCopiedPrompt(false), 2000);
   };
 
   return (
@@ -171,77 +198,208 @@ Always work iteratively tool-by-tool to construct the storyboard.`;
           <PopoverTrigger asChild>
             <button
               type="button"
-              className="flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-muted text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
-              title="Copy Agent MCP Configuration & Instructions"
+              className="flex items-center gap-1.5 px-2 py-0.5 rounded-md hover:bg-muted text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0 border border-border/60"
+              title="Agent MCP Connection Guide"
             >
-              <Bot className="w-3.5 h-3.5" />
+              <Bot className="w-3.5 h-3.5 text-primary" />
               <span>Agent Setup</span>
             </button>
           </PopoverTrigger>
           <PopoverContent
             align="start"
             sideOffset={6}
-            className="w-84 p-3 bg-popover border border-border shadow-xl rounded-lg text-popover-foreground z-50"
+            className="w-[480px] p-4 bg-popover border border-border shadow-2xl rounded-xl text-popover-foreground z-50"
           >
-            <div className="space-y-3">
-              <div>
-                <div className="flex items-center justify-between">
-                  <h4 className="font-semibold text-xs text-foreground flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-primary" />
-                    Agent MCP Setup
-                  </h4>
-                  <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded font-mono">
-                    stdio
-                  </span>
+            <div className="space-y-3.5">
+              {/* Header */}
+              <div className="flex items-center justify-between pb-2 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-xs text-foreground">
+                      Connect MCP to Your AI Agent
+                    </h4>
+                    <p className="text-[11px] text-muted-foreground">
+                      Give Cursor, Claude Desktop, or your AI agent direct control over{" "}
+                      <span className="font-mono text-foreground">{activeProjectName}</span>
+                    </p>
+                  </div>
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">
-                  Connect Claude Desktop, Cursor, or your local agent to edit your{" "}
-                  <span className="font-mono text-foreground">.mtn</span> files tool-by-tool.
-                </p>
+                <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full font-mono">
+                  stdio (zero-port)
+                </span>
               </div>
 
-              {/* Config Code Box */}
-              <div className="relative rounded-md bg-muted/60 p-2 font-mono text-[10px] text-foreground border border-border/60 overflow-x-auto">
-                <pre>{getMcpConfigSnippet()}</pre>
+              {/* Client Selection Tabs */}
+              <div className="flex items-center bg-muted/60 p-0.5 rounded-lg text-[11px] font-medium border border-border/50">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("agent")}
+                  className={cn(
+                    "flex-1 py-1 px-2.5 rounded-md transition-all cursor-pointer text-center",
+                    activeTab === "agent"
+                      ? "bg-card text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Prompt for Agent
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("cursor")}
+                  className={cn(
+                    "flex-1 py-1 px-2.5 rounded-md transition-all cursor-pointer text-center",
+                    activeTab === "cursor"
+                      ? "bg-card text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Cursor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("claude")}
+                  className={cn(
+                    "flex-1 py-1 px-2.5 rounded-md transition-all cursor-pointer text-center",
+                    activeTab === "claude"
+                      ? "bg-card text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Claude Desktop
+                </button>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={handleCopyConfig}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 py-1.5 px-2.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer"
-                >
-                  {copiedConfig ? (
-                    <>
-                      <Check className="w-3 h-3 text-emerald-400" />
-                      <span>Copied JSON!</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3 h-3" />
-                      <span>Copy Config</span>
-                    </>
-                  )}
-                </button>
+              {/* Tab 1: Prompt for Agent (Antigravity, Cursor Agent, Cline, Windsurf) */}
+              {activeTab === "agent" && (
+                <div className="space-y-2.5">
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Paste this directly into your agent's chat. It tells the agent how to configure the MCP server, run <span className="font-mono text-foreground">mcp.js</span>, and start editing <span className="font-mono text-foreground">{activeProjectName}</span>:
+                  </p>
+                  <div className="relative rounded-lg bg-muted/60 p-2.5 font-mono text-[10px] text-foreground border border-border/60 max-h-36 overflow-y-auto leading-relaxed select-text">
+                    <pre className="whitespace-pre-wrap">{getAgentInstructionsPrompt()}</pre>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => markCopied("agent_prompt", getAgentInstructionsPrompt())}
+                    className="w-full flex items-center justify-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 py-2 px-3 rounded-lg text-xs font-medium transition-colors cursor-pointer shadow-xs"
+                  >
+                    {copiedKey === "agent_prompt" ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Copied Instructions for Agent!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy Agent Instructions Prompt</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
 
-                <button
-                  type="button"
-                  onClick={handleCopyPrompt}
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-muted text-foreground hover:bg-muted/80 py-1.5 px-2.5 rounded-md text-[11px] font-medium border border-border transition-colors cursor-pointer"
-                >
-                  {copiedPrompt ? (
-                    <>
-                      <Check className="w-3 h-3 text-emerald-400" />
-                      <span>Copied Prompt!</span>
-                    </>
-                  ) : (
-                    <>
-                      <FileCode className="w-3 h-3" />
-                      <span>Copy Prompt</span>
-                    </>
-                  )}
-                </button>
+              {/* Tab 2: Cursor Setup */}
+              {activeTab === "cursor" && (
+                <div className="space-y-2.5">
+                  <div className="text-[11px] text-muted-foreground space-y-1">
+                    <p>
+                      <strong>Option A:</strong> In Cursor, go to <span className="font-medium text-foreground">Settings → Features → MCP → Add New MCP Server</span>:
+                    </p>
+                    <ul className="list-disc pl-4 space-y-0.5 text-[10.5px]">
+                      <li>Name: <span className="font-mono text-foreground">motion-studio</span></li>
+                      <li>Type: <span className="font-mono text-foreground">command</span></li>
+                      <li>Command: <span className="font-mono text-foreground">{getCursorCommand()}</span></li>
+                    </ul>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    <p>
+                      <strong>Option B:</strong> Or save to <span className="font-mono text-foreground">.cursor/mcp.json</span>:
+                    </p>
+                  </div>
+                  <div className="relative rounded-lg bg-muted/60 p-2 font-mono text-[10px] text-foreground border border-border/60 overflow-x-auto">
+                    <pre>{getCursorMcpJson()}</pre>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => markCopied("cursor_cmd", getCursorCommand())}
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-muted text-foreground hover:bg-muted/80 py-1.5 px-2.5 rounded-lg text-[11px] font-medium border border-border transition-colors cursor-pointer"
+                    >
+                      {copiedKey === "cursor_cmd" ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-400" />
+                          <span>Copied Command!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copy Command</span>
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => markCopied("cursor_json", getCursorMcpJson())}
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 py-1.5 px-2.5 rounded-lg text-[11px] font-medium transition-colors cursor-pointer shadow-xs"
+                    >
+                      {copiedKey === "cursor_json" ? (
+                        <>
+                          <Check className="w-3 h-3 text-emerald-400" />
+                          <span>Copied JSON!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3 h-3" />
+                          <span>Copy .cursor/mcp.json</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: Claude Desktop Setup */}
+              {activeTab === "claude" && (
+                <div className="space-y-2.5">
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Paste this into your <span className="font-mono text-foreground">claude_desktop_config.json</span>:
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/80 font-mono">
+                    Windows: %APPDATA%\Claude\claude_desktop_config.json<br />
+                    macOS: ~/Library/Application Support/Claude/claude_desktop_config.json
+                  </p>
+                  <div className="relative rounded-lg bg-muted/60 p-2 font-mono text-[10px] text-foreground border border-border/60 overflow-x-auto">
+                    <pre>{getClaudeConfig()}</pre>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => markCopied("claude_json", getClaudeConfig())}
+                    className="w-full flex items-center justify-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 py-2 px-3 rounded-lg text-xs font-medium transition-colors cursor-pointer shadow-xs"
+                  >
+                    {copiedKey === "claude_json" ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Copied Claude Config JSON!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>Copy Claude Config JSON</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* Active Project Footer Banner */}
+              <div className="pt-2 border-t border-border flex items-center justify-between text-[10px] text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  Target: <strong className="font-mono text-foreground">{activeProjectName}</strong>
+                </span>
+                <span className="font-mono">stdio · node mcp.js</span>
               </div>
             </div>
           </PopoverContent>

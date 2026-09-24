@@ -2464,6 +2464,22 @@ The engine provides first-class, motion-first reactive primitives for each eleme
     - MSI: `src-tauri/target/release/bundle/msi/Motion Studio_0.1.0_x64_en-US.msi`
     - NSIS: `src-tauri/target/release/bundle/nsis/Motion Studio_0.1.0_x64-setup.exe`
 
+---
+
+### Decision 107: Multi-Client Agent Connection Guide (Cursor, Claude Desktop, and Agent Prompt UX)
+* **Context & Motivation**:
+  - The previous Agent Setup popover copied a static instructions prompt that assumed the external agent was already connected and registered to the MCP server.
+  - When users pasted this into external AI agents (Cursor, Claude, Antigravity, etc.), the agents were confused because no MCP server had been registered or started, and no instructions were provided on how to configure or run the server.
+* **The Solution**:
+  1. **Comprehensive 3-Client Tabbed Connection Guide**:
+     - **Prompt for Agent**: Provides a self-contained, actionable prompt that explicitly tells the agent how to register the `motion-studio` MCP server, the exact `node mcp.js` command, the path, and which `.mtn` project file to inspect and choreograph.
+     - **Cursor**: Step-by-step instructions for adding the MCP server in Cursor Settings (`Features → MCP → Add New MCP Server`) and 1-click `.cursor/mcp.json` export.
+     - **Claude Desktop**: Step-by-step instructions for `claude_desktop_config.json` with OS paths for Windows and macOS, and 1-click JSON snippet copying.
+  2. **Active Project File Awareness**:
+     - The connection guide automatically binds to the active `.mtn` project document name, providing the exact target file name and path in both the prompt and footer banner.
+* **Verification**:
+  - All 55 test files and 586 tests pass in Vitest.
+
 
 
 
