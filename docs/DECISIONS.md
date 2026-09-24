@@ -2446,6 +2446,24 @@ The engine provides first-class, motion-first reactive primitives for each eleme
     - `src-tauri/target/release/bundle/msi/Motion Studio_0.1.0_x64_en-US.msi` (3.9 MB)
     - `src-tauri/target/release/bundle/nsis/Motion Studio_0.1.0_x64-setup.exe` (2.7 MB)
 
+---
+
+### Decision 106: Desktop Dev Server IPv4/IPv6 Loopback Alignment & Resilient Window Binding
+* **Context & Motivation**:
+  - Running `npm run desktop:dev` (`tauri dev`) stalled at `Running target\debug\app.exe` with no visible window opening on Windows.
+  - Root cause: Vite was configured with `host: '127.0.0.1'`, but `src-tauri/tauri.conf.json` configured `"devUrl": "http://localhost:5173"`. On Windows machines with Hyper-V or WSL2 enabled, `localhost` resolves by default to IPv6 `[::1]`. When WebView2 attempted to navigate to `http://localhost:5173`, connection attempts were refused or hung, leaving the frameless window unable to render.
+* **The Solution**:
+  1. **Strict IPv4 Dev URL Matching**:
+     - Synchronized `src-tauri/tauri.conf.json` `"devUrl"` to strictly match `"http://127.0.0.1:5173"`, bypassing ambiguous OS loopback DNS resolution.
+  2. **Direct Tauri Window Binding**:
+     - Simplified `getNativeWindow()` in `src/components/layout/DesktopTitleBar.tsx` to directly invoke `getCurrentWindow()` within a safe `try...catch` block rather than relying on brittle window property presence checks.
+* **Verification**:
+  - `cargo check` verified in 19.28s with code 0.
+  - Vitest test suite verified: 55/55 test files passed, 586/586 tests passed.
+  - Rebuilt production installers:
+    - MSI: `src-tauri/target/release/bundle/msi/Motion Studio_0.1.0_x64_en-US.msi`
+    - NSIS: `src-tauri/target/release/bundle/nsis/Motion Studio_0.1.0_x64-setup.exe`
+
 
 
 

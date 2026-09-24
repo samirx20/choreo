@@ -31,10 +31,7 @@ export const DesktopTitleBar: React.FC = () => {
   // Safely resolve the native Tauri window instance
   const getNativeWindow = () => {
     try {
-      if (
-        typeof window !== "undefined" &&
-        ((window as any).__TAURI_INTERNALS__ || (window as any).__TAURI__)
-      ) {
+      if (typeof window !== "undefined") {
         return getCurrentWindow();
       }
     } catch (err) {
