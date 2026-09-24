@@ -36,31 +36,78 @@ export const MultiSelectionCard: React.FC<MultiSelectionCardProps> = ({
   );
 
   return (
-    <div className="space-y-4 pt-1" data-testid="multi-selection-card">
-      {/* 1. MASKING SECTION */}
-      <div className="p-3 bg-muted/30 border border-border rounded-xl space-y-2.5">
+    <div className="border-t border-border divide-y divide-border/50" data-testid="multi-selection-card">
+      {/* 1. BOOLEAN OPERATIONS */}
+      <div className="py-2.5 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <CircleDashed className="w-3.5 h-3.5 text-purple-400" />
-            Masking
-          </span>
-          <span className="text-[10px] text-muted-foreground font-mono">
-            Ctrl+Alt+M
-          </span>
+          <span className="text-xs font-semibold text-foreground">Boolean</span>
+          <span className="text-[10px] text-muted-foreground font-mono">Shapes</span>
         </div>
 
-        <p className="text-[11px] text-muted-foreground leading-snug">
-          The bottom-most layer acts as a stencil, clipping the layers above it.
-        </p>
+        <div className="flex items-center justify-between px-1 py-1 bg-muted rounded border border-border/40">
+          <button
+            type="button"
+            onClick={() => applyBooleanOperation("union")}
+            className="flex-1 py-1 flex items-center justify-center text-muted-foreground hover:text-foreground rounded hover:bg-card transition-colors cursor-pointer"
+            title="Union Selection (Ctrl+Alt+U)"
+          >
+            <Combine className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => applyBooleanOperation("subtract")}
+            className="flex-1 py-1 flex items-center justify-center text-muted-foreground hover:text-foreground rounded hover:bg-card transition-colors cursor-pointer"
+            title="Subtract Selection (Ctrl+Alt+S)"
+          >
+            <MinusCircle className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => applyBooleanOperation("intersect")}
+            className="flex-1 py-1 flex items-center justify-center text-muted-foreground hover:text-foreground rounded hover:bg-card transition-colors cursor-pointer"
+            title="Intersect Selection (Ctrl+Alt+I)"
+          >
+            <Blend className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => applyBooleanOperation("exclude")}
+            className="flex-1 py-1 flex items-center justify-center text-muted-foreground hover:text-foreground rounded hover:bg-card transition-colors cursor-pointer"
+            title="Exclude Selection (Ctrl+Alt+X)"
+          >
+            <Split className="h-3.5 w-3.5" />
+          </button>
+        </div>
 
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => flattenSelection()}
+          className="w-full h-7 px-2 flex items-center justify-between bg-muted hover:bg-muted/80 text-foreground text-xs font-medium rounded border border-border transition-colors cursor-pointer"
+          title="Flatten to Vector Path (Ctrl+E)"
+        >
+          <div className="flex items-center gap-1.5">
+            <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+            <span>Flatten</span>
+          </div>
+          <span className="text-[10px] text-muted-foreground font-mono">Ctrl+E</span>
+        </button>
+      </div>
+
+      {/* 2. MASKING */}
+      <div className="py-2.5 space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-semibold text-foreground">Mask</span>
+          <span className="text-[10px] text-muted-foreground font-mono">Ctrl+Alt+M</span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => maskSelection()}
-            className="flex-1 h-8 px-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            className="flex-1 h-7 px-2.5 bg-muted hover:bg-muted/80 text-foreground text-xs font-medium rounded border border-border flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             title="Create Mask Group (Ctrl+Alt+M)"
           >
-            <CircleDashed className="w-3.5 h-3.5" />
+            <CircleDashed className="h-3.5 w-3.5 text-purple-400" />
             <span>Mask Selection</span>
           </button>
 
@@ -68,7 +115,7 @@ export const MultiSelectionCard: React.FC<MultiSelectionCardProps> = ({
             <button
               type="button"
               onClick={() => unmaskGroup(maskGroup.id)}
-              className="h-8 px-3 rounded-lg border border-border bg-card hover:bg-muted text-foreground font-medium text-xs transition-colors cursor-pointer"
+              className="h-7 px-2.5 bg-muted hover:bg-muted/80 text-foreground text-xs font-medium rounded border border-border transition-colors cursor-pointer"
               title="Release Mask Group"
             >
               Release
@@ -77,92 +124,21 @@ export const MultiSelectionCard: React.FC<MultiSelectionCardProps> = ({
         </div>
       </div>
 
-      {/* 2. BOOLEAN OPERATIONS SECTION */}
-      <div className="p-3 bg-muted/30 border border-border rounded-xl space-y-2.5">
+      {/* 3. GROUPING */}
+      <div className="py-2.5 space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <Combine className="w-3.5 h-3.5 text-blue-400" />
-            Boolean Operations
-          </span>
-          <span className="text-[10px] text-muted-foreground font-mono">
-            Shapes & Paths
-          </span>
+          <span className="text-xs font-semibold text-foreground">Group</span>
+          <span className="text-[10px] text-muted-foreground font-mono">Ctrl+G</span>
         </div>
 
-        <div className="grid grid-cols-4 gap-1 p-1 bg-muted/60 border border-border/50 rounded-lg">
-          <button
-            type="button"
-            onClick={() => applyBooleanOperation("union")}
-            className="h-7 rounded flex flex-col items-center justify-center gap-0.5 hover:bg-card text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-            title="Union Selection (Ctrl+Alt+U)"
-          >
-            <Combine className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-medium">Union</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyBooleanOperation("subtract")}
-            className="h-7 rounded flex flex-col items-center justify-center gap-0.5 hover:bg-card text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-            title="Subtract Selection (Ctrl+Alt+S)"
-          >
-            <MinusCircle className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-medium">Subtract</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyBooleanOperation("intersect")}
-            className="h-7 rounded flex flex-col items-center justify-center gap-0.5 hover:bg-card text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-            title="Intersect Selection (Ctrl+Alt+I)"
-          >
-            <Blend className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-medium">Intersect</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyBooleanOperation("exclude")}
-            className="h-7 rounded flex flex-col items-center justify-center gap-0.5 hover:bg-card text-muted-foreground hover:text-foreground transition-all cursor-pointer"
-            title="Exclude Selection (Ctrl+Alt+X)"
-          >
-            <Split className="w-3.5 h-3.5" />
-            <span className="text-[9px] font-medium">Exclude</span>
-          </button>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => flattenSelection()}
-          className="w-full h-7 rounded-lg border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-          title="Flatten to Vector Path (Ctrl+E)"
-        >
-          <Layers className="w-3.5 h-3.5 text-zinc-400" />
-          <span>Flatten to Vector Path</span>
-          <span className="text-[10px] text-muted-foreground font-mono ml-auto mr-1">Ctrl+E</span>
-        </button>
-      </div>
-
-      {/* 3. GROUPING SECTION */}
-      <div className="p-3 bg-muted/30 border border-border rounded-xl space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-            <Folder className="w-3.5 h-3.5 text-zinc-400" />
-            Grouping
-          </span>
-          <span className="text-[10px] text-muted-foreground font-mono">
-            Ctrl+G
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => groupSelection()}
-            className="flex-1 h-8 px-3 rounded-lg border border-border bg-card hover:bg-muted text-foreground text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+            className="flex-1 h-7 px-2.5 bg-muted hover:bg-muted/80 text-foreground text-xs font-medium rounded border border-border flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             title="Group Elements (Ctrl+G)"
           >
-            <Folder className="w-3.5 h-3.5" />
+            <Folder className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Group ({selectedLayers.length})</span>
           </button>
 
@@ -170,10 +146,10 @@ export const MultiSelectionCard: React.FC<MultiSelectionCardProps> = ({
             <button
               type="button"
               onClick={() => ungroup(regularGroup.id)}
-              className="h-8 px-3 rounded-lg border border-border bg-card hover:bg-muted text-foreground text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              className="h-7 px-2.5 bg-muted hover:bg-muted/80 text-foreground text-xs font-medium rounded border border-border flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               title="Ungroup (Ctrl+Shift+G)"
             >
-              <FolderOpen className="w-3.5 h-3.5" />
+              <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Ungroup</span>
             </button>
           )}

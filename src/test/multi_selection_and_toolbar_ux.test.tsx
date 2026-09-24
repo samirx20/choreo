@@ -70,14 +70,14 @@ describe("Multi-Selection Inspector & Unified Toolbar UX", () => {
     // Shows multi-selection card
     expect(screen.getByTestId("multi-selection-card")).toBeDefined();
     expect(screen.getByText("2 elements selected")).toBeDefined();
-    expect(screen.getByText("Masking")).toBeDefined();
+    expect(screen.getByText("Mask")).toBeDefined();
     expect(screen.getByText("Mask Selection")).toBeDefined();
-    expect(screen.getByText("Boolean Operations")).toBeDefined();
-    expect(screen.getByText("Union")).toBeDefined();
-    expect(screen.getByText("Subtract")).toBeDefined();
-    expect(screen.getByText("Intersect")).toBeDefined();
-    expect(screen.getByText("Exclude")).toBeDefined();
-    expect(screen.getByText("Flatten to Vector Path")).toBeDefined();
+    expect(screen.getByText("Boolean")).toBeDefined();
+    expect(screen.getByTitle("Union Selection (Ctrl+Alt+U)")).toBeDefined();
+    expect(screen.getByTitle("Subtract Selection (Ctrl+Alt+S)")).toBeDefined();
+    expect(screen.getByTitle("Intersect Selection (Ctrl+Alt+I)")).toBeDefined();
+    expect(screen.getByTitle("Exclude Selection (Ctrl+Alt+X)")).toBeDefined();
+    expect(screen.getByText("Flatten")).toBeDefined();
     expect(screen.getByText("Group (2)")).toBeDefined();
 
     // Irrelevant single-element properties must NOT be rendered
