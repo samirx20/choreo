@@ -47,7 +47,6 @@ export const ExportPopover: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [resolution, setResolution] = useState<ResolutionPreset>("1080p");
   const [backgroundMode, setBackgroundMode] = useState<"solid" | "transparent">("solid");
-  const [fps, setFps] = useState<number>(doc.settings.fps || 60);
   const [format, setFormat] = useState<"mp4" | "webm" | "gif">("mp4");
   const [scopeMode, setScopeMode] = useState<"all" | "current">("all");
   const [includeAudio, setIncludeAudio] = useState(true);
@@ -128,7 +127,6 @@ export const ExportPopover: React.FC = () => {
         ...doc.settings,
         width: exportWidth,
         height: exportHeight,
-        fps,
       });
     }
 
@@ -140,10 +138,8 @@ export const ExportPopover: React.FC = () => {
           ...doc.settings,
           width: exportWidth,
           height: exportHeight,
-          fps,
         },
         format,
-        fps,
         scale,
         transparent: isTransparent,
         includeAudio: includeAudio && format !== "gif",
@@ -348,31 +344,7 @@ export const ExportPopover: React.FC = () => {
               )}
             </div>
 
-            {/* 3. Frame Rate */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
-                Frame Rate
-              </label>
-              <div className="grid grid-cols-3 gap-1.5 p-0.5 bg-muted/50 border border-border rounded-lg">
-                {[60, 30, 24].map((fpsVal) => (
-                  <button
-                    key={fpsVal}
-                    type="button"
-                    onClick={() => setFps(fpsVal)}
-                    className={cn(
-                      "h-7 px-1.5 rounded-md text-xs font-medium flex items-center justify-center transition-all cursor-pointer",
-                      fps === fpsVal
-                        ? "bg-primary text-primary-foreground font-semibold shadow-xs"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    )}
-                  >
-                    <span>{fpsVal} fps</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 4. Format Selection (MP4 vs WebM vs GIF; MP4 blocked if Transparent) */}
+            {/* 3. Format Selection (MP4 vs WebM vs GIF; MP4 blocked if Transparent) */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
@@ -439,7 +411,7 @@ export const ExportPopover: React.FC = () => {
               </div>
             </div>
 
-            {/* 5. Scope Selection */}
+            {/* 4. Scope Selection */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 Scope
@@ -474,7 +446,7 @@ export const ExportPopover: React.FC = () => {
               </div>
             </div>
 
-            {/* 6. Audio Track Sync Toggle (Only if audio exists and format supports audio) */}
+            {/* 5. Audio Track Sync Toggle (Only if audio exists and format supports audio) */}
             {hasAudioTrack && format !== "gif" && (
               <div className="flex items-center justify-between p-2 bg-muted/50 border border-border rounded-lg">
                 <div className="flex items-center gap-2">
@@ -502,16 +474,16 @@ export const ExportPopover: React.FC = () => {
               </div>
             )}
 
-            {/* 7. Format Footnote */}
+            {/* Footnote */}
             <div className="text-[10px] text-muted-foreground font-mono text-center">
               {format === "gif"
                 ? "Animated GIF • Loops Automatically"
                 : backgroundMode === "transparent"
                 ? "WebM • VP9 with Alpha Transparency"
-                : `${format.toUpperCase()} • Full Studio Quality (${fps} fps)`}
+                : `${format.toUpperCase()} • Full Studio Quality`}
             </div>
 
-            {/* 8. Primary Action Button */}
+            {/* Primary Action Button */}
             <button
               type="button"
               onClick={handleExport}

@@ -2326,14 +2326,15 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 
 ### Decision 101: Re-Architected Video Export Menu & Format Transparency Guardrails
 * **Context & Motivation**:
-  - The previous video export popover listed formats first, used arbitrary fractional scales (0.5x, 1x, 2x), allowed selecting transparent background while in MP4 (which silently failed or created opaque videos since H.264 lacks alpha support), and had an uncoordinated ordering of controls.
+  - The previous video export popover listed formats first, used arbitrary fractional scales (0.5x, 1x, 2x), allowed selecting transparent background while in MP4 (which silently failed or created opaque videos since H.264 lacks alpha support), and had an uncoordinated ordering of controls including an redundant frame rate selector.
+  - In Motion Studio, frame rate is an intrinsic property of scenes (`scene.stepFps` or `doc.settings.fps`), enabling multi-scene compositions where individual scenes run at different framerates (e.g. 12 fps stop-motion scene transitioning into a 60 fps fluid scene). Overriding or re-specifying global FPS in the export menu was redundant and broke per-scene motion timing.
 * **The Solution**:
-  1. **Strict 5-Tier Export Ordering**:
+  1. **Strict 4-Tier Clean Export Ordering**:
      - **1st: Resolution**: Dedicated industry standard presets: `480p`, `720p`, `1080p`, `1440p`, and `4K`. Calculates exact scale relative to the project aspect ratio's minor dimension, ensuring all generated width/height pixels are even numbers divisible by 2 (mandatory for video codecs).
      - **2nd: Background**: `With Background` (Solid) vs `Transparent`.
-     - **3rd: Frame Rate**: Clean token pills: `60 fps`, `30 fps`, and `24 fps` (adhering to AGENTS.md Rule 9).
-     - **4th: Format**: `MP4`, `WebM`, and `GIF`.
-     - **5th: Scope**: `All (Sequence)` vs `Current (Scene)`.
+     - **3rd: Format**: `MP4`, `WebM`, and `GIF`.
+     - **4th: Scope**: `All (Sequence)` vs `Current (Scene)`.
+     - *(Frame Rate removed)*: Handled natively by each scene's temporal settings.
   2. **Format Alpha Guardrail**:
      - Standard H.264/MP4 video containers do not support alpha transparency channels.
      - When `Transparent` background is selected:
@@ -2341,7 +2342,7 @@ The engine provides first-class, motion-first reactive primitives for each eleme
        - The `MP4` button is blocked (`disabled`, `opacity-40 cursor-not-allowed`) and displays a clear `No Alpha` warning badge.
        - Re-selecting `With Background` immediately unblocks `MP4`.
   3. **Headless & Pixi Stage Scale Sync**:
-     - Passed computed target dimensions and chosen `fps` to both `HeadlessRenderStage` and `videoExporter.exportVideo`, guaranteeing full resolution fidelity during rendering.
+     - Passed computed target dimensions to both `HeadlessRenderStage` and `videoExporter.exportVideo`, guaranteeing full resolution fidelity during rendering.
 * **Verification**:
   - Added unit test suite in `src/test/multi_scene_export_and_popover.test.ts` verifying all 5 resolution presets across 16:9 and 9:16 aspect ratios, even-integer dimension clamping, and transparent alpha MP4 blocking.
   - Full automated test suite: 52 test files, 488 tests passing cleanly.
