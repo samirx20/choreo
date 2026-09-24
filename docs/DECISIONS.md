@@ -2037,6 +2037,36 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 51 test suites (460 tests) pass cleanly.
   - Production build (`npm run build`) compiles with 0 errors.
 
+---
+
+### Decision 90: 4-Phase Physical Morph Choreography & Transform-Origin Alignment
+* **Context & User Direction**:
+  - In user testing, particles landing on diagonal arrows were offset down-and-right from the visible arrow, and particles exhibited horizontal needle spikes at rest.
+  - The user clarified the fundamental physical choreographic narrative of morph: the first element expands and breaks into particles, the particles travel to the second element, form the second element's shape, and collapse inward to turn into the second element. Gimmicky distinct effects were removed in favor of a single, coherent, physical 4-phase system.
+* **Architectural Decisions & Implementation**:
+  1. **Pivot Point & Transform-Origin Invariance (`particleSwarmSolver.ts`)**:
+     - Drag-created arrows and lines have `style.pivotX: 0, style.pivotY: 0.5` in CSS (`transform-origin: 0% 50%`).
+     - Previously, rotation was evaluated around the bounding box center $(cx, cy)$, causing an angular offset of $(W/2)(1 - \cos\theta)$ and $(W/2)\sin\theta$.
+     - Updated `samplePointOnLayer` to rotate strictly around `(originX, originY) = (bounds.x + pivotX * bounds.width, bounds.y + pivotY * bounds.height)`. The sampled particle coordinates now align with on-screen geometry down to 0.00px.
+  2. **The 4-Phase Physical Morph Choreography**:
+     - **Phase 1 ($t \in [0, 0.20]$) — Breakup & Expansion**:
+       - Source element in `clipEvaluator.ts` scales smoothly up from $1.0 \to 1.08$ with cubic ease and dematerializes.
+       - Particles are born on the source contour and burst slightly outward along the shape's radial normal vector $\vec{u}_{\text{out}}$, cleanly taking over visual matter.
+     - **Phase 2 ($t \in [0.20, 0.72]$) — Swarm Migration**:
+       - The flock of particles travels smoothly across the canvas from source to target with natural organic flocking wave dynamics.
+     - **Phase 3 ($t \in [0.72, 0.88]$) — Shape Assembly**:
+       - The particles decelerate and snap precisely into the exact contour of the target shape (the arrow shaft + arrowhead, star vertices, circle, polygon, etc.).
+       - The target shape is clearly visible as an assembled constellation of luminous motes.
+     - **Phase 4 ($t \in [0.88, 1.0]$) — Collapse & Fusion**:
+       - The particles collapse inward ($scale \to 0, opacity \to 0$).
+       - Target element solidifies and collapses from $1.08 \to 1.0$ resting scale with optical focus settling to 0.
+  3. **High-Signal Energy Motes (`MorphTransitionRenderer.tsx`)**:
+     - Removed horizontal needle trails and prickly spikes.
+     - Rendered particles as luminous energy motes with radiant color halo and pure white-hot core, preserving crisp, premium visual fidelity.
+* **Verification**:
+  - All 51 test suites (460 tests) pass 100%.
+  - Production build (`npm run build`) succeeds with 0 errors in 10.39s.
+
 
 
 

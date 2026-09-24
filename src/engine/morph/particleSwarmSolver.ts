@@ -1,16 +1,23 @@
 /**
- * particleSwarmSolver.ts — Deterministic O(1) Particle Swarm & Transition Solver
+ * particleSwarmSolver.ts — Deterministic O(1) 4-Phase Physical Morph Swarm Solver
  *
- * Implements analytical second-order closed-form trajectories for cross-element morphing:
- * - Stardust (cosmic starburst & harmonic swarm with luminous comet trails)
- * - Liquid (viscous gooey organic metaball flow that stretches and fuses)
- * - Voronoi (crystalline shard detachment, 3D tumbling & magnetic snap)
- * - Laser (high-energy electric neon tracer beams & lightning arcs)
- * - Singularity (gravitational implosion, hyper-speed transfer beam & shockwave burst)
- * - Spline (flowing Bezier vector streamlines & animated light ribbons)
+ * Choreographic Architecture:
+ * 1. Phase 1 (Breakup, t in [0, 0.20]):
+ *    Source element expands slightly (1.0 -> 1.08) and shatters into particles on its contour.
+ *    Particles burst outward slightly from the source center, taking over visual ownership.
+ *
+ * 2. Phase 2 (Swarm Migration, t in [0.20, 0.72]):
+ *    The particle swarm travels across the canvas from source to target with natural
+ *    flocking momentum and fluid arc waves.
+ *
+ * 3. Phase 3 (Shape Assembly, t in [0.72, 0.88]):
+ *    Particles decelerate onto the exact target contour (arrow shaft, star vertices, circle, etc.),
+ *    clearly outlining and forming the second shape on canvas.
+ *
+ * 4. Phase 4 (Collapse & Fusion, t in [0.88, 1.0]):
+ *    Particles collapse inward and fuse into the solid second element as it emerges and settles.
  *
  * Rule 4 compliance: Fully closed-form f(t). Zero Euler numerical integration drift.
- * Completely scrubbable forward and backward.
  */
 
 import { MorphStyle, MorphParticleShape } from "@/types/animation";
@@ -59,15 +66,15 @@ export interface MorphSolverOptions {
 }
 
 /**
- * Deterministic pseudo-random float in [0, 1) based on integer seed
+ * Deterministic PRNG hash function for O(1) analytical evaluation
  */
-export function hash(seed: number): number {
-  const s = Math.sin(seed * 127.1 + 311.7) * 43758.5453123;
-  return s - Math.floor(s);
+function hash(n: number): number {
+  const sin = Math.sin(n * 12.9898 + 78.233) * 43758.5453123;
+  return sin - Math.floor(sin);
 }
 
 /**
- * Samples a point on the perimeter of an ElementBounds box
+ * Samples a point along the rectangular boundary of an element
  */
 function samplePointOnBounds(
   bounds: ElementBounds,
@@ -75,8 +82,7 @@ function samplePointOnBounds(
   total: number,
   seedOffset: number
 ): { x: number; y: number } {
-  const p1 = hash(index * 3 + seedOffset);
-  const perimeterPos = (index / total + p1 * 0.05) % 1;
+  const perimeterPos = (index / total + hash(index * 3 + seedOffset) * 0.04) % 1;
   const perimeterLength = 2 * (bounds.width + bounds.height);
   const d = perimeterPos * perimeterLength;
 
@@ -98,7 +104,7 @@ function samplePointOnBounds(
 }
 
 /**
- * Samples true contour points from any layer geometry (Star, Arrow, Line, Circle, Polygon, Card, Text)
+ * Samples unrotated raw contour points from layer geometry
  */
 function sampleRawPointOnLayer(
   layer: Layer | undefined,
@@ -139,31 +145,30 @@ function sampleRawPointOnLayer(
       (layer as any).arrowEnd === "arrow" ||
       (layer as any).arrowEnd === true;
 
-    // If arrow, reserve last 18% of points for the arrowhead wings
-    if (isArrow && index > total * 0.82) {
+    // If arrow, reserve last 20% of points for the arrowhead wings
+    if (isArrow && index > total * 0.80) {
       const wingIdx = index % 2;
-      const wingFrac = (index - total * 0.82) / Math.max(1, total * 0.18);
-      const wingAngle = wingIdx === 0 ? Math.PI / 5.5 : -Math.PI / 5.5;
+      const wingFrac = (index - total * 0.80) / Math.max(1, total * 0.20);
+      const wingAngle = wingIdx === 0 ? Math.PI / 6 : -Math.PI / 6;
       const cosA = Math.cos(wingAngle);
       const sinA = Math.sin(wingAngle);
       const wingDirX = -ux * cosA - nx * sinA;
       const wingDirY = -uy * cosA - ny * sinA;
-      const headLen = Math.min(32, Math.max(16, len * 0.25));
+      const headLen = Math.min(28, Math.max(14, len * 0.22));
       return {
         x: p2.x + wingDirX * headLen * wingFrac,
         y: p2.y + wingDirY * headLen * wingFrac,
       };
     }
 
-    const t = index / Math.max(1, isArrow ? total * 0.82 : total);
-    const jitter = (hash(index * 5 + seedOffset) - 0.5) * 2;
+    const t = index / Math.max(1, isArrow ? total * 0.80 : total);
     return {
-      x: p1.x + dx * t + nx * jitter,
-      y: p1.y + dy * t + ny * jitter,
+      x: p1.x + dx * t,
+      y: p1.y + dy * t,
     };
   }
 
-  // 2. Star
+  // 2. Star Shape
   if (shapeType === "star") {
     const points = (layer as any).points || 5;
     const innerRatio = (layer as any).innerRadiusRatio || 0.382;
@@ -192,10 +197,10 @@ function sampleRawPointOnLayer(
     const nextIdx = (edgeIdx + 1) % totalVertices;
     const v1 = vertices[edgeIdx]!;
     const v2 = vertices[nextIdx]!;
-    const edgeT = ((index / totalVertices) % 1) * 0.85 + hash(index * 7 + seedOffset) * 0.15;
+    const edgeFraction = ((index / totalVertices) * 1.618) % 1;
     return {
-      x: v1.x + (v2.x - v1.x) * edgeT,
-      y: v1.y + (v2.y - v1.y) * edgeT,
+      x: v1.x + (v2.x - v1.x) * edgeFraction,
+      y: v1.y + (v2.y - v1.y) * edgeFraction,
     };
   }
 
@@ -203,7 +208,7 @@ function sampleRawPointOnLayer(
   if (shapeType === "circle" || shapeType === "ellipse") {
     const rx = W / 2;
     const ry = H / 2;
-    const angle = (index / total) * Math.PI * 2 + hash(index * 7 + seedOffset) * 0.04;
+    const angle = (index / total) * Math.PI * 2;
     return {
       x: cx + rx * Math.cos(angle),
       y: cy + ry * Math.sin(angle),
@@ -248,7 +253,7 @@ function sampleRawPointOnLayer(
 
 /**
  * Samples true contour points from any layer geometry (Star, Arrow, Line, Circle, Polygon, Card, Text)
- * applying layer rotation in world space.
+ * applying the layer's true transformOrigin / pivot point rotation in world space.
  */
 export function samplePointOnLayer(
   layer: Layer | undefined,
@@ -259,14 +264,19 @@ export function samplePointOnLayer(
 ): { x: number; y: number } {
   const pt = sampleRawPointOnLayer(layer, bounds, index, total, seedOffset);
   if (layer?.style?.rotation) {
+    const pivotX = typeof layer.style.pivotX === "number" ? layer.style.pivotX : 0.5;
+    const pivotY = typeof layer.style.pivotY === "number" ? layer.style.pivotY : 0.5;
+    const originX = bounds.x + pivotX * bounds.width;
+    const originY = bounds.y + pivotY * bounds.height;
+
     const rad = (layer.style.rotation * Math.PI) / 180;
     const cosR = Math.cos(rad);
     const sinR = Math.sin(rad);
-    const dx = pt.x - bounds.centerX;
-    const dy = pt.y - bounds.centerY;
+    const dx = pt.x - originX;
+    const dy = pt.y - originY;
     return {
-      x: bounds.centerX + dx * cosR - dy * sinR,
-      y: bounds.centerY + dx * sinR + dy * cosR,
+      x: originX + dx * cosR - dy * sinR,
+      y: originY + dx * sinR + dy * cosR,
     };
   }
   return pt;
@@ -301,7 +311,7 @@ export function interpolateColor(c1: string, c2: string, factor: number): string
  * Generate a deterministic voronoi crystal shard SVG path around (0, 0)
  */
 function generateShardPath(seed: number, size: number): string {
-  const numVertices = 3 + Math.floor(hash(seed * 11) * 3); // 3 to 5 vertices
+  const numVertices = 3 + Math.floor(hash(seed * 11) * 3);
   const points: [number, number][] = [];
   for (let i = 0; i < numVertices; i++) {
     const angle = (i / numVertices) * Math.PI * 2 + (hash(seed * 13 + i) - 0.5) * 0.4;
@@ -312,7 +322,11 @@ function generateShardPath(seed: number, size: number): string {
 }
 
 /**
- * Solves deterministic particle states at normalized progress t in [0, 1]
+ * Solves deterministic particle states implementing the 4-Phase Physical Morph:
+ * Phase 1 [0 <= t < 0.20]: Source expands & breaks into particles along contour
+ * Phase 2 [0.20 <= t < 0.72]: Swarm travels across canvas to target position with natural flocking
+ * Phase 3 [0.72 <= t < 0.88]: Particles lock onto and clearly form the second shape
+ * Phase 4 [0.88 <= t <= 1.0]: Particles collapse inward / fuse into the solid second element
  */
 export function solveParticleSwarm(
   source: ElementBounds,
@@ -338,173 +352,95 @@ export function solveParticleSwarm(
   const particles: MorphParticle[] = [];
 
   for (let i = 0; i < count; i++) {
-    // 1. Deterministic contour point sampling from true shape geometry
+    // 1. Precise contour sampling with full transform-origin rotation invariance
     const pStart = samplePointOnLayer(sourceLayer, source, i, count, 101);
     const pEnd = samplePointOnLayer(targetLayer, target, i, count, 202);
 
-    // 2. Individual stagger and speed per particle
-    const staggerWindow = 0.25;
-    const particleStagger = hash(i * 19) * staggerWindow;
-    const durationFraction = 1.0 - staggerWindow;
-    const localProgress = Math.max(
-      0,
-      Math.min(1, (t - particleStagger) / durationFraction)
-    );
+    // Subtle individual particle stagger so they don't move as rigid clones
+    const stagger = (hash(i * 19) - 0.5) * 0.05;
+    const localT = Math.max(0, Math.min(1, t + stagger));
 
-    // Smooth cubic ease for progress
-    const easeT =
-      localProgress < 0.5
-        ? 4 * localProgress * localProgress * localProgress
-        : 1 - Math.pow(-2 * localProgress + 2, 3) / 2;
+    // Vector from source center to contour point for outward breakup impulse
+    const dxFromSource = pStart.x - source.centerX;
+    const dyFromSource = pStart.y - source.centerY;
+    const distFromSource = Math.hypot(dxFromSource, dyFromSource) || 1;
+    const normSourceX = dxFromSource / distFromSource;
+    const normSourceY = dyFromSource / distFromSource;
 
-    // 3. Style-specific trajectory and physics
-    let posX = 0;
-    let posY = 0;
+    // Flight vector from start to end
+    const flightX = pEnd.x - pStart.x;
+    const flightY = pEnd.y - pStart.y;
+    const flightDist = Math.hypot(flightX, flightY) || 1;
+    const perpX = -flightY / flightDist;
+    const perpY = flightX / flightDist;
+
+    let posX: number;
+    let posY: number;
     let scale = 1;
+    let opacity = 1;
     let rotation = 0;
-    let opacity = 0;
-    let stretchX = 1;
-    let stretchY = 1;
-    let tailX: number | undefined;
-    let tailY: number | undefined;
-    let streamPath: string | undefined;
-    let finalShape: MorphParticleShape | "shard" = particleShape;
-    let shardPath: string | undefined;
 
-    const angleSeed = hash(i * 31) * Math.PI * 2;
-    const freqSeed = 2 + hash(i * 41) * 3;
-    const ampSeed = (20 + hash(i * 53) * 60) * chaosFactor;
+    // PHASE 1: Source Expansion & Breakup (t in [0, 0.20])
+    if (localT < 0.20) {
+      const p1 = localT / 0.20; // 0 to 1
+      const burstDist = Math.sin(p1 * Math.PI) * (12 * (1 + chaosFactor * 0.5));
+      posX = pStart.x + normSourceX * burstDist;
+      posY = pStart.y + normSourceY * burstDist;
 
-    switch (morphStyle) {
-      case "singularity": {
-        // Gravitational collapse, relativistic beam streak & shockwave burst
-        if (easeT < 0.35) {
-          // Phase 1: Inward gravitational spiral suction into source center
-          const subT = easeT / 0.35;
-          const spiralAngle = angleSeed + (1 - subT) * Math.PI * 3;
-          const dist = Math.hypot(pStart.x - source.centerX, pStart.y - source.centerY) * (1 - subT);
-          posX = source.centerX + Math.cos(spiralAngle) * dist;
-          posY = source.centerY + Math.sin(spiralAngle) * dist;
-          scale = Math.max(0.2, 1 - subT * 0.7);
-          opacity = 0.6 + 0.4 * subT;
-        } else if (easeT < 0.65) {
-          // Phase 2: Relativistic hyper-speed transfer beam
-          const subT = (easeT - 0.35) / 0.3;
-          posX = source.centerX + (target.centerX - source.centerX) * subT;
-          posY = source.centerY + (target.centerY - source.centerY) * subT;
-          scale = 0.4 + 0.3 * Math.sin(subT * Math.PI);
-          opacity = 1;
-          stretchX = 3.5;
-          stretchY = 0.4;
-          rotation = (Math.atan2(target.centerY - source.centerY, target.centerX - source.centerX) * 180) / Math.PI;
-        } else {
-          // Phase 3: High-energy shockwave explosion outwards to target contour
-          const subT = (easeT - 0.65) / 0.35;
-          posX = target.centerX + (pEnd.x - target.centerX) * subT;
-          posY = target.centerY + (pEnd.y - target.centerY) * subT;
-          scale = 0.3 + 0.7 * subT;
-          opacity = 0.7 + 0.3 * subT;
-        }
-        break;
-      }
+      scale = Math.min(1, p1 * 1.8);
+      opacity = Math.min(1, p1 * 2.2);
+      rotation = i * 36;
+    }
+    // PHASE 2: Swarm Flight Across Canvas (t in [0.20, 0.72])
+    else if (localT < 0.72) {
+      const p2 = (localT - 0.20) / 0.52; // 0 to 1
+      // Smooth cubic ease for flight
+      const flightEase = p2 * p2 * (3 - 2 * p2);
 
-      case "voronoi": {
-        // Crystalline shards with 3D tumble and magnetic snap
-        finalShape = "shard";
-        shardPath = generateShardPath(i, 22);
-        const directX = pStart.x + (pEnd.x - pStart.x) * easeT;
-        const directY = pStart.y + (pEnd.y - pStart.y) * easeT;
-        // Lateral arc explosion settling into target
-        const arcY = -Math.sin(easeT * Math.PI) * (25 + ampSeed * 1.2);
-        const arcX = Math.cos(angleSeed) * Math.sin(easeT * Math.PI) * (20 + ampSeed);
+      const baseX = pStart.x + flightX * flightEase;
+      const baseY = pStart.y + flightY * flightEase;
 
-        posX = directX + arcX;
-        posY = directY + arcY;
-        // 3D spin settling to 0 at arrival
-        rotation = (i * 30 + (1 - easeT) * 540 * (hash(i * 7) > 0.5 ? 1 : -1)) % 360;
-        stretchX = 0.8 + 0.4 * Math.sin(easeT * Math.PI * 3);
-        scale = 0.8 + 0.4 * Math.sin(easeT * Math.PI);
-        opacity = 0.85 + 0.15 * Math.sin(easeT * Math.PI);
-        break;
-      }
+      // Natural fluid flocking arc
+      const arcAmp = Math.min(50, Math.max(12, flightDist * 0.12)) * (0.6 + chaosFactor * 0.6);
+      const arcOffset = (hash(i * 37) - 0.5) * 2 * arcAmp;
+      const wave = Math.sin(p2 * Math.PI);
 
-      case "liquid": {
-        // Viscous gooey metaball droplets that stretch and fuse
-        const directX = pStart.x + (pEnd.x - pStart.x) * easeT;
-        const directY = pStart.y + (pEnd.y - pStart.y) * easeT;
-        const fluidWave = Math.sin(easeT * Math.PI * 2 + angleSeed) * (15 + ampSeed * 0.5);
+      posX = baseX + perpX * (arcOffset * wave);
+      posY = baseY + perpY * (arcOffset * wave);
 
-        posX = directX + Math.sin(angleSeed) * fluidWave;
-        posY = directY + Math.cos(angleSeed) * fluidWave;
+      scale = 1.0 + Math.sin(p2 * Math.PI) * 0.2;
+      opacity = 1.0;
+      rotation = (i * 36 + p2 * 360) % 360;
+    }
+    // PHASE 3: Target Shape Assembly (t in [0.72, 0.88])
+    else if (localT < 0.88) {
+      const p3 = (localT - 0.72) / 0.16; // 0 to 1
+      // Decelerate and snap cleanly into the target contour position
+      const settleEase = 1 - Math.pow(1 - p3, 2);
+      const remainingOffset = (1 - settleEase) * 6 * (hash(i * 47) - 0.5);
 
-        const flightSpeed = Math.sin(easeT * Math.PI);
-        stretchX = 1 + flightSpeed * 1.3;
-        stretchY = Math.max(0.4, 1 - flightSpeed * 0.4);
-        scale = 1.3 + 0.8 * flightSpeed;
-        opacity = 0.9 + 0.1 * flightSpeed;
-        rotation = (Math.atan2(pEnd.y - pStart.y, pEnd.x - pStart.x) * 180) / Math.PI;
-        break;
-      }
+      posX = pEnd.x + perpX * remainingOffset;
+      posY = pEnd.y + perpY * remainingOffset;
 
-      case "laser": {
-        // High-voltage electric neon tracer beams
-        const directX = pStart.x + (pEnd.x - pStart.x) * easeT;
-        const directY = pStart.y + (pEnd.y - pStart.y) * easeT;
-        const jitter = Math.sin(easeT * 35 + i * 5) * (4 * chaosFactor);
+      scale = 1.0;
+      opacity = 1.0;
+      rotation = i * 36;
+    }
+    // PHASE 4: Collapse & Fusion into Target Element (t in [0.88, 1.0])
+    else {
+      const p4 = (localT - 0.88) / 0.12; // 0 to 1
+      // Particles collapse directly into the solid shape
+      posX = pEnd.x;
+      posY = pEnd.y;
 
-        posX = directX + jitter;
-        posY = directY + jitter;
-
-        const beamSpan = 0.22;
-        const bStartT = Math.max(0, easeT - beamSpan);
-        tailX = pStart.x + (pEnd.x - pStart.x) * bStartT;
-        tailY = pStart.y + (pEnd.y - pStart.y) * bStartT;
-
-        scale = 0.8 + 0.5 * Math.sin(easeT * Math.PI);
-        opacity = 0.8 + 0.2 * Math.sin(easeT * Math.PI);
-        rotation = (Math.atan2(pEnd.y - pStart.y, pEnd.x - pStart.x) * 180) / Math.PI;
-        break;
-      }
-
-      case "spline": {
-        // Flowing Bezier streamlines and ribbons
-        const midX = (pStart.x + pEnd.x) / 2 + Math.cos(angleSeed) * (30 + ampSeed * 0.5);
-        const midY = Math.min(pStart.y, pEnd.y) - (35 + ampSeed * 0.7);
-        const oneMinusT = 1 - easeT;
-
-        posX = oneMinusT * oneMinusT * pStart.x + 2 * oneMinusT * easeT * midX + easeT * easeT * pEnd.x;
-        posY = oneMinusT * oneMinusT * pStart.y + 2 * oneMinusT * easeT * midY + easeT * easeT * pEnd.y;
-
-        streamPath = `M ${pStart.x.toFixed(1)},${pStart.y.toFixed(1)} Q ${midX.toFixed(1)},${midY.toFixed(1)} ${pEnd.x.toFixed(1)},${pEnd.y.toFixed(1)}`;
-        scale = 0.7 + 0.5 * Math.sin(easeT * Math.PI);
-        opacity = 0.8 + 0.2 * Math.sin(easeT * Math.PI);
-        rotation = easeT * 180;
-        break;
-      }
-
-      case "stardust":
-      default: {
-        // Cosmic stardust with sparkling embers and comet tails
-        const directX = pStart.x + (pEnd.x - pStart.x) * easeT;
-        const directY = pStart.y + (pEnd.y - pStart.y) * easeT;
-        const harmonic = Math.sin(easeT * Math.PI * freqSeed + angleSeed) * (18 + ampSeed * 0.6);
-        const lift = -Math.sin(easeT * Math.PI) * (20 + ampSeed * 0.4);
-
-        posX = directX + Math.cos(angleSeed) * harmonic;
-        posY = directY + lift + Math.sin(angleSeed) * (harmonic * 0.4);
-
-        // Luminous comet tail
-        tailX = posX - (pEnd.x - pStart.x) * 0.07 - Math.cos(angleSeed) * harmonic * 0.2;
-        tailY = posY - (pEnd.y - pStart.y) * 0.07 - lift * 0.2;
-
-        scale = 0.8 + 0.5 * Math.sin(easeT * Math.PI);
-        opacity = 0.85 + 0.15 * Math.sin(easeT * Math.PI);
-        rotation = (i * 36 + easeT * 360) % 360;
-        break;
-      }
+      scale = Math.max(0, 1 - p4 * 1.25);
+      opacity = Math.max(0, 1 - p4);
+      rotation = i * 36;
     }
 
-    const particleColor = interpolateColor(sourceColor, targetColor, easeT);
+    const particleColor = interpolateColor(sourceColor, targetColor, localT);
+    const finalShape: MorphParticleShape | "shard" = morphStyle === "voronoi" ? "shard" : particleShape;
+    const shardPath = finalShape === "shard" ? generateShardPath(i, 20) : undefined;
 
     particles.push({
       id: i,
@@ -516,11 +452,8 @@ export function solveParticleSwarm(
       color: particleColor,
       shape: finalShape,
       shardPath,
-      stretchX,
-      stretchY,
-      tailX,
-      tailY,
-      streamPath,
+      stretchX: 1,
+      stretchY: 1,
     });
   }
 

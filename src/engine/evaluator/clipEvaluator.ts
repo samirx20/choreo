@@ -162,27 +162,33 @@ export function evaluateClipDelta(
 
   if (preset === "morph") {
     if (type === "out") {
-      // Dematerialize source quickly into particles so it doesn't double-expose with target
-      d.opacity = Math.pow(Math.max(0, 1 - progress), 2.5);
-      d.scaleX = 1 - progress * 0.08;
-      d.scaleY = 1 - progress * 0.08;
+      // Phase 1: Source expands slightly (1.0 -> 1.08) and shatters into particles
+      const expandProgress = Math.min(1, progress / 0.20);
+      const scaleExpansion = Math.sin(expandProgress * Math.PI * 0.5) * 0.08;
+      d.scaleX = 1 + scaleExpansion - progress * 0.05;
+      d.scaleY = 1 + scaleExpansion - progress * 0.05;
+      d.opacity = Math.pow(Math.max(0, 1 - progress), 3.0);
       d.blur = Math.sin(progress * Math.PI) * 4 + progress * 2;
       return d;
     } else {
-      // Coalesce target as particles arrive
-      d.opacity = Math.pow(Math.min(1, progress), 2.5);
-      d.scaleX = 0.95 + progress * 0.05;
-      d.scaleY = 0.95 + progress * 0.05;
+      // Phase 4: Target collapses (1.08 -> 1.0) and solidifies into resting shape
+      d.opacity = Math.pow(Math.min(1, progress), 3.0);
+      const appearProgress = Math.max(0, (progress - 0.72) / 0.28);
+      const scaleCollapse = (1 - appearProgress) * 0.08;
+      d.scaleX = 1 + scaleCollapse;
+      d.scaleY = 1 + scaleCollapse;
       d.blur = (1 - progress) * 4;
       return d;
     }
   }
 
   if (preset === "morphIn") {
-    // Coalesce target as particles arrive
-    d.opacity = Math.pow(Math.min(1, progress), 2.5);
-    d.scaleX = 0.95 + progress * 0.05;
-    d.scaleY = 0.95 + progress * 0.05;
+    // Phase 4: Target collapses (1.08 -> 1.0) and solidifies into resting shape
+    d.opacity = Math.pow(Math.min(1, progress), 3.0);
+    const appearProgress = Math.max(0, (progress - 0.72) / 0.28);
+    const scaleCollapse = (1 - appearProgress) * 0.08;
+    d.scaleX = 1 + scaleCollapse;
+    d.scaleY = 1 + scaleCollapse;
     d.blur = (1 - progress) * 4;
     return d;
   }
