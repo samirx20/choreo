@@ -5,9 +5,17 @@ pub fn run() {
     .plugin(tauri_plugin_fs::init())
     .setup(|app| {
       use tauri::Manager;
-      if let Some(window) = app.get_webview_window("main") {
-        let _ = window.show();
-        let _ = window.set_focus();
+      eprintln!(">>> [TAURI SETUP] starting");
+      let windows = app.webview_windows();
+      eprintln!(">>> [TAURI SETUP] windows count: {}", windows.len());
+      for (label, win) in &windows {
+        eprintln!(">>> [TAURI SETUP] found window: {}", label);
+        if let Err(e) = win.show() {
+          eprintln!(">>> [TAURI SETUP] show() error: {:?}", e);
+        }
+        if let Err(e) = win.set_focus() {
+          eprintln!(">>> [TAURI SETUP] set_focus() error: {:?}", e);
+        }
       }
       Ok(())
     })

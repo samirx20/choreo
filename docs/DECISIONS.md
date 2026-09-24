@@ -2496,6 +2496,22 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - `cargo check` compiled in 2.26s with exit code 0.
   - `tsc --noEmit` and `npm run build` verified with 0 errors.
 
+---
+
+### Decision 109: Native Window Chrome (`decorations: true`) for Guaranteed Windows Desktop Mapping
+* **Context & Motivation**:
+  - Borderless windows (`decorations: false`) on Windows 10/11 frequently suffer from DWM non-composition where `app.exe` launches into the user session but Windows DWM keeps the window unmapped (invisible without taskbar presence).
+* **The Solution**:
+  1. **Standard OS Window Chrome (`decorations: true`)**:
+     - Configured `"decorations": true` in `src-tauri/tauri.conf.json`, allowing Windows Desktop Window Manager to render standard native window borders, taskbar grouping, and native title controls with 100% OS authority.
+  2. **In-App Header Alignment**:
+     - `DesktopTitleBar` remains positioned at the top of the canvas layout, housing the Motion Studio branding, active `.mtn` project breadcrumb, MCP toggle switch, and the redesigned 3-client Agent Setup guide.
+* **Verification**:
+  - Vitest test suite verified: 55/55 passed, 586/586 passed.
+  - Rebuilt production installers:
+    - MSI: `src-tauri/target/release/bundle/msi/Motion Studio_0.1.0_x64_en-US.msi`
+    - NSIS: `src-tauri/target/release/bundle/nsis/Motion Studio_0.1.0_x64-setup.exe`
+
 
 
 
