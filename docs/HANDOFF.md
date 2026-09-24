@@ -2,23 +2,28 @@
 
 > **Date**: September 24, 2026  
 > **Branch**: `main`  
-> **Session Baseline**: 52 test suites, 472 automated tests passing via Vitest (`npm test`). Production build succeeds with 0 errors in 10.87s (`npm run build`).
+> **Session Baseline**: 52 test suites, 476 automated tests passing via Vitest (`npm test`). Production build succeeds with 0 errors in 9.85s (`npm run build`).
 
 ---
 
 ## 1. Executive Summary & Current State
 
-1. **Multi-Selection Inspector Architecture (`MultiSelectionCard.tsx`, `DesignInspector.tsx`)**:
+1. **On-Demand Audio Track & High-Signal Timeline (`TimelinePanel.tsx`, `AudioTrackRow.tsx`)**:
+   - Reclaimed 40px of vertical timeline space by hiding the audio track lane by default when unused.
+   - Added a compact, high-signal `Music` toggle button in the transport/playhead row (`timeline-audio-toggle`).
+   - Clicking with no audio directly launches the native file picker (`.mp3`, `.wav`, `.ogg`, `.m4a`, `.aac`), analyzes waveform, and mounts the track. Clicking with existing audio toggles lane visibility or dismisses (`X`) without data loss.
+2. **Smart Timeline Container Pruning (`TimelinePanel.tsx`)**:
+   - Eliminated empty 32px group/frame container rows that have 0 animation clips.
+   - Child leaf elements and sub-shapes of boolean groups render directly with a subtle breadcrumb indicator (`Subtract Group › Rectangle`).
+   - If an animation clip is authored on a group, the group row appears on the timeline to host its clip.
+3. **Multi-Selection Inspector Architecture (`MultiSelectionCard.tsx`, `DesignInspector.tsx`)**:
    - Single-element cards (Transform, Appearance, Typography, Specialized cards) are suppressed when $\ge 2$ elements are selected, eliminating irrelevant property clutter.
-   - Replaced with dedicated `MultiSelectionCard` presenting:
-     - **Masking**: "Mask Selection" (`Ctrl+Alt+M`) with clear stencil subtext, plus "Release" button if a mask group is present.
-     - **Boolean Operations**: 4 operation buttons (`Union`, `Subtract`, `Intersect`, `Exclude`) and "Flatten to Vector Path" (`Ctrl+E`).
-     - **Grouping**: "Group ({count})" (`Ctrl+G`) and "Ungroup" (`Ctrl+Shift+G`).
-2. **Bottom Floating Toolbar Consolidation (`FloatingDesignToolbar.tsx`)**:
+   - Replaced with dedicated `MultiSelectionCard` presenting Masking, Boolean Operations, and Grouping.
+4. **Bottom Floating Toolbar Consolidation (`FloatingDesignToolbar.tsx`)**:
    - Removed Boolean operation buttons from the floating toolbar, consolidating combination tools into the right sidebar inspector.
    - Combined Pen (`P`) and Pencil (`Shift+P`) into a single unified Vector Drawing dropdown button matching the Shapes dropdown UX.
    - Upgraded the Media button into a dropdown supporting raster **Image** (PNG, JPG, WebP) and **Vector SVG** (.svg) with dedicated file pickers.
-3. **Live 2D Vector Path Boolean Engine (`booleanEngine.ts`, `GroupRenderer.tsx`)**:
+5. **Live 2D Vector Path Boolean Engine (`booleanEngine.ts`, `GroupRenderer.tsx`)**:
    - Uses the Martinez-Rueda-Feito polygon clipping algorithm (`polygon-clipping`) for exact mathematical boundary calculation of Union, Subtract (Difference), Intersect, and Exclude (XOR).
    - Solved the unfilled/stroked shape problem: shapes with 0 fill and a 1px stroke render pristine closed vector perimeters rather than broken CSS mask cuts.
    - Non-destructive Boolean Groups maintain live sub-shapes with interactive canvas hit-targets, enabling independent dragging and keyframe animation on the timeline with 60 FPS live geometry updates.

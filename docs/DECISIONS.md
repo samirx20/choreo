@@ -2186,6 +2186,37 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 52 test suites (472 tests) pass cleanly (`npm test`).
   - Production build (`npm run build`) compiles in 10.87s with 0 errors.
 
+---
+
+### Decision 96: On-Demand Audio Track & High-Signal Timeline Container Pruning (Hybrid Paradigm)
+* **Context & Problem**:
+  - The Audio track occupied 40px of vertical space at the top of the timeline permanently, even when empty and unused in 90%+ of animation authoring scenarios.
+  - Groups, frames, and boolean containers generated empty 32px timeline track rows by default, even though users animate individual leaf elements or sub-shapes rather than empty group containers.
+* **The Solution (Hybrid Paradigm: Apple Restraint + Jitter Direct Manipulation)**:
+  1. **On-Demand Audio Track**:
+     - The audio lane is hidden by default when no audio is present in the document, instantly reclaiming 40px of vertical workspace for animation layers.
+     - Added a dedicated `Music` toggle button in the transport/playhead row (`timeline-audio-toggle`):
+       - If no audio track exists, clicking the button directly invokes the file picker (`.mp3`, `.wav`, `.ogg`, `.m4a`, `.aac`), extracts waveform data, and adds the track.
+       - If audio exists, clicking toggles lane visibility (`isAudioVisible`).
+       - Active/processing/idle states with high-signal badge ("Audio").
+       - Dismiss button (`X`) on the audio lane allows collapsing the lane at any time without deleting the audio asset.
+       - Deleting the audio track via the trash icon automatically cleans up the track from the project document and collapses the lane.
+  2. **Smart Timeline Container Pruning**:
+     - Replaced raw unpruned layer listing with `timelineTrackItems` utilizing recursive high-signal container filtering.
+     - Container layers (`group`, `frame`, `booleanGroup`) with 0 animation clips are automatically omitted from generating empty timeline tracks when their children exist.
+     - All animatable leaf elements (shapes, text, media, paths) and sub-shapes of boolean groups are rendered on the timeline.
+     - Each child track displays a clean, truncated parent breadcrumb prefix in its track header: `[parentName] › [layerName]`.
+     - When an animation clip is explicitly authored on the container group (e.g. group fade or scale), the container track automatically appears on the timeline to host and edit its clip.
+* **Verification**:
+  - Appended integration test suite to `src/test/timeline_controls.test.ts`:
+    - Hides audio track by default when no audio is present and verifies transport button.
+    - Shows audio lane when `audioTrack` exists, toggles visibility, and deletes correctly.
+    - Prunes empty group containers from timeline tracks while showing children with `Subtract Group ›` breadcrumbs.
+    - Renders group container track when an animation clip is authored on it.
+  - All 52 test suites (476 tests) pass cleanly (`npm test`).
+  - Production build (`npm run build`) succeeds with 0 errors in 9.85s.
+
+
 
 
 

@@ -13,6 +13,8 @@ import {
   icons,
   Smile,
   ListOrdered,
+  Music,
+  Loader2,
 } from "lucide-react";
 import {
   useProjectStore,
@@ -21,7 +23,8 @@ import {
   getScreenTimings,
   getTotalDuration,
 } from "@/store/useProjectStore";
-import { Layer, AnimationClip, getLayerClips } from "@/types/scene";
+import { Layer, AnimationClip, getLayerClips, AudioTrack } from "@/types/scene";
+import { extractAudioWaveform } from "@/engine/audio/audioWaveform";
 import { DraggableClip } from "./DraggableClip";
 import { LayerIcon } from "@/components/common/LayerIcon";
 import { animationClock } from "@/engine/clock/AnimationClock";
@@ -80,12 +83,57 @@ export const TimelinePanel: React.FC = () => {
     setLoopMode,
     updateLayerStyle,
     updateLayer,
+    addAudioTrack,
   } = useProjectStore();
 
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
   const [editingSceneName, setEditingSceneName] = useState("");
   const [editingTrackLayerId, setEditingTrackLayerId] = useState<string | null>(null);
   const [editingTrackLayerName, setEditingTrackLayerName] = useState("");
+
+  const hasAudioTrack = Boolean(doc.audioTracks && doc.audioTracks.length > 0);
+  const [isAudioVisible, setIsAudioVisible] = useState(hasAudioTrack);
+  const audioFileInputRef = useRef<HTMLInputElement>(null);
+  const [isAudioProcessing, setIsAudioProcessing] = useState(false);
+
+  useEffect(() => {
+    if (hasAudioTrack) {
+      setIsAudioVisible(true);
+    }
+  }, [hasAudioTrack]);
+
+  const handleAudioFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsAudioProcessing(true);
+    try {
+      const src = URL.createObjectURL(file);
+      const { duration, waveformData } = await extractAudioWaveform(file, 240);
+
+      const newTrack: AudioTrack = {
+        id: `audio_${Date.now()}`,
+        name: file.name.replace(/\.[^/.]+$/, ""),
+        src,
+        duration: Math.max(1, duration),
+        start: 0,
+        offset: 0,
+        volume: 1,
+        muted: false,
+        waveformData,
+      };
+
+      addAudioTrack(newTrack);
+      setIsAudioVisible(true);
+    } catch (err) {
+      console.error("Failed to load audio track:", err);
+    } finally {
+      setIsAudioProcessing(false);
+      if (audioFileInputRef.current) {
+        audioFileInputRef.current.value = "";
+      }
+    }
+  };
 
   const activeScreen =
     doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
@@ -225,10 +273,47 @@ export const TimelinePanel: React.FC = () => {
     window.addEventListener("pointercancel", onPointerUp);
   };
 
-  // Layers list filtered for artboard
-  const visibleLayers = useMemo(() => {
-    const all = flattenLayers(activeScreen?.layers || []);
-    return all.filter((l) => isLayerOnArtboard(l, doc.settings.width, doc.settings.height));
+  // High-signal timeline track items with smart container pruning
+  // Container layers with 0 clips are omitted so only animatable elements and animated containers occupy tracks
+  const timelineTrackItems = useMemo(() => {
+    const result: { layer: Layer; parentName?: string; depth: number }[] = [];
+
+    function traverse(layers: Layer[], depth = 0, parentName?: string) {
+      for (const layer of layers) {
+        const isContainer = layer.type === "group" || layer.type === "frame";
+        const clips = getLayerClips(layer);
+        const hasClips = clips.length > 0;
+        const hasChildren =
+          isContainer &&
+          Array.isArray((layer as any).children) &&
+          (layer as any).children.length > 0;
+
+        // Container layers only get their own track if:
+        // 1. They have 1 or more animation clips, OR
+        // 2. They have no children (empty placeholder container)
+        if (!isContainer || hasClips || !hasChildren) {
+          if (isLayerOnArtboard(layer, doc.settings.width, doc.settings.height)) {
+            result.push({
+              layer,
+              parentName,
+              depth,
+            });
+          }
+        }
+
+        // Recursively traverse children
+        if (hasChildren) {
+          traverse(
+            (layer as any).children,
+            isContainer && !hasClips ? depth : depth + 1,
+            layer.name
+          );
+        }
+      }
+    }
+
+    traverse(activeScreen?.layers || []);
+    return result;
   }, [activeScreen, doc.settings.width, doc.settings.height]);
 
   // Ruler tick generator for Jitter (1s, 2s, 3s, 4s, 5s, 6s, 7s, 8s)
@@ -252,7 +337,7 @@ export const TimelinePanel: React.FC = () => {
     >
       {/* 1. TOP HEADER: Transport Controls & Time Ruler (Play, Loop, Time Indicators) */}
       <div className="flex h-8 bg-white border-b border-[#e5e5e7] z-20 shrink-0">
-        {/* Left Transport Controls: Play & Loop */}
+        {/* Left Transport Controls: Play, Loop, Stagger, Audio */}
         <div className="w-56 shrink-0 px-3 flex items-center gap-2 border-r border-[#e5e5e7] bg-white">
           {/* Play / Pause button */}
           <button
@@ -319,6 +404,43 @@ export const TimelinePanel: React.FC = () => {
               <span>Stagger</span>
             </button>
           )}
+
+          {/* Audio Track Toggle / Add Button */}
+          <button
+            type="button"
+            onClick={() => {
+              if (!hasAudioTrack) {
+                audioFileInputRef.current?.click();
+              } else {
+                setIsAudioVisible(!isAudioVisible);
+              }
+            }}
+            disabled={isAudioProcessing}
+            data-testid="timeline-audio-toggle"
+            className={`h-6 px-1.5 gap-1 rounded flex items-center justify-center transition-colors text-[10px] font-medium ${
+              hasAudioTrack
+                ? isAudioVisible
+                  ? "bg-[#7c3aed]/10 text-[#7c3aed]"
+                  : "text-[#7c3aed] hover:bg-[#f4f4f6]"
+                : "text-[#a1a1aa] hover:text-[#18181b]"
+            }`}
+            title={
+              !hasAudioTrack
+                ? "Add Audio Track (MP3, WAV, AAC)"
+                : isAudioVisible
+                ? "Hide Audio Track Lane"
+                : "Show Audio Track Lane"
+            }
+          >
+            {isAudioProcessing ? (
+              <Loader2 className="h-3 w-3 animate-spin text-[#7c3aed]" />
+            ) : (
+              <Music className="h-3 w-3" />
+            )}
+            {hasAudioTrack && (
+              <span className="text-[9px] font-mono">Audio</span>
+            )}
+          </button>
         </div>
 
         {/* Ruler Lane */}
@@ -523,12 +645,23 @@ export const TimelinePanel: React.FC = () => {
         ref={tracksContainerRef}
         className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col bg-white"
       >
-        {/* Unified Project Audio Track */}
-        <AudioTrackRow maxSec={maxSec} />
+        {/* Hidden Audio File Input for Transport Button */}
+        <input
+          ref={audioFileInputRef}
+          type="file"
+          accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac"
+          onChange={handleAudioFileChange}
+          className="hidden"
+        />
+
+        {/* Unified Project Audio Track - On-Demand: Only rendered when active & visible */}
+        {isAudioVisible && (
+          <AudioTrackRow maxSec={maxSec} onClose={() => setIsAudioVisible(false)} />
+        )}
 
         <div className="flex-1 divide-y divide-[#f4f4f6]">
-          {visibleLayers.length > 0 ? (
-            visibleLayers.map((layer) => {
+          {timelineTrackItems.length > 0 ? (
+            timelineTrackItems.map(({ layer, parentName, depth }) => {
               const isLayerSelected = selectedLayerIds.includes(layer.id);
               const clips = getLayerClips(layer);
               const selectedClip = clips.find((c) => selectedClipIds.includes(c.id));
@@ -611,17 +744,27 @@ export const TimelinePanel: React.FC = () => {
                       ) : (
                         <>
                           <LayerIcon layer={layer} className="w-3.5 h-3.5 text-[#71717a] shrink-0" />
-                          <span
-                            onDoubleClick={(e) => {
-                              e.stopPropagation();
-                              setEditingTrackLayerId(layer.id);
-                              setEditingTrackLayerName(layer.name);
-                            }}
-                            className="truncate text-xs hover:underline cursor-text"
-                            title="Double-click to rename layer"
-                          >
-                            {layer.name}
-                          </span>
+                          <div className="flex items-center gap-1 truncate min-w-0 flex-1">
+                            {parentName && (
+                              <span
+                                className="text-[10px] text-[#a1a1aa] truncate shrink-0 max-w-[72px]"
+                                title={`Inside: ${parentName}`}
+                              >
+                                {parentName} ›
+                              </span>
+                            )}
+                            <span
+                              onDoubleClick={(e) => {
+                                e.stopPropagation();
+                                setEditingTrackLayerId(layer.id);
+                                setEditingTrackLayerName(layer.name);
+                              }}
+                              className="truncate text-xs hover:underline cursor-text"
+                              title="Double-click to rename layer"
+                            >
+                              {layer.name}
+                            </span>
+                          </div>
                         </>
                       )}
                     </div>

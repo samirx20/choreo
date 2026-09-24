@@ -6,6 +6,7 @@ import {
   Trash2,
   Plus,
   Loader2,
+  X,
 } from "lucide-react";
 import { useProjectStore } from "@/store/useProjectStore";
 import { AudioTrack } from "@/types/scene";
@@ -13,9 +14,10 @@ import { extractAudioWaveform } from "@/engine/audio/audioWaveform";
 
 interface AudioTrackRowProps {
   maxSec: number;
+  onClose?: () => void;
 }
 
-export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec }) => {
+export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose }) => {
   const {
     document: doc,
     addAudioTrack,
@@ -134,29 +136,54 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec }) => {
             </button>
             <button
               type="button"
-              onClick={() => removeAudioTrack(audioTrack.id)}
+              onClick={() => {
+                removeAudioTrack(audioTrack.id);
+                onClose?.();
+              }}
               className="p-1 rounded text-[#a1a1aa] hover:text-red-600 transition-colors"
               title="Delete Audio Track"
             >
               <Trash2 className="w-3 h-3" />
             </button>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1 rounded text-[#a1a1aa] hover:text-[#18181b] transition-colors"
+                title="Hide Audio Lane"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isProcessing}
-            className="text-[11px] font-medium text-purple-600 hover:text-purple-700 flex items-center gap-1 px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50/50 hover:bg-purple-50"
-          >
-            {isProcessing ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <>
-                <Plus className="w-3 h-3" />
-                <span>Add</span>
-              </>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isProcessing}
+              className="text-[11px] font-medium text-purple-600 hover:text-purple-700 flex items-center gap-1 px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50/50 hover:bg-purple-50"
+            >
+              {isProcessing ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <>
+                  <Plus className="w-3 h-3" />
+                  <span>Add</span>
+                </>
+              )}
+            </button>
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1 rounded text-[#a1a1aa] hover:text-[#18181b] transition-colors"
+                title="Hide Audio Lane"
+              >
+                <X className="w-3 h-3" />
+              </button>
             )}
-          </button>
+          </div>
         )}
       </div>
 

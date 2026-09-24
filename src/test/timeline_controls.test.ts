@@ -1,9 +1,12 @@
+import React from "react";
 import { describe, it, expect, beforeEach } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { useProjectStore, INITIAL_SCENE } from "@/store/useProjectStore";
 import { layerStyleToCss } from "@/components/canvas/renderers/styleUtils";
-import { LayerStyle } from "@/types/scene";
+import { LayerStyle, GroupLayer, ShapeLayer } from "@/types/scene";
 import { animationClock } from "@/engine/clock/AnimationClock";
 import { evaluateSceneAtTime } from "@/engine/evaluator";
+import { TimelinePanel } from "@/components/timeline/TimelinePanel";
 
 describe("Timeline Multi-Clip Selection & Work Area Controls", () => {
   beforeEach(() => {
@@ -240,6 +243,153 @@ describe("Timeline Multi-Clip Selection & Work Area Controls", () => {
     const effectiveDuration = Math.max(screen.duration || 5.0, 0);
     const timelineMaxSec = Math.max(8, Math.ceil(effectiveDuration));
     expect(timelineMaxSec).toBe(8); // Must be at least 8 seconds, not 1s!
+  });
+});
+
+describe("On-Demand Audio Track & High-Signal Timeline Container Pruning", () => {
+  beforeEach(() => {
+    useProjectStore.setState({
+      document: JSON.parse(JSON.stringify(INITIAL_SCENE)),
+      selectedLayerIds: [],
+      selectedClipIds: [],
+    });
+  });
+
+  it("hides audio track by default when no audio is present and toggles audio lane visibility", () => {
+    // Check initial state has no audio track
+    const store = useProjectStore.getState();
+    expect(store.document.audioTracks?.length || 0).toBe(0);
+
+    const { queryByTitle, getByTestId, queryByText } = render(React.createElement(TimelinePanel));
+
+    // Audio lane should NOT be visible by default (reclaiming 40px)
+    expect(queryByTitle("Hide Audio Lane")).toBeNull();
+    expect(queryByText("Track 1")).toBeNull();
+
+    // Toggle button should be present in transport bar
+    const audioToggle = getByTestId("timeline-audio-toggle");
+    expect(audioToggle).toBeDefined();
+    expect(audioToggle.getAttribute("title")).toContain("Add Audio Track");
+  });
+
+  it("shows audio lane when audioTrack exists and hides it when dismissed or deleted", () => {
+    const store = useProjectStore.getState();
+    store.addAudioTrack({
+      id: "audio_test_1",
+      name: "Podcast Intro",
+      src: "blob:test",
+      duration: 10,
+      start: 0,
+      offset: 0,
+      volume: 1,
+      muted: false,
+    });
+
+    const { queryByTitle, getByTitle, getByTestId } = render(React.createElement(TimelinePanel));
+
+    // With audioTrack present, AudioTrackRow is visible
+    expect(getByTitle("Hide Audio Lane")).toBeDefined();
+    expect(getByTitle("Delete Audio Track")).toBeDefined();
+
+    // Clicking Hide Audio Lane collapses it
+    fireEvent.click(getByTitle("Hide Audio Lane"));
+    expect(queryByTitle("Hide Audio Lane")).toBeNull();
+
+    // Clicking audio toggle in transport bar brings it back
+    const audioToggle = getByTestId("timeline-audio-toggle");
+    fireEvent.click(audioToggle);
+    expect(getByTitle("Hide Audio Lane")).toBeDefined();
+
+    // Clicking Delete Audio Track deletes it from store and closes the lane
+    fireEvent.click(getByTitle("Delete Audio Track"));
+    expect(queryByTitle("Hide Audio Lane")).toBeNull();
+    expect(useProjectStore.getState().document.audioTracks?.length).toBe(0);
+  });
+
+  it("prunes empty group containers from timeline tracks while showing children with parent breadcrumb", () => {
+    const store = useProjectStore.getState();
+    const activeScreen = store.document.screens[0];
+
+    // Create a group with 2 child shapes and no clips on the group
+    const childRect: ShapeLayer = {
+      id: "layer_child_rect",
+      name: "Child Rectangle",
+      type: "shape",
+      shapeType: "rectangle",
+      style: { x: 10, y: 10, width: 100, height: 100, rotation: 0, opacity: 1 },
+    };
+    const childCircle: ShapeLayer = {
+      id: "layer_child_circle",
+      name: "Child Circle",
+      type: "shape",
+      shapeType: "circle",
+      style: { x: 20, y: 20, width: 50, height: 50, rotation: 0, opacity: 1 },
+    };
+    const parentGroup: GroupLayer = {
+      id: "layer_parent_group",
+      name: "Subtract Group",
+      type: "group",
+      children: [childRect, childCircle],
+      style: { x: 0, y: 0, width: 200, height: 200, rotation: 0, opacity: 1 },
+    };
+
+    store.updateScreen(activeScreen.id, {
+      layers: [parentGroup],
+    });
+
+    const { queryByTestId, getByTestId } = render(React.createElement(TimelinePanel));
+
+    // The group container itself has 0 clips, so it should be PRUNED from the timeline
+    expect(queryByTestId("timeline-track-row-layer_parent_group")).toBeNull();
+
+    // But the child shapes MUST be rendered on the timeline
+    expect(getByTestId("timeline-track-row-layer_child_rect")).toBeDefined();
+    expect(getByTestId("timeline-track-row-layer_child_circle")).toBeDefined();
+
+    // The children should display the parent breadcrumb
+    const rectHeader = getByTestId("timeline-track-header-layer_child_rect");
+    expect(rectHeader.textContent).toContain("Subtract Group ›");
+    expect(rectHeader.textContent).toContain("Child Rectangle");
+  });
+
+  it("renders group container track on timeline when an animation clip is authored on it", () => {
+    const store = useProjectStore.getState();
+    const activeScreen = store.document.screens[0];
+
+    const childRect: ShapeLayer = {
+      id: "layer_child_rect_2",
+      name: "Inner Shape",
+      type: "shape",
+      shapeType: "rectangle",
+      style: { x: 10, y: 10, width: 100, height: 100, rotation: 0, opacity: 1 },
+    };
+    const parentGroupWithAnim: GroupLayer = {
+      id: "layer_animated_group",
+      name: "Hero Group",
+      type: "group",
+      children: [childRect],
+      style: { x: 0, y: 0, width: 200, height: 200, rotation: 0, opacity: 1 },
+      animation: {
+        in: {
+          id: "clip_group_in",
+          preset: "fade",
+          start: 0.5,
+          duration: 1.0,
+          easing: "smooth",
+        },
+      },
+    };
+
+    store.updateScreen(activeScreen.id, {
+      layers: [parentGroupWithAnim],
+    });
+
+    const { getByTestId } = render(React.createElement(TimelinePanel));
+
+    // Because Hero Group has an animation clip, it MUST be rendered on timeline to host the clip
+    expect(getByTestId("timeline-track-row-layer_animated_group")).toBeDefined();
+    // And inner shape also rendered
+    expect(getByTestId("timeline-track-row-layer_child_rect_2")).toBeDefined();
   });
 });
 
