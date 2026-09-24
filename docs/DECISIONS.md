@@ -2480,6 +2480,22 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Verification**:
   - All 55 test files and 586 tests pass in Vitest.
 
+---
+
+### Decision 108: Windows Frameless Window DWM Composition & Explicit Window Setup
+* **Context & Motivation**:
+  - In dev mode on Windows with `"decorations": false`, the Tauri window process could run in the background without Windows DWM compositing and displaying the frame on screen.
+* **The Solution**:
+  1. **Explicit Window Setup Hook (`src-tauri/src/lib.rs`)**:
+     - Added a `.setup()` hook that resolves `app.get_webview_window("main")` and explicitly calls `window.show()` and `window.set_focus()` on application launch.
+  2. **DWM Shadow Composition (`src-tauri/tauri.conf.json`)**:
+     - Added `"shadow": true` to the main window configuration, ensuring Windows DWM treats the borderless window as a top-level composited surface.
+  3. **Process Hygiene**:
+     - Terminated orphan hung processes holding WebView2 instance locks on port 5173.
+* **Verification**:
+  - `cargo check` compiled in 2.26s with exit code 0.
+  - `tsc --noEmit` and `npm run build` verified with 0 errors.
+
 
 
 
