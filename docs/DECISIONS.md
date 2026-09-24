@@ -2132,10 +2132,10 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **The Solution**:
   1. **Multi-Selection Inspector Card (`MultiSelectionCard.tsx` & `DesignInspector.tsx`)**:
      - When $\ge 2$ elements are selected, `DesignInspector` completely hides single-element cards (`TransformCard`, `SpecializedLayerCard`, `TypographyCard`, `AppearanceCard`).
-     - Renders a clean, high-signal [`MultiSelectionCard`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/components/inspector/design/MultiSelectionCard.tsx):
-       - **Masking Section**: "Mask Selection" (`Ctrl+Alt+M`) with subtext explaining that the bottom layer becomes a stencil clipping the layers above it into a `Mask Group`. If a mask group is selected, provides an instant "Release" button.
-       - **Boolean Operations Section**: 4 operation buttons (`Union`, `Subtract`, `Intersect`, `Exclude`) plus a full-width "Flatten to Vector Path" (`Ctrl+E`) action.
-       - **Grouping Section**: "Group ({count})" (`Ctrl+G`) and "Ungroup" (`Ctrl+Shift+G`).
+     - Aligned with the native studio design language (`border-t border-border divide-y divide-border/50`), eliminating nested card containers, bulky borders, paragraph helper text, and colored pill buttons:
+       - **Boolean**: Segmented icon button bar (`Combine`, `MinusCircle`, `Blend`, `Split`) matching `AlignmentBar`, plus compact "Flatten" (`Ctrl+E`) button.
+       - **Mask**: Clean single-row "Mask Selection" (`Ctrl+Alt+M`) with subtle stencil icon, plus "Release" button when a mask group is present.
+       - **Group**: Clean single-row "Group ({count})" (`Ctrl+G`) and "Ungroup" (`Ctrl+Shift+G`).
   2. **Consolidated Vector Drawing Dropdown in Toolbar (`FloatingDesignToolbar.tsx`)**:
      - Combined Pen (`P`) and Pencil (`Shift+P`) into a single dropdown button matching the Shapes tool pattern.
      - Displays the currently selected tool icon (`PenTool` or `Pencil`) with `ChevronDown` arrow, enabling seamless toggling and switching between vector anchor paths and Catmull-Rom smoothed freehand curves.
