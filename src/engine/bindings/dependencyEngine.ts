@@ -664,7 +664,7 @@ export function resolveSceneBindings(
   function populateMap(items: Layer[]) {
     for (const item of items) {
       layerMap.set(item.id, item);
-      if (item.type === 'group' && (item as any).children) {
+      if (Array.isArray((item as any).children)) {
         populateMap((item as any).children);
       }
     }
@@ -758,6 +758,56 @@ export function resolveSceneBindings(
     }
 
     resolved[layerId] = layerStyle;
+  }
+
+  // Resolve parent container dynamic hugging
+  for (const [layerId, layer] of layerMap.entries()) {
+    if (
+      layer.containerLayout?.mode === 'hug' &&
+      Array.isArray((layer as any).children) &&
+      (layer as any).children.length > 0
+    ) {
+      const children = (layer as any).children as Layer[];
+      const padX = layer.containerLayout.paddingX ?? 20;
+      const padY = layer.containerLayout.paddingY ?? 14;
+
+      let maxX = 0;
+      let maxY = 0;
+      for (const child of children) {
+        const childResolved = resolved[child.id];
+        let cw = typeof child.style.width === 'number' ? child.style.width : 100;
+        if (childResolved?.width && typeof childResolved.width === 'string') {
+          const parsed = parseFloat(childResolved.width);
+          if (!isNaN(parsed)) cw = parsed;
+        } else if (child.type === 'text' || child.type === 'chunk' || child.type === 'counter') {
+          const content = (child as any).renderedValue || (child as any).content || 'Text';
+          const fs = child.style.fontSize || 24;
+          cw = Math.max(40, content.length * (fs * 0.6));
+        }
+
+        let ch = typeof child.style.height === 'number' ? child.style.height : 40;
+        if (childResolved?.height && typeof childResolved.height === 'string') {
+          const parsed = parseFloat(childResolved.height);
+          if (!isNaN(parsed)) ch = parsed;
+        } else if (child.style.fontSize) {
+          ch = child.style.fontSize * 1.3;
+        }
+
+        const cx = child.style.x || 0;
+        const cy = child.style.y || 0;
+        maxX = Math.max(maxX, cx + cw);
+        maxY = Math.max(maxY, cy + ch);
+      }
+
+      const huggedW = Math.round(maxX + padX * 2);
+      const huggedH = Math.round(maxY + padY * 2);
+
+      resolved[layerId] = {
+        ...(resolved[layerId] || {}),
+        width: `${huggedW}px`,
+        height: `${huggedH}px`,
+      };
+    }
   }
 
   return resolved;

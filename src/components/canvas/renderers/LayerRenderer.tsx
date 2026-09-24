@@ -149,6 +149,20 @@ export const LayerRenderer: React.FC<LayerRendererProps> = ({
           isSelected={isSelected}
           isChildInFlex={isChildInFlex}
           computedStyle={computedStyle}
+          computedLayerStyles={computedLayerStyles}
+          selectedLayerIds={selectedLayerIds}
+          onSelectLayer={onSelectLayer}
+          renderChild={(child, childInFlex) => (
+            <LayerRenderer
+              key={child.id}
+              layer={child}
+              selectedLayerIds={selectedLayerIds}
+              isChildInFlex={childInFlex}
+              computedStyle={computedLayerStyles[child.id]}
+              computedLayerStyles={computedLayerStyles}
+              onSelectLayer={onSelectLayer}
+            />
+          )}
           onClick={handleClick}
         />
       );

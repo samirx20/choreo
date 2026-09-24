@@ -21,7 +21,7 @@ import {
   icons,
   Smile,
 } from "lucide-react";
-import { Layer } from "@/types/scene";
+import { Layer, ShapeLayer } from "@/types/scene";
 import { LayerIcon } from "@/components/common/LayerIcon";
 import {
   useProjectStore,
@@ -123,8 +123,13 @@ export const LeftSidebar: React.FC = () => {
   // Render a single layer item in the tree
   const renderLayerNode = (layer: Layer, depth = 1, screenId?: string) => {
     const isSelected = selectedLayerIds.includes(layer.id);
-    const isGroup = layer.type === "group" || layer.type === "frame";
-    const isCollapsed = isGroup && collapsedGroups[layer.id];
+    const isContainer =
+      layer.type === "group" ||
+      layer.type === "frame" ||
+      (layer.type === "shape" && (layer as ShapeLayer).shapeType === "rectangle") ||
+      (Array.isArray((layer as any).children) && (layer as any).children.length >= 0);
+    const hasChildren = Array.isArray((layer as any).children) && (layer as any).children.length > 0;
+    const isCollapsed = hasChildren && Boolean(collapsedGroups[layer.id]);
     const isDragging = draggingLayerId === layer.id;
     const isDragTarget = dragOverTarget?.id === layer.id;
 
@@ -141,7 +146,7 @@ export const LeftSidebar: React.FC = () => {
           const relY = (e.clientY - rect.top) / rect.height;
 
           let pos: "before" | "after" | "inside";
-          if (isGroup) {
+          if (isContainer) {
             if (relY < 0.25) pos = "before";
             else if (relY > 0.75) pos = "after";
             else pos = "inside";
@@ -174,6 +179,13 @@ export const LeftSidebar: React.FC = () => {
         )}
         {isDragTarget && dragOverTarget.position === "after" && (
           <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-[#6d28d9] rounded-full z-30" />
+        )}
+        {isDragTarget && dragOverTarget.position === "inside" && (
+          <div className="absolute inset-0.5 border-2 border-[#6d28d9] bg-[#6d28d9]/10 rounded pointer-events-none z-30 flex items-center justify-end pr-2">
+            <span className="text-[10px] font-semibold text-[#6d28d9] bg-white/95 px-1.5 py-0.5 rounded shadow-sm">
+              Nest as Child
+            </span>
+          </div>
         )}
 
         <div
@@ -211,7 +223,7 @@ export const LeftSidebar: React.FC = () => {
           )}
         >
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            {isGroup && (
+            {hasChildren && (
               <button
                 onClick={(e) => toggleGroupCollapse(layer.id, e)}
                 className="p-0.5 -ml-1 text-[#71717a] hover:text-inherit"
@@ -283,6 +295,16 @@ export const LeftSidebar: React.FC = () => {
                 {layer.name}
               </span>
             )}
+            {layer.containerLayout?.mode === "hug" && (
+              <span className="text-[9px] px-1 py-0.2 rounded bg-purple-500/15 text-purple-600 font-mono font-semibold uppercase shrink-0">
+                Hug
+              </span>
+            )}
+            {layer.containerLayout?.mode === "stack" && (
+              <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/15 text-emerald-600 font-mono font-semibold uppercase shrink-0">
+                Stack
+              </span>
+            )}
           </div>
 
           {/* Quick Hover Actions: Visibility & Lock */}
@@ -334,10 +356,10 @@ export const LeftSidebar: React.FC = () => {
           </div>
         </div>
 
-        {/* Group Children */}
-        {isGroup && !isCollapsed && layer.children && layer.children.length > 0 && (
+        {/* Container Children */}
+        {!isCollapsed && hasChildren && (
           <div className="flex flex-col">
-            {[...layer.children].reverse().map((child) => renderLayerNode(child, depth + 1, screenId))}
+            {[...((layer as any).children || [])].reverse().map((child) => renderLayerNode(child, depth + 1, screenId))}
           </div>
         )}
       </div>

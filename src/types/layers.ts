@@ -243,6 +243,20 @@ export interface GridCoordinates {
   rowSpan: number;
 }
 
+export type ContainerLayoutMode = 'hug' | 'stack' | 'freeform';
+
+export interface ContainerLayoutConfig {
+  mode: ContainerLayoutMode;
+  paddingX?: number;
+  paddingY?: number;
+  physics?: 'spring' | 'instant';
+  stiffness?: number;
+  damping?: number;
+  stackAxis?: 'vertical' | 'horizontal';
+  stackGap?: number;
+  stackAlign?: 'start' | 'center' | 'end';
+}
+
 export interface BaseLayer {
   id: string;
   name: string;
@@ -255,6 +269,8 @@ export interface BaseLayer {
   isCompound?: boolean;
   compoundType?: 'split-shape' | 'split-text' | 'split-line';
   isMask?: boolean;
+  children?: Layer[];
+  containerLayout?: ContainerLayoutConfig;
 }
 
 export type BooleanOperationType = 'union' | 'subtract' | 'intersect' | 'exclude';

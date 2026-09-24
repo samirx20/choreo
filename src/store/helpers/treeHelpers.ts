@@ -1,4 +1,16 @@
-import { Layer, GroupLayer, FrameLayer } from "@/types/scene";
+import { Layer, GroupLayer, FrameLayer, ShapeLayer } from "@/types/scene";
+
+/**
+ * Checks whether a layer is structurally capable of acting as a parent container.
+ */
+export function isContainerLayer(layer: Layer): layer is Layer & { children: Layer[] } {
+  return (
+    layer.type === "group" ||
+    layer.type === "frame" ||
+    (layer.type === "shape" && (layer as ShapeLayer).shapeType === "rectangle") ||
+    (Array.isArray((layer as any).children) && (layer as any).children.length >= 0)
+  );
+}
 
 // Helper: Recursively search and mutate a layer in a layer tree
 export function mutateLayerInTree(
@@ -14,8 +26,8 @@ export function mutateLayerInTree(
       if (mutated !== null) {
         result.push(mutated);
       }
-    } else if (layer.type === "group" || layer.type === "frame") {
-      const updatedChildren = mutateLayerInTree(layer.children, layerId, mutator);
+    } else if (Array.isArray((layer as any).children)) {
+      const updatedChildren = mutateLayerInTree((layer as any).children, layerId, mutator);
       result.push({
         ...layer,
         children: updatedChildren,
@@ -32,25 +44,25 @@ export function mutateLayerInTree(
 export function findLayerInTree(layers: Layer[], layerId: string): Layer | null {
   for (const layer of layers) {
     if (layer.id === layerId) return layer;
-    if (layer.type === "group" || layer.type === "frame") {
-      const found = findLayerInTree(layer.children, layerId);
+    if (Array.isArray((layer as any).children)) {
+      const found = findLayerInTree((layer as any).children, layerId);
       if (found) return found;
     }
   }
   return null;
 }
 
-// Helper: Find parent group of a layer in tree
+// Helper: Find parent container of a layer in tree
 export function findParentGroupInTree(
   layers: Layer[],
   targetId: string
-): (GroupLayer | FrameLayer) | null {
+): Layer | null {
   for (const layer of layers) {
-    if (layer.type === "group" || layer.type === "frame") {
-      if (layer.children.some((c: Layer) => c.id === targetId)) {
+    if (Array.isArray((layer as any).children)) {
+      if ((layer as any).children.some((c: Layer) => c.id === targetId)) {
         return layer;
       }
-      const deeper = findParentGroupInTree(layer.children, targetId);
+      const deeper = findParentGroupInTree((layer as any).children, targetId);
       if (deeper) return deeper;
     }
   }
@@ -61,15 +73,16 @@ export function findParentGroupInTree(
 export function findTopmostParentGroupInTree(
   layers: Layer[],
   targetId: string
-): (GroupLayer | FrameLayer) | null {
+): Layer | null {
   for (const layer of layers) {
-    if (layer.type === "group" || layer.type === "frame") {
+    if (Array.isArray((layer as any).children)) {
       if (layer.id === targetId) return null;
-      const contains = (g: GroupLayer | FrameLayer): boolean => {
-        return g.children.some(
-          (c: Layer) =>
-            c.id === targetId ||
-            ((c.type === "group" || c.type === "frame") && contains(c))
+      const contains = (g: Layer): boolean => {
+        return (
+          Array.isArray((g as any).children) &&
+          (g as any).children.some(
+            (c: Layer) => c.id === targetId || contains(c)
+          )
         );
       };
       if (contains(layer)) {
@@ -91,11 +104,24 @@ export function insertLayerRelativeInTree(
   if (targetIndex !== -1) {
     if (position === "inside") {
       const target = layers[targetIndex];
-      if (target.type === "group" || target.type === "frame") {
+      if (isContainerLayer(target)) {
+        const existingChildren = (target as any).children || [];
         const nextTarget: Layer = {
           ...target,
-          children: [...target.children, layerToInsert],
+          children: [...existingChildren, layerToInsert],
         };
+        // Auto-initialize containerLayout if not present
+        if (!(nextTarget as any).containerLayout) {
+          const isTextLike = layerToInsert.type === "text" || layerToInsert.type === "counter" || layerToInsert.type === "chunk";
+          (nextTarget as any).containerLayout = {
+            mode: isTextLike ? "hug" : "stack",
+            paddingX: 20,
+            paddingY: 14,
+            physics: "spring",
+            stackAxis: "vertical",
+            stackGap: 16,
+          };
+        }
         const nextLayers = [...layers];
         nextLayers[targetIndex] = nextTarget;
         return { updated: nextLayers, inserted: true };
@@ -110,9 +136,9 @@ export function insertLayerRelativeInTree(
 
   let inserted = false;
   const updated = layers.map((layer) => {
-    if (inserted || (layer.type !== "group" && layer.type !== "frame")) return layer;
+    if (inserted || !Array.isArray((layer as any).children)) return layer;
     const res = insertLayerRelativeInTree(
-      layer.children,
+      (layer as any).children,
       targetId,
       layerToInsert,
       position
@@ -132,8 +158,8 @@ export function flattenLayers(layers: Layer[]): Layer[] {
   const flat: Layer[] = [];
   for (const layer of layers) {
     flat.push(layer);
-    if (layer.type === "group" || layer.type === "frame") {
-      flat.push(...flattenLayers(layer.children));
+    if (Array.isArray((layer as any).children)) {
+      flat.push(...flattenLayers((layer as any).children));
     }
   }
   return flat;

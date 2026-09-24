@@ -807,9 +807,9 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       // Check if we are already inside this group hierarchy (either topmost group, parent, or sibling is selected)
       const isTopmostSelected = selectedLayerIds.includes(topmostGroup.id);
       const isParentSelected = parentGroup ? selectedLayerIds.includes(parentGroup.id) : false;
-      const isSiblingSelected = parentGroup
+      const isSiblingSelected = parentGroup?.children
         ? selectedLayerIds.some((id) =>
-            parentGroup.children.some((child: Layer) => child.id === id)
+            parentGroup.children!.some((child: Layer) => child.id === id)
           )
         : false;
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { ShapeLayer } from "@/types/scene";
+import { ShapeLayer, Layer } from "@/types/scene";
 import { layerStyleToCss } from "./styleUtils";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +8,10 @@ interface ShapeRendererProps {
   isSelected?: boolean;
   isChildInFlex?: boolean;
   computedStyle?: React.CSSProperties;
+  computedLayerStyles?: Record<string, React.CSSProperties>;
+  selectedLayerIds?: string[];
+  onSelectLayer?: (layerId: string, e: React.MouseEvent) => void;
+  renderChild?: (child: Layer, isChildInFlex: boolean) => React.ReactNode;
   onClick?: (e: React.MouseEvent) => void;
 }
 
@@ -41,6 +45,10 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   isSelected,
   isChildInFlex,
   computedStyle,
+  computedLayerStyles = {},
+  selectedLayerIds = [],
+  onSelectLayer,
+  renderChild,
   onClick,
 }) => {
   const widthNum = typeof layer.style.width === "number" ? layer.style.width : 100;
@@ -269,6 +277,41 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
             markerEnd={layer.shapeType === "arrow" && layer.arrowEnd !== false ? `url(#arrow-head-${layer.id})` : undefined}
           />
         </svg>
+      )}
+
+      {layer.children && layer.children.length > 0 && (
+        <div
+          className={cn(
+            "w-full h-full pointer-events-auto",
+            layer.containerLayout?.mode === "stack" ? "flex" : "relative"
+          )}
+          style={{
+            ...(layer.containerLayout?.mode === "stack"
+              ? {
+                  display: "flex",
+                  flexDirection: layer.containerLayout.stackAxis === "horizontal" ? "row" : "column",
+                  alignItems:
+                    layer.containerLayout.stackAlign === "center"
+                      ? "center"
+                      : layer.containerLayout.stackAlign === "end"
+                      ? "flex-end"
+                      : "flex-start",
+                  gap: `${layer.containerLayout.stackGap ?? 16}px`,
+                  padding: `${layer.containerLayout.paddingY ?? 14}px ${layer.containerLayout.paddingX ?? 20}px`,
+                  boxSizing: "border-box",
+                }
+              : {
+                  position: "absolute",
+                  inset: 0,
+                }),
+          }}
+        >
+          {layer.children.map((child: Layer) =>
+            renderChild
+              ? renderChild(child, layer.containerLayout?.mode === "stack")
+              : null
+          )}
+        </div>
       )}
     </div>
   );
