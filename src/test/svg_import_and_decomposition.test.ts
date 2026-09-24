@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useProjectStore } from "@/store/useProjectStore";
 import { parseSvgString } from "@/engine/svg/svgParser";
 import { computePathBounds } from "@/engine/svg/svgPathBounds";
-import { decomposeVectorGroup } from "@/engine/svg/svgDecomposer";
 import { GroupLayer, ShapeLayer } from "@/types/scene";
 
 describe("Native SVG Import & Vector Path Decomposition (Decision 76)", () => {
@@ -139,83 +138,7 @@ describe("Native SVG Import & Vector Path Decomposition (Decision 76)", () => {
     });
   });
 
-  describe("Vector Path Decomposition (decomposeVectorGroup)", () => {
-    it("decomposes compound vector group into absolute canvas layers with 0.0000px visual shift", () => {
-      const group: GroupLayer = {
-        id: "vector_grp_1",
-        name: "App Icon",
-        type: "group",
-        style: {
-          x: 200,
-          y: 100,
-          width: 300,
-          height: 300,
-          rotation: 0,
-          opacity: 1,
-        },
-        children: [
-          {
-            id: "child_bg",
-            name: "Background",
-            type: "shape",
-            shapeType: "path",
-            d: "M 0 0 H 100 V 100 H 0 Z",
-            viewBox: "0 0 100 100",
-            style: {
-              x: 0,
-              y: 0,
-              width: 300,
-              height: 300,
-              rotation: 0,
-              opacity: 1,
-              backgroundColor: "#3b82f6",
-            },
-          } as ShapeLayer,
-          {
-            id: "child_symbol",
-            name: "Symbol",
-            type: "shape",
-            shapeType: "path",
-            d: "M 30 30 H 70 V 70 H 30 Z",
-            viewBox: "0 0 100 100",
-            style: {
-              x: 0,
-              y: 0,
-              width: 300,
-              height: 300,
-              rotation: 0,
-              opacity: 1,
-              backgroundColor: "#ffffff",
-            },
-          } as ShapeLayer,
-        ],
-      };
-
-      const decomposed = decomposeVectorGroup(group);
-      expect(decomposed.length).toBe(2);
-
-      // Child 1 (Background): bounds [0, 0, 100, 100] -> scale 3x -> x: 200, y: 100, w: 300, h: 300
-      const dChild1 = decomposed[0] as ShapeLayer;
-      expect(dChild1.style.x).toBe(200);
-      expect(dChild1.style.y).toBe(100);
-      expect(dChild1.style.width).toBe(300);
-      expect(dChild1.style.height).toBe(300);
-
-      // Child 2 (Symbol): bounds [30, 30, 70, 70] (w: 40, h: 40)
-      // Scaled x = 200 + 30 * 3 = 290
-      // Scaled y = 100 + 30 * 3 = 190
-      // Scaled w = 40 * 3 = 120
-      // Scaled h = 40 * 3 = 120
-      const dChild2 = decomposed[1] as ShapeLayer;
-      expect(dChild2.style.x).toBe(290);
-      expect(dChild2.style.y).toBe(190);
-      expect(dChild2.style.width).toBe(120);
-      expect(dChild2.style.height).toBe(120);
-      expect(dChild2.viewBox).toBe("30 30 40 40");
-    });
-  });
-
-  describe("Store Integration (importSvg & decomposeVectorGroup)", () => {
+  describe("Store Integration (importSvg & ungroup)", () => {
     it("imports SVG directly into the project store and selects the created layer", () => {
       const store = useProjectStore.getState();
       const svg = `
@@ -235,7 +158,7 @@ describe("Native SVG Import & Vector Path Decomposition (Decision 76)", () => {
       expect(updatedState.selectedLayerIds).toEqual(layerIds);
     });
 
-    it("decomposes imported compound SVG via store action into top-level layers", () => {
+    it("unpacks imported compound SVG via ungroup into top-level layers", () => {
       const store = useProjectStore.getState();
       const svg = `
         <svg viewBox="0 0 100 100">
@@ -250,15 +173,14 @@ describe("Native SVG Import & Vector Path Decomposition (Decision 76)", () => {
       const groupId = layerIds![0];
       expect(useProjectStore.getState().document.screens[0].layers[0].type).toBe("group");
 
-      // Decompose vector group
-      store.decomposeVectorGroup(groupId);
+      // Ungroup vector group
+      store.ungroup(groupId);
 
-      const afterDecompose = useProjectStore.getState();
-      const layers = afterDecompose.document.screens[0].layers;
+      const afterUngroup = useProjectStore.getState();
+      const layers = afterUngroup.document.screens[0].layers;
       expect(layers.length).toBe(2);
       expect(layers[0].type).toBe("shape");
       expect(layers[1].type).toBe("shape");
-      expect(afterDecompose.selectedLayerIds.length).toBe(2);
     });
   });
 });

@@ -321,7 +321,7 @@ describe("Pillar A: Universal Element Splitting Engine", () => {
       expect((createdGroup as any).children[1].shapeType).toBe("path");
     });
 
-    it("executes detachGroupToAbsolute in store, dissolving group and locking child world coordinates", () => {
+    it("executes ungroup in store, dissolving group and locking child world coordinates", () => {
       const store = useProjectStore.getState();
       const child1: Layer = {
         id: "c1",
@@ -346,7 +346,7 @@ describe("Pillar A: Universal Element Splitting Engine", () => {
       } as any;
 
       store.addLayer(group);
-      store.detachGroupToAbsolute("g1");
+      store.ungroup("g1");
 
       const screen = useProjectStore.getState().document.screens[0];
       // Group dissolved

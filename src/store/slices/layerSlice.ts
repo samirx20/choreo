@@ -26,7 +26,6 @@ import {
   detachArrowhead as detachArrowheadEngine,
 } from "@/engine/lineSplitter";
 import { parseSvgString } from "@/engine/svg/svgParser";
-import { decomposeVectorGroup as decomposeVectorGroupEngine } from "@/engine/svg/svgDecomposer";
 import { flattenBooleanGroup } from "@/engine/vector/booleanOperations";
 
 export type LayerSlice = Pick<
@@ -50,7 +49,6 @@ export type LayerSlice = Pick<
   | "unmaskGroup"
   | "toggleMaskInvert"
   | "importSvg"
-  | "decomposeVectorGroup"
   | "applyBooleanOperation"
   | "flattenSelection"
   | "splitTextRange"
@@ -61,7 +59,6 @@ export type LayerSlice = Pick<
   | "separateStrokeAndFill"
   | "splitLineAtPoint"
   | "detachArrowhead"
-  | "detachGroupToAbsolute"
   | "mergeChunkWithPrevious"
   | "mergeChunkWithNext"
   | "addLayerBinding"
@@ -911,30 +908,6 @@ export const createLayerSlice = (
     return [rootLayer.id];
   },
 
-  decomposeVectorGroup: (groupId: string) => {
-    const { document: doc, activeScreenId } = get();
-    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
-    if (!activeScreen) return;
-    const group = findLayerInTree(activeScreen.layers, groupId) as GroupLayer | null;
-    if (!group || group.type !== "group" || !group.children?.length) return;
-
-    const decomposedChildren = decomposeVectorGroupEngine(group);
-
-    const nextLayers = activeScreen.layers.flatMap((l) =>
-      l.id === groupId ? decomposedChildren : [l]
-    );
-
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-      ),
-    };
-
-    commitDoc(set, nextDoc, {
-      selectedLayerIds: decomposedChildren.map((c) => c.id),
-    });
-  },
 
   applyBooleanOperation: (operation: BooleanOperationType) => {
     const { document: doc, activeScreenId, selectedLayerIds } = get();
@@ -1337,57 +1310,6 @@ export const createLayerSlice = (
     });
   },
 
-  detachGroupToAbsolute: (groupId) => {
-    const { document: doc, activeScreenId } = get();
-    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
-    if (!activeScreen) return;
-
-    const targetGroup = findLayerInTree(activeScreen.layers, groupId);
-    if (!targetGroup || (targetGroup.type !== "group" && targetGroup.type !== "frame")) return;
-
-    const parentGroup = targetGroup as GroupLayer | FrameLayer;
-    const parentX = parentGroup.style.x || 0;
-    const parentY = parentGroup.style.y || 0;
-
-    const absoluteChildren: Layer[] = parentGroup.children.map((child) => ({
-      ...child,
-      style: {
-        ...child.style,
-        x: Math.round(parentX + (child.style.x || 0)),
-        y: Math.round(parentY + (child.style.y || 0)),
-        rotation: (parentGroup.style.rotation || 0) + (child.style.rotation || 0),
-      },
-    }));
-
-    const replaceInTree = (layers: Layer[]): Layer[] => {
-      const result: Layer[] = [];
-      for (const layer of layers) {
-        if (layer.id === groupId) {
-          result.push(...absoluteChildren);
-        } else if ((layer.type === "group" || layer.type === "frame") && (layer as any).children) {
-          result.push({
-            ...layer,
-            children: replaceInTree((layer as any).children),
-          } as Layer);
-        } else {
-          result.push(layer);
-        }
-      }
-      return result;
-    };
-
-    const nextLayers = replaceInTree(activeScreen.layers);
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-      ),
-    };
-
-    commitDoc(set, nextDoc, {
-      selectedLayerIds: absoluteChildren.map((c) => c.id),
-    });
-  },
 
   splitTextAtCaret: (layerId, index) => {
     const { document: doc, activeScreenId } = get();

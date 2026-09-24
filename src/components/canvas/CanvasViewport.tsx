@@ -71,7 +71,6 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     groupSelection,
     ungroup,
     importSvg,
-    decomposeVectorGroup,
     removeLayer,
     duplicateLayer,
     startTransaction,

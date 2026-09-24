@@ -63,32 +63,35 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
         transformOrigin: "center center",
       }}
     >
-      {/* Floating Action Pill Header (unrotated orientation) */}
+      {/* Floating Action Pill Header (unrotated orientation & zoom-invariant screen scale) */}
       <div
-        className="absolute left-1/2 -top-12 -translate-x-1/2 pointer-events-auto flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/95 border border-violet-500/50 shadow-2xl backdrop-blur-md whitespace-nowrap text-xs text-zinc-200 z-50 animate-in fade-in zoom-in-95 duration-150"
+        className="absolute left-1/2 pointer-events-auto flex items-center gap-3 px-4 h-14 rounded-full bg-zinc-900/95 border border-zinc-700/80 shadow-2xl backdrop-blur-xl whitespace-nowrap text-xs text-zinc-100 z-50 animate-in fade-in zoom-in-95 duration-150"
         style={{
-          transform: `translateX(-50%) rotate(${-rotation}deg)`,
+          bottom: `calc(100% + ${20 / Math.max(0.1, effectiveScale)}px)`,
+          transform: `translateX(-50%) rotate(${-rotation}deg) scale(${1 / Math.max(0.1, effectiveScale)})`,
+          transformOrigin: "bottom center",
         }}
       >
-        <div className="flex items-center gap-1.5 text-violet-400 font-semibold tracking-wide text-[11px] uppercase">
-          <Scissors className="w-3.5 h-3.5" />
+        <div className="flex items-center gap-2 text-violet-400 font-semibold tracking-wider text-xs uppercase">
+          <Scissors className="w-4 h-4" />
           <span>Split Mode</span>
         </div>
-        <div className="h-3 w-px bg-zinc-700 mx-0.5" />
-        <span className="text-zinc-400 text-[11px]">
+        <div className="h-4 w-px bg-zinc-700" />
+        <span className="text-zinc-300 text-xs font-medium">
           {selectedEdges.length} of {edges.length} {edges.length === 1 ? "edge" : "edges"} selected
         </span>
-        <div className="flex items-center gap-1.5 ml-1">
+        <div className="h-4 w-px bg-zinc-700" />
+        <div className="flex items-center gap-2 ml-0.5">
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               confirmSplit();
             }}
-            className="w-8 h-8 rounded-full bg-violet-600 hover:bg-violet-500 text-white flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95 shrink-0"
-            title="Confirm Split"
+            className="w-10 h-10 rounded-full bg-violet-600 hover:bg-violet-500 text-white flex items-center justify-center transition-all cursor-pointer shadow-lg shadow-violet-500/30 hover:scale-105 active:scale-95 shrink-0"
+            title="Confirm Split (Enter)"
           >
-            <Check className="w-4 h-4 stroke-[2.5]" />
+            <Check className="w-5 h-5 stroke-[3]" />
           </button>
           <button
             type="button"
@@ -96,10 +99,10 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
               e.stopPropagation();
               exitSplitMode();
             }}
-            className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 active:scale-95"
-            title="Discard Split"
+            className="w-10 h-10 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center border border-zinc-700 transition-all cursor-pointer shrink-0 hover:scale-105 active:scale-95"
+            title="Discard Split (Esc)"
           >
-            <X className="w-4 h-4 stroke-[2.5]" />
+            <X className="w-5 h-5 stroke-[2.5]" />
           </button>
         </div>
       </div>
@@ -117,6 +120,8 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
 
         {edges.map((edge) => {
           const isSelected = selectedEdges.includes(edge.id);
+          const handleRadius = (isSelected ? 7 : 5) / Math.max(0.2, effectiveScale);
+          const strokeW = 2 / Math.max(0.2, effectiveScale);
 
           return (
             <g
@@ -132,7 +137,7 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
                 d={edge.d}
                 fill="none"
                 stroke="transparent"
-                strokeWidth={20}
+                strokeWidth={Math.max(20, 24 / Math.max(0.2, effectiveScale))}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className="cursor-pointer"
@@ -143,8 +148,8 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
                 d={edge.d}
                 fill="none"
                 stroke={isSelected ? "#8b5cf6" : "#71717a"}
-                strokeWidth={isSelected ? 4.5 : 2.5}
-                strokeDasharray={isSelected ? undefined : "6 4"}
+                strokeWidth={(isSelected ? 4.5 : 2.5) / Math.max(0.2, effectiveScale)}
+                strokeDasharray={isSelected ? undefined : `${6 / effectiveScale} ${4 / effectiveScale}`}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 filter={isSelected ? "url(#purple-glow)" : undefined}
@@ -159,12 +164,12 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
               <circle
                 cx={edge.midPoint.x}
                 cy={edge.midPoint.y}
-                r={isSelected ? 5 : 4}
+                r={handleRadius}
                 fill={isSelected ? "#8b5cf6" : "#27272a"}
                 stroke={isSelected ? "#ffffff" : "#71717a"}
-                strokeWidth={1.5}
+                strokeWidth={strokeW}
                 className={`transition-transform duration-150 ${
-                  isSelected ? "scale-110 drop-shadow-[0_0_4px_rgba(139,92,246,0.8)]" : "group-hover:scale-125"
+                  isSelected ? "scale-110 drop-shadow-[0_0_6px_rgba(139,92,246,0.9)]" : "group-hover:scale-125"
                 }`}
               />
             </g>

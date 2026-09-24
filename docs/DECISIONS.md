@@ -1962,5 +1962,26 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 51 test suites (459 tests) passing.
   - Clean production build (`npm run build`).
 
+---
+
+### Decision 87: Purge of Dead Methods (`detachGroupToAbsolute`, `decomposeVectorGroup`) & Zoom-Invariant Prominent Split Overlay UI
+* **Context & Rationale**:
+  - The speculative helper functions `detachGroupToAbsolute` and `decomposeVectorGroup` were identified as unused bloat (standard `Ungroup` already handles hoisting with relative-to-world coordinate calculation).
+  - Additionally, during shape and line split modes on zoomed-out canvases, the split action pill and its Confirm (`Check`) and Discard (`X`) buttons were rendered inside the zoomed canvas container without counter-scaling. On typical 1080p viewport scales (~0.45x), the controls shrank by 55% into tiny, hard-to-click specks.
+* **Architectural Decisions & Implementation**:
+  1. **Purged Dead Methods**:
+     - Deleted `detachGroupToAbsolute` and `decomposeVectorGroup` from `types.ts`, `layerSlice.ts`, and removed `svgDecomposer.ts`.
+     - Standardized on `ungroup` (`Ctrl+Shift+G`) for all group dissolution.
+  2. **Zoom-Invariant Split Mode Pill (`ShapeSplitOverlay.tsx`, `LineSplitOverlay.tsx`)**:
+     - Applied counter-scaling `scale(${1 / Math.max(0.1, effectiveScale)})` with `transformOrigin: "bottom center"`.
+     - Pinned position using `bottom: calc(100% + ${20 / Math.max(0.1, effectiveScale)}px)` to guarantee the toolbar always hovers exactly 20 screen pixels above the shape boundary at any zoom level.
+     - Upgraded the pill to a prominent `h-14` (56px) rounded capsule with `backdrop-blur-xl`.
+     - Upgraded the Confirm and Discard buttons to large `w-10 h-10` (40px) tactile circular buttons with large `w-5 h-5` icons (`stroke-[3]` on Check, `stroke-[2.5]` on X).
+     - Scaled interactive edge dots and line cut pins dynamically by `1 / effectiveScale` so they remain comfortably visible and draggable on screen regardless of canvas zoom.
+* **Verification**:
+  - All 51 test suites (458 tests) passing cleanly.
+  - Clean production build (`npm run build`).
+
+
 
 

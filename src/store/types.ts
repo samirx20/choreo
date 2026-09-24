@@ -146,7 +146,6 @@ export interface ProjectStoreState {
   unmaskGroup: (groupId: string) => void;
   toggleMaskInvert: (groupId: string) => void;
   importSvg: (svgString: string, targetPoint?: { x: number; y: number }, name?: string) => string[] | null;
-  decomposeVectorGroup: (groupId: string) => void;
   applyBooleanOperation: (operation: BooleanOperationType) => void;
   flattenSelection: () => void;
   splitTextRange: (layerId: string, start: number, end: number) => void;
@@ -157,7 +156,6 @@ export interface ProjectStoreState {
   separateStrokeAndFill: (layerId: string) => void;
   splitLineAtPoint: (layerId: string, ratio?: number) => void;
   detachArrowhead: (layerId: string) => void;
-  detachGroupToAbsolute: (groupId: string) => void;
   mergeChunkWithPrevious: (chunkId: string) => void;
   mergeChunkWithNext: (chunkId: string) => void;
 
