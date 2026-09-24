@@ -162,56 +162,53 @@ export function evaluateClipDelta(
 
   if (preset === "morph") {
     if (type === "out") {
-      // Phase 1: Source expands slightly (1.0 -> 1.08) and converts into particles by rawProgress = 0.18
+      // Phase 1: Source converts into particles by rawProgress = 0.18 at 100% resting scale
       if (rawProgress < 0.18) {
         const breakFrac = rawProgress / 0.18;
-        const scaleExpansion = Math.sin(breakFrac * Math.PI * 0.5) * 0.08;
-        d.scaleX = 1 + scaleExpansion;
-        d.scaleY = 1 + scaleExpansion;
+        d.scaleX = 1;
+        d.scaleY = 1;
         d.opacity = Math.max(0, 1 - breakFrac);
-        d.blur = breakFrac * 3;
+        d.blur = 0;
         return d;
       }
       // After converting into particles: completely disappeared
       d.opacity = 0;
-      d.scaleX = 1.08;
-      d.scaleY = 1.08;
-      d.blur = 3;
+      d.scaleX = 1;
+      d.scaleY = 1;
+      d.blur = 0;
       return d;
     } else {
-      // Target only appears after particles have fully landed and are in place (rawProgress >= 0.90)
+      // Target appears at exact 100% scale once particles have fully landed and are in place (rawProgress >= 0.90)
       if (rawProgress < 0.90) {
         d.opacity = 0;
-        d.scaleX = 1.08;
-        d.scaleY = 1.08;
-        d.blur = 3;
+        d.scaleX = 1;
+        d.scaleY = 1;
+        d.blur = 0;
         return d;
       }
       const revealFrac = (rawProgress - 0.90) / 0.10;
       d.opacity = Math.min(1, revealFrac);
-      const scaleCollapse = (1 - revealFrac) * 0.08;
-      d.scaleX = 1 + scaleCollapse;
-      d.scaleY = 1 + scaleCollapse;
-      d.blur = (1 - revealFrac) * 3;
+      d.scaleX = 1;
+      d.scaleY = 1;
+      d.blur = 0;
       return d;
     }
   }
 
   if (preset === "morphIn") {
-    // Target only appears after particles have fully landed and are in place (rawProgress >= 0.90)
+    // Target appears at exact 100% scale once particles have fully landed and are in place (rawProgress >= 0.90)
     if (rawProgress < 0.90) {
       d.opacity = 0;
-      d.scaleX = 1.08;
-      d.scaleY = 1.08;
-      d.blur = 3;
+      d.scaleX = 1;
+      d.scaleY = 1;
+      d.blur = 0;
       return d;
     }
     const revealFrac = (rawProgress - 0.90) / 0.10;
     d.opacity = Math.min(1, revealFrac);
-    const scaleCollapse = (1 - revealFrac) * 0.08;
-    d.scaleX = 1 + scaleCollapse;
-    d.scaleY = 1 + scaleCollapse;
-    d.blur = (1 - revealFrac) * 3;
+    d.scaleX = 1;
+    d.scaleY = 1;
+    d.blur = 0;
     return d;
   }
 

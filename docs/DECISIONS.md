@@ -2082,6 +2082,23 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 51 test suites (460 tests) pass cleanly.
   - Production build compiles with 0 errors in 9.49s.
 
+---
+
+### Decision 92: Exact 100% Scale Invariance on Morph Element Reveal & Disappearance
+* **Context & Problem**:
+  - During morph transitions, the source element was previously animated with an artificial scale expansion ($1.0 \to 1.08$) and target element was revealed at $1.08\times$ scale before collapsing down to $1.00\times$ with $3\text{px}$ blur.
+  - On sharp, precise vector assets (lines, arrows, text, geometric polygons), scaling around the pivot point produced a jarring visible pop and shift at the moment of reveal instead of seamlessly materializing at its resting dimensions.
+* **The Solution (`clipEvaluator.ts`)**:
+  - Removed all artificial scale overshoots (`scaleCollapse` and `scaleExpansion`) and optical blur filters from morph evaluation.
+  - Both source and target remain strictly locked at **exact resting scale (`scaleX = 1, scaleY = 1, blur = 0`)** throughout their visible windows.
+  - Source dematerializes directly from $100\%$ scale ($rawProgress < 0.18$).
+  - Target remains strictly at $opacity = 0$ until particles have finished traveling and are assembled ($rawProgress \ge 0.90$), then cleanly solidifies at **exact 100% resting scale** as particles complete fusion.
+* **Verification**:
+  - Verified with 10 unit tests in `src/test/cross_element_morph.test.ts` ensuring target element evaluates to `scaleX: 1, scaleY: 1, blur: 0` during reveal.
+  - All 51 test suites (460 tests) pass cleanly.
+  - Production build compiles cleanly with 0 errors in 10.50s.
+
+
 
 
 
