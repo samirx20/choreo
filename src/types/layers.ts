@@ -304,6 +304,8 @@ export interface ShapeLayer extends BaseLayer {
   type: 'shape';
   shapeType: 'rectangle' | 'circle' | 'ellipse' | 'triangle' | 'star' | 'polygon' | 'line' | 'arrow' | 'path';
   d?: string;
+  viewBox?: string;
+  fillRule?: 'nonzero' | 'evenodd';
   pathPerimeter?: number;
   points?: number;
   sides?: number;

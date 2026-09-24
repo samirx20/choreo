@@ -141,6 +141,8 @@ export interface ProjectStoreState {
   useAsMask: (layerId: string) => void;
   unmaskGroup: (groupId: string) => void;
   toggleMaskInvert: (groupId: string) => void;
+  importSvg: (svgString: string, targetPoint?: { x: number; y: number }, name?: string) => string[] | null;
+  decomposeVectorGroup: (groupId: string) => void;
   splitTextRange: (layerId: string, start: number, end: number) => void;
   splitTextAtCaret: (layerId: string, index: number) => void;
   splitTextIntoWords: (layerId: string) => void;

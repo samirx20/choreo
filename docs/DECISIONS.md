@@ -1662,6 +1662,40 @@ The engine provides first-class, motion-first reactive primitives for each eleme
     - Audio track timeline playhead synchronization.
   - Production build (`tsc -b && vite build`) passes with zero errors.
 
+---
+
+### Decision 76: Native SVG Import & Vector Path Decomposition
+* **Context & Motivation**:
+  - Motion graphics rely heavily on vector iconography, custom logos, illustrations, and brand assets.
+  - Previously, importing an SVG file treated it as a flat raster image or wasn't supported for clipboard paste and vector decomposition. Users could not animate individual vector strokes, separate paths, or apply Trim Path Draw-On to custom vectors.
+* **The Solution**:
+  1. **Analytical Path Bounding Box Solver (`src/engine/svg/svgPathBounds.ts`)**:
+     - Fast, analytical parser computing `[minX, minY, maxX, maxY]`, `width`, and `height` from arbitrary SVG path `d` strings (supporting `M, L, H, V, C, S, Q, T, A, Z` in absolute and relative coordinates).
+     - Pure TypeScript, zero external dependencies, works in Node, Browser, and Headless workers.
+  2. **Native SVG Parser Engine (`src/engine/svg/svgParser.ts`)**:
+     - `parseSvgString(svgString, options)`: parses raw SVG XML markup into structured scene layers.
+     - Resolves root `viewBox` and dimensions, computing target placement and responsive scaling.
+     - Converts all basic SVG primitives (`<path>`, `<rect>`, `<circle>`, `<ellipse>`, `<line>`, `<polyline>`, `<polygon>`) into normalized vector path shapes.
+     - Cascades styles from parent `<g>` containers down to child paths (color fills, strokes, linecaps, linejoins, opacities, fill-rules).
+     - Single elements map directly to `ShapeLayer` (`shapeType: 'path'`); multi-element SVGs map to `GroupLayer` containing child `ShapeLayer`s.
+  3. **Vector Path Decomposition Engine ("Explode Vector Paths") (`src/engine/svg/svgDecomposer.ts`)**:
+     - `decomposeVectorGroup(group)`: unwraps vector groups and hoists each path/shape to root canvas coordinates with **0.0000px visual shift invariance**.
+     - Calculates tight local bounding boxes and transforms viewBoxes so each decomposed path gets an independent, tight 8-point bounding box on canvas.
+  4. **Store Actions (`src/store/slices/layerSlice.ts` & `src/store/types.ts`)**:
+     - `importSvg(svgString, targetPoint?, name?)`: parses SVG, commits layers to active screen, and selects the new vector graphic.
+     - `decomposeVectorGroup(groupId)`: unrolls group into top-level layers in-place.
+  5. **Direct Viewport Ingestion & Interaction**:
+     - **Canvas Drag-and-Drop (`CanvasViewport.tsx`)**: dropping `.svg` files parses them into vector layers centered at the drop point.
+     - **System Clipboard Paste (`useCanvasHotkeys.ts`)**: pasting copied SVG markup (e.g. from Figma "Copy as SVG" or web) or SVG files automatically imports native vector shapes.
+     - **Toolbar File Picker (`FloatingDesignToolbar.tsx`)**: file input accepts `.svg` alongside raster images and routes to vector import.
+     - **Context Menu (`contextMenuBuilders.tsx` & `CanvasContextMenu.tsx`)**: right-clicking a group provides **"Decompose Vector Paths"** to explode compound vectors.
+  6. **Trim Path & Vector Animation Compatibility (`ShapeRenderer.tsx`)**:
+     - `ShapeLayer` extended with `viewBox?: string` and `fillRule?: 'nonzero' | 'evenodd'`.
+     - `ShapeRenderer` preserves SVG viewBox with `preserveAspectRatio="xMidYMid meet"`, enabling crisp vector scaling and immediate compatibility with **Trim Path Draw-On** (`trimStart`, `trimEnd`, `trimOffset`).
+* **Verification**:
+  - 10 automated unit and integration tests in `src/test/svg_import_and_decomposition.test.ts`.
+  - Production build (`tsc -b && vite build`) succeeds without errors.
+
 
 
 

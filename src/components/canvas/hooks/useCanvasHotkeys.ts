@@ -287,11 +287,53 @@ export function useCanvasHotkeys({
       }
     };
 
+    const handlePaste = (e: ClipboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput =
+        activeEl?.tagName === "INPUT" ||
+        activeEl?.tagName === "TEXTAREA" ||
+        activeEl?.getAttribute("contenteditable") === "true";
+      if (isInput) return;
+
+      const clipboardData = e.clipboardData;
+      if (!clipboardData) return;
+
+      const store = useProjectStore.getState();
+
+      const file = clipboardData.files?.[0];
+      if (file && (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg"))) {
+        e.preventDefault();
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const svgText = event.target?.result as string;
+          if (svgText) {
+            store.importSvg(svgText);
+          }
+        };
+        reader.readAsText(file);
+        return;
+      }
+
+      const text = clipboardData.getData("text/plain")?.trim();
+      if (
+        text &&
+        (text.startsWith("<svg") ||
+          text.includes("<svg ") ||
+          (text.startsWith("<?xml") && text.includes("<svg")))
+      ) {
+        e.preventDefault();
+        store.importSvg(text);
+        return;
+      }
+    };
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("paste", handlePaste);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("paste", handlePaste);
     };
   }, [
     activeScreen,

@@ -153,6 +153,19 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
+      const textReader = new FileReader();
+      textReader.onload = (event) => {
+        const svgText = event.target?.result as string;
+        if (svgText) {
+          useProjectStore.getState().importSvg(svgText, undefined, file.name.replace(/\.[^/.]+$/, ""));
+        }
+      };
+      textReader.readAsText(file);
+      e.target.value = "";
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = (event) => {
       const dataUrl = event.target?.result as string;
@@ -232,7 +245,7 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
         type="file"
         ref={fileInputRef}
         onChange={handleImageUpload}
-        accept="image/*"
+        accept="image/*,.svg"
         className="hidden"
       />
 

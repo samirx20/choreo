@@ -70,6 +70,8 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     setCurrentTime,
     groupSelection,
     ungroup,
+    importSvg,
+    decomposeVectorGroup,
     removeLayer,
     duplicateLayer,
     startTransaction,
@@ -947,7 +949,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         e.preventDefault();
         e.stopPropagation();
         const file = e.dataTransfer.files?.[0];
-        if (file && file.type.startsWith("image/")) {
+        if (file) {
           const screenEl = document.getElementById(`screen-${activeScreen.id}`);
           if (!screenEl) return;
           const screenRect = screenEl.getBoundingClientRect();
@@ -955,8 +957,22 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
             screenRect.width > 0 ? screenRect.width / doc.settings.width : effectiveScale;
           const dropX = (e.clientX - screenRect.left) / domScale;
           const dropY = (e.clientY - screenRect.top) / domScale;
+          const cleanName = file.name.replace(/\.[^/.]+$/, "");
 
-          const reader = new FileReader();
+          if (file.type === "image/svg+xml" || file.name.toLowerCase().endsWith(".svg")) {
+            const svgReader = new FileReader();
+            svgReader.onload = (event) => {
+              const svgText = event.target?.result as string;
+              if (svgText) {
+                importSvg(svgText, { x: Math.round(dropX), y: Math.round(dropY) }, cleanName);
+              }
+            };
+            svgReader.readAsText(file);
+            return;
+          }
+
+          if (file.type.startsWith("image/")) {
+            const reader = new FileReader();
           reader.onload = (event) => {
             const dataUrl = event.target?.result as string;
             const img = new Image();
@@ -1005,7 +1021,8 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           };
           reader.readAsDataURL(file);
         }
-      }}
+      }
+    }}
       onContextMenu={(e) => {
         e.preventDefault();
         const store = useProjectStore.getState();

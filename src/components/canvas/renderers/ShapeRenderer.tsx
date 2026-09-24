@@ -214,12 +214,14 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
       )}
       {layer.shapeType === "path" && layer.d && (
         <svg
-          viewBox={`0 0 ${widthNum} ${heightNum}`}
+          viewBox={layer.viewBox || `0 0 ${widthNum} ${heightNum}`}
+          preserveAspectRatio="xMidYMid meet"
           className="w-full h-full overflow-visible pointer-events-none"
         >
           <path
             d={layer.d}
             fill={fill}
+            fillRule={layer.fillRule || "nonzero"}
             stroke={hasStroke ? strokeColor : "none"}
             strokeWidth={hasStroke ? strokeWidth : 0}
             strokeLinejoin={(layer.strokeJoin as any) || "round"}

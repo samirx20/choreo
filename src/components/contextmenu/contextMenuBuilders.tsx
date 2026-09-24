@@ -351,6 +351,11 @@ export function buildCanvasElementMenu(params: {
   } else if (layer.type === "group" || layer.type === "frame") {
     items.push(
       {
+        id: "decompose-vector-group",
+        label: "Decompose Vector Paths",
+        action: () => store.decomposeVectorGroup(layer.id),
+      },
+      {
         id: "detach-group-absolute",
         label: "Detach to Canvas Layers",
         action: () => store.detachGroupToAbsolute(layer.id),

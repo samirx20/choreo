@@ -24,6 +24,8 @@ import {
   splitLineAtRatio,
   detachArrowhead as detachArrowheadEngine,
 } from "@/engine/lineSplitter";
+import { parseSvgString } from "@/engine/svg/svgParser";
+import { decomposeVectorGroup as decomposeVectorGroupEngine } from "@/engine/svg/svgDecomposer";
 
 export type LayerSlice = Pick<
   ProjectStoreState,
@@ -45,6 +47,8 @@ export type LayerSlice = Pick<
   | "useAsMask"
   | "unmaskGroup"
   | "toggleMaskInvert"
+  | "importSvg"
+  | "decomposeVectorGroup"
   | "splitTextRange"
   | "splitTextAtCaret"
   | "splitTextIntoWords"
@@ -866,6 +870,65 @@ export const createLayerSlice = (
 
     commitDoc(set, nextDoc, {
       selectedLayerIds: [updatedGroup.id],
+    });
+  },
+
+  importSvg: (svgString, targetPoint, name) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return null;
+
+    const sWidth = activeScreen.width ?? doc.settings.width;
+    const sHeight = activeScreen.height ?? doc.settings.height;
+    const center = targetPoint || { x: Math.round(sWidth / 2), y: Math.round(sHeight / 2) };
+
+    const parsed = parseSvgString(svgString, {
+      name,
+      targetCenter: center,
+      targetSize: Math.min(400, Math.round(sWidth * 0.4)),
+    });
+
+    if (!parsed) return null;
+
+    const rootLayer = parsed.root;
+    const nextLayers = [...activeScreen.layers, rootLayer];
+
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: [rootLayer.id],
+    });
+
+    return [rootLayer.id];
+  },
+
+  decomposeVectorGroup: (groupId: string) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+    const group = findLayerInTree(activeScreen.layers, groupId) as GroupLayer | null;
+    if (!group || group.type !== "group" || !group.children?.length) return;
+
+    const decomposedChildren = decomposeVectorGroupEngine(group);
+
+    const nextLayers = activeScreen.layers.flatMap((l) =>
+      l.id === groupId ? decomposedChildren : [l]
+    );
+
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: decomposedChildren.map((c) => c.id),
     });
   },
 
