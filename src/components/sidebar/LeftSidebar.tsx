@@ -226,6 +226,25 @@ export const LeftSidebar: React.FC = () => {
 
             {getLayerIcon(layer, isSelected)}
 
+            {(() => {
+              const parent = activeScreen ? findParentGroupInTree(activeScreen.layers, layer.id) : null;
+              if (parent && (parent as any).isMaskGroup) {
+                if (layer.isMask || (parent as any).children[0]?.id === layer.id) {
+                  return (
+                    <span className="text-[9px] px-1 py-0.2 rounded bg-purple-500/20 text-purple-400 font-mono uppercase tracking-wider font-semibold">
+                      Mask
+                    </span>
+                  );
+                }
+                return (
+                  <span className="text-[10px] text-purple-400 font-mono select-none -mr-0.5">
+                    ⤷
+                  </span>
+                );
+              }
+              return null;
+            })()}
+
             {renamingLayerId === layer.id ? (
               <input
                 autoFocus

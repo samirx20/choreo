@@ -254,6 +254,7 @@ export interface BaseLayer {
   bindings?: ElementLinkBinding[];
   isCompound?: boolean;
   compoundType?: 'split-shape' | 'split-text' | 'split-line';
+  isMask?: boolean;
 }
 
 export interface GroupLayer extends BaseLayer {
@@ -261,6 +262,8 @@ export interface GroupLayer extends BaseLayer {
   layout?: LayoutConfig;
   autoFit?: boolean;
   clipContent?: boolean;
+  isMaskGroup?: boolean;
+  invertMask?: boolean;
   children: Layer[];
   autoLink?: boolean;
   staggerDelay?: number;

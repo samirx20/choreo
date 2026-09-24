@@ -1577,6 +1577,44 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 43 test suites (402 tests) passing cleanly (`npm test`).
   - Production build compiles cleanly in 8.97s (`npm run build`).
 
+---
+
+### Decision 74: Layer Masking & Clipping Masks ("Use as Mask")
+* **Context & Motivation**:
+  - Masking is a foundational pillar of motion design (reveals, shaped video crops, typographic window transitions, cutout hole-punches).
+  - Rather than treating masks as static destructive cutouts, Motion Studio implements masks as dynamic, non-destructive, independently animatable and selectable entities matching the Figma and After Effects paradigm.
+* **The Solution**:
+  1. **Data Model (`src/types/layers.ts` & `src/types/scene.ts`)**:
+     - `GroupLayer`: extended with `isMaskGroup?: boolean;` and `invertMask?: boolean;`.
+     - `BaseLayer`: extended with `isMask?: boolean;`.
+     - Standard convention: when `isMaskGroup` is true, the bottom layer (`children[0]` or layer with `isMask: true`) acts as the mask stencil, and all layers above it in that group render strictly within the stencil silhouette.
+  2. **Store Actions (`src/store/slices/layerSlice.ts` & `src/store/types.ts`)**:
+     - `maskSelection()`: Groups 2+ selected layers into a new `Mask Group` with computed bounding box, designating `children[0]` as the mask stencil (`isMask: true`).
+     - `useAsMask(layerId)`: Converts a layer inside a group into that group's mask, or pairs a top-level layer with its sibling into a new Mask Group.
+     - `unmaskGroup(groupId)`: Reverts `isMaskGroup: false` and clears `isMask` flags on children without destroying hierarchy. Self-healing: can be called with the group ID or any child inside the mask group.
+     - `toggleMaskInvert(groupId)`: Toggles `invertMask: !group.invertMask` (stencil $\leftrightarrow$ cutout hole punch).
+  3. **Direct Canvas Viewport Renderer (`src/components/canvas/renderers/GroupRenderer.tsx`)**:
+     - Analytical `renderMaskGeometry()` converts any layer form (rectangle with border radius, circle/ellipse, star, polygon, triangle, text with typography attributes, line stroke, or image) into real-time SVG `<mask id={`mask-${layer.id}`}>` geometry.
+     - Invert Mask support: draws an infinite white backdrop `<rect>` with a black stencil cutout to punch a transparent hole through the masked content.
+     - Content container wrapped in `<div style={{ maskImage: "url(#mask-...)", WebkitMaskImage: "url(#mask-...)" }}>`.
+     - Dedicated interactive canvas hit-target element `id={`layer-${maskChild.id}`}` ensures clicking the mask layer on canvas selects it, mounting `TransformBox` handles for dragging, scaling, and rotating the mask stencil independently.
+  4. **Universal Keyboard Hotkey & Context Menus (`useCanvasHotkeys.ts`, `contextMenuBuilders.tsx`, `CanvasContextMenu.tsx`)**:
+     - Shortcut: `Ctrl + Alt + M` (`Cmd + Option + M` on Mac) creates a mask selection when $\ge 2$ layers are selected, or toggles/releases mask when on a mask group.
+     - Canvas and Layer Tree context menus provide "Mask Selection", "Use as Mask", "Release Mask", and "Invert Mask".
+  5. **Layer Tree UI (`src/components/sidebar/LeftSidebar.tsx` & `LayerIcon.tsx`)**:
+     - Mask Groups display a distinct stencil icon (`CircleDashed`).
+     - Stencil child displays a purple `MASK` tag.
+     - Masked content children display an indented clipped arrow badge (`⤷`).
+  6. **Inspector Panel (`src/components/inspector/design/SpecializedLayerCard.tsx`)**:
+     - Shows dedicated **Mask Group** card with stencil layer name, Invert Mask checkbox, and Release Mask button.
+  7. **PixiJS Stage Integration (`src/engine/pixi/PixiStage.ts`)**:
+     - Sets `groupContainer.mask = maskDisplayObject` for offline video exports and headless rendering.
+* **Verification**:
+  - 6 automated tests in `src/test/layer_masking.test.ts` covering multi-layer mask creation, single-layer use-as-mask, invert toggling, release mask, SVG geometry rendering for all shapes/text, and context menu generation.
+  - All 44 test suites (408 tests) pass cleanly.
+  - Production build succeeds without errors.
+
+
 
 
 

@@ -41,6 +41,10 @@ export type LayerSlice = Pick<
   | "bringForward"
   | "sendBackward"
   | "groupSelection"
+  | "maskSelection"
+  | "useAsMask"
+  | "unmaskGroup"
+  | "toggleMaskInvert"
   | "splitTextRange"
   | "splitTextAtCaret"
   | "splitTextIntoWords"
@@ -631,6 +635,237 @@ export const createLayerSlice = (
 
     commitDoc(set, nextDoc, {
       selectedLayerIds: [newGroupId],
+    });
+  },
+
+  maskSelection: () => {
+    const { document: doc, activeScreenId, selectedLayerIds } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen || selectedLayerIds.length < 2) return;
+
+    // Filter to selected layers in active screen (preserving order in scene)
+    let selectedLayers = activeScreen.layers.filter((l) => selectedLayerIds.includes(l.id));
+    if (selectedLayers.length < 2) {
+      selectedLayers = selectedLayerIds
+        .map((id) => findLayerInTree(activeScreen.layers, id))
+        .filter((l): l is Layer => l !== null);
+    }
+    if (selectedLayers.length < 2) return;
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    selectedLayers.forEach((l) => {
+      const el = typeof document !== "undefined" ? document.getElementById(`layer-${l.id}`) : null;
+      const x = l.style.x || 0;
+      const y = l.style.y || 0;
+      const w = typeof l.style.width === "number" ? l.style.width : (el && el.offsetWidth > 0 ? el.offsetWidth : 200);
+      const h = typeof l.style.height === "number" ? l.style.height : (el && el.offsetHeight > 0 ? el.offsetHeight : 60);
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x + w);
+      maxY = Math.max(maxY, y + h);
+    });
+
+    if (!isFinite(minX)) minX = 100;
+    if (!isFinite(minY)) minY = 100;
+    if (!isFinite(maxX)) maxX = 500;
+    if (!isFinite(maxY)) maxY = 300;
+
+    const newGroupId = `mask_group_${Date.now()}`;
+    // Bottom-most selected layer (index 0) becomes the mask stencil
+    const maskedChildren: Layer[] = selectedLayers.map((l, idx) => ({
+      ...l,
+      isMask: idx === 0,
+      style: {
+        ...l.style,
+        x: Math.round((l.style.x || 0) - minX),
+        y: Math.round((l.style.y || 0) - minY),
+      },
+    }));
+
+    const newMaskGroup: GroupLayer = {
+      id: newGroupId,
+      name: "Mask Group",
+      type: "group",
+      isMaskGroup: true,
+      invertMask: false,
+      layout: {
+        display: "none",
+        flexDirection: "column",
+        gap: 0,
+        align: "start",
+      },
+      autoFit: false,
+      autoLink: false,
+      style: {
+        x: Math.round(minX),
+        y: Math.round(minY),
+        width: Math.max(Math.round(maxX - minX), 10),
+        height: Math.max(Math.round(maxY - minY), 10),
+        rotation: 0,
+        opacity: 1,
+      },
+      children: maskedChildren,
+    };
+
+    const firstIdx = activeScreen.layers.findIndex((l) => selectedLayerIds.includes(l.id));
+    let cleanedLayers = activeScreen.layers;
+    for (const id of selectedLayerIds) {
+      cleanedLayers = mutateLayerInTree(cleanedLayers, id, () => null);
+    }
+    const insertIdx = firstIdx !== -1 ? Math.min(firstIdx, cleanedLayers.length) : cleanedLayers.length;
+    const nextLayers = [
+      ...cleanedLayers.slice(0, insertIdx),
+      newMaskGroup,
+      ...cleanedLayers.slice(insertIdx),
+    ];
+
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: [newGroupId],
+    });
+  },
+
+  useAsMask: (layerId: string) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    // Check if layer is inside an existing group
+    const parentGroup = findParentGroupInTree(activeScreen.layers, layerId);
+    if (parentGroup && parentGroup.type === "group") {
+      const nextGroup: GroupLayer = {
+        ...parentGroup,
+        isMaskGroup: true,
+        children: parentGroup.children.map((c) => ({
+          ...c,
+          isMask: c.id === layerId ? !c.isMask : false,
+        })),
+      };
+      const nextLayers = mutateLayerInTree(activeScreen.layers, parentGroup.id, () => nextGroup);
+      const nextDoc: SceneDocument = {
+        ...doc,
+        screens: doc.screens.map((s) =>
+          s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+        ),
+      };
+      commitDoc(set, nextDoc, { selectedLayerIds: [parentGroup.id] });
+      return;
+    }
+
+    // Top-level layer: find sibling above or below to form a mask group
+    const layerIdx = activeScreen.layers.findIndex((l) => l.id === layerId);
+    if (layerIdx === -1) return;
+
+    let targetIds: string[];
+    if (layerIdx < activeScreen.layers.length - 1) {
+      // Pair with the layer immediately above it (natural mask relationship: layerId masks layerAbove)
+      targetIds = [activeScreen.layers[layerIdx].id, activeScreen.layers[layerIdx + 1].id];
+    } else if (layerIdx > 0) {
+      // Pair with the layer below it
+      targetIds = [activeScreen.layers[layerIdx - 1].id, activeScreen.layers[layerIdx].id];
+    } else {
+      // Solo layer: wrap into a mask group
+      targetIds = [layerId];
+    }
+
+    if (targetIds.length >= 2) {
+      set({ selectedLayerIds: targetIds });
+      get().maskSelection();
+    } else {
+      // Single layer wrapped in mask group
+      const layer = activeScreen.layers[layerIdx];
+      const newGroupId = `mask_group_${Date.now()}`;
+      const newMaskGroup: GroupLayer = {
+        id: newGroupId,
+        name: "Mask Group",
+        type: "group",
+        isMaskGroup: true,
+        invertMask: false,
+        layout: { display: "none" },
+        style: { ...layer.style },
+        children: [{ ...layer, isMask: true, style: { ...layer.style, x: 0, y: 0 } }],
+      };
+      const nextLayers = activeScreen.layers.map((l) => (l.id === layerId ? newMaskGroup : l));
+      const nextDoc: SceneDocument = {
+        ...doc,
+        screens: doc.screens.map((s) =>
+          s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+        ),
+      };
+      commitDoc(set, nextDoc, { selectedLayerIds: [newGroupId] });
+    }
+  },
+
+  unmaskGroup: (groupId: string) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    let targetGroup = findLayerInTree(activeScreen.layers, groupId) as GroupLayer | null;
+    if (!targetGroup || targetGroup.type !== "group") {
+      targetGroup = findParentGroupInTree(activeScreen.layers, groupId) as GroupLayer | null;
+    }
+    if (!targetGroup || targetGroup.type !== "group") return;
+
+    const unmaskedGroup: GroupLayer = {
+      ...targetGroup,
+      isMaskGroup: false,
+      name: targetGroup.name === "Mask Group" ? "Group" : targetGroup.name,
+      children: targetGroup.children.map((c) => ({
+        ...c,
+        isMask: false,
+      })),
+    };
+
+    const nextLayers = mutateLayerInTree(activeScreen.layers, targetGroup.id, () => unmaskedGroup);
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: [unmaskedGroup.id],
+    });
+  },
+
+  toggleMaskInvert: (groupId: string) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    let targetGroup = findLayerInTree(activeScreen.layers, groupId) as GroupLayer | null;
+    if (!targetGroup || targetGroup.type !== "group") {
+      targetGroup = findParentGroupInTree(activeScreen.layers, groupId) as GroupLayer | null;
+    }
+    if (!targetGroup || targetGroup.type !== "group") return;
+
+    const updatedGroup: GroupLayer = {
+      ...targetGroup,
+      invertMask: !targetGroup.invertMask,
+    };
+
+    const nextLayers = mutateLayerInTree(activeScreen.layers, targetGroup.id, () => updatedGroup);
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: [updatedGroup.id],
     });
   },
 

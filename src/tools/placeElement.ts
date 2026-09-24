@@ -290,6 +290,14 @@ export function placeElement(
     };
   }
 
+  if (input.isMask) {
+    createdLayer.isMask = true;
+  }
+  if ((createdLayer as any).type === "group") {
+    if (input.isMaskGroup) (createdLayer as any).isMaskGroup = true;
+    if (input.invertMask) (createdLayer as any).invertMask = true;
+  }
+
   // 6. Mutate Store
   if (typeof state.selectScreen === "function") {
     state.selectScreen(targetScreen.id);

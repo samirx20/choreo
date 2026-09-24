@@ -16,6 +16,7 @@ import {
   Box,
   Smile,
   icons,
+  CircleDashed,
 } from "lucide-react";
 import type { Layer } from "@/types/layers";
 
@@ -25,6 +26,10 @@ interface LayerIconProps {
 }
 
 export const LayerIcon: React.FC<LayerIconProps> = ({ layer, className = "h-3.5 w-3.5" }) => {
+  if (layer.isMask) {
+    return <CircleDashed className={className} />;
+  }
+
   switch (layer.type) {
     case "text":
     case "chunk":
@@ -34,6 +39,9 @@ export const LayerIcon: React.FC<LayerIconProps> = ({ layer, className = "h-3.5 
       return <Timer className={className} />;
 
     case "group":
+      if ((layer as any).isMaskGroup) {
+        return <CircleDashed className={className} />;
+      }
       return <Folder className={className} />;
 
     case "frame":

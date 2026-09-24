@@ -14,8 +14,10 @@ import {
   ArrowLeftRight,
   ArrowUpRight,
   Maximize2,
+  CircleDashed,
 } from "lucide-react";
 import { useProjectStore, findLayerInTree } from "@/store/useProjectStore";
+import { findParentGroupInTree } from "@/store/helpers/treeHelpers";
 import { isVectorLine, isMedia } from "@/utils/layerCapabilities";
 
 interface CanvasContextMenuProps {
@@ -43,6 +45,10 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
     addLayer,
     groupSelection,
     ungroup,
+    maskSelection,
+    useAsMask,
+    unmaskGroup,
+    toggleMaskInvert,
     splitTextRange,
     activeTextSelection,
     selectedLayerIds,
@@ -262,6 +268,81 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
           <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+G</kbd>
         </button>
       )}
+
+      {/* Mask Operations */}
+      {(() => {
+        const isMaskGroup = isGroup && (layer as any).isMaskGroup;
+        const parentGroup = findParentGroupInTree(activeScreen.layers, layer.id);
+        const isInsideMaskGroup = parentGroup && (parentGroup as any).isMaskGroup;
+
+        if (isMaskGroup || isInsideMaskGroup) {
+          const maskGroupId = isMaskGroup ? layer.id : parentGroup!.id;
+          const targetGroup = (isMaskGroup ? layer : parentGroup) as any;
+          return (
+            <>
+              <button
+                onClick={() => {
+                  toggleMaskInvert(maskGroupId);
+                  onClose();
+                }}
+                className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+              >
+                <span className="flex items-center gap-2">
+                  <CircleDashed className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>{targetGroup.invertMask ? "Invert Mask: Stencil" : "Invert Mask: Cutout"}</span>
+                </span>
+              </button>
+              <button
+                onClick={() => {
+                  unmaskGroup(maskGroupId);
+                  onClose();
+                }}
+                className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+              >
+                <span className="flex items-center gap-2">
+                  <Scissors className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Release Mask</span>
+                </span>
+                <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+Alt+M</kbd>
+              </button>
+            </>
+          );
+        }
+
+        if (selectedLayerIds.length >= 2) {
+          return (
+            <button
+              onClick={() => {
+                maskSelection();
+                onClose();
+              }}
+              className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+            >
+              <span className="flex items-center gap-2">
+                <CircleDashed className="h-3.5 w-3.5 text-purple-400" />
+                <span>Mask Selection</span>
+              </span>
+              <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+Alt+M</kbd>
+            </button>
+          );
+        }
+
+        return (
+          <button
+            onClick={() => {
+              useAsMask(layer.id);
+              onClose();
+            }}
+            className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
+          >
+            <span className="flex items-center gap-2">
+              <CircleDashed className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Use as Mask</span>
+            </span>
+            <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+Alt+M</kbd>
+          </button>
+        );
+      })()}
 
       <button
         onClick={() => {

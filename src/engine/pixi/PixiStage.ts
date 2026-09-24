@@ -239,6 +239,17 @@ export class PixiStage {
       if (layer.type === "group" && layer.children) {
         const groupContainer = (dobj as any).__childrenContainer || dobj;
         this.renderLayerList(layer.children, groupContainer);
+
+        // Mask Group Support
+        if (layer.isMaskGroup && layer.children.length > 1) {
+          const maskChild = layer.children.find((c) => c.isMask) || layer.children[0];
+          const maskDobj = this.layerDisplayObjects.get(maskChild.id);
+          if (maskDobj) {
+            groupContainer.mask = maskDobj;
+          }
+        } else if (groupContainer.mask) {
+          groupContainer.mask = null;
+        }
       }
     }
   }

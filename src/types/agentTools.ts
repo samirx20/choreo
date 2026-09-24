@@ -172,6 +172,9 @@ export const PlaceElementInputSchema = z.object({
     })
     .optional(),
   parentId: z.string().optional(),
+  isMask: z.boolean().optional(),
+  isMaskGroup: z.boolean().optional(),
+  invertMask: z.boolean().optional(),
 });
 
 export type PlaceElementInput = z.input<typeof PlaceElementInputSchema>;

@@ -136,6 +136,10 @@ export interface ProjectStoreState {
   bringForward: (layerId: string) => void;
   sendBackward: (layerId: string) => void;
   groupSelection: () => void;
+  maskSelection: () => void;
+  useAsMask: (layerId: string) => void;
+  unmaskGroup: (groupId: string) => void;
+  toggleMaskInvert: (groupId: string) => void;
   splitTextRange: (layerId: string, start: number, end: number) => void;
   splitTextAtCaret: (layerId: string, index: number) => void;
   splitTextIntoWords: (layerId: string) => void;

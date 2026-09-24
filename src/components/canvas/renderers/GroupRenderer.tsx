@@ -3,6 +3,7 @@ import { GroupLayer, Layer } from "@/types/scene";
 import { layerStyleToCss } from "./styleUtils";
 import { cn } from "@/lib/utils";
 import { useProjectStore, isMotionMode } from "@/store/useProjectStore";
+import { generateStarPoints, generatePolygonPoints } from "./ShapeRenderer";
 
 interface GroupRendererProps {
   layer: GroupLayer;
@@ -12,6 +13,123 @@ interface GroupRendererProps {
   computedLayerStyles?: Record<string, React.CSSProperties>;
   onSelectLayer: (layerId: string, e: React.MouseEvent) => void;
   renderChild?: (child: Layer, isChildInFlex: boolean) => React.ReactNode;
+}
+
+export function renderMaskGeometry(
+  maskLayer: Layer,
+  fillColor: string,
+  compStyle?: React.CSSProperties
+): React.ReactNode {
+  const x =
+    (compStyle?.left !== undefined
+      ? parseFloat(String(compStyle.left))
+      : maskLayer.style.x) || 0;
+  const y =
+    (compStyle?.top !== undefined
+      ? parseFloat(String(compStyle.top))
+      : maskLayer.style.y) || 0;
+  const w =
+    (compStyle?.width !== undefined
+      ? parseFloat(String(compStyle.width))
+      : typeof maskLayer.style.width === "number"
+      ? maskLayer.style.width
+      : 200) || 200;
+  const h =
+    (compStyle?.height !== undefined
+      ? parseFloat(String(compStyle.height))
+      : typeof maskLayer.style.height === "number"
+      ? maskLayer.style.height
+      : 200) || 200;
+  const rotation = maskLayer.style.rotation || 0;
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+  const transform = rotation ? `rotate(${rotation}, ${cx}, ${cy})` : undefined;
+
+  let content: React.ReactNode = null;
+
+  if (maskLayer.type === "shape") {
+    const shapeType = maskLayer.shapeType;
+    if (shapeType === "circle" || shapeType === "ellipse") {
+      content = <ellipse cx={cx} cy={cy} rx={w / 2} ry={h / 2} fill={fillColor} />;
+    } else if (shapeType === "star") {
+      content = (
+        <polygon
+          points={generateStarPoints(maskLayer.points || 5, maskLayer.innerRadiusRatio || 0.382)}
+          transform={`translate(${x}, ${y}) scale(${w / 100}, ${h / 100})`}
+          fill={fillColor}
+        />
+      );
+    } else if (shapeType === "triangle" || shapeType === "polygon") {
+      content = (
+        <polygon
+          points={generatePolygonPoints(maskLayer.sides || (shapeType === "triangle" ? 3 : 5))}
+          transform={`translate(${x}, ${y}) scale(${w / 100}, ${h / 100})`}
+          fill={fillColor}
+        />
+      );
+    } else if (shapeType === "path" && (maskLayer as any).pathData) {
+      content = (
+        <path
+          d={(maskLayer as any).pathData}
+          transform={`translate(${x}, ${y}) scale(${w / 100}, ${h / 100})`}
+          fill={fillColor}
+        />
+      );
+    } else {
+      const rx = typeof maskLayer.style.borderRadius === "number" ? maskLayer.style.borderRadius : 0;
+      content = <rect x={x} y={y} width={w} height={h} rx={rx} ry={rx} fill={fillColor} />;
+    }
+  } else if (maskLayer.type === "text" || maskLayer.type === "chunk") {
+    const fontSize = (maskLayer.style.fontSize as number) || 48;
+    const fontFamily = maskLayer.style.fontFamily || "Inter, -apple-system, sans-serif";
+    const fontWeight = maskLayer.style.fontWeight || "bold";
+    const textContent = (maskLayer as any).content || "";
+    content = (
+      <text
+        x={x}
+        y={y + fontSize * 0.85}
+        fontSize={fontSize}
+        fontFamily={fontFamily}
+        fontWeight={fontWeight}
+        fill={fillColor}
+      >
+        {textContent}
+      </text>
+    );
+  } else if (maskLayer.type === "line") {
+    const strokeWidth =
+      typeof maskLayer.style.borderWidth === "number" ? maskLayer.style.borderWidth : 8;
+    content = (
+      <line
+        x1={x}
+        y1={y}
+        x2={x + w}
+        y2={y + h}
+        stroke={fillColor}
+        strokeWidth={strokeWidth}
+        strokeLinecap="round"
+      />
+    );
+  } else if (maskLayer.type === "image") {
+    const src = (maskLayer as any).src || (maskLayer as any).url;
+    if (src) {
+      content = (
+        <image
+          href={src}
+          x={x}
+          y={y}
+          width={w}
+          height={h}
+          preserveAspectRatio="xMidYMid slice"
+        />
+      );
+    }
+  } else {
+    const rx = typeof maskLayer.style.borderRadius === "number" ? maskLayer.style.borderRadius : 0;
+    content = <rect x={x} y={y} width={w} height={h} rx={rx} ry={rx} fill={fillColor} />;
+  }
+
+  return transform ? <g transform={transform}>{content}</g> : content;
 }
 
 export const GroupRenderer: React.FC<GroupRendererProps> = ({
@@ -188,6 +306,22 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
   const isChildrenInFlex = isFlex;
   const isEmpty = !layer.children || layer.children.length === 0;
 
+  const isMaskGroup = Boolean(layer.isMaskGroup) && Boolean(layer.children && layer.children.length > 0);
+  const maskChild = isMaskGroup
+    ? layer.children.find((c) => c.isMask) || layer.children[0]
+    : null;
+  const contentChildren = isMaskGroup && maskChild
+    ? layer.children.filter((c) => c.id !== maskChild.id)
+    : layer.children;
+
+  const maskStyle = isMaskGroup && maskChild
+    ? computedLayerStyles[maskChild.id]
+    : undefined;
+  const maskX = maskStyle?.left !== undefined ? parseFloat(String(maskStyle.left)) : (maskChild?.style.x || 0);
+  const maskY = maskStyle?.top !== undefined ? parseFloat(String(maskStyle.top)) : (maskChild?.style.y || 0);
+  const maskW = maskStyle?.width !== undefined ? parseFloat(String(maskStyle.width)) : (maskChild?.style.width || 200);
+  const maskH = maskStyle?.height !== undefined ? parseFloat(String(maskStyle.height)) : (maskChild?.style.height || 200);
+
   return (
     <div
       ref={containerRef}
@@ -219,7 +353,79 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
         layer.style.tailwindClasses
       )}
     >
-      {isEmpty ? (
+      {isMaskGroup && maskChild ? (
+        <>
+          <svg
+            className="absolute pointer-events-none"
+            style={{ position: "absolute", width: 0, height: 0, overflow: "hidden" }}
+            aria-hidden="true"
+          >
+            <defs>
+              <mask
+                id={`mask-${layer.id}`}
+                maskUnits="userSpaceOnUse"
+                x="-10000"
+                y="-10000"
+                width="20000"
+                height="20000"
+              >
+                {layer.invertMask ? (
+                  <>
+                    <rect x="-10000" y="-10000" width="20000" height="20000" fill="white" />
+                    {renderMaskGeometry(maskChild, "black", computedLayerStyles[maskChild.id])}
+                  </>
+                ) : (
+                  renderMaskGeometry(maskChild, "white", computedLayerStyles[maskChild.id])
+                )}
+              </mask>
+            </defs>
+          </svg>
+
+          {/* Masked Content Container */}
+          <div
+            className="w-full h-full relative"
+            style={{
+              maskImage: `url(#mask-${layer.id})`,
+              WebkitMaskImage: `url(#mask-${layer.id})`,
+            }}
+          >
+            {contentChildren.map((child: Layer) => {
+              const anim = child.animation?.in;
+              const isNotYetEntered =
+                isMotionMode(uiMode) &&
+                layer.autoFit &&
+                anim &&
+                currentTime < anim.start;
+              if (isNotYetEntered) return null;
+              return renderChild ? renderChild(child, isChildrenInFlex) : null;
+            })}
+          </div>
+
+          {/* Mask Stencil Hit & Selection Overlay on Canvas */}
+          <div
+            id={`layer-${maskChild.id}`}
+            style={{
+              position: "absolute",
+              left: `${maskX}px`,
+              top: `${maskY}px`,
+              width: `${maskW}px`,
+              height: `${maskH}px`,
+              transform: maskStyle?.transform,
+              pointerEvents: "auto",
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectLayer(maskChild.id, e);
+            }}
+            className={cn(
+              "cursor-pointer select-none",
+              selectedLayerIds.includes(maskChild.id)
+                ? "ring-1 ring-purple-500/80 ring-offset-1 border border-dashed border-purple-400/60"
+                : "hover:outline hover:outline-1 hover:outline-purple-400/30"
+            )}
+          />
+        </>
+      ) : isEmpty ? (
         <div className="text-[10px] text-zinc-500 font-mono pointer-events-none select-none px-3 py-2 text-center">
           Empty Flex Group
         </div>

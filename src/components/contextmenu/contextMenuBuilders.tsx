@@ -19,7 +19,9 @@ import {
   Unlink,
   Pin,
   MoveHorizontal,
+  CircleDashed,
 } from "lucide-react";
+import { findParentGroupInTree } from "@/store/helpers/treeHelpers";
 
 /**
  * Zone A: Timeline Clip Context Menu
@@ -373,6 +375,67 @@ export function buildCanvasElementMenu(params: {
       },
       {
         id: "divider-media-specific",
+        label: "",
+        divider: true,
+      }
+    );
+  }
+
+  // Mask Operations
+  const isMaskGroup = layer.type === "group" && (layer as any).isMaskGroup;
+  const activeScreenForMask = store.document.screens.find((s) => s.id === store.activeScreenId);
+  const parentGroup = activeScreenForMask ? findParentGroupInTree(activeScreenForMask.layers, layer.id) : null;
+  const isInsideMaskGroup = parentGroup && (parentGroup as any).isMaskGroup;
+
+  if (isMaskGroup || isInsideMaskGroup) {
+    const maskGroupId = isMaskGroup ? layer.id : parentGroup!.id;
+    const targetGroup = (isMaskGroup ? layer : parentGroup) as any;
+    items.push(
+      {
+        id: "toggle-mask-invert",
+        label: targetGroup.invertMask ? "Invert Mask: Stencil" : "Invert Mask: Cutout",
+        icon: <CircleDashed className="w-3.5 h-3.5" />,
+        action: () => store.toggleMaskInvert(maskGroupId),
+      },
+      {
+        id: "release-mask",
+        label: "Release Mask",
+        icon: <Scissors className="w-3.5 h-3.5" />,
+        shortcut: "Ctrl+Alt+M",
+        action: () => store.unmaskGroup(maskGroupId),
+      },
+      {
+        id: "divider-mask-specific",
+        label: "",
+        divider: true,
+      }
+    );
+  } else if (store.selectedLayerIds && store.selectedLayerIds.length >= 2) {
+    items.push(
+      {
+        id: "mask-selection",
+        label: "Mask Selection",
+        icon: <CircleDashed className="w-3.5 h-3.5 text-purple-400" />,
+        shortcut: "Ctrl+Alt+M",
+        action: () => store.maskSelection(),
+      },
+      {
+        id: "divider-mask-selection",
+        label: "",
+        divider: true,
+      }
+    );
+  } else if (!isMaskGroup) {
+    items.push(
+      {
+        id: "use-as-mask",
+        label: "Use as Mask",
+        icon: <CircleDashed className="w-3.5 h-3.5" />,
+        shortcut: "Ctrl+Alt+M",
+        action: () => store.useAsMask(layer.id),
+      },
+      {
+        id: "divider-use-as-mask",
         label: "",
         divider: true,
       }

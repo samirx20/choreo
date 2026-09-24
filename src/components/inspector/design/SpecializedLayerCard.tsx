@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { icons, Smile, Sparkles, ArrowLeftRight } from "lucide-react";
+import { icons, Smile, Sparkles, ArrowLeftRight, CircleDashed } from "lucide-react";
 import { Layer } from "@/types/scene";
 import { useProjectStore } from "@/store/useProjectStore";
 import { ScrubbableInput } from "@/components/ui/scrubbable-input";
@@ -43,6 +43,39 @@ export const SpecializedLayerCard: React.FC<SpecializedLayerCardProps> = ({
 
   return (
     <>
+      {/* Mask Group Section */}
+      {selectedLayer.type === "group" && (selectedLayer as any).isMaskGroup && (
+        <div className="pt-3 border-t border-border space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <CircleDashed className="w-3.5 h-3.5 text-purple-400" />
+              Mask Group
+            </span>
+            <span className="text-[10px] text-muted-foreground font-mono">
+              {(selectedLayer as any).children?.[0]?.name || "Stencil"}
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Invert Mask (Cutout)</span>
+            <Checkbox
+              checked={Boolean((selectedLayer as any).invertMask)}
+              onCheckedChange={() =>
+                useProjectStore.getState().toggleMaskInvert(selectedLayer.id)
+              }
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => useProjectStore.getState().unmaskGroup(selectedLayer.id)}
+            className="w-full py-1 text-xs rounded border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+          >
+            Release Mask
+          </button>
+        </div>
+      )}
+
       {/* Frame Container & Auto-Layout Section */}
       {selectedLayer.type === "frame" && (
         <div className="pt-3 border-t border-border space-y-2">

@@ -126,6 +126,29 @@ export function useCanvasHotkeys({
         if (selectedLayerIds[0]) {
           store.ungroup(selectedLayerIds[0]);
         }
+      } else if (
+        (e.ctrlKey || e.metaKey) &&
+        e.altKey &&
+        (e.key === "m" || e.key === "M") &&
+        !isInput
+      ) {
+        // Ctrl + Alt + M: Mask Selection / Use as Mask / Release Mask
+        e.preventDefault();
+        if (selectedLayerIds.length >= 2) {
+          store.maskSelection();
+        } else if (selectedLayerIds.length === 1) {
+          const selected = findLayerInTree(activeScreen.layers, selectedLayerIds[0]);
+          if (selected && selected.type === "group" && (selected as any).isMaskGroup) {
+            store.unmaskGroup(selected.id);
+          } else {
+            const parent = findParentGroupInTree(activeScreen.layers, selectedLayerIds[0]);
+            if (parent && (parent as any).isMaskGroup) {
+              store.unmaskGroup(parent.id);
+            } else {
+              store.useAsMask(selectedLayerIds[0]);
+            }
+          }
+        }
       } else if (e.shiftKey && e.key === "Enter" && !isInput) {
         // Shift + Enter: Ascend hierarchy to parent group
         if (selectedLayerIds[0]) {
