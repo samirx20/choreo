@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useProjectStore } from "@/store/useProjectStore";
 import { flattenBooleanGroup, layerToLocalSvgPath } from "@/engine/vector/booleanOperations";
+import { computeBooleanGroupPath } from "@/engine/vector/booleanEngine";
 import { GroupLayer, ShapeLayer } from "@/types/scene";
 
 describe("Boolean Operations & Shape Flattening (Decision 78)", () => {
@@ -307,6 +308,158 @@ describe("Boolean Operations & Shape Flattening (Decision 78)", () => {
       expect(flattened.fillRule).toBe("evenodd");
       expect(flattened.style.backgroundColor).toBe("#ec4899");
       expect(useProjectStore.getState().selectedLayerIds).toEqual([flattened.id]);
+    });
+  });
+
+  describe("Stroked & Unfilled Boolean Shapes (Zero Fill, Stroke Only)", () => {
+    // Overlapping Rectangle (100x100 at 0,0) and Circle (100x100 at 50,50)
+    const baseRect: ShapeLayer = {
+      id: "rect_stroke_only",
+      name: "Rectangle",
+      type: "shape",
+      shapeType: "rectangle",
+      style: {
+        x: 0,
+        y: 0,
+        width: 100,
+        height: 100,
+        rotation: 0,
+        opacity: 1,
+        backgroundColor: "transparent",
+        borderColor: "#ffffff",
+        borderWidth: 1,
+      },
+    };
+
+    const overlapCircle: ShapeLayer = {
+      id: "circle_stroke_only",
+      name: "Circle",
+      type: "shape",
+      shapeType: "circle",
+      style: {
+        x: 50,
+        y: 50,
+        width: 100,
+        height: 100,
+        rotation: 0,
+        opacity: 1,
+        backgroundColor: "transparent",
+        borderColor: "#ffffff",
+        borderWidth: 1,
+      },
+    };
+
+    it("Union produces a single closed vector boundary joining the outer perimeter", () => {
+      const group: GroupLayer = {
+        id: "union_group",
+        name: "Union Group",
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: "union",
+        style: { x: 0, y: 0, width: 150, height: 150, rotation: 0, opacity: 1 },
+        children: [baseRect, overlapCircle],
+      };
+
+      const pathD = computeBooleanGroupPath(group);
+      expect(pathD).toBeTruthy();
+      expect(pathD.startsWith("M ")).toBe(true);
+      expect(pathD.endsWith(" Z")).toBe(true);
+
+      // Flattens into a single closed path preserving transparent fill and 1px stroke
+      const flattened = flattenBooleanGroup(group);
+      expect(flattened).not.toBeNull();
+      expect(flattened!.style.backgroundColor).toBe("transparent");
+      expect(flattened!.style.borderColor).toBe("#ffffff");
+      expect(flattened!.style.borderWidth).toBe(1);
+    });
+
+    it("Subtract produces a closed boundary with the circular cutout arc", () => {
+      const group: GroupLayer = {
+        id: "subtract_group",
+        name: "Subtract Group",
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: "subtract",
+        style: { x: 0, y: 0, width: 100, height: 100, rotation: 0, opacity: 1 },
+        children: [baseRect, overlapCircle],
+      };
+
+      const pathD = computeBooleanGroupPath(group);
+      expect(pathD).toBeTruthy();
+      expect(pathD.startsWith("M ")).toBe(true);
+      expect(pathD.endsWith(" Z")).toBe(true);
+
+      const flattened = flattenBooleanGroup(group);
+      expect(flattened).not.toBeNull();
+      expect(flattened!.style.backgroundColor).toBe("transparent");
+      expect(flattened!.style.borderColor).toBe("#ffffff");
+      expect(flattened!.style.borderWidth).toBe(1);
+    });
+
+    it("Intersect produces a closed boundary around only the overlapping lens", () => {
+      const group: GroupLayer = {
+        id: "intersect_group",
+        name: "Intersect Group",
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: "intersect",
+        style: { x: 50, y: 50, width: 50, height: 50, rotation: 0, opacity: 1 },
+        children: [baseRect, overlapCircle],
+      };
+
+      const pathD = computeBooleanGroupPath(group);
+      expect(pathD).toBeTruthy();
+      expect(pathD.startsWith("M ")).toBe(true);
+      expect(pathD.endsWith(" Z")).toBe(true);
+    });
+
+    it("Exclude produces closed boundaries for the non-overlapping lobes (XOR)", () => {
+      const group: GroupLayer = {
+        id: "exclude_group",
+        name: "Exclude Group",
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: "exclude",
+        style: { x: 0, y: 0, width: 150, height: 150, rotation: 0, opacity: 1 },
+        children: [baseRect, overlapCircle],
+      };
+
+      const pathD = computeBooleanGroupPath(group);
+      expect(pathD).toBeTruthy();
+      expect(pathD.startsWith("M ")).toBe(true);
+      expect(pathD.endsWith(" Z")).toBe(true);
+      // Exclude has at least two closed rings (Z)
+      const zCount = (pathD.match(/Z/g) || []).length;
+      expect(zCount).toBeGreaterThanOrEqual(2);
+    });
+
+    it("Dynamically recomputes boolean path when sub-shapes move via computedLayerStyles", () => {
+      const group: GroupLayer = {
+        id: "dynamic_group",
+        name: "Subtract Group",
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: "subtract",
+        style: { x: 0, y: 0, width: 100, height: 100, rotation: 0, opacity: 1 },
+        children: [baseRect, overlapCircle],
+      };
+
+      const pathAtRest = computeBooleanGroupPath(group);
+
+      // Simulate dragging or animating the circle to (70, 70)
+      const animatedStyles = {
+        [overlapCircle.id]: {
+          left: 70,
+          top: 70,
+          width: 100,
+          height: 100,
+        },
+      };
+
+      const pathAnimated = computeBooleanGroupPath(group, animatedStyles as any);
+      expect(pathAnimated).toBeTruthy();
+      // Path must be different from resting path
+      expect(pathAnimated).not.toBe(pathAtRest);
     });
   });
 });

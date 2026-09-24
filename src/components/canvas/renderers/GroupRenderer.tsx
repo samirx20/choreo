@@ -4,6 +4,7 @@ import { layerStyleToCss } from "./styleUtils";
 import { cn } from "@/lib/utils";
 import { useProjectStore, isMotionMode } from "@/store/useProjectStore";
 import { generateStarPoints, generatePolygonPoints } from "./ShapeRenderer";
+import { computeBooleanGroupPath } from "@/engine/vector/booleanEngine";
 
 interface GroupRendererProps {
   layer: GroupLayer;
@@ -148,7 +149,8 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
   const prevRectRef = useRef<DOMRect | null>(null);
 
   const isCompound = Boolean(layer.isCompound);
-  const effectiveStyle = isCompound
+  const isBooleanGroup = Boolean(layer.isBooleanGroup) && Boolean(layer.children && layer.children.length > 0);
+  const effectiveStyle = (isCompound || isBooleanGroup)
     ? {
         ...layer.style,
         backgroundColor: "transparent",
@@ -306,18 +308,13 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
   const isChildrenInFlex = isFlex;
   const isEmpty = !layer.children || layer.children.length === 0;
 
-  const isBooleanSubtract = Boolean(layer.isBooleanGroup) && layer.booleanOperation === "subtract" && Boolean(layer.children && layer.children.length >= 2);
-  const isBooleanIntersect = Boolean(layer.isBooleanGroup) && layer.booleanOperation === "intersect" && Boolean(layer.children && layer.children.length >= 2);
-  const isBooleanGroup = isBooleanSubtract || isBooleanIntersect;
-  const isMaskGroup = (Boolean(layer.isMaskGroup) && Boolean(layer.children && layer.children.length > 0)) || isBooleanGroup;
+  const isMaskGroup = !isBooleanGroup && (Boolean(layer.isMaskGroup) && Boolean(layer.children && layer.children.length > 0));
 
   const maskChild = isMaskGroup
-    ? (isBooleanGroup ? layer.children[1] : (layer.children.find((c) => c.isMask) || layer.children[0]))
+    ? (layer.children.find((c) => c.isMask) || layer.children[0])
     : null;
 
-  const contentChildren = isBooleanGroup
-    ? [layer.children[0]]
-    : isMaskGroup && maskChild
+  const contentChildren = isMaskGroup && maskChild
     ? layer.children.filter((c) => c.id !== maskChild.id)
     : layer.children;
 
@@ -328,6 +325,40 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
   const maskY = maskStyle?.top !== undefined ? parseFloat(String(maskStyle.top)) : (maskChild?.style.y || 0);
   const maskW = maskStyle?.width !== undefined ? parseFloat(String(maskStyle.width)) : (maskChild?.style.width || 200);
   const maskH = maskStyle?.height !== undefined ? parseFloat(String(maskStyle.height)) : (maskChild?.style.height || 200);
+
+  // Live Boolean 2D Vector Path Geometry & Style Computation
+  const booleanPath = isBooleanGroup ? computeBooleanGroupPath(layer, computedLayerStyles) : "";
+
+  const baseChild = isBooleanGroup ? layer.children?.[0] : undefined;
+  const baseChildComp = baseChild ? computedLayerStyles[baseChild.id] : undefined;
+
+  const rawGroupFill = (computedStyle?.backgroundColor as string) || (layer.style as any).fillColor || layer.style.backgroundColor;
+  const rawChildFill = (baseChildComp?.backgroundColor as string) || (baseChild?.style as any)?.fillColor || baseChild?.style?.backgroundColor;
+  const rawFill = (rawGroupFill && rawGroupFill !== "transparent" && rawGroupFill !== "none")
+    ? rawGroupFill
+    : rawChildFill;
+  const booleanFill = (!rawFill || rawFill === "transparent" || rawFill === "none") ? "none" : rawFill;
+
+  const rawGroupBorder = (computedStyle?.borderColor as string) || layer.style.borderColor;
+  const rawChildBorder = (baseChildComp?.borderColor as string) || baseChild?.style?.borderColor;
+  const rawStroke = (rawGroupBorder && rawGroupBorder !== "transparent") ? rawGroupBorder : rawChildBorder;
+  const booleanStroke = (rawStroke && rawStroke !== "transparent") ? rawStroke : "#ffffff";
+
+  const rawGroupStrokeWidth = typeof layer.style.borderWidth === "number" ? layer.style.borderWidth : undefined;
+  const rawChildStrokeWidth = typeof baseChild?.style?.borderWidth === "number" ? baseChild.style.borderWidth : undefined;
+  const booleanStrokeWidth = rawGroupStrokeWidth !== undefined
+    ? rawGroupStrokeWidth
+    : (rawChildStrokeWidth !== undefined ? rawChildStrokeWidth : 0);
+
+  const borderStyle = layer.style.borderStyle || baseChild?.style?.borderStyle || "solid";
+  let booleanStrokeDasharray: string | undefined = undefined;
+  if ((baseChild as any)?.strokeDashArray && (baseChild as any).strokeDashArray.length > 0) {
+    booleanStrokeDasharray = (baseChild as any).strokeDashArray.join(" ");
+  } else if (borderStyle === "dashed") {
+    booleanStrokeDasharray = `${Math.max(6, booleanStrokeWidth * 3)} ${Math.max(4, booleanStrokeWidth * 2)}`;
+  } else if (borderStyle === "dotted") {
+    booleanStrokeDasharray = `${booleanStrokeWidth || 2} ${booleanStrokeWidth || 2}`;
+  }
 
   return (
     <div
@@ -360,7 +391,67 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
         layer.style.tailwindClasses
       )}
     >
-      {isMaskGroup && maskChild ? (
+      {isBooleanGroup ? (
+        <>
+          {/* 1. Live 2D Vector Path Boolean Contour with Continuous Closed Stroke & Fill */}
+          <svg
+            className="w-full h-full absolute inset-0 pointer-events-none"
+            style={{ overflow: "visible" }}
+            aria-hidden="true"
+          >
+            <path
+              d={booleanPath}
+              fill={booleanFill}
+              stroke={booleanStrokeWidth > 0 ? booleanStroke : "none"}
+              strokeWidth={booleanStrokeWidth}
+              strokeDasharray={booleanStrokeDasharray}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fillRule="evenodd"
+            />
+          </svg>
+
+          {/* 2. Interactive Sub-shape Hit-Targets for Direct Manipulation & Independent Animation */}
+          {layer.children.map((child) => {
+            const isChildSelected = selectedLayerIds.includes(child.id);
+            const cStyle = computedLayerStyles[child.id];
+            const cX = cStyle?.left !== undefined ? parseFloat(String(cStyle.left)) : (child.style.x || 0);
+            const cY = cStyle?.top !== undefined ? parseFloat(String(cStyle.top)) : (child.style.y || 0);
+            const cW = cStyle?.width !== undefined ? parseFloat(String(cStyle.width)) : (typeof child.style.width === "number" ? child.style.width : 100);
+            const cH = cStyle?.height !== undefined ? parseFloat(String(cStyle.height)) : (typeof child.style.height === "number" ? child.style.height : 100);
+            const cRot = child.style.rotation || 0;
+            const isCircle = child.type === "shape" && (child.shapeType === "circle" || child.shapeType === "ellipse");
+
+            return (
+              <div
+                key={child.id}
+                id={`layer-${child.id}`}
+                style={{
+                  position: "absolute",
+                  left: `${cX}px`,
+                  top: `${cY}px`,
+                  width: `${cW}px`,
+                  height: `${cH}px`,
+                  transform: cStyle?.transform || (cRot ? `rotate(${cRot}deg)` : undefined),
+                  borderRadius: isCircle ? "9999px" : (typeof child.style.borderRadius === "number" ? `${child.style.borderRadius}px` : undefined),
+                  pointerEvents: "auto",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectLayer(child.id, e);
+                }}
+                className={cn(
+                  "cursor-pointer select-none transition-colors",
+                  isChildSelected
+                    ? "ring-1 ring-blue-500/80 ring-offset-1 border border-dashed border-blue-400/80 bg-blue-500/5"
+                    : "hover:outline hover:outline-1 hover:outline-blue-400/30"
+                )}
+                title={`${child.name} (Sub-shape)`}
+              />
+            );
+          })}
+        </>
+      ) : isMaskGroup && maskChild ? (
         <>
           <svg
             className="absolute pointer-events-none"
@@ -376,18 +467,7 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
                 width="20000"
                 height="20000"
               >
-                {isBooleanSubtract ? (
-                  <>
-                    <rect x="-10000" y="-10000" width="20000" height="20000" fill="white" />
-                    {layer.children.slice(1).map((cutout) =>
-                      renderMaskGeometry(cutout, "black", computedLayerStyles[cutout.id])
-                    )}
-                  </>
-                ) : isBooleanIntersect ? (
-                  layer.children.slice(1).map((stencil) =>
-                    renderMaskGeometry(stencil, "white", computedLayerStyles[stencil.id])
-                  )
-                ) : layer.invertMask ? (
+                {layer.invertMask ? (
                   <>
                     <rect x="-10000" y="-10000" width="20000" height="20000" fill="white" />
                     {renderMaskGeometry(maskChild, "black", computedLayerStyles[maskChild.id])}
@@ -419,65 +499,28 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
             })}
           </div>
 
-          {/* Mask / Cutout Stencil Hit & Selection Overlay on Canvas */}
-          {isBooleanGroup ? (
-            layer.children.slice(1).map((child) => {
-              const cStyle = computedLayerStyles[child.id];
-              const cX = cStyle?.left !== undefined ? parseFloat(String(cStyle.left)) : (child.style.x || 0);
-              const cY = cStyle?.top !== undefined ? parseFloat(String(cStyle.top)) : (child.style.y || 0);
-              const cW = cStyle?.width !== undefined ? parseFloat(String(cStyle.width)) : (child.style.width || 200);
-              const cH = cStyle?.height !== undefined ? parseFloat(String(cStyle.height)) : (child.style.height || 200);
-              return (
-                <div
-                  key={child.id}
-                  id={`layer-${child.id}`}
-                  style={{
-                    position: "absolute",
-                    left: `${cX}px`,
-                    top: `${cY}px`,
-                    width: `${cW}px`,
-                    height: `${cH}px`,
-                    transform: cStyle?.transform,
-                    pointerEvents: "auto",
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectLayer(child.id, e);
-                  }}
-                  className={cn(
-                    "cursor-pointer select-none",
-                    selectedLayerIds.includes(child.id)
-                      ? "ring-1 ring-rose-500/80 ring-offset-1 border border-dashed border-rose-400/60"
-                      : "hover:outline hover:outline-1 hover:outline-rose-400/30"
-                  )}
-                  title={`Cutout Stencil: ${child.name}`}
-                />
-              );
-            })
-          ) : (
-            <div
-              id={`layer-${maskChild.id}`}
-              style={{
-                position: "absolute",
-                left: `${maskX}px`,
-                top: `${maskY}px`,
-                width: `${maskW}px`,
-                height: `${maskH}px`,
-                transform: maskStyle?.transform,
-                pointerEvents: "auto",
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onSelectLayer(maskChild.id, e);
-              }}
-              className={cn(
-                "cursor-pointer select-none",
-                selectedLayerIds.includes(maskChild.id)
-                  ? "ring-1 ring-purple-500/80 ring-offset-1 border border-dashed border-purple-400/60"
-                  : "hover:outline hover:outline-1 hover:outline-purple-400/30"
-              )}
-            />
-          )}
+          <div
+            id={`layer-${maskChild.id}`}
+            style={{
+              position: "absolute",
+              left: `${maskX}px`,
+              top: `${maskY}px`,
+              width: `${maskW}px`,
+              height: `${maskH}px`,
+              transform: maskStyle?.transform,
+              pointerEvents: "auto",
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectLayer(maskChild.id, e);
+            }}
+            className={cn(
+              "cursor-pointer select-none",
+              selectedLayerIds.includes(maskChild.id)
+                ? "ring-1 ring-purple-500/80 ring-offset-1 border border-dashed border-purple-400/60"
+                : "hover:outline hover:outline-1 hover:outline-purple-400/30"
+            )}
+          />
         </>
       ) : isEmpty ? (
         <div className="text-[10px] text-zinc-500 font-mono pointer-events-none select-none px-3 py-2 text-center">

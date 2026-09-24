@@ -1,8 +1,8 @@
 # Motion Studio Handoff — Comprehensive UX Architecture & Review Agenda
 
 > **Date**: September 24, 2026  
-> **Branch**: `main` (Latest commit: `d5664b3`, fully pushed to remote)  
-> **Session Baseline**: 52 test suites, 467 automated tests passing via Vitest (`npm test`). Production build succeeds with 0 errors in 10.60s (`npm run build`).
+> **Branch**: `main`  
+> **Session Baseline**: 52 test suites, 472 automated tests passing via Vitest (`npm test`). Production build succeeds with 0 errors in 10.87s (`npm run build`).
 
 ---
 
@@ -18,9 +18,11 @@
    - Removed Boolean operation buttons from the floating toolbar, consolidating combination tools into the right sidebar inspector.
    - Combined Pen (`P`) and Pencil (`Shift+P`) into a single unified Vector Drawing dropdown button matching the Shapes dropdown UX.
    - Upgraded the Media button into a dropdown supporting raster **Image** (PNG, JPG, WebP) and **Vector SVG** (.svg) with dedicated file pickers.
-3. **Cross-Element Morph Transition & Inspector Refinements**:
-   - Physical 4-phase choreography with transform-origin and resting scale invariance ($100\%$ scale, zero blur/overshoot pops).
-   - Unified "Morph Into..." target element picker sheet.
+3. **Live 2D Vector Path Boolean Engine (`booleanEngine.ts`, `GroupRenderer.tsx`)**:
+   - Uses the Martinez-Rueda-Feito polygon clipping algorithm (`polygon-clipping`) for exact mathematical boundary calculation of Union, Subtract (Difference), Intersect, and Exclude (XOR).
+   - Solved the unfilled/stroked shape problem: shapes with 0 fill and a 1px stroke render pristine closed vector perimeters rather than broken CSS mask cuts.
+   - Non-destructive Boolean Groups maintain live sub-shapes with interactive canvas hit-targets, enabling independent dragging and keyframe animation on the timeline with 60 FPS live geometry updates.
+   - High-fidelity flattening (`Ctrl+E`) bakes live groups into standalone `ShapeLayer` paths without color shifts.
 
 ---
 
@@ -106,14 +108,15 @@ In the upcoming session, the user and agent will review and refine the user expe
 
 ---
 
-### Domain 5: Boolean Operations & Flattening UX (`src/services/booleanEngine.ts`)
+### Domain 5: Boolean Operations & Flattening UX (`src/engine/vector/booleanEngine.ts`, `GroupRenderer.tsx`)
 * **Current Implementation**:
-  - Non-destructive Union (`Ctrl+Alt+U`), Subtract (`Ctrl+Alt+S`), Intersect (`Ctrl+Alt+I`), and Exclude (`Ctrl+Alt+X`).
-  - Compound boolean shapes maintain editable sub-layer hierarchies.
-  - "Flatten / Bake Shape" (`Ctrl+E`) combines shapes into a single analytical vector contour for 1D Draw-On Trim Path animations.
+  - Exact 2D polygon clipping algorithm (`polygon-clipping`) for Union (`Ctrl+Alt+U`), Subtract (`Ctrl+Alt+S`), Intersect (`Ctrl+Alt+I`), and Exclude (`Ctrl+Alt+X`).
+  - True continuous closed vector perimeter for stroked, zero-fill shapes.
+  - Non-destructive Boolean Groups maintain live sub-shapes with interactive canvas hit-targets, enabling sub-shape dragging and keyframing on the timeline.
+  - "Flatten to Vector Path" (`Ctrl+E`) bakes compound geometry into a single analytical vector contour with exact bounding box normalization.
 * **UX Questions & Review Points for Next Session**:
-  - *Toolbar Discoverability*: When two or more overlapping shapes are selected, does a high-signal boolean action bar appear in the top toolbar or right inspector?
-  - *Non-Destructive Hierarchy*: In the layer tree, how are boolean compound groups represented? Can users expand the group and drag sub-shapes to adjust cutout placement in real time?
+  - *Layer Tree Representation*: In the layer tree, boolean compound groups are marked with the boolean icon and operation name. Can users expand the group and drag sub-shapes to adjust cutout placement in real time?
+  - *Direct Canvas Manipulation*: When double-clicking a sub-shape within the boolean group, does the canvas transform box immediately isolate the sub-shape for precise dragging?
   - *Flatten Feedback*: Does flattening provide clear feedback that sub-shapes have been merged into a unified vector path?
 
 ---
@@ -158,18 +161,18 @@ In the upcoming session, the user and agent will review and refine the user expe
 ## 4. Engineering Verification State
 
 Before closing this session, full repository verification was performed:
-* **Automated Test Suites**: 51 suites, 461 tests passing (100% green).
-* **Production Build**: `npm run build` succeeds in 10.84s with 0 type errors.
+* **Automated Test Suites**: 52 suites, 472 tests passing (100% green).
+* **Production Build**: `npm run build` succeeds in 10.87s with 0 type errors.
 * **Git Status**: Working tree clean, all commits pushed to `origin main`.
 
 ```bash
 $ npm test
-Test Files  51 passed (51)
-     Tests  461 passed (461)
-  Duration  17.22s
+Test Files  52 passed (52)
+     Tests  472 passed (472)
+  Duration  18.10s
 
 $ npm run build
-✓ built in 10.84s
+✓ built in 10.87s
 ```
 
 All source code and documentation are fully synchronized and ready for the next session.

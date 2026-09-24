@@ -7,6 +7,7 @@
 import { GroupLayer, Layer, ShapeLayer } from "@/types/scene";
 import { computePathBounds } from "../svg/svgPathBounds";
 import { transformPath } from "../svg/svgPathTransform";
+import { computeBooleanGroupPath } from "./booleanEngine";
 
 export function layerToLocalSvgPath(layer: Layer): string {
   const w = typeof layer.style.width === "number" ? layer.style.width : 100;
@@ -69,24 +70,28 @@ export function flattenBooleanGroup(group: GroupLayer): ShapeLayer | null {
   const grpY = typeof group.style.y === "number" ? group.style.y : 0;
   const baseChild = group.children[0];
 
-  const subpaths: string[] = [];
-
-  for (const child of group.children) {
-    const childLocalD = layerToLocalSvgPath(child);
-    if (!childLocalD) continue;
-
-    const childX = typeof child.style.x === "number" ? child.style.x : 0;
-    const childY = typeof child.style.y === "number" ? child.style.y : 0;
-
-    // Translate each child path to group coordinates
-    const inGroupD = transformPath(childLocalD, { dx: childX, dy: childY });
-    subpaths.push(inGroupD);
+  // Compute true 2D vector boolean geometry
+  let combinedD = "";
+  try {
+    combinedD = computeBooleanGroupPath(group);
+  } catch {
+    // Fallback if booleanEngine encounters an unexpected geometry
   }
 
-  if (subpaths.length === 0) return null;
+  if (!combinedD) {
+    const subpaths: string[] = [];
+    for (const child of group.children) {
+      const childLocalD = layerToLocalSvgPath(child);
+      if (!childLocalD) continue;
+      const childX = typeof child.style.x === "number" ? child.style.x : 0;
+      const childY = typeof child.style.y === "number" ? child.style.y : 0;
+      const inGroupD = transformPath(childLocalD, { dx: childX, dy: childY });
+      subpaths.push(inGroupD);
+    }
+    if (subpaths.length === 0) return null;
+    combinedD = subpaths.join(" ");
+  }
 
-  // Combine into a single compound path
-  const combinedD = subpaths.join(" ");
   const bounds = computePathBounds(combinedD);
 
   // Normalize path coordinates so the layer's local (0, 0) matches bounds.minX, bounds.minY
@@ -103,12 +108,25 @@ export function flattenBooleanGroup(group: GroupLayer): ShapeLayer | null {
   const fillRule =
     group.booleanOperation === "union" ? "nonzero" : "evenodd";
 
-  const primaryFill =
+  const rawFill =
+    group.style.backgroundColor ||
+    (group.style as any).fillColor ||
     baseChild.style.backgroundColor ||
-    (baseChild as any).style?.fillColor ||
-    "#3b82f6";
-  const primaryStroke = baseChild.style.borderColor || "transparent";
-  const primaryStrokeWidth = baseChild.style.borderWidth || 0;
+    (baseChild as any).style?.fillColor;
+  const primaryFill = (!rawFill || rawFill === "transparent" || rawFill === "none") ? "transparent" : rawFill;
+
+  const rawStroke =
+    group.style.borderColor ||
+    baseChild.style.borderColor;
+  const primaryStroke = (rawStroke && rawStroke !== "transparent") ? rawStroke : "transparent";
+
+  const rawStrokeWidth =
+    typeof group.style.borderWidth === "number"
+      ? group.style.borderWidth
+      : (typeof baseChild.style.borderWidth === "number" ? baseChild.style.borderWidth : 0);
+  const primaryStrokeWidth = rawStrokeWidth;
+
+  const primaryBorderStyle = group.style.borderStyle || baseChild.style.borderStyle || "solid";
 
   const flattenedShape: ShapeLayer = {
     id: `boolean_flat_${Date.now()}`,
@@ -130,6 +148,7 @@ export function flattenBooleanGroup(group: GroupLayer): ShapeLayer | null {
       backgroundColor: primaryFill,
       borderColor: primaryStroke,
       borderWidth: primaryStrokeWidth,
+      borderStyle: primaryBorderStyle,
     },
   };
 

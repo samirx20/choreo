@@ -2156,6 +2156,36 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 52 test suites (467 tests) pass cleanly (`npm test`).
   - Production build (`npm run build`) succeeds with 0 type errors in 10.60s.
 
+---
+
+### Decision 95: Live 2D Vector Path Boolean Engine & Non-Destructive Sub-Shape Animation
+* **Context & Problem**:
+  - Previously, Boolean operations were implemented as an SVG CSS `mask-image` on HTML container `<div>`s in `GroupRenderer.tsx`.
+  - For shapes with transparent fill and 1px stroke (the default in vector design), CSS masks could only clip existing border pixels; they could not construct the missing circular arc boundary or fuse outer strokes, resulting in disconnected, floating line ends in thin air.
+  - Furthermore, `union` and `exclude` had no rendering implementation and simply rendered raw overlapping shapes.
+  - Users explicitly required **live non-destructive Boolean Groups** so sub-shapes can be selected, moved, and animated independently on the timeline, while rendering the mathematically exact closed vector boundary (with continuous stroke and fill).
+* **The Solution**:
+  1. **Analytical 2D Vector Path Boolean Engine (`src/engine/vector/booleanEngine.ts`)**:
+     - Utilizes the Martinez-Rueda-Feito polygon clipping algorithm (`polygon-clipping`) for exact Union, Difference (Subtract), Intersection, and XOR (Exclude) operations.
+     - `layerToPolygonRing`: Samples rectangles (with or without `borderRadius`), circles, ellipses, triangles, regular polygons, stars, and arbitrary SVG path contours into closed coordinate rings in local group space, with full rotation transform support.
+     - `multiPolygonToSvgPath`: Converts clipping output into clean SVG `<path d="..." />` data.
+     - `computeBooleanGroupPath`: Evaluates live group geometry dynamically, accepting optional `computedLayerStyles` so child animation on the timeline or dragging on the canvas updates the cutout contour at 60 FPS.
+  2. **First-Class Live Boolean Group Rendering (`GroupRenderer.tsx`)**:
+     - Completely decoupled `isBooleanGroup` from `isMaskGroup`.
+     - When `layer.isBooleanGroup` is true, the group's wrapper `<div>` has transparent background and 0 borderWidth, avoiding unwanted rectangular frame borders.
+     - Renders the live vector path via `<svg style={{ overflow: "visible" }}><path d={booleanPath} fill={booleanFill} stroke={booleanStroke} strokeWidth={booleanStrokeWidth} strokeDasharray={...} fillRule="evenodd" /></svg>`.
+     - Inherits fill and stroke faithfully from the group or base child, correctly preserving transparent fills without defaulting to arbitrary blues.
+     - Renders interactive hit-targets for all child layers with DOM ID `layer-${child.id}`, enabling direct selection, dragging, and independent keyframing on the timeline.
+  3. **High-Fidelity Flattening (`flattenBooleanGroup`)**:
+     - On `Ctrl+E` / "Flatten to Vector Path", bakes the dynamic 2D vector path into a permanent `ShapeLayer` (`shapeType: 'path'`) with exact bounding box normalization, zero pixel shift, and preserved fill/stroke attributes.
+* **Verification**:
+  - Expanded `src/test/boolean_operations.test.ts` to 12 tests covering:
+    - Overlapping stroked shapes with 0 fill across all 4 operations (Union, Subtract, Intersect, Exclude).
+    - Flattening preserving transparent fill and 1px stroke.
+    - Dynamic re-evaluation with `computedLayerStyles` during sub-shape motion.
+  - All 52 test suites (472 tests) pass cleanly (`npm test`).
+  - Production build (`npm run build`) compiles in 10.87s with 0 errors.
+
 
 
 
