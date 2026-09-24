@@ -2098,6 +2098,30 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 51 test suites (460 tests) pass cleanly.
   - Production build compiles cleanly with 0 errors in 10.50s.
 
+---
+
+### Decision 93: Impeccable High-Signal Morph Inspector & Unified Target Selection Screen
+* **Context & Problem**:
+  - The morph clip inspector had visual clutter and non-compliant decorative anti-patterns (banned under Impeccable craft floor and Rule 9):
+    1. Redundant icon badge boxes before "From" and after "To" in the Connected Elements card.
+    2. Decorative emoji and symbol prefixes (`✦`, `💧`, `💎`, `⚡`, `🌀`, `〰️`) on the Effect Style buttons.
+    3. Clicking "Change Target" opened a tiny floating dropdown menu (`DropdownMenu`) instead of the dedicated, searchable "Morph Into..." element picker sheet that opens when initially adding a morph animation.
+    4. Changing target elements via the previous dropdown did not cleanly transfer the partner entrance clip from the old target layer to the new target layer in project state.
+* **The Solution**:
+  1. **Clean High-Signal Typography**:
+     - Stripped the useless decorative icon badges from before "From" and after "To" in [`ClipDetailView.tsx`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/components/inspector/animate/ClipDetailView.tsx).
+     - Cleaned Effect Style button labels to pure typographic tokens: `Stardust`, `Liquid`, `Voronoi`, `Laser`, `Singularity`, `Spline`.
+  2. **Unified "Morph Into..." Target Selection Screen**:
+     - Clicking "Change Target" now opens the identical full-panel element picker screen (`AnimationCatalogSheet` "select-morph-target" layout) with search filter, type icons, hover interaction states, and clear current target indicators.
+  3. **Atomic Target Relinking (`relinkMorphTarget`)**:
+     - Implemented `relinkMorphTarget` in [`animationSlice.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/store/slices/animationSlice.ts).
+     - Automatically cleans up the old partner `morphIn` clip from the previous destination layer, creates the synchronized `morphIn` clip on the new target layer, updates the source clip's `targetLayerId` and `partnerClipId`, and preserves inspector clip selection seamlessly.
+* **Verification**:
+  - Added unit test in `src/test/cross_element_morph.test.ts` verifying `relinkMorphTarget` moves the partner clip and updates source bindings.
+  - All 51 test suites (461 tests) pass cleanly.
+  - Production build (`npm run build`) succeeds with 0 errors in 10.84s.
+
+
 
 
 

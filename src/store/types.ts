@@ -234,6 +234,12 @@ export interface ProjectStoreState {
       params?: Record<string, any>;
     }
   ) => string | null;
+  relinkMorphTarget: (
+    sourceLayerId: string,
+    currentTargetLayerId: string,
+    newTargetLayerId: string
+  ) => void;
+
 
   // Kinetic Stagger & Multi-Layer Cascade Actions
   staggerSelectedLayers: (config: StaggerConfig) => void;

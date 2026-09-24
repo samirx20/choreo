@@ -404,5 +404,74 @@ describe("Cross-Element Morph Transition Suite", () => {
       expect(delSrc.animation?.clips).toHaveLength(0);
       expect(delTgt.animation?.clips).toHaveLength(0);
     });
+
+    it("relinks morph target seamlessly when changing target element", () => {
+      const store = useProjectStore.getState();
+      const srcId = "relink_src";
+      const tgt1Id = "relink_tgt_1";
+      const tgt2Id = "relink_tgt_2";
+
+      store.addLayer({
+        id: srcId,
+        type: "shape",
+        shapeType: "rectangle",
+        name: "Src",
+        style: { x: 0, y: 0, width: 100, height: 100, rotation: 0, opacity: 1 },
+        animation: { clips: [] },
+      });
+      store.addLayer({
+        id: tgt1Id,
+        type: "shape",
+        shapeType: "circle",
+        name: "Old Target",
+        style: { x: 200, y: 0, width: 100, height: 100, rotation: 0, opacity: 1 },
+        animation: { clips: [] },
+      });
+      store.addLayer({
+        id: tgt2Id,
+        type: "shape",
+        shapeType: "star",
+        name: "New Target",
+        style: { x: 400, y: 0, width: 100, height: 100, rotation: 0, opacity: 1 },
+        animation: { clips: [] },
+      });
+
+      store.applyAnimationPreset(srcId, null, {
+        id: "morph",
+        name: "Morph",
+        type: "out",
+        duration: 0.8,
+        easing: "smooth",
+        params: { targetLayerId: tgt1Id },
+      });
+
+      // Old target has morphIn clip
+      let scr = useProjectStore.getState().document.screens[0];
+      expect(getLayerClips(scr.layers.find((l) => l.id === tgt1Id)!)).toHaveLength(1);
+      expect(getLayerClips(scr.layers.find((l) => l.id === tgt2Id)!)).toHaveLength(0);
+
+      // Relink to tgt2Id
+      store.relinkMorphTarget(srcId, tgt1Id, tgt2Id);
+
+      scr = useProjectStore.getState().document.screens[0];
+      const srcL = scr.layers.find((l) => l.id === srcId)!;
+      const tgt1L = scr.layers.find((l) => l.id === tgt1Id)!;
+      const tgt2L = scr.layers.find((l) => l.id === tgt2Id)!;
+
+      // Old target is cleared
+      expect(getLayerClips(tgt1L)).toHaveLength(0);
+
+      // New target received morphIn clip
+      const newClips = getLayerClips(tgt2L);
+      expect(newClips).toHaveLength(1);
+      expect(newClips[0].preset).toBe("morphIn");
+      expect(newClips[0].params?.sourceLayerId).toBe(srcId);
+      expect(newClips[0].params?.targetLayerId).toBe(tgt2Id);
+
+      // Source clip params updated to new target
+      const srcClips = getLayerClips(srcL);
+      expect(srcClips[0].params?.targetLayerId).toBe(tgt2Id);
+      expect(srcClips[0].params?.partnerClipId).toBe(newClips[0].id);
+    });
   });
 });

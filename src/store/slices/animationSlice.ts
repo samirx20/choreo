@@ -17,6 +17,7 @@ export type AnimationSlice = Pick<
   | "openAnimationCatalog"
   | "closeAnimationCatalog"
   | "applyAnimationPreset"
+  | "relinkMorphTarget"
   | "staggerSelectedLayers"
 >;
 
@@ -807,6 +808,133 @@ export const createAnimationSlice = (
       selectedClipIds: newClipId ? [newClipId] : [],
     });
     return newClipId;
+  },
+
+  relinkMorphTarget: (sourceLayerId, currentTargetLayerId, newTargetLayerId) => {
+    if (!sourceLayerId || !newTargetLayerId || currentTargetLayerId === newTargetLayerId) return;
+    const { document: doc, activeScreenId, selectedClipIds } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    const sourceLayer = findLayerInTree(activeScreen.layers, sourceLayerId);
+    const newTargetLayer = findLayerInTree(activeScreen.layers, newTargetLayerId);
+    if (!sourceLayer || !newTargetLayer) return;
+
+    // 1. Find the exit morph clip on sourceLayer
+    const sourceClips = getLayerClips(sourceLayer);
+    const sourceClip = sourceClips.find(
+      (c) =>
+        c.preset === "morph" ||
+        (c.params?.sourceLayerId === sourceLayerId && c.params?.targetLayerId === currentTargetLayerId) ||
+        Boolean(c.params?.morphGroupId)
+    );
+    if (!sourceClip) return;
+
+    const morphGroupId = sourceClip.params?.morphGroupId || `morph_grp_${Date.now()}`;
+    const newTargetClipId = `anim_clip_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    // 2. Remove old morphIn clip on currentTargetLayer (if present)
+    let mutatedLayers = activeScreen.layers;
+    let oldTargetClipId: string | null = null;
+    if (currentTargetLayerId) {
+      const oldTargetLayer = findLayerInTree(mutatedLayers, currentTargetLayerId);
+      if (oldTargetLayer) {
+        const oldTargetClips = getLayerClips(oldTargetLayer);
+        const filteredOldClips = oldTargetClips.filter((c) => {
+          const isOldMorphIn =
+            (c.preset === "morphIn" || c.preset === "morph") &&
+            (c.params?.morphGroupId === morphGroupId ||
+              (c.params?.sourceLayerId === sourceLayerId && c.params?.targetLayerId === currentTargetLayerId));
+          if (isOldMorphIn) {
+            oldTargetClipId = c.id;
+            return false;
+          }
+          return true;
+        });
+
+        mutatedLayers = mutateLayerInTree(mutatedLayers, currentTargetLayerId, (layer) => {
+          const existing = { ...(layer.animation || {}) };
+          if (oldTargetClipId && existing.in?.id === oldTargetClipId) {
+            delete existing.in;
+          }
+          return { ...layer, animation: { ...existing, clips: filteredOldClips } } as Layer;
+        });
+      }
+    }
+
+    // 3. Create new morphIn clip on newTargetLayer
+    const targetLayerRef = findLayerInTree(mutatedLayers, newTargetLayerId);
+    const currentNewTargetClips = targetLayerRef ? getLayerClips(targetLayerRef) : [];
+    const newTargetClip: AnimationClip = {
+      id: newTargetClipId,
+      name: "Morph",
+      type: "in",
+      preset: "morphIn",
+      start: sourceClip.start,
+      duration: sourceClip.duration,
+      easing: sourceClip.easing,
+      loop: false,
+      params: {
+        ...(sourceClip.params || {}),
+        morphGroupId,
+        sourceLayerId: sourceLayerId,
+        targetLayerId: newTargetLayerId,
+        partnerClipId: sourceClip.id,
+      },
+    };
+    const nextNewTargetClips = [...currentNewTargetClips, newTargetClip].sort((a, b) => a.start - b.start);
+    mutatedLayers = mutateLayerInTree(mutatedLayers, newTargetLayerId, (layer) => ({
+      ...layer,
+      animation: {
+        ...(layer.animation || {}),
+        in: newTargetClip,
+        clips: nextNewTargetClips,
+      },
+    } as Layer));
+
+    // 4. Update sourceClip on sourceLayer
+    const nextSourceClips = sourceClips.map((c) => {
+      if (c.id === sourceClip.id) {
+        return {
+          ...c,
+          params: {
+            ...(c.params || {}),
+            morphGroupId,
+            sourceLayerId: sourceLayerId,
+            targetLayerId: newTargetLayerId,
+            partnerClipId: newTargetClipId,
+          },
+        };
+      }
+      return c;
+    });
+    const updatedSourceClip = nextSourceClips.find((c) => c.id === sourceClip.id);
+    mutatedLayers = mutateLayerInTree(mutatedLayers, sourceLayerId, (layer) => ({
+      ...layer,
+      animation: {
+        ...(layer.animation || {}),
+        out: updatedSourceClip?.type === "out" ? updatedSourceClip : layer.animation?.out,
+        clips: nextSourceClips,
+      },
+    } as Layer));
+
+    // 5. Update selection
+    let nextSelectedClipIds = selectedClipIds;
+    if (oldTargetClipId && selectedClipIds.includes(oldTargetClipId)) {
+      nextSelectedClipIds = [newTargetClipId];
+    } else if (selectedClipIds.includes(sourceClip.id)) {
+      nextSelectedClipIds = [sourceClip.id];
+    }
+
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((screen) =>
+        screen.id === activeScreenId ? { ...screen, layers: mutatedLayers } : screen
+      ),
+    };
+
+    commitDoc(set, nextDoc);
+    set({ selectedClipIds: nextSelectedClipIds });
   },
 
   staggerSelectedLayers: (config) => {

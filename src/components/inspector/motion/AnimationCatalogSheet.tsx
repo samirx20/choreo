@@ -40,7 +40,7 @@ import {
 } from "@/components/canvas/renderers/ShapeRenderer";
 import { useProjectStore } from "@/store/useProjectStore";
 
-function getLayerIcon(layer: Layer) {
+export function getLayerIcon(layer: Layer) {
   if (layer.type === "text" || layer.type === "chunk") return Type;
   if (layer.type === "image" || layer.type === "video") return ImageIcon;
   if (layer.type === "line") return CornerUpRight;
