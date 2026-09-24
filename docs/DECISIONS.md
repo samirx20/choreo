@@ -2010,6 +2010,33 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 51 test suites (460 tests) pass 100%.
   - Clean production build (`npm run build`) in 10.35s with 0 errors.
 
+---
+
+### Decision 89: True Geometric Contour Sampling, 6 Distinct Morph Shaders, and Elimination of Double-Exposure Crossfade
+* **Context & Rationale**:
+  - Previously, morphing particles sampled from generic rectangular bounding boxes rather than true layer contours, causing particles around stars and arrows to float in an invisible rectangle.
+  - Linear opacity crossfades caused both source and target shapes to sit simultaneously visible as 50% opacity ghosts during mid-flight.
+  - Style selection only slightly changed particle shapes instead of providing completely distinct physical and optical shaders.
+* **Architectural Decisions & Implementation**:
+  1. **True Geometric Contour Sampling with Rotation Invariance (`particleSwarmSolver.ts`)**:
+     - `samplePointOnLayer`: Implements exact geometry sampling for Stars (outer/inner vertices & edge interpolation), Arrows/Lines (collinear shafts + angled arrowhead wings), Circles/Ellipses (trigonometric perimeter), Polygons (vertices & sides), and Rectangles (border perimeter).
+     - Applied `layer.style.rotation` matrix transform around layer center $(cx, cy)$ in world space so rotated elements (e.g. tilted arrows or stars) have 100% accurate particle anchoring.
+  2. **Elimination of Double-Exposure Ghosting (`clipEvaluator.ts`)**:
+     - Replaced linear crossfade with power dematerialization and optical defocus:
+       $$\text{Source Opacity}(t) = (1 - t)^{2.5}, \quad \text{Blur}(t) = \sin(\pi t) \times 4 + 2t$$
+       $$\text{Target Opacity}(t) = t^{2.5}, \quad \text{Blur}(t) = (1 - t) \times 4$$
+     - The source element rapidly dissolves into the particle swarm; the target element emerges only upon particle arrival. During mid-flight, the transition particle swarm carries 100% of the visual matter.
+  3. **6 Distinct GPU/SVG VFX Pipelines (`MorphTransitionRenderer.tsx`)**:
+     - **✦ Stardust**: Cosmic starbursts with directional comet tails (`<line>` along velocity vectors) and sparkling ember centers.
+     - **💧 Liquid**: Real-time SVG metaball fusion filter (`#liquid-goo` Gaussian blur + high-contrast alpha color matrix). Viscous droplets stretch along velocity vectors and fuse into organic fluid streams with surface tension.
+     - **⚡ Laser**: High-voltage neon tracer beams with double-pass blur corona (`#laser-glow`), glowing colored beam spans, pure white inner core filaments, and electric sparks.
+     - **🌀 Singularity**: Gravitational event horizon with 3 distinct phases: collapsing accretion ring at source center $\to$ relativistic hyper-speed transfer beam streak $\to$ expanding shockwave ring at target center.
+     - **〰️ Spline**: Continuous animated quadratic Bezier streamlines (`strokeDasharray` and moving `strokeDashoffset`) with gliding particle heads.
+     - **💎 Voronoi**: Crystalline glass shards with 3D rotational tumble and crisp white faceted edge refraction highlights.
+* **Verification**:
+  - All 51 test suites (460 tests) pass cleanly.
+  - Production build (`npm run build`) compiles with 0 errors.
+
 
 
 

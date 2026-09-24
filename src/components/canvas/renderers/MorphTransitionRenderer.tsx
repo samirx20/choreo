@@ -49,19 +49,28 @@ function getLayerColor(layer: Layer, fallback: string): string {
     return layer.style.fillColor;
   }
   if (
+    (layer.style as any).borderColor &&
+    typeof (layer.style as any).borderColor === "string" &&
+    (layer.style as any).borderColor !== "transparent"
+  ) {
+    return (layer.style as any).borderColor;
+  }
+  if (
+    (layer.style as any).strokeColor &&
+    typeof (layer.style as any).strokeColor === "string" &&
+    (layer.style as any).strokeColor !== "transparent"
+  ) {
+    return (layer.style as any).strokeColor;
+  }
+  if (
     (layer.style as any).backgroundColor &&
-    typeof (layer.style as any).backgroundColor === "string"
+    typeof (layer.style as any).backgroundColor === "string" &&
+    (layer.style as any).backgroundColor !== "transparent"
   ) {
     return (layer.style as any).backgroundColor;
   }
   if (layer.style.color && typeof layer.style.color === "string") {
     return layer.style.color;
-  }
-  if (
-    (layer.style as any).strokeColor &&
-    typeof (layer.style as any).strokeColor === "string"
-  ) {
-    return (layer.style as any).strokeColor;
   }
   return fallback;
 }
@@ -121,10 +130,43 @@ export const MorphTransitionRenderer: React.FC<MorphTransitionRendererProps> = (
       style={{ width: `${width}px`, height: `${height}px` }}
     >
       <defs>
+        {/* 1. Stardust & Standard Soft Glow */}
         <filter id="morph-glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
           <feMerge>
             <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        {/* 2. Liquid Metaball Fusion (Goo Filter) */}
+        <filter id="liquid-goo">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
+          <feColorMatrix
+            in="blur"
+            mode="matrix"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9"
+            result="goo"
+          />
+          <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+        </filter>
+
+        {/* 3. High-Voltage Laser Neon Glow */}
+        <filter id="laser-glow" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="sharpGlow" />
+          <feGaussianBlur in="SourceGraphic" stdDeviation="5.0" result="wideGlow" />
+          <feMerge>
+            <feMergeNode in="wideGlow" />
+            <feMergeNode in="sharpGlow" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+
+        {/* 4. Gravitational Singularity Core */}
+        <filter id="singularity-core" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="coreBlur" />
+          <feMerge>
+            <feMergeNode in="coreBlur" />
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
@@ -147,68 +189,309 @@ export const MorphTransitionRenderer: React.FC<MorphTransitionRendererProps> = (
             particleShape: morph.particleShape,
             sourceColor,
             targetColor,
+            sourceLayer: morph.sourceLayer,
+            targetLayer: morph.targetLayer,
           }
         );
 
-        return (
-          <g key={`morph-${mIdx}`} filter="url(#morph-glow)">
-            {particles.map((p) => {
-              if (p.opacity <= 0.01) return null;
-              const baseSize = 8;
-              const transform = `translate(${p.x}, ${p.y}) rotate(${p.rotation}) scale(${p.scale * p.stretchX}, ${p.scale * p.stretchY})`;
-
-              if (p.shape === "shard" && p.shardPath) {
+        // 1. LIQUID STYLE: Rendered under SVG metaball fusion filter
+        if (morph.morphStyle === "liquid") {
+          return (
+            <g key={`morph-${mIdx}`} filter="url(#liquid-goo)">
+              {particles.map((p) => {
+                if (p.opacity <= 0.01) return null;
+                const baseR = 14;
+                const transform = `translate(${p.x}, ${p.y}) rotate(${p.rotation}) scale(${p.scale * p.stretchX}, ${p.scale * p.stretchY})`;
                 return (
-                  <path
+                  <ellipse
                     key={p.id}
-                    d={p.shardPath}
+                    cx={0}
+                    cy={0}
+                    rx={baseR}
+                    ry={baseR * 0.75}
                     fill={p.color}
                     opacity={p.opacity}
                     transform={transform}
                   />
                 );
+              })}
+            </g>
+          );
+        }
+
+        // 2. LASER STYLE: High-voltage neon tracer beams & electric corona
+        if (morph.morphStyle === "laser") {
+          return (
+            <g key={`morph-${mIdx}`} filter="url(#laser-glow)">
+              {/* Laser tracer streak beams */}
+              {particles.map((p) => {
+                if (p.opacity <= 0.01) return null;
+                if (p.tailX === undefined || p.tailY === undefined) return null;
+                return (
+                  <g key={`beam-${p.id}`}>
+                    {/* Outer neon glow beam */}
+                    <line
+                      x1={p.tailX}
+                      y1={p.tailY}
+                      x2={p.x}
+                      y2={p.y}
+                      stroke={p.color}
+                      strokeWidth={Math.max(2, p.scale * 3.8)}
+                      strokeLinecap="round"
+                      opacity={p.opacity * 0.85}
+                    />
+                    {/* Inner hot white core line */}
+                    <line
+                      x1={p.tailX}
+                      y1={p.tailY}
+                      x2={p.x}
+                      y2={p.y}
+                      stroke="#ffffff"
+                      strokeWidth={Math.max(1, p.scale * 1.5)}
+                      strokeLinecap="round"
+                      opacity={p.opacity}
+                    />
+                  </g>
+                );
+              })}
+
+              {/* Laser sparks at leading edge */}
+              {particles.map((p) => {
+                if (p.opacity <= 0.01) return null;
+                return (
+                  <circle
+                    key={`spark-${p.id}`}
+                    cx={p.x}
+                    cy={p.y}
+                    r={Math.max(2, p.scale * 3)}
+                    fill="#ffffff"
+                    opacity={p.opacity}
+                  />
+                );
+              })}
+            </g>
+          );
+        }
+
+        // 3. SINGULARITY STYLE: Gravitational implosion vortex, transfer streak & shockwave
+        if (morph.morphStyle === "singularity") {
+          const pr = morph.progress;
+          const maxSourceDim = Math.max(sourceBounds.width, sourceBounds.height);
+          const maxTargetDim = Math.max(targetBounds.width, targetBounds.height);
+
+          return (
+            <g key={`morph-${mIdx}`} filter="url(#singularity-core)">
+              {/* Phase 1: Inward gravitational collapsing ring at source center */}
+              {pr < 0.35 && (
+                <circle
+                  cx={sourceBounds.centerX}
+                  cy={sourceBounds.centerY}
+                  r={Math.max(4, (1 - pr / 0.35) * maxSourceDim * 0.6)}
+                  fill="none"
+                  stroke={sourceColor}
+                  strokeWidth={2.5}
+                  opacity={(1 - pr / 0.35) * 0.8}
+                />
+              )}
+
+              {/* Phase 2: Relativistic hyper-speed transfer core streak */}
+              {pr >= 0.35 && pr < 0.65 && (
+                <g>
+                  <line
+                    x1={sourceBounds.centerX}
+                    y1={sourceBounds.centerY}
+                    x2={targetBounds.centerX}
+                    y2={targetBounds.centerY}
+                    stroke={sourceColor}
+                    strokeWidth={5}
+                    strokeLinecap="round"
+                    opacity={0.7}
+                  />
+                  <line
+                    x1={sourceBounds.centerX}
+                    y1={sourceBounds.centerY}
+                    x2={targetBounds.centerX}
+                    y2={targetBounds.centerY}
+                    stroke="#ffffff"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    opacity={1}
+                  />
+                </g>
+              )}
+
+              {/* Phase 3: Outward expanding shockwave ring at target center */}
+              {pr >= 0.65 && (
+                <circle
+                  cx={targetBounds.centerX}
+                  cy={targetBounds.centerY}
+                  r={Math.max(4, ((pr - 0.65) / 0.35) * maxTargetDim * 0.75)}
+                  fill="none"
+                  stroke={targetColor}
+                  strokeWidth={3}
+                  opacity={(1 - (pr - 0.65) / 0.35) * 0.85}
+                />
+              )}
+
+              {/* Plasma particles */}
+              {particles.map((p) => {
+                if (p.opacity <= 0.01) return null;
+                const transform = `translate(${p.x}, ${p.y}) rotate(${p.rotation}) scale(${p.scale * p.stretchX}, ${p.scale * p.stretchY})`;
+                return (
+                  <g key={p.id} transform={transform}>
+                    <circle cx={0} cy={0} r={4.5} fill={p.color} opacity={p.opacity} />
+                    <circle cx={0} cy={0} r={2} fill="#ffffff" opacity={p.opacity} />
+                  </g>
+                );
+              })}
+            </g>
+          );
+        }
+
+        // 4. SPLINE STYLE: Flowing vector streamlines and gliding light nodes
+        if (morph.morphStyle === "spline") {
+          return (
+            <g key={`morph-${mIdx}`} filter="url(#morph-glow)">
+              {/* Flowing animated streamlines */}
+              {particles.map((p) => {
+                if (!p.streamPath || p.opacity <= 0.01) return null;
+                return (
+                  <path
+                    key={`stream-${p.id}`}
+                    d={p.streamPath}
+                    fill="none"
+                    stroke={p.color}
+                    strokeWidth={Math.max(1, p.scale * 2.2)}
+                    strokeOpacity={p.opacity * 0.4}
+                    strokeDasharray="14 7"
+                    strokeDashoffset={-morph.progress * 70}
+                    strokeLinecap="round"
+                  />
+                );
+              })}
+
+              {/* Gliding particle nodes */}
+              {particles.map((p) => {
+                if (p.opacity <= 0.01) return null;
+                return (
+                  <g key={`node-${p.id}`} transform={`translate(${p.x}, ${p.y})`}>
+                    <circle cx={0} cy={0} r={4 * p.scale} fill={p.color} opacity={p.opacity} />
+                    <circle cx={0} cy={0} r={1.8 * p.scale} fill="#ffffff" opacity={p.opacity} />
+                  </g>
+                );
+              })}
+            </g>
+          );
+        }
+
+        // 5. VORONOI STYLE: Crystalline glass shards with 3D tumble & white facet highlights
+        if (morph.morphStyle === "voronoi") {
+          return (
+            <g key={`morph-${mIdx}`} filter="url(#morph-glow)">
+              {particles.map((p) => {
+                if (p.opacity <= 0.01) return null;
+                const transform = `translate(${p.x}, ${p.y}) rotate(${p.rotation}) scale(${p.scale * p.stretchX}, ${p.scale * p.stretchY})`;
+                return (
+                  <g key={p.id} transform={transform}>
+                    {p.shardPath ? (
+                      <path
+                        d={p.shardPath}
+                        fill={p.color}
+                        stroke="rgba(255, 255, 255, 0.75)"
+                        strokeWidth={1.2}
+                        opacity={p.opacity}
+                      />
+                    ) : (
+                      <rect
+                        x={-5}
+                        y={-5}
+                        width={10}
+                        height={10}
+                        fill={p.color}
+                        stroke="rgba(255, 255, 255, 0.75)"
+                        strokeWidth={1}
+                        opacity={p.opacity}
+                      />
+                    )}
+                  </g>
+                );
+              })}
+            </g>
+          );
+        }
+
+        // 6. STARDUST STYLE (Default): Cosmic starburst with luminous comet tails
+        return (
+          <g key={`morph-${mIdx}`} filter="url(#morph-glow)">
+            {/* Luminous comet tails */}
+            {particles.map((p) => {
+              if (p.opacity <= 0.01 || p.tailX === undefined || p.tailY === undefined) {
+                return null;
               }
+              return (
+                <line
+                  key={`tail-${p.id}`}
+                  x1={p.tailX}
+                  y1={p.tailY}
+                  x2={p.x}
+                  y2={p.y}
+                  stroke={p.color}
+                  strokeWidth={Math.max(1, p.scale * 2.2)}
+                  strokeOpacity={p.opacity * 0.55}
+                  strokeLinecap="round"
+                />
+              );
+            })}
+
+            {/* Glowing sparkle stars & ember cores */}
+            {particles.map((p) => {
+              if (p.opacity <= 0.01) return null;
+              const baseSize = 8;
+              const transform = `translate(${p.x}, ${p.y}) rotate(${p.rotation}) scale(${p.scale * p.stretchX}, ${p.scale * p.stretchY})`;
 
               if (p.shape === "star") {
                 return (
-                  <path
-                    key={p.id}
-                    d={getStarPath(baseSize)}
-                    fill={p.color}
-                    opacity={p.opacity}
-                    transform={transform}
-                  />
+                  <g key={p.id} transform={transform}>
+                    <path
+                      d={getStarPath(baseSize)}
+                      fill={p.color}
+                      opacity={p.opacity}
+                    />
+                    <circle cx={0} cy={0} r={1.5} fill="#ffffff" opacity={p.opacity} />
+                  </g>
                 );
               }
 
               if (p.shape === "square") {
                 const s = baseSize * 1.2;
                 return (
-                  <rect
-                    key={p.id}
-                    x={-s / 2}
-                    y={-s / 2}
-                    width={s}
-                    height={s}
-                    rx={2}
-                    fill={p.color}
-                    opacity={p.opacity}
-                    transform={transform}
-                  />
+                  <g key={p.id} transform={transform}>
+                    <rect
+                      x={-s / 2}
+                      y={-s / 2}
+                      width={s}
+                      height={s}
+                      rx={2}
+                      fill={p.color}
+                      opacity={p.opacity}
+                    />
+                    <circle cx={0} cy={0} r={1.2} fill="#ffffff" opacity={p.opacity} />
+                  </g>
                 );
               }
 
-              // Default: circle / dot
+              // Circle / ember dot
               return (
-                <circle
-                  key={p.id}
-                  cx={0}
-                  cy={0}
-                  r={baseSize / 2}
-                  fill={p.color}
-                  opacity={p.opacity}
-                  transform={transform}
-                />
+                <g key={p.id} transform={transform}>
+                  <circle
+                    cx={0}
+                    cy={0}
+                    r={baseSize / 2}
+                    fill={p.color}
+                    opacity={p.opacity}
+                  />
+                  <circle cx={0} cy={0} r={1.4} fill="#ffffff" opacity={p.opacity} />
+                </g>
               );
             })}
           </g>

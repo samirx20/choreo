@@ -162,25 +162,28 @@ export function evaluateClipDelta(
 
   if (preset === "morph") {
     if (type === "out") {
-      d.opacity = Math.max(0, 1 - progress);
+      // Dematerialize source quickly into particles so it doesn't double-expose with target
+      d.opacity = Math.pow(Math.max(0, 1 - progress), 2.5);
       d.scaleX = 1 - progress * 0.08;
       d.scaleY = 1 - progress * 0.08;
-      d.blur = progress * 3;
+      d.blur = Math.sin(progress * Math.PI) * 4 + progress * 2;
       return d;
     } else {
-      d.opacity = Math.min(1, progress);
+      // Coalesce target as particles arrive
+      d.opacity = Math.pow(Math.min(1, progress), 2.5);
       d.scaleX = 0.95 + progress * 0.05;
       d.scaleY = 0.95 + progress * 0.05;
-      d.blur = (1 - progress) * 3;
+      d.blur = (1 - progress) * 4;
       return d;
     }
   }
 
   if (preset === "morphIn") {
-    d.opacity = Math.min(1, progress);
+    // Coalesce target as particles arrive
+    d.opacity = Math.pow(Math.min(1, progress), 2.5);
     d.scaleX = 0.95 + progress * 0.05;
     d.scaleY = 0.95 + progress * 0.05;
-    d.blur = (1 - progress) * 3;
+    d.blur = (1 - progress) * 4;
     return d;
   }
 
