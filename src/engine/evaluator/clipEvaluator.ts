@@ -128,12 +128,12 @@ export function evaluateClipDelta(
   }
 
   // 3. ACTIVE INTERPOLATION
+  const rawProgress = Math.min(Math.max((t - start) / safeDur, 0), 1);
   let progress = 0;
   if (loop) {
     const elapsed = t - start;
     progress = (elapsed % safeDur) / safeDur;
   } else {
-    const rawProgress = Math.min(Math.max((t - start) / safeDur, 0), 1);
     const springConfig =
       clip.springStiffness || clip.springDamping
         ? {
@@ -162,9 +162,9 @@ export function evaluateClipDelta(
 
   if (preset === "morph") {
     if (type === "out") {
-      // Phase 1: Source expands slightly (1.0 -> 1.08) and converts into particles by progress = 0.18
-      if (progress < 0.18) {
-        const breakFrac = progress / 0.18;
+      // Phase 1: Source expands slightly (1.0 -> 1.08) and converts into particles by rawProgress = 0.18
+      if (rawProgress < 0.18) {
+        const breakFrac = rawProgress / 0.18;
         const scaleExpansion = Math.sin(breakFrac * Math.PI * 0.5) * 0.08;
         d.scaleX = 1 + scaleExpansion;
         d.scaleY = 1 + scaleExpansion;
@@ -179,15 +179,15 @@ export function evaluateClipDelta(
       d.blur = 3;
       return d;
     } else {
-      // Target only appears after particles are already in place (progress >= 0.82)
-      if (progress < 0.82) {
+      // Target only appears after particles have fully landed and are in place (rawProgress >= 0.90)
+      if (rawProgress < 0.90) {
         d.opacity = 0;
         d.scaleX = 1.08;
         d.scaleY = 1.08;
         d.blur = 3;
         return d;
       }
-      const revealFrac = (progress - 0.82) / 0.18;
+      const revealFrac = (rawProgress - 0.90) / 0.10;
       d.opacity = Math.min(1, revealFrac);
       const scaleCollapse = (1 - revealFrac) * 0.08;
       d.scaleX = 1 + scaleCollapse;
@@ -198,15 +198,15 @@ export function evaluateClipDelta(
   }
 
   if (preset === "morphIn") {
-    // Target only appears after particles are already in place (progress >= 0.82)
-    if (progress < 0.82) {
+    // Target only appears after particles have fully landed and are in place (rawProgress >= 0.90)
+    if (rawProgress < 0.90) {
       d.opacity = 0;
       d.scaleX = 1.08;
       d.scaleY = 1.08;
       d.blur = 3;
       return d;
     }
-    const revealFrac = (progress - 0.82) / 0.18;
+    const revealFrac = (rawProgress - 0.90) / 0.10;
     d.opacity = Math.min(1, revealFrac);
     const scaleCollapse = (1 - revealFrac) * 0.08;
     d.scaleX = 1 + scaleCollapse;
