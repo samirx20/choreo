@@ -1895,3 +1895,31 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Verification**:
   - All 51 test suites (454 tests) pass with 100% success.
   - Production build (`npm run build`) compiles cleanly with zero TypeScript errors.
+
+---
+
+### Decision 84: Split Mode Visual Ergonomics, Default Locked Split Groups, and Full Canvas/Inspector Locking Parity
+* **Context & Rationale**:
+  - In interactive shape and line split modes, the confirm and discard controls previously used small text pills ("Confirm split", "Discard") that felt cramped and lacked prominent visual affordance on the canvas overlay.
+  - Furthermore, split operations (dividing a rectangle, circle, polygon, or line into multiple distinct geometric paths or separating stroke and fill) produce compound multi-part graphics that initially represent the single original form. If sub-elements are immediately draggable individually without intent, users easily disrupt the visual continuity.
+  - The right sidebar inspector header lacked a working lock toggle, and the canvas transform box previously ignored layer lock state, allowing locked elements to be dragged or resized on the canvas.
+* **Architectural Decisions & Implementation**:
+  1. **Prominent Icon-Only Split Overlay Controls (`ShapeSplitOverlay.tsx`, `LineSplitOverlay.tsx`)**:
+     - Upgraded the confirm/discard toolbar to large `w-8 h-8 rounded-full` icon buttons (`Check` in brand violet, `X` in dark secondary) with tooltip badges, eliminating cramped text labels.
+     - Added keyboard hotkeys (`Enter` to confirm, `Escape` to discard) in `useCanvasHotkeys.ts`.
+  2. **Split Compound Groups Default Locked (`locked: true`)**:
+     - All split generators (`splitShapeByEdges`, `splitCircleContour`, `separateStrokeFillEngine`, `splitShapeContourDualOrigin`, `splitLineAtRatio`, `detachArrowhead`, and text splitters) now set `locked: true` on the generated parent group.
+     - The split group acts as a single unified layer holding the parent's identity and position.
+     - When the user explicitly **unlocks** the group via the sidebar or inspector, each sub-element becomes directly selectable and editable, allowing distinct stroke colors, widths, trim paths, and independent animation roles.
+     - Standard manual grouping (`Ctrl+G` / `groupSelection()`) remains unlocked by default (`locked: false`), maintaining conventional grouping workflows.
+  3. **Canvas Selection & Drill-In Logic (`CanvasViewport.tsx`)**:
+     - When a group is locked (`group.locked === true`), canvas clicks always resolve to the topmost locked group entity and never drill into sub-children.
+     - When unlocked, canvas clicks drill into children as expected.
+  4. **Canvas Transform & Inspector Protection (`TransformBox.tsx`, `DesignInspector.tsx`, `LayerHeaderCard.tsx`)**:
+     - Canvas `TransformBox`: when an element is locked, drag bodies, rotation handles, hit zones, and resize handles are disabled; the bounding box displays an amber lock indicator badge and HUD `(Locked)`.
+     - Right Inspector header: added interactive `Lock`/`Unlock` toggle button and context menu item.
+     - Inspector Property Cards: locked layers display a prominent amber notice banner (`Element is locked [Unlock]`) and disable child property inputs (`opacity-50 pointer-events-none`) to prevent accidental property corruption.
+* **Verification**:
+  - 16 automated tests in `src/test/interactive_split_mode.test.ts` verifying default split locking, unlocked sub-element property editing, manual group non-locking, and canvas selection semantics.
+  - All 51 test suites (458 tests) passing; production build clean.
+

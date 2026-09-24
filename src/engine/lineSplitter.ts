@@ -80,6 +80,7 @@ export function splitLineAtRatio(layer: Layer, ratio: number = 0.5): SplitLineRe
     name: `${layer.name} (Split Line)`,
     type: "group",
     isCompound: true,
+    locked: true,
     compoundType: "split-line",
     style: {
       x: layer.style.x,
@@ -164,6 +165,7 @@ export function detachArrowhead(layer: Layer): SplitLineResult {
     name: `${layer.name} (Shaft & Head)`,
     type: "group",
     isCompound: true,
+    locked: true,
     compoundType: "split-line",
     style: {
       x: layer.style.x,

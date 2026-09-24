@@ -16,12 +16,15 @@ import {
   Copy,
   Trash2,
   Layers,
+  Lock,
+  Unlock,
   icons,
   Smile,
 } from "lucide-react";
 import { Layer } from "@/types/scene";
 import { useProjectStore } from "@/store/useProjectStore";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -151,17 +154,66 @@ export const LayerHeaderCard: React.FC<LayerHeaderCardProps> = ({
           </>
         )}
       </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition-colors"
-            title={selectedLayers.length > 1 ? "Selection options" : "Layer options"}
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48 bg-popover border-border text-xs">
-          {selectedLayers.length > 1 ? (
+      <div className="flex items-center gap-0.5">
+        <button
+          onClick={() => {
+            const nextLocked = !selectedLayer.locked;
+            if (selectedLayers.length > 1) {
+              selectedLayers.forEach((l) => updateLayer(l.id, { locked: nextLocked }));
+            } else {
+              updateLayer(selectedLayer.id, { locked: nextLocked });
+            }
+          }}
+          className={cn(
+            "p-1 rounded transition-colors cursor-pointer",
+            selectedLayer.locked
+              ? "text-amber-500 hover:bg-amber-500/10"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          )}
+          title={selectedLayer.locked ? "Unlock element" : "Lock element"}
+        >
+          {selectedLayer.locked ? (
+            <Lock className="h-4 w-4" />
+          ) : (
+            <Unlock className="h-4 w-4" />
+          )}
+        </button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition-colors cursor-pointer"
+              title={selectedLayers.length > 1 ? "Selection options" : "Layer options"}
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48 bg-popover border-border text-xs">
+            <DropdownMenuItem
+              onClick={() => {
+                const nextLocked = !selectedLayer.locked;
+                if (selectedLayers.length > 1) {
+                  selectedLayers.forEach((l) => updateLayer(l.id, { locked: nextLocked }));
+                } else {
+                  updateLayer(selectedLayer.id, { locked: nextLocked });
+                }
+              }}
+              className="gap-2 cursor-pointer"
+            >
+              {selectedLayer.locked ? (
+                <>
+                  <Unlock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Unlock Element</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Lock Element</span>
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {selectedLayers.length > 1 ? (
             <>
               <DropdownMenuItem
                 onClick={() => {
@@ -211,6 +263,7 @@ export const LayerHeaderCard: React.FC<LayerHeaderCardProps> = ({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
     </div>
   );
 };

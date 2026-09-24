@@ -148,28 +148,30 @@ export const LineSplitOverlay: React.FC<LineSplitOverlayProps> = ({
           </button>
         )}
 
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            confirmSplit();
-          }}
-          className="ml-1 px-2.5 py-1 rounded-full bg-violet-600 hover:bg-violet-500 text-white font-medium text-[11px] flex items-center gap-1 transition-colors cursor-pointer shadow-sm active:scale-95"
-        >
-          <Check className="w-3 h-3" />
-          Confirm Split
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            exitSplitMode();
-          }}
-          className="p-1 rounded-full text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors cursor-pointer"
-          title="Cancel"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
+        <div className="flex items-center gap-1.5 ml-1">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              confirmSplit();
+            }}
+            className="w-8 h-8 rounded-full bg-violet-600 hover:bg-violet-500 text-white flex items-center justify-center transition-all cursor-pointer shadow-md active:scale-95 shrink-0"
+            title="Confirm Split"
+          >
+            <Check className="w-4 h-4 stroke-[2.5]" />
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              exitSplitMode();
+            }}
+            className="w-8 h-8 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0 active:scale-95"
+            title="Discard Split"
+          >
+            <X className="w-4 h-4 stroke-[2.5]" />
+          </button>
+        </div>
       </div>
 
       {/* Interactive Line Shaft Hit Track */}

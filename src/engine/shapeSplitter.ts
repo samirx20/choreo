@@ -130,6 +130,7 @@ export function splitRoundedRectContour(
     name: `${layer.name} (Dual Path)`,
     type: "group",
     isCompound: true,
+    locked: true,
     compoundType: "split-shape",
     style: {
       x: layer.style.x,
@@ -219,6 +220,7 @@ export function splitCircleContour(layer: ShapeLayer): SplitShapeResult {
     name: `${layer.name} (Split Arcs)`,
     type: "group",
     isCompound: true,
+    locked: true,
     compoundType: "split-shape",
     style: {
       x: layer.style.x,
@@ -299,6 +301,7 @@ export function separateStrokeAndFill(layer: ShapeLayer): SplitShapeResult {
     name: `${layer.name} (Fill & Stroke)`,
     type: "group",
     isCompound: true,
+    locked: true,
     compoundType: "split-shape",
     style: {
       x: layer.style.x,
@@ -438,6 +441,7 @@ export function splitShapeByEdges(
     name: `${layer.name} (Split)`,
     type: "group",
     isCompound: true,
+    locked: true,
     compoundType: "split-shape",
     style: {
       ...layer.style,

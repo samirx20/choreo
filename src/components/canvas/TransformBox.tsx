@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { Lock } from "lucide-react";
 import { Layer, LayerStyle } from "@/types/scene";
 import { useProjectStore, findParentGroupInTree } from "@/store/useProjectStore";
 import { calculateSnapping, SnapGuide } from "./snapping";
 import { isVectorLine } from "@/utils/layerCapabilities";
+import { cn } from "@/lib/utils";
 
 const getParentWorldOffset = (targetId: string): { x: number; y: number } => {
   let curX = 0;
@@ -119,6 +121,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
   } = useProjectStore();
 
   const isMulti = (selectedLayers && selectedLayers.length > 1) || false;
+  const isLocked = !isMulti && Boolean(layer.locked);
   const isEditing = editingLayerId === layer.id;
   const [activeHandle, setActiveHandle] = useState<HandleType | null>(null);
 
@@ -196,7 +199,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
   );
 
   const handlePointerDown = (handle: HandleType, e: React.PointerEvent) => {
-    if (isPanMode) return;
+    if (isPanMode || isLocked) return;
     if (e.button !== 0) return;
     e.stopPropagation();
     e.preventDefault();
@@ -587,10 +590,23 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         transformOrigin: `${pivotOriginX} ${pivotOriginY}`,
         pointerEvents: "none",
       }}
-      className="z-40 ring-1 ring-[#7c3aed] select-none group pointer-events-none"
+      className={cn(
+        "z-40 select-none group pointer-events-none",
+        isLocked ? "ring-1 ring-amber-500 shadow-xs" : "ring-1 ring-[#7c3aed]"
+      )}
     >
+      {/* Locked Badge Indicator */}
+      {isLocked && (
+        <div
+          className="absolute -top-2.5 -right-2.5 w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-xs z-30 pointer-events-none"
+          title="Element is locked (Unlock in right sidebar to edit)"
+        >
+          <Lock className="w-3 h-3" />
+        </div>
+      )}
+
       {/* Pivot / Anchor Point Indicator */}
-      {!isMulti && (
+      {!isMulti && !isLocked && (
         <div
           style={{
             left: `${(layer.style.pivotX ?? 0.5) * 100}%`,
@@ -603,7 +619,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         </div>
       )}
       {/* Center Drag Body: Clicking and dragging anywhere inside the selection box moves the layer */}
-      {!isEditing && (
+      {!isEditing && !isLocked && (
         <div
           className={`absolute inset-0 ${
             isPanMode ? "pointer-events-none" : "cursor-move pointer-events-auto"
@@ -632,8 +648,8 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         />
       )}
 
-      {/* 4 Border Grab Edges, Rotation Controls & Handles (Only when NOT editing text!) */}
-      {!isEditing && (
+      {/* 4 Border Grab Edges, Rotation Controls & Handles (Only when NOT editing text and NOT locked!) */}
+      {!isEditing && !isLocked && (
         <>
           <div
             className={`absolute top-0 left-0 right-0 h-2 -translate-y-1 ${
@@ -808,7 +824,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
           ? `Destination Pose (${Math.round(visualX)}, ${Math.round(visualY)})`
           : isMulti
           ? `${selectedLayers?.length || 0} layers (${Math.round(visualW)} × ${Math.round(visualH)})`
-          : `${Math.round(visualW)} × ${Math.round(visualH)}${rotation ? ` (${rotation}°)` : ""}`}
+          : `${Math.round(visualW)} × ${Math.round(visualH)}${isLocked ? " (Locked)" : rotation ? ` (${rotation}°)` : ""}`}
       </div>
     </div>
   );

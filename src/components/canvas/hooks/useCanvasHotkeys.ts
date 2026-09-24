@@ -48,6 +48,19 @@ export function useCanvasHotkeys({
 
       const store = useProjectStore.getState();
 
+      if (store.splitModeState && !isInput) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          store.confirmSplit();
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          store.exitSplitMode();
+          return;
+        }
+      }
+
       if (e.altKey && !isInput) {
         setAltPressed(true);
       }

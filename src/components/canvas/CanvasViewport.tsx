@@ -804,6 +804,12 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     const parentGroup = findParentGroupInTree(activeScreen.layers, layerId);
 
     if (topmostGroup) {
+      // If the group is locked: always select the group as one unified entity!
+      if (topmostGroup.locked || parentGroup?.locked) {
+        selectLayer(topmostGroup.id, isMulti);
+        return;
+      }
+
       // Check if we are already inside this group hierarchy (either topmost group, parent, or sibling is selected)
       const isTopmostSelected = selectedLayerIds.includes(topmostGroup.id);
       const isParentSelected = parentGroup ? selectedLayerIds.includes(parentGroup.id) : false;

@@ -134,6 +134,7 @@ export function splitTextIntoChunks(layer: TextLayer): GroupLayer {
     id: `group_${Date.now()}`,
     name: `${layer.name} (Split Chunks)`,
     type: "group",
+    locked: true,
     layout: {
       display: "flex",
       flexDirection: "column",
@@ -208,6 +209,7 @@ export function splitTextIntoWords(layer: TextLayer): GroupLayer {
     id: `group_words_${Date.now()}`,
     name: `${layer.name} (Split Words)`,
     type: "group",
+    locked: true,
     layout: {
       display: "flex",
       flexDirection: "row",
@@ -284,6 +286,7 @@ export function splitTextIntoLines(layer: TextLayer): GroupLayer {
     id: `group_lines_${Date.now()}`,
     name: `${layer.name} (Split Lines)`,
     type: "group",
+    locked: true,
     layout: {
       display: "flex",
       flexDirection: "column",
@@ -394,6 +397,7 @@ export function splitTextBySelection(
     id: `group_sel_${Date.now()}`,
     name: `${layer.name} (Split Selection)`,
     type: "group",
+    locked: true,
     layout: {
       display: "flex",
       flexDirection: "row",

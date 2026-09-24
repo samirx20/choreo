@@ -454,4 +454,133 @@ describe("Interactive Split Mode & Locked Compound Entities", () => {
       expect(remainderPart.content).toBe("Experience Motion");
     });
   });
+
+  describe("Locked Compound Split Groups vs Unlocked Sub-Element Editing", () => {
+    it("creates split shape groups with locked: true by default", () => {
+      const rectLayer: ShapeLayer = {
+        id: "rect-lock-test",
+        name: "Card Frame",
+        type: "shape",
+        shapeType: "rectangle",
+        style: { x: 100, y: 100, width: 300, height: 200, borderWidth: 2, borderColor: "#8b5cf6", rotation: 0, opacity: 1 },
+      };
+
+      useProjectStore.getState().addLayer(rectLayer);
+      useProjectStore.getState().enterSplitMode(rectLayer.id);
+      useProjectStore.getState().confirmSplit();
+
+      const screen = useProjectStore.getState().document.screens[0];
+      const splitGroup = screen.layers.find((l) => (l as any).isCompound) as any;
+      expect(splitGroup).toBeDefined();
+      expect(splitGroup.locked).toBe(true);
+      expect(splitGroup.children).toHaveLength(2);
+    });
+
+    it("creates line split groups with locked: true by default", () => {
+      const lineLayer: LineLayer = {
+        id: "line-lock-test",
+        name: "Leader Line",
+        type: "line",
+        style: { x: 50, y: 50, width: 200, height: 2, borderWidth: 2, borderColor: "#06b6d4", rotation: 0, opacity: 1 },
+      };
+
+      useProjectStore.getState().addLayer(lineLayer);
+      useProjectStore.getState().enterSplitMode(lineLayer.id);
+      useProjectStore.getState().confirmSplit();
+
+      const screen = useProjectStore.getState().document.screens[0];
+      const splitGroup = screen.layers.find((l) => (l as any).isCompound) as any;
+      expect(splitGroup).toBeDefined();
+      expect(splitGroup.locked).toBe(true);
+      expect(splitGroup.children).toHaveLength(2);
+    });
+
+    it("allows editing individual sub-element properties when the group is unlocked", () => {
+      const rectLayer: ShapeLayer = {
+        id: "rect-unlock-test",
+        name: "Editable Card",
+        type: "shape",
+        shapeType: "rectangle",
+        style: { x: 100, y: 100, width: 300, height: 200, borderWidth: 2, borderColor: "#8b5cf6", rotation: 0, opacity: 1 },
+      };
+
+      useProjectStore.getState().addLayer(rectLayer);
+      useProjectStore.getState().enterSplitMode(rectLayer.id);
+      useProjectStore.getState().confirmSplit();
+
+      let screen = useProjectStore.getState().document.screens[0];
+      let splitGroup = screen.layers.find((l) => (l as any).isCompound) as any;
+      expect(splitGroup.locked).toBe(true);
+
+      const [childA, childB] = splitGroup.children;
+
+      // Unlock group
+      useProjectStore.getState().updateLayer(splitGroup.id, { locked: false });
+
+      screen = useProjectStore.getState().document.screens[0];
+      splitGroup = screen.layers.find((l) => (l as any).isCompound) as any;
+      expect(splitGroup.locked).toBe(false);
+
+      // Now customize childA independently with distinct stroke and trim properties
+      useProjectStore.getState().updateLayer(childA.id, {
+        style: {
+          ...childA.style,
+          borderColor: "#ec4899",
+          borderWidth: 6,
+          trimPathStart: 0.1,
+          trimPathEnd: 0.8,
+        },
+      });
+
+      // And customize childB with different color
+      useProjectStore.getState().updateLayer(childB.id, {
+        style: {
+          ...childB.style,
+          borderColor: "#3b82f6",
+          borderWidth: 3,
+        },
+      });
+
+      screen = useProjectStore.getState().document.screens[0];
+      splitGroup = screen.layers.find((l) => (l as any).isCompound) as any;
+      const updatedA = splitGroup.children.find((c: any) => c.id === childA.id);
+      const updatedB = splitGroup.children.find((c: any) => c.id === childB.id);
+
+      expect(updatedA.style.borderColor).toBe("#ec4899");
+      expect(updatedA.style.borderWidth).toBe(6);
+      expect(updatedA.style.trimPathStart).toBe(0.1);
+      expect(updatedA.style.trimPathEnd).toBe(0.8);
+
+      expect(updatedB.style.borderColor).toBe("#3b82f6");
+      expect(updatedB.style.borderWidth).toBe(3);
+    });
+
+    it("keeps manual groupSelection unlocked by default", () => {
+      const layer1: ShapeLayer = {
+        id: "l1",
+        name: "Box 1",
+        type: "shape",
+        shapeType: "rectangle",
+        style: { x: 10, y: 10, width: 50, height: 50, rotation: 0, opacity: 1 },
+      };
+      const layer2: ShapeLayer = {
+        id: "l2",
+        name: "Box 2",
+        type: "shape",
+        shapeType: "rectangle",
+        style: { x: 70, y: 10, width: 50, height: 50, rotation: 0, opacity: 1 },
+      };
+
+      useProjectStore.getState().addLayer(layer1);
+      useProjectStore.getState().addLayer(layer2);
+      useProjectStore.getState().selectLayer("l1");
+      useProjectStore.getState().selectLayer("l2", true);
+      useProjectStore.getState().groupSelection();
+
+      const screen = useProjectStore.getState().document.screens[0];
+      const manualGroup = screen.layers.find((l) => l.type === "group" && !(l as any).isCompound) as any;
+      expect(manualGroup).toBeDefined();
+      expect(manualGroup.locked).toBeFalsy();
+    });
+  });
 });
