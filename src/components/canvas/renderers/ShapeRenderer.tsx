@@ -8,10 +8,6 @@ interface ShapeRendererProps {
   isSelected?: boolean;
   isChildInFlex?: boolean;
   computedStyle?: React.CSSProperties;
-  computedLayerStyles?: Record<string, React.CSSProperties>;
-  selectedLayerIds?: string[];
-  onSelectLayer?: (layerId: string, e: React.MouseEvent) => void;
-  renderChild?: (child: Layer, isChildInFlex: boolean) => React.ReactNode;
   onClick?: (e: React.MouseEvent) => void;
 }
 
@@ -45,10 +41,6 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
   isSelected,
   isChildInFlex,
   computedStyle,
-  computedLayerStyles = {},
-  selectedLayerIds = [],
-  onSelectLayer,
-  renderChild,
   onClick,
 }) => {
   const widthNum = typeof layer.style.width === "number" ? layer.style.width : 100;
@@ -278,50 +270,6 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
           />
         </svg>
       )}
-
-      {layer.children && layer.children.length > 0 && (() => {
-        const isStack = Boolean(layer.containerLayout?.stack?.enabled) || layer.containerLayout?.mode === "stack";
-        const stackAxis = layer.containerLayout?.stack?.axis ?? layer.containerLayout?.stackAxis ?? "vertical";
-        const stackGap = layer.containerLayout?.stack?.gap ?? layer.containerLayout?.stackGap ?? 16;
-        const stackAlign = layer.containerLayout?.stack?.align ?? layer.containerLayout?.stackAlign ?? "start";
-        const padX = layer.containerLayout?.hug?.paddingX ?? layer.containerLayout?.paddingX ?? 20;
-        const padY = layer.containerLayout?.hug?.paddingY ?? layer.containerLayout?.paddingY ?? 14;
-        const isClip = Boolean(layer.containerLayout?.clip?.enabled);
-
-        return (
-          <div
-            className={cn(
-              "w-full h-full pointer-events-auto",
-              isStack ? "flex" : "relative"
-            )}
-            style={{
-              overflow: isClip ? "hidden" : "visible",
-              ...(isStack
-                ? {
-                    display: "flex",
-                    flexDirection: stackAxis === "horizontal" ? "row" : "column",
-                    alignItems:
-                      stackAlign === "center"
-                        ? "center"
-                        : stackAlign === "end"
-                        ? "flex-end"
-                        : "flex-start",
-                    gap: `${stackGap}px`,
-                    padding: `${padY}px ${padX}px`,
-                    boxSizing: "border-box",
-                  }
-                : {
-                    position: "absolute",
-                    inset: 0,
-                  }),
-            }}
-          >
-            {layer.children.map((child: Layer) =>
-              renderChild ? renderChild(child, isStack) : null
-            )}
-          </div>
-        );
-      })()}
     </div>
   );
 };

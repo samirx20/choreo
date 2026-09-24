@@ -195,10 +195,6 @@ export interface ProjectStoreState {
   updateLayerBinding: (layerId: string, bindingId: string, patch: Partial<ElementLinkBinding>) => void;
   removeLayerBinding: (layerId: string, bindingId: string) => void;
 
-  // Relational Container Layout & Parenting
-  updateLayerContainerLayout: (layerId: string, layout: Partial<import("@/types/scene").ContainerLayoutConfig>) => void;
-  detachChildFromParent: (childId: string) => void;
-
   // Razor Split & Multi-Studio Handoff
   razorSplitLayer: (layerId: string, time?: number) => RazorSplitResult;
   sendTo3D: () => void;

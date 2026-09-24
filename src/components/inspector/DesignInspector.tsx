@@ -8,7 +8,6 @@ import { TransformCard } from "./design/TransformCard";
 import { TypographyCard } from "./design/TypographyCard";
 import { AppearanceCard } from "./design/AppearanceCard";
 import { SpecializedLayerCard } from "./design/SpecializedLayerCard";
-import { RelationalLinksCard } from "./design/RelationalLinksCard";
 
 export const DesignInspector: React.FC = () => {
   const {
@@ -45,7 +44,6 @@ export const DesignInspector: React.FC = () => {
       <SpecializedLayerCard selectedLayer={selectedLayer} />
       {isText && <TypographyCard selectedLayer={selectedLayer} />}
       <AppearanceCard selectedLayer={selectedLayer} />
-      <RelationalLinksCard selectedLayer={selectedLayer} />
     </div>
   );
 };

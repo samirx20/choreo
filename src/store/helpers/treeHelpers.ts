@@ -4,12 +4,7 @@ import { Layer, GroupLayer, FrameLayer, ShapeLayer } from "@/types/scene";
  * Checks whether a layer is structurally capable of acting as a parent container.
  */
 export function isContainerLayer(layer: Layer): layer is Layer & { children: Layer[] } {
-  return (
-    layer.type === "group" ||
-    layer.type === "frame" ||
-    (layer.type === "shape" && (layer as ShapeLayer).shapeType === "rectangle") ||
-    (Array.isArray((layer as any).children) && (layer as any).children.length >= 0)
-  );
+  return layer.type === "group" || layer.type === "frame";
 }
 
 // Helper: Recursively search and mutate a layer in a layer tree
@@ -110,18 +105,6 @@ export function insertLayerRelativeInTree(
           ...target,
           children: [...existingChildren, layerToInsert],
         };
-        // Auto-initialize containerLayout if not present
-        if (!(nextTarget as any).containerLayout) {
-          const isTextLike = layerToInsert.type === "text" || layerToInsert.type === "counter" || layerToInsert.type === "chunk";
-          (nextTarget as any).containerLayout = {
-            mode: isTextLike ? "hug" : "stack",
-            paddingX: 20,
-            paddingY: 14,
-            physics: "spring",
-            stackAxis: "vertical",
-            stackGap: 16,
-          };
-        }
         const nextLayers = [...layers];
         nextLayers[targetIndex] = nextTarget;
         return { updated: nextLayers, inserted: true };

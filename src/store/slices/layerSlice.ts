@@ -67,8 +67,6 @@ export type LayerSlice = Pick<
   | "addLayerBinding"
   | "updateLayerBinding"
   | "removeLayerBinding"
-  | "updateLayerContainerLayout"
-  | "detachChildFromParent"
   | "razorSplitLayer"
   | "enterSplitMode"
   | "toggleSplitEdge"
@@ -1573,84 +1571,6 @@ export const createLayerSlice = (
       ),
     };
     commitDoc(set, nextDoc);
-  },
-
-  updateLayerContainerLayout: (layerId, layout) => {
-    const { document: doc, activeScreenId } = get();
-    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
-    if (!activeScreen) return;
-
-    const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, (layer) => {
-      const existing = layer.containerLayout || {
-        mode: "hug",
-        paddingX: 20,
-        paddingY: 14,
-        physics: "spring",
-      };
-      return {
-        ...layer,
-        containerLayout: { ...existing, ...layout },
-      };
-    });
-
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-      ),
-    };
-    commitDoc(set, nextDoc);
-  },
-
-  detachChildFromParent: (childId) => {
-    const { document: doc, activeScreenId } = get();
-    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
-    if (!activeScreen) return;
-
-    const childLayer = findLayerInTree(activeScreen.layers, childId);
-    const parentLayer = findParentGroupInTree(activeScreen.layers, childId);
-    if (!childLayer || !parentLayer) return;
-
-    // Convert child coordinates to world coordinates
-    const worldX = (parentLayer.style.x || 0) + (childLayer.style.x || 0);
-    const worldY = (parentLayer.style.y || 0) + (childLayer.style.y || 0);
-
-    const hoistedChild: Layer = {
-      ...childLayer,
-      style: {
-        ...childLayer.style,
-        x: Math.round(worldX),
-        y: Math.round(worldY),
-      },
-    };
-
-    // Remove child from parent
-    const withoutChild = mutateLayerInTree(activeScreen.layers, parentLayer.id, (p) => {
-      const nextChildren = ((p as any).children || []).filter((c: Layer) => c.id !== childId);
-      return {
-        ...p,
-        children: nextChildren,
-      };
-    });
-
-    // Insert child directly after parent in root/parent container
-    const { updated: withChildPlaced } = insertLayerRelativeInTree(
-      withoutChild,
-      parentLayer.id,
-      hoistedChild,
-      "after"
-    );
-
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: withChildPlaced } : s
-      ),
-    };
-
-    commitDoc(set, nextDoc, {
-      selectedLayerIds: [childId],
-    });
   },
 
   razorSplitLayer: (layerId, time) => {

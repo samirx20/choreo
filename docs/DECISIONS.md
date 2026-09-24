@@ -1875,16 +1875,23 @@ The engine provides first-class, motion-first reactive primitives for each eleme
      - `dependencyEngine.ts` dynamically resolves compound stacked + hugged bounding boxes in $O(1)$ time for deterministic scrubbing and export.
 * **Verification**:
   - 7 dedicated automated tests in `src/test/parent_child_relational_linking.test.tsx` verifying universal nesting, 0.0000px coordinate preservation, container layout updates, child detachment, zero-noise inspector rendering, and simultaneous multi-linking.
-  - All 52 test suites (461 tests) passing via Vitest.
-  - Production build (`tsc -b && vite build`) compiles with zero TypeScript errors.
+---
 
-
-
-
-
-
-
-
-
-
-
+### Decision 83: Retirement of Experimental Relational Auto-Layout Linking in Favor of Deterministic Motion Graphics Primitives
+* **Context & Rationale**:
+  - The experimental "Relational Linking" / auto-layout model (`Hug Bounds`, `Reflow Stack`, `containerLayout`, arbitrary shape nesting) attempted to treat static motion graphics elements like a dynamic web browser DOM.
+  - In motion graphics, elements already exist across time tracks rather than being dynamically generated at runtime. Attempting to make parents automatically react and stretch to time-varying child animations introduced competing spring physics, delayed visual jitter, and confusing layout settings (`Hug Bounds`, `Reflow Stack`, `Clip Content`, `Pad X`, `Axis`) in the inspector.
+  - Motion design tools (After Effects, Jitter, Keynote) maintain predictable, deterministic choreography: if a card expands as text appears, the animator/agent animates the card's width and the text's entrance directly.
+* **Architectural Actions Taken**:
+  1. **Removed Inspector Linking Card (`RelationalLinksCard.tsx` & `DesignInspector.tsx`)**:
+     - Deleted `RelationalLinksCard.tsx` and removed its mount from `DesignInspector.tsx`, restoring high-signal, zero-clutter inspection.
+  2. **Clean Grouping Truth (`treeHelpers.ts`, `LeftSidebar.tsx`)**:
+     - Preserved standard composite grouping (`Ctrl+G` / Group folders and frames). When multiple elements are grouped, they move and transform together as expected.
+     - Retired arbitrary shape nesting: shapes (rectangles, circles, lines) are geometric layers, not auto-layout HTML divs. Dropping inside is strictly restricted to container groups (`isContainerLayer(target)`).
+  3. **Removed Canvas & Evaluator Overhead (`ShapeRenderer.tsx`, `LayerRenderer.tsx`, `dependencyEngine.ts`)**:
+     - Removed child layout flex loops and clipping stencils from `ShapeRenderer.tsx`.
+     - Removed the container layout auto-dilation block from `resolveSceneBindings` in `dependencyEngine.ts`.
+     - Removed `updateLayerContainerLayout` and `detachChildFromParent` from `layerSlice.ts` and `store/types.ts`.
+* **Verification**:
+  - All 51 test suites (454 tests) pass with 100% success.
+  - Production build (`npm run build`) compiles cleanly with zero TypeScript errors.
