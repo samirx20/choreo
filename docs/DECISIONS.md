@@ -2498,19 +2498,29 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 
 ---
 
-### Decision 109: Native Window Chrome (`decorations: true`) for Guaranteed Windows Desktop Mapping
+### Decision 110: Native Rust Window Control Handlers & Standard Caption Geometry
 * **Context & Motivation**:
-  - Borderless windows (`decorations: false`) on Windows 10/11 frequently suffer from DWM non-composition where `app.exe` launches into the user session but Windows DWM keeps the window unmapped (invisible without taskbar presence).
+  - The in-app custom window control buttons (minimize, maximize, close) in `DesktopTitleBar.tsx` failed to operate when running in the packaged MSI due to IPC permission mismatches on `@tauri-apps/api/window`.
+  - Furthermore, button dimensions and iconography felt small and non-standard compared to Windows 11 desktop application conventions.
+  - In development mode, `EBWebView` cache lock contention from aborted background sessions prevented WebView2 from cleanly painting the native window.
 * **The Solution**:
-  1. **Standard OS Window Chrome (`decorations: true`)**:
-     - Configured `"decorations": true` in `src-tauri/tauri.conf.json`, allowing Windows Desktop Window Manager to render standard native window borders, taskbar grouping, and native title controls with 100% OS authority.
-  2. **In-App Header Alignment**:
-     - `DesktopTitleBar` remains positioned at the top of the canvas layout, housing the Motion Studio branding, active `.mtn` project breadcrumb, MCP toggle switch, and the redesigned 3-client Agent Setup guide.
+  1. **Direct Rust Window Commands (`src-tauri/src/lib.rs`)**:
+     - Implemented `#[tauri::command]` handlers for `minimize_window`, `toggle_maximize_window`, and `close_window` with `.invoke_handler(tauri::generate_handler![...])`.
+     - These invoke handlers operate directly on `tauri::Window` native Win32 message queues, bypassing frontend ACL friction and ensuring 100% reliable execution.
+     - `DesktopTitleBar.tsx` invokes these commands with a graceful fallback to `getCurrentWindow()`.
+  2. **Standard Windows 11 Caption Button Geometry & Vector Glyphs**:
+     - Caption buttons styled to standard Windows 11 specifications: `w-[46px]` width, `h-full` height, and standard hover states (`hover:bg-muted/80`, `active:bg-muted`, and `#e81123` close hover).
+     - Glyphs updated to crisp, standardized 10×10 vector paths: 10px horizontal bar (minimize), 10×10 bordered rect (maximize), and centered 10×10 diagonal cross (close).
+  3. **Tauri Window Lifecycle & Cache Resilience**:
+     - Added explicit `url: "index.html"` in `app.windows[0]` within `tauri.conf.json`.
+     - Setup hook calls `unminimize()`, `show()`, and `set_focus()` alongside comprehensive diagnostic logging (`url`, `outer_position`, `outer_size`).
+     - Cleared stale `EBWebView` cache lock files from `%LOCALAPPDATA%\app.motionstudio`.
 * **Verification**:
-  - Vitest test suite verified: 55/55 passed, 586/586 passed.
-  - Rebuilt production installers:
+  - All 55 test files and 586 tests pass in Vitest.
+  - Production bundles rebuilt and verified:
     - MSI: `src-tauri/target/release/bundle/msi/Motion Studio_0.1.0_x64_en-US.msi`
     - NSIS: `src-tauri/target/release/bundle/nsis/Motion Studio_0.1.0_x64-setup.exe`
+    - Executable: `src-tauri/target/release/app.exe`
 
 
 

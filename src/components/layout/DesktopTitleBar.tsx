@@ -7,6 +7,7 @@ import {
   Sparkles,
   FileCode,
 } from "lucide-react";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useMcpStore } from "@/store/useMcpStore";
 import { useProjectStore } from "@/store/useProjectStore";
@@ -98,48 +99,43 @@ Once connected, you will have access to the Motion Studio tools:
 Please register/connect this MCP server, inspect the active project with get_storyboard_state, and let me know when you are ready to begin choreographing!`;
   };
 
-  // Safely resolve the native Tauri window instance
-  const getNativeWindow = () => {
-    try {
-      if (typeof window !== "undefined") {
-        return getCurrentWindow();
-      }
-    } catch (err) {
-      console.warn("Could not get Tauri window:", err);
-    }
-    return null;
-  };
-
+  // Native window actions via Rust invoke commands (with Window API fallback)
   const handleMinimize = async () => {
     try {
-      const win = getNativeWindow();
-      if (win) {
-        await win.minimize();
+      await invoke("minimize_window");
+    } catch {
+      try {
+        const win = getCurrentWindow();
+        await win?.minimize();
+      } catch (err) {
+        console.error("Failed to minimize window:", err);
       }
-    } catch (err) {
-      console.error("Failed to minimize window:", err);
     }
   };
 
   const handleToggleMaximize = async () => {
     try {
-      const win = getNativeWindow();
-      if (win) {
-        await win.toggleMaximize();
+      await invoke("toggle_maximize_window");
+    } catch {
+      try {
+        const win = getCurrentWindow();
+        await win?.toggleMaximize();
+      } catch (err) {
+        console.error("Failed to toggle maximize:", err);
       }
-    } catch (err) {
-      console.error("Failed to toggle maximize:", err);
     }
   };
 
   const handleClose = async () => {
     try {
-      const win = getNativeWindow();
-      if (win) {
-        await win.close();
+      await invoke("close_window");
+    } catch {
+      try {
+        const win = getCurrentWindow();
+        await win?.close();
+      } catch (err) {
+        console.error("Failed to close window:", err);
       }
-    } catch (err) {
-      console.error("Failed to close window:", err);
     }
   };
 
@@ -412,18 +408,18 @@ Please register/connect this MCP server, inspect the active project with get_sto
       {/* 2. Center: Draggable Window Strip */}
       <div data-tauri-drag-region className="flex-1 h-full mx-2" />
 
-      {/* 3. Right: Native Window Action Buttons (Full Height, Generous Click Targets) */}
+      {/* 3. Right: Native Window Action Buttons (Windows 11 standard 46px click targets) */}
       <div className="flex items-stretch h-full shrink-0">
         {/* Minimize Button */}
         <button
           type="button"
           onClick={handleMinimize}
-          className="w-11 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+          className="w-[46px] h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 active:bg-muted transition-colors cursor-pointer"
           title="Minimize"
           aria-label="Minimize Window"
         >
-          <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 16 16">
-            <rect x="2" y="8" width="12" height="1.5" rx="0.5" />
+          <svg className="w-2.5 h-2.5" viewBox="0 0 10 10">
+            <line x1="0" y1="5" x2="10" y2="5" stroke="currentColor" strokeWidth="1.2" />
           </svg>
         </button>
 
@@ -431,25 +427,26 @@ Please register/connect this MCP server, inspect the active project with get_sto
         <button
           type="button"
           onClick={handleToggleMaximize}
-          className="w-11 h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+          className="w-[46px] h-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 active:bg-muted transition-colors cursor-pointer"
           title="Maximize"
           aria-label="Maximize Window"
         >
-          <svg className="w-3.5 h-3.5 stroke-current fill-none stroke-[1.4]" viewBox="0 0 16 16">
-            <rect x="3" y="3" width="10" height="10" rx="1" />
+          <svg className="w-2.5 h-2.5" viewBox="0 0 10 10">
+            <rect x="0.6" y="0.6" width="8.8" height="8.8" fill="none" stroke="currentColor" strokeWidth="1.2" />
           </svg>
         </button>
 
-        {/* Close Button (Native Red Hover) */}
+        {/* Close Button (Windows standard red hover) */}
         <button
           type="button"
           onClick={handleClose}
-          className="w-11 h-full flex items-center justify-center text-muted-foreground hover:text-white hover:bg-[#e81123] transition-colors cursor-pointer"
+          className="w-[46px] h-full flex items-center justify-center text-muted-foreground hover:text-white hover:bg-[#e81123] active:bg-[#c4101e] transition-colors cursor-pointer"
           title="Close"
           aria-label="Close Window"
         >
-          <svg className="w-4 h-4 stroke-current stroke-[1.5]" viewBox="0 0 16 16">
-            <path d="M 4 4 L 12 12 M 12 4 L 4 12" />
+          <svg className="w-2.5 h-2.5" viewBox="0 0 10 10">
+            <line x1="0.5" y1="0.5" x2="9.5" y2="9.5" stroke="currentColor" strokeWidth="1.2" />
+            <line x1="9.5" y1="0.5" x2="0.5" y2="9.5" stroke="currentColor" strokeWidth="1.2" />
           </svg>
         </button>
       </div>
