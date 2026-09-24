@@ -2237,9 +2237,31 @@ The engine provides first-class, motion-first reactive primitives for each eleme
      - Added a `Sun` / `Moon` toggle button in `TopNavBar.tsx` (`data-testid="theme-toggle-btn"`) wired to `toggleTheme()`.
      - Fully synchronizes with `document.documentElement.classList.toggle("dark")` and persists to `localStorage`.
 * **Verification**:
-  - Added theme toggle persistence test in `src/test/inspector_and_workflows.test.ts`.
-  - All 52 test suites (476 tests) pass cleanly (`npm test`).
-  - Production build (`npm run build`) compiles with 0 errors in 10.16s.
+---
+
+### Decision 98: Studio Palette Monochrome Alignment & Complete Dark Mode Contrast Overhaul
+* **Context & Motivation**:
+  - Despite preliminary accent updates, residues of saturated SaaS purples (`#7c3aed`, `#6d28d9`, `#ede9fe`, `purple-*`, `blue-*`) persisted across sub-components: Timeline Panel track highlights and scene pills, Animation Catalog Sheet preset cards and thumbnail previews, Clip Detail View property icons and morph modals, Stagger popover, Icon Picker popover, Line and Shape Split overlays, and native Select dropdowns.
+  - Furthermore, Dark Mode exhibited severe contrast deficiencies:
+    - Viewport canvas pasteboard was blinding white (`#f3f3f5`) instead of dark pasteboard (`#09090b`).
+    - Right Inspector Panel, Timeline tracks, and Select menus had hardcoded `bg-white` while `.dark` set text to pure white (`--foreground: 0 0% 98%`), creating unreadable white-on-white text knockouts.
+    - Active selection rows used high-contrast solid white blocks in dark mode (`dark:bg-zinc-100 dark:text-zinc-950`) which glared and clashed with pro studio tools.
+* **The Solution**:
+  1. **Purge of Saturated SaaS Color Residue**:
+     - Converted all remaining purple and blue UI accents across 20+ components (`TimelinePanel`, `AnimationCatalogSheet`, `ClipDetailView`, `ExportPopover`, `SpecializedLayerCard`, `MultiSelectionCard`, `CanvasContextMenu`, `FloatingDesignToolbar`, `IconPickerPopover`, `StaggerPopover`, `contextMenuBuilders`, `AudioTrackRow`, `ProjectsWorkspace`, `ProjectCard`, `GroupRenderer`, `IconRenderer`, `LineSplitOverlay`, `ShapeSplitOverlay`, `select.tsx`).
+     - Replaced all 15 property animation icons in `ClipDetailView` from hardcoded purple (`text-[#7c3aed]`) to theme-aware `text-foreground`.
+     - Replaced canvas marquee and drawing creation previews with neutral `bg-zinc-900 dark:bg-zinc-100` and `border-zinc-900 dark:border-zinc-100`.
+  2. **Complete Dark Mode Contrast System**:
+     - **Canvas Viewport Pasteboard**: Added `dark:bg-[#09090b]` to create an immersive, glare-free darkroom surrounding the stage artboards.
+     - **Right Inspector Panel**: Added `dark:bg-[#141417] dark:border-[#27272a] dark:text-zinc-100` ensuring perfect typographic contrast across Design, Animate, and Scene inspectors.
+     - **Timeline Panel & Tracks**: Added `dark:bg-[#141417]`, dark track dividers (`dark:divide-[#27272a]/60`), dark scene block lanes (`dark:bg-[#18181b]`), neutral active scene window track highlights (`bg-zinc-900/5 dark:bg-white/5`), and dark-aware audio waveforms.
+     - **Subtle Pro Translucent Selections**: Replaced solid white selection bars with refined translucent pro highlights (`dark:bg-white/15 dark:text-white dark:border-white/10`) in the left layer sidebar and timeline headers, matching Linear and Apple Keynote precision interfaces.
+     - **Select Dropdowns & Sheets**: Refactored `select.tsx` with `dark:border-[#27272a] dark:bg-[#141417] dark:text-zinc-100 dark:focus:bg-white/10 dark:focus:text-white` and neutral check indicators.
+* **Verification**:
+  - Full automated regression test suite: 52 test suites, 477 tests passing cleanly (`npx vitest run`).
+  - Production build verification (`npm run build`): passes with 0 TypeScript or bundling errors.
+  - Zero saturated SaaS blues/purples remain in UI components.
+
 
 
 

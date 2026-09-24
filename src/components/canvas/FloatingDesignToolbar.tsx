@@ -607,7 +607,7 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
           className="h-8 w-8 rounded-full flex items-center justify-center text-[#a1a1aa] hover:text-white hover:bg-white/10 transition-colors"
           title="AI Assistant (Cmd+K)"
         >
-          <Sparkles className="h-4 w-4 text-purple-400" />
+          <Sparkles className="h-4 w-4 text-foreground" />
         </button>
       )}
     </div>

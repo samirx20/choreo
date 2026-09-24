@@ -1054,7 +1054,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           items: buildCanvasPasteboardMenu({ store }),
         });
       }}
-      className={`flex-1 min-w-0 relative bg-[#f3f3f5] overflow-hidden select-none ${getCanvasCursor()}`}
+      className={`flex-1 min-w-0 relative bg-[#f3f3f5] dark:bg-[#09090b] overflow-hidden select-none ${getCanvasCursor()}`}
     >
       {/* Canvas Frame / World Transform Container */}
       <div
@@ -1156,7 +1156,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
                 transformOrigin: "0 50%",
                 transform: `rotate(${previewLine.angle}deg)`,
               }}
-              className="bg-[#7c3aed] pointer-events-none z-50 flex items-center justify-center"
+              className="bg-zinc-900 dark:bg-zinc-100 pointer-events-none z-50 flex items-center justify-center"
             >
               <span
                 style={{
@@ -1177,7 +1177,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
                 height: `${previewBounds.height}px`,
                 borderRadius: drawingCreation.tool === "circle" ? "9999px" : "4px",
               }}
-              className="border-2 border-dashed border-[#7c3aed] bg-[#7c3aed]/10 pointer-events-none z-50 flex items-end justify-end p-1.5"
+              className="border-2 border-dashed border-zinc-900 dark:border-zinc-100 bg-zinc-900/10 dark:bg-zinc-100/10 pointer-events-none z-50 flex items-end justify-end p-1.5"
             >
               <span className="text-[10px] font-mono font-medium text-white bg-zinc-900/90 px-1.5 py-0.5 rounded shadow-xs border border-zinc-700/50 whitespace-nowrap">
                 {Math.round(previewBounds.width)} × {Math.round(previewBounds.height)}
@@ -1197,7 +1197,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
                 width: `${Math.abs(marquee.currentX - marquee.startX)}px`,
                 height: `${Math.abs(marquee.currentY - marquee.startY)}px`,
               }}
-              className="border border-[#7c3aed] bg-[#7c3aed]/15 pointer-events-none z-50 rounded-[2px]"
+              className="border border-zinc-900 dark:border-zinc-100 bg-zinc-900/15 dark:bg-white/10 pointer-events-none z-50 rounded-[2px]"
             />
           )}
 

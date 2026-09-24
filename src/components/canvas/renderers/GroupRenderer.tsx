@@ -443,8 +443,8 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
                 className={cn(
                   "cursor-pointer select-none transition-colors",
                   isChildSelected
-                    ? "ring-1 ring-blue-500/80 ring-offset-1 border border-dashed border-blue-400/80 bg-blue-500/5"
-                    : "hover:outline hover:outline-1 hover:outline-blue-400/30"
+                    ? "ring-1 ring-zinc-900/80 dark:ring-zinc-100/80 ring-offset-1 border border-dashed border-zinc-700/80 dark:border-zinc-300/80 bg-zinc-900/5 dark:bg-white/5"
+                    : "hover:outline hover:outline-1 hover:outline-zinc-500/30"
                 )}
                 title={`${child.name} (Sub-shape)`}
               />
@@ -517,8 +517,8 @@ export const GroupRenderer: React.FC<GroupRendererProps> = ({
             className={cn(
               "cursor-pointer select-none",
               selectedLayerIds.includes(maskChild.id)
-                ? "ring-1 ring-purple-500/80 ring-offset-1 border border-dashed border-purple-400/60"
-                : "hover:outline hover:outline-1 hover:outline-purple-400/30"
+                ? "ring-1 ring-zinc-900/80 dark:ring-zinc-100/80 ring-offset-1 border border-dashed border-zinc-700/60 dark:border-zinc-300/60"
+                : "hover:outline hover:outline-1 hover:outline-zinc-500/40"
             )}
           />
         </>

@@ -104,7 +104,7 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded-md bg-purple-600/20 text-purple-400 flex items-center justify-center">
+          <div className="h-6 w-6 rounded-md bg-white/10 text-white flex items-center justify-center">
             <ListOrdered className="h-3.5 w-3.5" />
           </div>
           <div>
@@ -142,7 +142,7 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
               className={cn(
                 "py-1 px-1 text-[10px] rounded border text-center transition-all",
                 Math.abs(interval - item.val) < 0.005
-                  ? "bg-purple-600/25 border-purple-500 text-purple-200 font-medium"
+                  ? "bg-white text-zinc-950 border-white font-semibold shadow-xs"
                   : "bg-zinc-900 border-[#27272a] text-zinc-400 hover:text-white hover:bg-zinc-800"
               )}
             >
@@ -160,7 +160,7 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
             step={0.01}
             value={interval}
             onChange={(e) => setInterval(parseFloat(e.target.value))}
-            className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
+            className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white"
           />
         </div>
       </div>
@@ -179,11 +179,11 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
                 className={cn(
                   "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left text-[11px] transition-all",
                   isActive
-                    ? "bg-purple-600/20 border-purple-500/80 text-white font-medium shadow-xs"
+                    ? "bg-white/15 border-white/30 text-white font-semibold shadow-xs"
                     : "bg-zinc-900/80 border-[#27272a] text-zinc-400 hover:text-white hover:bg-zinc-800"
                 )}
               >
-                <span className={isActive ? "text-purple-400" : "text-zinc-500"}>
+                <span className={isActive ? "text-white" : "text-zinc-500"}>
                   {item.icon}
                 </span>
                 <span className="truncate">{item.label}</span>
@@ -198,13 +198,13 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
         <div className="flex items-center justify-between text-[11px]">
           <span className="text-zinc-400 font-medium">Entrance Animation</span>
           {syncPreset && (
-            <span className="text-[10px] text-purple-400 font-medium">Uniform Override</span>
+            <span className="text-[10px] text-zinc-300 font-medium">Uniform Override</span>
           )}
         </div>
         <select
           value={syncPreset}
           onChange={(e) => setSyncPreset(e.target.value)}
-          className="w-full h-8 px-2.5 bg-zinc-900 border border-[#27272a] rounded-lg text-xs text-white outline-none focus:border-purple-500 transition-colors"
+          className="w-full h-8 px-2.5 bg-zinc-900 border border-[#27272a] rounded-lg text-xs text-white outline-none focus:border-zinc-500 transition-colors"
         >
           {PRESET_OPTIONS.map((opt) => (
             <option key={opt.id} value={opt.id}>
@@ -233,7 +233,7 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
             justApplied
               ? "bg-emerald-600 text-white"
               : count >= 2
-              ? "bg-purple-600 hover:bg-purple-500 text-white active:scale-[0.98]"
+              ? "bg-white hover:bg-zinc-200 text-zinc-950 font-semibold active:scale-[0.98]"
               : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
           )}
         >

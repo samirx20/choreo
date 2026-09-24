@@ -8,11 +8,11 @@
 
 ## 1. Executive Summary & Current State
 
-1. **Minimal Neutral Accents & Studio Dark/Light Theme Switching (`LeftSidebar.tsx`, `TopNavBar.tsx`, `TransformBox.tsx`)**:
-   - Fixed Left Sidebar hover bug: text no longer turns invisible on hover when an element or scene is selected.
-   - Replaced loud SaaS purple/blue chrome with sleek minimal neutral accents: dark shade in light mode (`zinc-900`), light shade in dark mode (`zinc-100`).
-   - Added `Sun` / `Moon` theme toggle button in `TopNavBar` with full document `.dark` class synchronization and `localStorage` persistence.
-   - Harmonized canvas transform handles, floating toolbar active buttons, scrubbable inputs, and timeline track selections.
+1. **Studio-Wide Monochrome Alignment & Dark Mode Contrast Overhaul (`DECISIONS.md` Decision 98)**:
+   - Completely eradicated all remaining saturated blue and purple SaaS accents across 20+ studio components (`TimelinePanel`, `AnimationCatalogSheet`, `ClipDetailView`, `ExportPopover`, `SpecializedLayerCard`, `MultiSelectionCard`, `FloatingDesignToolbar`, `IconPickerPopover`, `StaggerPopover`, `GroupRenderer`, `IconRenderer`, `LineSplitOverlay`, `ShapeSplitOverlay`, `select.tsx`).
+   - Overhauled Dark Mode: eliminated blinding white pasteboard (`#09090b`), solved unreadable white-on-white text knockouts by providing dark containers (`#141417`) for inspector panels, timeline tracks, and select menus, and replaced jarring solid white selection bars with refined translucent pro highlights (`dark:bg-white/15 dark:text-white`).
+   - Left Sidebar hover bug resolved: text stays crisp and readable on hover regardless of selection state.
+   - Theme toggle button in `TopNavBar` with persistence to `localStorage`.
 2. **On-Demand Audio Track & High-Signal Timeline (`TimelinePanel.tsx`, `AudioTrackRow.tsx`)**:
    - Reclaimed 40px of vertical timeline space by hiding the audio track lane by default when unused.
    - Added a compact, high-signal `Music` toggle button in the transport/playhead row (`timeline-audio-toggle`).

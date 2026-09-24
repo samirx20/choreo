@@ -104,12 +104,12 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
         className={`absolute -top-6 left-0 right-0 flex items-center justify-between text-xs z-20 px-0.5 ${
           isPanMode ? "pointer-events-none" : "cursor-pointer pointer-events-auto"
         } ${
-          isSelected ? "text-[#6d28d9] font-medium" : "text-[#71717a] hover:text-[#18181b]"
+          isSelected ? "text-zinc-950 dark:text-zinc-100 font-semibold" : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200"
         }`}
         title="Double-click to fit in viewport, right-click for scene options"
       >
         <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-2">
-          <Play className={`h-3 w-3 fill-current shrink-0 ${isSelected ? "text-[#6d28d9]" : "text-[#71717a]"}`} />
+          <Play className={`h-3 w-3 fill-current shrink-0 ${isSelected ? "text-zinc-950 dark:text-zinc-100" : "text-zinc-400 dark:text-zinc-500"}`} />
           {isEditingName ? (
             <input
               type="text"
@@ -137,7 +137,7 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
               autoFocus
               onClick={(e) => e.stopPropagation()}
               onDoubleClick={(e) => e.stopPropagation()}
-              className="h-5 px-1 bg-white border border-[#6d28d9] rounded text-[11px] text-[#18181b] outline-none min-w-[80px]"
+              className="h-5 px-1 bg-white dark:bg-zinc-800 border border-zinc-900 dark:border-zinc-100 rounded text-[11px] text-zinc-900 dark:text-zinc-100 outline-none min-w-[80px]"
             />
           ) : (
             <span
@@ -236,8 +236,8 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
         }}
         className={`rounded-[2px] transition-all ${
           isSelected
-            ? "ring-2 ring-[#7c3aed]"
-            : "border border-[#e5e5e7] hover:border-[#a1a1aa]"
+            ? "ring-1.5 ring-zinc-900 dark:ring-zinc-100 shadow-sm"
+            : "border border-[#e5e5e7] dark:border-[#27272a] hover:border-[#a1a1aa] dark:hover:border-zinc-500"
         }`}
       >
         {screen.layers.map((layer) => (

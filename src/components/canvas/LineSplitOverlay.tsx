@@ -123,7 +123,7 @@ export const LineSplitOverlay: React.FC<LineSplitOverlayProps> = ({
           transformOrigin: "bottom center",
         }}
       >
-        <div className="flex items-center gap-2 text-violet-400 font-semibold tracking-wider text-xs uppercase">
+        <div className="flex items-center gap-2 text-zinc-100 font-semibold tracking-wider text-xs uppercase">
           <Scissors className="w-4 h-4" />
           <span>Line Split Mode</span>
         </div>
@@ -141,7 +141,7 @@ export const LineSplitOverlay: React.FC<LineSplitOverlayProps> = ({
             }}
             className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer flex items-center gap-1.5 ${
               detachArrowhead
-                ? "bg-violet-600/40 border-violet-500 text-violet-200"
+                ? "bg-zinc-100 text-zinc-950 border-white font-semibold"
                 : "border-zinc-700 hover:border-zinc-500 text-zinc-300 bg-zinc-800/80"
             }`}
           >
@@ -159,7 +159,7 @@ export const LineSplitOverlay: React.FC<LineSplitOverlayProps> = ({
               e.stopPropagation();
               confirmSplit();
             }}
-            className="w-10 h-10 rounded-full bg-violet-600 hover:bg-violet-500 text-white flex items-center justify-center transition-all cursor-pointer shadow-lg shadow-violet-500/30 hover:scale-105 active:scale-95 shrink-0"
+            className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-white text-zinc-950 flex items-center justify-center transition-all cursor-pointer shadow-lg shadow-black/30 hover:scale-105 active:scale-95 shrink-0"
             title="Confirm Split (Enter)"
           >
             <Check className="w-5 h-5 stroke-[3]" />
@@ -187,7 +187,7 @@ export const LineSplitOverlay: React.FC<LineSplitOverlayProps> = ({
         className="absolute top-1/2 -translate-y-1/2 w-full h-8 flex items-center cursor-crosshair pointer-events-auto"
       >
         {/* Subtle guide line */}
-        <div className="w-full h-[2px] bg-violet-500/30" />
+        <div className="w-full h-[2px] bg-zinc-400/40" />
 
         {/* Draggable Cut Pin */}
         {!detachArrowhead && (
@@ -196,7 +196,7 @@ export const LineSplitOverlay: React.FC<LineSplitOverlayProps> = ({
               left: `${cutX}px`,
               transform: `translate(-50%, -50%) scale(${1 / Math.max(0.2, effectiveScale)})`,
             }}
-            className="absolute top-1/2 w-7 h-7 rounded-full bg-violet-600 border-2 border-white shadow-[0_0_14px_rgba(139,92,246,1)] flex items-center justify-center cursor-ew-resize group hover:scale-110 active:scale-95 transition-transform"
+            className="absolute top-1/2 w-7 h-7 rounded-full bg-zinc-900 border-2 border-white shadow-[0_0_14px_rgba(0,0,0,0.5)] flex items-center justify-center cursor-ew-resize group hover:scale-110 active:scale-95 transition-transform"
           >
             <Scissors className="w-3.5 h-3.5 text-white" />
           </div>

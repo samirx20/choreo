@@ -339,8 +339,8 @@ export function solveParticleSwarm(
     particleCount = 80,
     chaos = 30,
     particleShape = "star",
-    sourceColor = "#7c3aed",
-    targetColor = "#3b82f6",
+    sourceColor = "#18181b",
+    targetColor = "#71717a",
     sourceLayer,
     targetLayer,
   } = options;

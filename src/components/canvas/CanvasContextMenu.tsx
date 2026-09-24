@@ -290,7 +290,7 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
             className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
           >
             <span className="flex items-center gap-2">
-              <ListOrdered className="h-3.5 w-3.5 text-purple-400" />
+              <ListOrdered className="h-3.5 w-3.5 text-foreground" />
               <span>Stagger Animations...</span>
             </span>
             <kbd className="text-[10px] text-muted-foreground font-mono">Shift+S</kbd>
@@ -400,7 +400,7 @@ export const CanvasContextMenu: React.FC<CanvasContextMenuProps> = ({
               className="w-full px-2 py-1.5 rounded-[8px] flex items-center justify-between hover:bg-accent hover:text-accent-foreground transition-colors text-left"
             >
               <span className="flex items-center gap-2">
-                <CircleDashed className="h-3.5 w-3.5 text-purple-400" />
+                <CircleDashed className="h-3.5 w-3.5 text-foreground" />
                 <span>Mask Selection</span>
               </span>
               <kbd className="text-[10px] text-muted-foreground font-mono">Ctrl+Alt+M</kbd>

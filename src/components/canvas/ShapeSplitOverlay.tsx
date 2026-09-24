@@ -72,7 +72,7 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
           transformOrigin: "bottom center",
         }}
       >
-        <div className="flex items-center gap-2 text-violet-400 font-semibold tracking-wider text-xs uppercase">
+        <div className="flex items-center gap-2 text-zinc-100 font-semibold tracking-wider text-xs uppercase">
           <Scissors className="w-4 h-4" />
           <span>Split Mode</span>
         </div>
@@ -88,7 +88,7 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
               e.stopPropagation();
               confirmSplit();
             }}
-            className="w-10 h-10 rounded-full bg-violet-600 hover:bg-violet-500 text-white flex items-center justify-center transition-all cursor-pointer shadow-lg shadow-violet-500/30 hover:scale-105 active:scale-95 shrink-0"
+            className="w-10 h-10 rounded-full bg-zinc-100 hover:bg-white text-zinc-950 flex items-center justify-center transition-all cursor-pointer shadow-lg shadow-black/30 hover:scale-105 active:scale-95 shrink-0"
             title="Confirm Split (Enter)"
           >
             <Check className="w-5 h-5 stroke-[3]" />
@@ -113,8 +113,8 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
         className="absolute inset-0 w-full h-full overflow-visible pointer-events-none"
       >
         <defs>
-          <filter id="purple-glow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#8b5cf6" floodOpacity="0.8" />
+          <filter id="edge-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#ffffff" floodOpacity="0.6" />
           </filter>
         </defs>
 
@@ -147,12 +147,12 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
               <path
                 d={edge.d}
                 fill="none"
-                stroke={isSelected ? "#8b5cf6" : "#71717a"}
+                stroke={isSelected ? "#ffffff" : "#71717a"}
                 strokeWidth={(isSelected ? 4.5 : 2.5) / Math.max(0.2, effectiveScale)}
                 strokeDasharray={isSelected ? undefined : `${6 / effectiveScale} ${4 / effectiveScale}`}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                filter={isSelected ? "url(#purple-glow)" : undefined}
+                filter={isSelected ? "url(#edge-glow)" : undefined}
                 className={`transition-all duration-150 ${
                   isSelected
                     ? "opacity-100"
@@ -165,11 +165,11 @@ export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
                 cx={edge.midPoint.x}
                 cy={edge.midPoint.y}
                 r={handleRadius}
-                fill={isSelected ? "#8b5cf6" : "#27272a"}
-                stroke={isSelected ? "#ffffff" : "#71717a"}
+                fill={isSelected ? "#ffffff" : "#27272a"}
+                stroke={isSelected ? "#000000" : "#71717a"}
                 strokeWidth={strokeW}
                 className={`transition-transform duration-150 ${
-                  isSelected ? "scale-110 drop-shadow-[0_0_6px_rgba(139,92,246,0.9)]" : "group-hover:scale-125"
+                  isSelected ? "scale-110 drop-shadow-[0_0_6px_rgba(255,255,255,0.9)]" : "group-hover:scale-125"
                 }`}
               />
             </g>

@@ -213,7 +213,7 @@ export const LeftSidebar: React.FC = () => {
           className={cn(
             "group flex items-center justify-between h-8 pr-2 text-xs transition-colors cursor-pointer relative",
             isSelected
-              ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-medium"
+              ? "bg-zinc-900 text-white dark:bg-white/15 dark:text-white font-medium"
               : "text-[#18181b] dark:text-zinc-200 hover:bg-[#f4f4f6] dark:hover:bg-zinc-800/60",
             isDragging && "opacity-40"
           )}
@@ -239,13 +239,13 @@ export const LeftSidebar: React.FC = () => {
               if (parent && (parent as any).isMaskGroup) {
                 if (layer.isMask || (parent as any).children[0]?.id === layer.id) {
                   return (
-                    <span className="text-[9px] px-1 py-0.2 rounded bg-purple-500/20 text-purple-400 font-mono uppercase tracking-wider font-semibold">
+                    <span className="text-[9px] px-1 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-mono uppercase tracking-wider font-semibold">
                       Mask
                     </span>
                   );
                 }
                 return (
-                  <span className="text-[10px] text-purple-400 font-mono select-none -mr-0.5">
+                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono select-none -mr-0.5">
                     ⤷
                   </span>
                 );
@@ -288,7 +288,7 @@ export const LeftSidebar: React.FC = () => {
                 className={cn(
                   "truncate text-xs font-normal cursor-text transition-colors",
                   isSelected
-                    ? "text-white dark:text-zinc-900"
+                    ? "text-white font-medium"
                     : "hover:text-zinc-900 dark:hover:text-zinc-100"
                 )}
                 title="Double-click, press F2, or right-click to rename"
@@ -400,9 +400,9 @@ export const LeftSidebar: React.FC = () => {
                 className={cn(
                   "group flex items-center justify-between h-9 px-3 text-xs cursor-pointer transition-colors select-none",
                   isScreenSelected
-                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-medium"
+                    ? "bg-zinc-900 text-white dark:bg-white/15 dark:text-white font-medium"
                     : isScreenActive
-                    ? "bg-[#f4f4f6] dark:bg-zinc-800 text-[#18181b] dark:text-zinc-100 font-medium"
+                    ? "bg-[#f4f4f6] dark:bg-white/5 text-[#18181b] dark:text-zinc-200 font-medium"
                     : "text-[#18181b] dark:text-zinc-200 hover:bg-[#f4f4f6] dark:hover:bg-zinc-800/60"
                 )}
               >
@@ -433,7 +433,7 @@ export const LeftSidebar: React.FC = () => {
                   <Play
                     className={cn(
                       "h-3.5 w-3.5 fill-current shrink-0",
-                      isScreenSelected ? "text-white dark:text-zinc-900" : "text-[#71717a]"
+                      isScreenSelected ? "text-white" : "text-[#71717a]"
                     )}
                   />
                   {renamingSceneId === screen.id ? (
@@ -471,7 +471,7 @@ export const LeftSidebar: React.FC = () => {
                       className={cn(
                         "truncate font-medium cursor-text transition-colors",
                         isScreenSelected
-                          ? "text-white dark:text-zinc-900"
+                          ? "text-white font-medium"
                           : "hover:text-zinc-900 dark:hover:text-zinc-100"
                       )}
                       title="Double-click or right-click to rename"

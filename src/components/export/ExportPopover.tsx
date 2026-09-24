@@ -156,12 +156,12 @@ export const ExportPopover: React.FC = () => {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="h-8 text-xs font-medium px-3.5 bg-[#7c3aed] hover:bg-[#6d28d9] text-white rounded-md flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer"
+          className="h-8 text-xs font-semibold px-3.5 bg-white hover:bg-zinc-200 text-zinc-950 rounded-md flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
           title="Export video"
         >
           <Download className="h-3.5 w-3.5" />
           <span>Export</span>
-          <ChevronDown className="h-3 w-3 text-white/70" />
+          <ChevronDown className="h-3 w-3 text-zinc-600" />
         </button>
       </PopoverTrigger>
 
@@ -175,7 +175,7 @@ export const ExportPopover: React.FC = () => {
           <div className="flex flex-col gap-3 py-1">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+                <Loader2 className="w-4 h-4 text-zinc-200 animate-spin" />
                 <span className="text-xs font-semibold text-white">
                   Exporting {format.toUpperCase()}...
                 </span>
@@ -189,7 +189,7 @@ export const ExportPopover: React.FC = () => {
             <div className="w-full h-2 bg-[#222226] rounded-full overflow-hidden">
               <div
                 style={{ width: `${progress ? progress.percent : 0}%` }}
-                className="h-full bg-gradient-to-r from-purple-600 to-indigo-500 rounded-full transition-all duration-150 ease-out"
+                className="h-full bg-white rounded-full transition-all duration-150 ease-out"
               />
             </div>
 
@@ -232,7 +232,7 @@ export const ExportPopover: React.FC = () => {
             {/* 1. Header & Live Dimensions */}
             <div className="flex items-center justify-between border-b border-[#222226] pb-2.5">
               <div className="flex items-center gap-2">
-                <Film className="w-4 h-4 text-purple-400" />
+                <Film className="w-4 h-4 text-zinc-300" />
                 <span className="text-xs font-semibold text-white tracking-tight">
                   Export Video
                 </span>
@@ -254,7 +254,7 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
                     format === "mp4"
-                      ? "bg-[#7c3aed] text-white shadow-xs"
+                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                   title="Universal MP4 (H.264 + Audio)"
@@ -267,7 +267,7 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
                     format === "webm"
-                      ? "bg-[#7c3aed] text-white shadow-xs"
+                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                   title="WebM (VP9 + Alpha Support)"
@@ -280,7 +280,7 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
                     format === "gif"
-                      ? "bg-[#7c3aed] text-white shadow-xs"
+                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                   title="Animated GIF (Looping)"
@@ -308,7 +308,7 @@ export const ExportPopover: React.FC = () => {
                     className={cn(
                       "h-7 px-1.5 rounded-md text-[11px] font-medium flex items-center justify-center transition-all cursor-pointer",
                       scale === item.val
-                        ? "bg-[#7c3aed] text-white shadow-xs"
+                        ? "bg-white text-zinc-950 font-semibold shadow-xs"
                         : "text-zinc-400 hover:text-white hover:bg-white/5"
                     )}
                   >
@@ -330,7 +330,7 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     backgroundMode === "solid"
-                      ? "bg-[#7c3aed] text-white shadow-xs"
+                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                 >
@@ -343,7 +343,7 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     backgroundMode === "transparent"
-                      ? "bg-[#7c3aed] text-white shadow-xs"
+                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                 >
@@ -352,7 +352,7 @@ export const ExportPopover: React.FC = () => {
                 </button>
               </div>
               {backgroundMode === "transparent" && (
-                <p className="text-[10px] text-purple-400 font-mono text-center">
+                <p className="text-[10px] text-zinc-400 font-mono text-center">
                   Transparent alpha requires WebM format
                 </p>
               )}
@@ -370,7 +370,7 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     scopeMode === "all"
-                      ? "bg-[#7c3aed] text-white shadow-xs"
+                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                 >
@@ -383,7 +383,7 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     scopeMode === "current"
-                      ? "bg-[#7c3aed] text-white shadow-xs"
+                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
                       : "text-zinc-400 hover:text-white hover:bg-white/5"
                   )}
                 >
@@ -398,7 +398,7 @@ export const ExportPopover: React.FC = () => {
               <div className="flex items-center justify-between p-2 bg-[#1a1a1e] border border-[#27272a] rounded-lg">
                 <div className="flex items-center gap-2">
                   {includeAudio ? (
-                    <Volume2 className="w-3.5 h-3.5 text-purple-400" />
+                    <Volume2 className="w-3.5 h-3.5 text-zinc-200" />
                   ) : (
                     <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
                   )}
@@ -412,7 +412,7 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "text-[10px] font-medium px-2 py-0.5 rounded border transition-all",
                     includeAudio
-                      ? "bg-purple-600/20 border-purple-500 text-purple-300 font-semibold"
+                      ? "bg-white text-zinc-950 border-white font-semibold"
                       : "bg-zinc-800 border-zinc-700 text-zinc-400"
                   )}
                 >
@@ -434,7 +434,7 @@ export const ExportPopover: React.FC = () => {
             <button
               type="button"
               onClick={handleExport}
-              className="w-full h-9 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer active:scale-[0.98]"
+              className="w-full h-9 bg-white hover:bg-zinc-200 text-zinc-950 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer active:scale-[0.98]"
             >
               <Download className="w-4 h-4" />
               <span>

@@ -155,8 +155,8 @@ export const MorphTransitionRenderer: React.FC<MorphTransitionRendererProps> = (
       {activeMorphs.map((morph, mIdx) => {
         const sourceBounds = getLayerBounds(morph.sourceLayer);
         const targetBounds = getLayerBounds(morph.targetLayer);
-        const sourceColor = getLayerColor(morph.sourceLayer, "#7c3aed");
-        const targetColor = getLayerColor(morph.targetLayer, "#3b82f6");
+        const sourceColor = getLayerColor(morph.sourceLayer, "#18181b");
+        const targetColor = getLayerColor(morph.targetLayer, "#52525b");
 
         const particles: MorphParticle[] = solveParticleSwarm(
           sourceBounds,

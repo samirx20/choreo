@@ -129,7 +129,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               }
             }}
             autoFocus
-            className="h-7 px-2 text-xs font-medium text-white bg-[#1f1f23] rounded border border-purple-500 outline-none w-44 text-left"
+            className="h-7 px-2 text-xs font-medium text-white bg-[#1f1f23] rounded border border-zinc-500 focus:border-zinc-300 outline-none w-44 text-left"
           />
         ) : (
           <DropdownMenu>

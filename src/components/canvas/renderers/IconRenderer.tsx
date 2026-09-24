@@ -54,7 +54,7 @@ export const IconRenderer: React.FC<IconRendererProps> = ({
       style={combinedStyle}
       className={cn(
         "absolute select-none flex items-center justify-center pointer-events-auto",
-        isSelected && "outline-2 outline-[#6d28d9] outline-offset-1"
+        isSelected && "outline-2 outline-zinc-900 dark:outline-zinc-100 outline-offset-1"
       )}
     >
       {IconComponent && (

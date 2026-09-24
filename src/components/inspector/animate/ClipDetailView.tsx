@@ -294,21 +294,21 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
 
   // Pick appropriate header icon
   const getHeaderIcon = () => {
-    if (isBlurBased) return <Flame className="h-4 w-4 text-[#7c3aed]" />;
-    if (isBackdropBlurBased) return <CircleDot className="h-4 w-4 text-[#7c3aed]" />;
-    if (isGlassBased) return <Shield className="h-4 w-4 text-[#7c3aed]" />;
-    if (isColorBased) return <Palette className="h-4 w-4 text-[#7c3aed]" />;
-    if (isShadowBased) return <BoxSelect className="h-4 w-4 text-[#7c3aed]" />;
-    if (isOpacityBased) return <SunMedium className="h-4 w-4 text-[#7c3aed]" />;
-    if (isRadiusBased) return <CornerUpRight className="h-4 w-4 text-[#7c3aed]" />;
-    if (isStrokeBased) return <Square className="h-4 w-4 text-[#7c3aed]" />;
-    if (isResizeBased) return <ArrowLeftRight className="h-4 w-4 text-[#7c3aed]" />;
-    if (isMorphBased) return <Shapes className="h-4 w-4 text-[#7c3aed]" />;
-    if (isVisibilityBased) return <EyeOff className="h-4 w-4 text-[#7c3aed]" />;
-    if (isDirectional) return <Move className="h-4 w-4 text-[#7c3aed]" />;
-    if (isScaleBased) return <Maximize2 className="h-4 w-4 text-[#7c3aed]" />;
-    if (isRotationBased) return <RotateCw className="h-4 w-4 text-[#7c3aed]" />;
-    return <Zap className="h-4 w-4 text-[#7c3aed]" />;
+    if (isBlurBased) return <Flame className="h-4 w-4 text-foreground" />;
+    if (isBackdropBlurBased) return <CircleDot className="h-4 w-4 text-foreground" />;
+    if (isGlassBased) return <Shield className="h-4 w-4 text-foreground" />;
+    if (isColorBased) return <Palette className="h-4 w-4 text-foreground" />;
+    if (isShadowBased) return <BoxSelect className="h-4 w-4 text-foreground" />;
+    if (isOpacityBased) return <SunMedium className="h-4 w-4 text-foreground" />;
+    if (isRadiusBased) return <CornerUpRight className="h-4 w-4 text-foreground" />;
+    if (isStrokeBased) return <Square className="h-4 w-4 text-foreground" />;
+    if (isResizeBased) return <ArrowLeftRight className="h-4 w-4 text-foreground" />;
+    if (isMorphBased) return <Shapes className="h-4 w-4 text-foreground" />;
+    if (isVisibilityBased) return <EyeOff className="h-4 w-4 text-foreground" />;
+    if (isDirectional) return <Move className="h-4 w-4 text-foreground" />;
+    if (isScaleBased) return <Maximize2 className="h-4 w-4 text-foreground" />;
+    if (isRotationBased) return <RotateCw className="h-4 w-4 text-foreground" />;
+    return <Zap className="h-4 w-4 text-foreground" />;
   };
 
   return (
@@ -1389,16 +1389,16 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                   setTargetSearch("");
                   setIsChangingTarget(true);
                 }}
-                className="text-[11px] font-bold text-[#6d28d9] hover:underline cursor-pointer"
+                className="text-[11px] font-bold text-foreground hover:underline cursor-pointer"
               >
                 Change Target
               </button>
             </div>
 
-            <div className="p-2.5 rounded-lg bg-[#f8f8fa] border border-[#e5e5e7] flex items-center justify-between gap-2">
+            <div className="p-2.5 rounded-lg bg-muted/40 border border-border flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <div className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">From</div>
-                <div className="text-xs font-semibold text-[#18181b] truncate" title={sourceLayer?.name || "Source"}>
+                <div className="text-xs font-semibold text-foreground truncate" title={sourceLayer?.name || "Source"}>
                   {sourceLayer
                     ? sourceLayer.name ||
                       (sourceLayer.type === "text" && (sourceLayer as any).text
@@ -1412,7 +1412,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
 
               <div className="min-w-0 flex-1 text-right">
                 <div className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">To</div>
-                <div className="text-xs font-semibold text-[#18181b] truncate" title={targetLayer?.name || "Target"}>
+                <div className="text-xs font-semibold text-foreground truncate" title={targetLayer?.name || "Target"}>
                   {targetLayer
                     ? targetLayer.name ||
                       (targetLayer.type === "text" && (targetLayer as any).text
@@ -1427,7 +1427,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
           {/* Morph Effect Style */}
           <div className="space-y-1.5">
             <span className="text-[13px] text-muted-foreground font-medium">Effect Style</span>
-            <div className="grid grid-cols-3 gap-1 bg-[#ebebef] p-1 rounded-lg">
+            <div className="grid grid-cols-3 gap-1 bg-muted/50 p-1 rounded-lg">
               {(
                 [
                   { id: "stardust", label: "Stardust" },
@@ -1449,8 +1449,8 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                   className={cn(
                     "py-1.5 text-[10px] font-bold rounded-md transition-all text-center flex items-center justify-center cursor-pointer",
                     currentMorphStyle === style.id
-                      ? "bg-white text-[#18181b] shadow-xs"
-                      : "text-[#71717a] hover:text-[#18181b]"
+                      ? "bg-background text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {style.label}
@@ -1465,7 +1465,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               <span className="text-[13px] text-muted-foreground font-medium">Particle Count</span>
               <span className="text-xs font-mono font-medium text-foreground">{currentParticleCount}</span>
             </div>
-            <div className="grid grid-cols-3 gap-1 bg-[#ebebef] p-1 rounded-lg">
+            <div className="grid grid-cols-3 gap-1 bg-muted/50 p-1 rounded-lg">
               {[
                 { count: 40, label: "Light (40)" },
                 { count: 80, label: "Medium (80)" },
@@ -1482,8 +1482,8 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                   className={cn(
                     "py-1 text-[10px] font-bold rounded-md transition-all text-center flex items-center justify-center cursor-pointer",
                     currentParticleCount === opt.count
-                      ? "bg-white text-[#18181b] shadow-xs"
-                      : "text-[#71717a] hover:text-[#18181b]"
+                      ? "bg-background text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {opt.label}
@@ -1516,7 +1516,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
           {/* Particle Shape */}
           <div className="space-y-1.5">
             <span className="text-[13px] text-muted-foreground font-medium">Particle Shape</span>
-            <div className="grid grid-cols-3 gap-1 bg-[#ebebef] p-1 rounded-lg">
+            <div className="grid grid-cols-3 gap-1 bg-muted/50 p-1 rounded-lg">
               {(
                 [
                   { id: "star", label: "Stars" },
@@ -1535,8 +1535,8 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                   className={cn(
                     "py-1 text-[10px] font-bold rounded-md transition-all text-center flex items-center justify-center cursor-pointer",
                     currentParticleShape === shape.id
-                      ? "bg-white text-[#18181b] shadow-xs"
-                      : "text-[#71717a] hover:text-[#18181b]"
+                      ? "bg-background text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {shape.label}
@@ -1869,7 +1869,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
         <button
           type="button"
           onClick={() => openAnimationCatalog()}
-          className="w-full py-2.5 px-3 rounded-lg bg-[#6d28d9]/10 hover:bg-[#6d28d9]/15 text-[#6d28d9] text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          className="w-full py-2.5 px-3 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white text-[13px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
         >
           <span>Add animation</span>
         </button>
@@ -1882,20 +1882,20 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               <div
                 onClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="absolute inset-0 z-40 bg-white flex flex-col select-none text-[#18181b] shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
+                className="absolute inset-0 z-40 bg-white dark:bg-[#141417] flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
               >
                 {/* Header */}
-                <div className="h-12 px-3 border-b border-[#e5e5e7] flex items-center justify-between shrink-0">
+                <div className="h-12 px-3 border-b border-border flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setIsChangingTarget(false)}
-                      className="p-1 rounded-md text-[#71717a] hover:text-[#18181b] hover:bg-[#f4f4f6] transition-colors cursor-pointer"
+                      className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                       title="Back"
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </button>
-                    <span className="text-sm font-bold text-[#18181b]">
+                    <span className="text-sm font-semibold text-foreground">
                       Morph Into...
                     </span>
                   </div>
@@ -1903,7 +1903,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsChangingTarget(false)}
-                    className="p-1 rounded-md text-[#71717a] hover:text-[#18181b] hover:bg-[#f4f4f6] transition-colors cursor-pointer"
+                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                     title="Close"
                   >
                     <X className="h-4 w-4" />
@@ -1912,7 +1912,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
 
                 {/* Content */}
                 <div className="p-3 flex-1 flex flex-col min-h-0 overflow-y-auto">
-                  <div className="text-[11px] text-[#71717a] pb-2">
+                  <div className="text-[11px] text-muted-foreground pb-2">
                     Select the destination element to transform into:
                   </div>
 
@@ -1922,12 +1922,12 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                       placeholder="Search elements..."
                       value={targetSearch}
                       onChange={(e) => setTargetSearch(e.target.value)}
-                      className="mb-2 px-2.5 py-1.5 text-xs bg-[#f4f4f6] border border-[#e5e5e7] rounded-md outline-none focus:border-[#6d28d9]"
+                      className="mb-2 px-2.5 py-1.5 text-xs bg-muted border border-border rounded-md outline-none focus:border-foreground text-foreground placeholder:text-muted-foreground"
                     />
                   )}
 
                   {filteredCandidateLayers.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-[#71717a] bg-[#fafafc] rounded-xl border border-dashed border-[#e5e5e7] mt-2">
+                    <div className="p-6 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border mt-2">
                       {candidateLayers.length === 0
                         ? "No other elements found in this scene."
                         : "No matching elements found."}
@@ -1955,8 +1955,8 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                             className={cn(
                               "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all text-left cursor-pointer group",
                               isCurrent
-                                ? "border-[#6d28d9] bg-[#ede9fe]/30"
-                                : "border-[#e5e5e7] hover:border-[#6d28d9] hover:bg-[#ede9fe]/20"
+                                ? "border-zinc-900 dark:border-zinc-100 bg-muted"
+                                : "border-border hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-muted/50"
                             )}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
@@ -1964,28 +1964,28 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                                 className={cn(
                                   "w-7 h-7 rounded-md flex items-center justify-center transition-colors shrink-0",
                                   isCurrent
-                                    ? "bg-[#6d28d9]/10 text-[#6d28d9]"
-                                    : "bg-[#f4f4f6] group-hover:bg-[#6d28d9]/10 text-[#71717a] group-hover:text-[#6d28d9]"
+                                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                                    : "bg-muted text-muted-foreground group-hover:text-foreground"
                                 )}
                               >
                                 <Icon className="w-4 h-4" />
                               </div>
                               <div className="min-w-0">
-                                <div className="text-xs font-semibold text-[#18181b] truncate group-hover:text-[#6d28d9]">
+                                <div className="text-xs font-semibold text-foreground truncate">
                                   {layerTitle}
                                 </div>
-                                <div className="text-[10px] text-[#71717a] capitalize truncate">
+                                <div className="text-[10px] text-muted-foreground capitalize truncate">
                                   {layer.type}
                                 </div>
                               </div>
                             </div>
                             {isCurrent ? (
-                              <span className="text-[11px] font-bold text-[#6d28d9] flex items-center gap-1">
+                              <span className="text-[11px] font-semibold text-foreground flex items-center gap-1">
                                 <Check className="w-3.5 h-3.5" />
                                 Current
                               </span>
                             ) : (
-                              <div className="text-[10px] font-bold text-[#6d28d9] opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                              <div className="text-[10px] font-semibold text-muted-foreground group-hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity pr-1">
                                 Select →
                               </div>
                             )}
@@ -2002,20 +2002,20 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               <div
                 onClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="absolute inset-0 z-40 bg-white flex flex-col select-none text-[#18181b] shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
+                className="absolute inset-0 z-40 bg-white dark:bg-[#141417] flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
               >
                 {/* Header */}
-                <div className="h-12 px-3 border-b border-[#e5e5e7] flex items-center justify-between shrink-0">
+                <div className="h-12 px-3 border-b border-border flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => setIsChangingTarget(false)}
-                      className="p-1 rounded-md text-[#71717a] hover:text-[#18181b] hover:bg-[#f4f4f6] transition-colors cursor-pointer"
+                      className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                       title="Back"
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </button>
-                    <span className="text-sm font-bold text-[#18181b]">
+                    <span className="text-sm font-semibold text-foreground">
                       Morph Into...
                     </span>
                   </div>
@@ -2023,7 +2023,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsChangingTarget(false)}
-                    className="p-1 rounded-md text-[#71717a] hover:text-[#18181b] hover:bg-[#f4f4f6] transition-colors cursor-pointer"
+                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                     title="Close"
                   >
                     <X className="h-4 w-4" />
@@ -2032,7 +2032,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
 
                 {/* Content */}
                 <div className="p-3 flex-1 flex flex-col min-h-0 overflow-y-auto">
-                  <div className="text-[11px] text-[#71717a] pb-2">
+                  <div className="text-[11px] text-muted-foreground pb-2">
                     Select the destination element to transform into:
                   </div>
 
@@ -2042,12 +2042,12 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                       placeholder="Search elements..."
                       value={targetSearch}
                       onChange={(e) => setTargetSearch(e.target.value)}
-                      className="mb-2 px-2.5 py-1.5 text-xs bg-[#f4f4f6] border border-[#e5e5e7] rounded-md outline-none focus:border-[#6d28d9]"
+                      className="mb-2 px-2.5 py-1.5 text-xs bg-muted border border-border rounded-md outline-none focus:border-foreground text-foreground placeholder:text-muted-foreground"
                     />
                   )}
 
                   {filteredCandidateLayers.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-[#71717a] bg-[#fafafc] rounded-xl border border-dashed border-[#e5e5e7] mt-2">
+                    <div className="p-6 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border mt-2">
                       {candidateLayers.length === 0
                         ? "No other elements found in this scene."
                         : "No matching elements found."}
@@ -2075,8 +2075,8 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                             className={cn(
                               "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all text-left cursor-pointer group",
                               isCurrent
-                                ? "border-[#6d28d9] bg-[#ede9fe]/30"
-                                : "border-[#e5e5e7] hover:border-[#6d28d9] hover:bg-[#ede9fe]/20"
+                                ? "border-zinc-900 dark:border-zinc-100 bg-muted"
+                                : "border-border hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-muted/50"
                             )}
                           >
                             <div className="flex items-center gap-2.5 min-w-0">
@@ -2084,28 +2084,28 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                                 className={cn(
                                   "w-7 h-7 rounded-md flex items-center justify-center transition-colors shrink-0",
                                   isCurrent
-                                    ? "bg-[#6d28d9]/10 text-[#6d28d9]"
-                                    : "bg-[#f4f4f6] group-hover:bg-[#6d28d9]/10 text-[#71717a] group-hover:text-[#6d28d9]"
+                                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                                    : "bg-muted text-muted-foreground group-hover:text-foreground"
                                 )}
                               >
                                 <Icon className="w-4 h-4" />
                               </div>
                               <div className="min-w-0">
-                                <div className="text-xs font-semibold text-[#18181b] truncate group-hover:text-[#6d28d9]">
+                                <div className="text-xs font-semibold text-foreground truncate">
                                   {layerTitle}
                                 </div>
-                                <div className="text-[10px] text-[#71717a] capitalize truncate">
+                                <div className="text-[10px] text-muted-foreground capitalize truncate">
                                   {layer.type}
                                 </div>
                               </div>
                             </div>
                             {isCurrent ? (
-                              <span className="text-[11px] font-bold text-[#6d28d9] flex items-center gap-1">
+                              <span className="text-[11px] font-semibold text-foreground flex items-center gap-1">
                                 <Check className="w-3.5 h-3.5" />
                                 Current
                               </span>
                             ) : (
-                              <div className="text-[10px] font-bold text-[#6d28d9] opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                              <div className="text-[10px] font-semibold text-muted-foreground group-hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity pr-1">
                                 Select →
                               </div>
                             )}

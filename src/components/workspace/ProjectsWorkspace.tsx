@@ -119,8 +119,8 @@ export const ProjectsWorkspace: React.FC = () => {
       {/* File Drop Overlay for Workspace */}
       {isDraggingFile && (
         <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-8 pointer-events-none">
-          <div className="w-full max-w-md p-8 rounded-2xl border-2 border-dashed border-purple-500 bg-[#141417]/95 flex flex-col items-center text-center shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-14 h-14 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-4 border border-purple-500/30 shadow-inner">
+          <div className="w-full max-w-md p-8 rounded-2xl border-2 border-dashed border-white/30 bg-[#141417]/95 flex flex-col items-center text-center shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-14 h-14 rounded-2xl bg-white/10 text-white flex items-center justify-center mb-4 border border-white/20 shadow-inner">
               <Film className="w-7 h-7" />
             </div>
             <h3 className="text-base font-semibold text-white tracking-tight">
@@ -136,7 +136,7 @@ export const ProjectsWorkspace: React.FC = () => {
       <header className="h-14 w-full bg-[#111113] border-b border-[#222226] px-6 flex items-center justify-between z-30 shrink-0">
         {/* Left: Brand Mark */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-b from-purple-600 to-indigo-700 flex items-center justify-center text-white shadow-sm border border-white/10">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-b from-zinc-700 to-zinc-900 flex items-center justify-center text-white shadow-sm border border-white/10">
             <Film className="w-4 h-4" />
           </div>
           <span className="font-semibold text-sm tracking-tight text-white">
@@ -153,7 +153,7 @@ export const ProjectsWorkspace: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search projects..."
-            className="h-8 w-full pl-8 pr-3 text-xs bg-[#18181b] border border-[#27272a] focus:border-purple-500 rounded-md outline-none text-zinc-200 placeholder:text-zinc-600 transition-colors"
+            className="h-8 w-full pl-8 pr-3 text-xs bg-[#18181b] border border-[#27272a] focus:border-zinc-500 rounded-md outline-none text-zinc-200 placeholder:text-zinc-600 transition-colors"
           />
         </div>
 
@@ -190,7 +190,7 @@ export const ProjectsWorkspace: React.FC = () => {
                 template: "blank",
               })
             }
-            className="h-8 px-3.5 rounded text-xs font-medium text-white bg-purple-600 hover:bg-purple-500 flex items-center gap-1.5 shadow-sm transition-colors"
+            className="h-8 px-3.5 rounded text-xs font-semibold text-zinc-950 bg-white hover:bg-zinc-200 flex items-center gap-1.5 shadow-xs transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Project</span>
@@ -222,7 +222,7 @@ export const ProjectsWorkspace: React.FC = () => {
               }
               className="group p-3 rounded-lg bg-[#141416] border border-[#27272a] hover:border-zinc-500 text-left transition-colors flex items-center gap-3"
             >
-              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-purple-400 group-hover:bg-purple-500/10 transition-colors">
+              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-white group-hover:bg-white/10 transition-colors">
                 <Monitor className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -246,7 +246,7 @@ export const ProjectsWorkspace: React.FC = () => {
               }
               className="group p-3 rounded-lg bg-[#141416] border border-[#27272a] hover:border-zinc-500 text-left transition-colors flex items-center gap-3"
             >
-              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-purple-400 group-hover:bg-purple-500/10 transition-colors">
+              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-white group-hover:bg-white/10 transition-colors">
                 <Smartphone className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -270,7 +270,7 @@ export const ProjectsWorkspace: React.FC = () => {
               }
               className="group p-3 rounded-lg bg-[#141416] border border-[#27272a] hover:border-zinc-500 text-left transition-colors flex items-center gap-3"
             >
-              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-purple-400 group-hover:bg-purple-500/10 transition-colors">
+              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-white group-hover:bg-white/10 transition-colors">
                 <Square className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -294,7 +294,7 @@ export const ProjectsWorkspace: React.FC = () => {
               }
               className="group p-3 rounded-lg bg-[#141416] border border-[#27272a] hover:border-zinc-500 text-left transition-colors flex items-center gap-3"
             >
-              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-purple-400 group-hover:bg-purple-500/10 transition-colors">
+              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-white group-hover:bg-white/10 transition-colors">
                 <LayoutTemplate className="w-4 h-4" />
               </div>
               <div className="min-w-0">
@@ -403,7 +403,7 @@ export const ProjectsWorkspace: React.FC = () => {
                       template: "blank",
                     })
                   }
-                  className="mt-4 px-3.5 py-1.5 rounded text-xs font-medium text-white bg-purple-600 hover:bg-purple-500 transition-colors"
+                  className="mt-4 px-3.5 py-1.5 rounded text-xs font-semibold text-zinc-950 bg-white hover:bg-zinc-200 shadow-xs transition-colors"
                 >
                   Create Project
                 </button>

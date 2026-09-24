@@ -332,18 +332,18 @@ export const TimelinePanel: React.FC = () => {
 
   return (
     <div
-      className="relative flex flex-col w-full h-[300px] bg-white border-t border-[#e5e5e7] select-none text-xs text-[#18181b]"
+      className="relative flex flex-col w-full h-[300px] bg-white dark:bg-[#141417] border-t border-[#e5e5e7] dark:border-[#27272a] select-none text-xs text-[#18181b] dark:text-zinc-100"
       data-testid="timeline-panel"
     >
       {/* 1. TOP HEADER: Transport Controls & Time Ruler (Play, Loop, Time Indicators) */}
-      <div className="flex h-8 bg-white border-b border-[#e5e5e7] z-20 shrink-0">
+      <div className="flex h-8 bg-white dark:bg-[#141417] border-b border-[#e5e5e7] dark:border-[#27272a] z-20 shrink-0">
         {/* Left Transport Controls: Play, Loop, Stagger, Audio */}
-        <div className="w-56 shrink-0 px-3 flex items-center gap-2 border-r border-[#e5e5e7] bg-white">
+        <div className="w-56 shrink-0 px-3 flex items-center gap-2 border-r border-[#e5e5e7] dark:border-[#27272a] bg-white dark:bg-[#141417]">
           {/* Play / Pause button */}
           <button
             type="button"
             onClick={() => setIsPlaying(!isPlaying)}
-            className="h-6 w-6 rounded flex items-center justify-center text-[#18181b] hover:bg-[#f4f4f6] transition-colors"
+            className="h-6 w-6 rounded flex items-center justify-center text-[#18181b] dark:text-zinc-100 hover:bg-[#f4f4f6] dark:hover:bg-zinc-800 transition-colors"
             title="Play / Pause (Space)"
           >
             {isPlaying ? (
@@ -369,8 +369,8 @@ export const TimelinePanel: React.FC = () => {
             data-testid="timeline-loop-toggle"
             className={`h-6 px-1.5 gap-1 rounded flex items-center justify-center transition-colors text-[10px] font-medium ${
               isLooping
-                ? "bg-[#f4f4f6] text-[#7c3aed]"
-                : "text-[#a1a1aa] hover:text-[#18181b]"
+                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 font-semibold"
+                : "text-[#a1a1aa] hover:text-[#18181b] dark:hover:text-zinc-200"
             }`}
             title={
               !isLooping
@@ -397,7 +397,7 @@ export const TimelinePanel: React.FC = () => {
                   window.dispatchEvent(new CustomEvent("motion-open-stagger-popover"));
                 }
               }}
-              className="h-6 px-1.5 gap-1 rounded flex items-center justify-center transition-colors text-[10px] font-medium bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20"
+              className="h-6 px-1.5 gap-1 rounded flex items-center justify-center transition-colors text-[10px] font-medium bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-xs"
               title="Stagger Animations (Shift+S)"
             >
               <ListOrdered className="h-3 w-3" />
@@ -448,11 +448,11 @@ export const TimelinePanel: React.FC = () => {
           ref={rulerRef}
           data-testid="timeline-ruler"
           onPointerDown={startScrubbing}
-          className="relative flex-1 cursor-ew-resize overflow-hidden bg-white"
+          className="relative flex-1 cursor-ew-resize overflow-hidden bg-white dark:bg-[#141417]"
         >
           {/* Shaded Active Scene Duration Span */}
           <div
-            className="absolute top-0 bottom-0 bg-[#7c3aed]/8 border-x border-[#7c3aed]/25 pointer-events-none"
+            className="absolute top-0 bottom-0 bg-zinc-900/5 dark:bg-white/5 border-x border-zinc-900/15 dark:border-white/15 pointer-events-none"
             style={{
               left: `${(screenStartTime / maxSec) * 100}%`,
               width: `${(activeTiming.duration / maxSec) * 100}%`,
@@ -514,15 +514,15 @@ export const TimelinePanel: React.FC = () => {
       </div>
 
       {/* 2. SCENE COMPONENT: Touching directly below the Ruler */}
-      <div className="flex h-7 bg-[#fbfbfa] border-b border-[#e5e5e7] z-10 shrink-0">
+      <div className="flex h-7 bg-[#fbfbfa] dark:bg-[#18181b] border-b border-[#e5e5e7] dark:border-[#27272a] z-10 shrink-0">
         {/* Left Label */}
-        <div className="w-56 shrink-0 px-3 flex items-center justify-between border-r border-[#e5e5e7] bg-[#fbfbfa] text-[11px] font-medium text-[#71717a]">
+        <div className="w-56 shrink-0 px-3 flex items-center justify-between border-r border-[#e5e5e7] dark:border-[#27272a] bg-[#fbfbfa] dark:bg-[#18181b] text-[11px] font-medium text-[#71717a] dark:text-zinc-400">
           <span>Scenes ({doc.screens.length})</span>
-          <span className="text-[10px] text-[#a1a1aa] font-mono">{totalDuration.toFixed(1)}s total</span>
+          <span className="text-[10px] text-[#a1a1aa] dark:text-zinc-500 font-mono">{totalDuration.toFixed(1)}s total</span>
         </div>
 
         {/* Scene Blocks Lane */}
-        <div className="relative flex-1 overflow-hidden bg-[#fbfbfa]">
+        <div className="relative flex-1 overflow-hidden bg-[#fbfbfa] dark:bg-[#18181b]">
           {screenTimings.map((st) => {
             const isScreenActive = st.screen.id === activeScreenId;
             const leftPct = (st.startTime / maxSec) * 100;
@@ -541,8 +541,8 @@ export const TimelinePanel: React.FC = () => {
                 }}
                 className={`absolute top-0.5 bottom-0.5 rounded border flex items-center justify-between px-2 cursor-pointer transition-all select-none ${
                   isScreenActive
-                    ? "bg-[#7c3aed] text-white border-[#6d28d9] shadow-xs font-semibold z-10"
-                    : "bg-white text-[#52525b] border-[#e4e4e7] hover:border-[#a1a1aa] hover:bg-[#f4f4f6]"
+                    ? "bg-zinc-900 text-white border-zinc-950 dark:bg-zinc-100 dark:text-zinc-950 dark:border-white shadow-xs font-semibold z-10"
+                    : "bg-white dark:bg-zinc-900 text-[#52525b] dark:text-zinc-400 border-[#e4e4e7] dark:border-zinc-800 hover:border-[#a1a1aa] dark:hover:border-zinc-600 hover:bg-[#f4f4f6] dark:hover:bg-zinc-800"
                 }`}
                 title={`${st.screen.name}: ${st.duration}s (click to focus scene)`}
               >
@@ -587,7 +587,7 @@ export const TimelinePanel: React.FC = () => {
                 )}
                 <span
                   className={`text-[9px] font-mono shrink-0 ml-1 ${
-                    isScreenActive ? "text-white/80" : "text-[#a1a1aa]"
+                    isScreenActive ? "text-white/80 dark:text-zinc-950/80" : "text-[#a1a1aa] dark:text-zinc-500"
                   }`}
                 >
                   {st.duration}s
@@ -643,7 +643,7 @@ export const TimelinePanel: React.FC = () => {
       {/* 3. TRACKS CONTAINER: Scrollable track rows */}
       <div
         ref={tracksContainerRef}
-        className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col bg-white"
+        className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col bg-white dark:bg-[#141417]"
       >
         {/* Hidden Audio File Input for Transport Button */}
         <input
@@ -659,7 +659,7 @@ export const TimelinePanel: React.FC = () => {
           <AudioTrackRow maxSec={maxSec} onClose={() => setIsAudioVisible(false)} />
         )}
 
-        <div className="flex-1 divide-y divide-[#f4f4f6]">
+        <div className="flex-1 divide-y divide-[#f4f4f6] dark:divide-[#27272a]/60">
           {timelineTrackItems.length > 0 ? (
             timelineTrackItems.map(({ layer, parentName, depth }) => {
               const isLayerSelected = selectedLayerIds.includes(layer.id);
@@ -676,13 +676,13 @@ export const TimelinePanel: React.FC = () => {
                   style={{ height: trackHeight }}
                   className={`flex transition-colors ${
                     isClipSelectedOnTrack
-                      ? "bg-[#f5f3ff]"
+                      ? "bg-zinc-100/70 dark:bg-white/5"
                       : isLayerSelected
-                      ? "bg-[#f8f8fa]"
-                      : "hover:bg-[#fafafa]"
+                      ? "bg-[#f8f8fa] dark:bg-white/[0.03]"
+                      : "hover:bg-[#fafafa] dark:hover:bg-white/[0.02]"
                   }`}
                 >
-                  {/* Left Track Header: Turns purple when animation clip is selected */}
+                  {/* Left Track Header */}
                   <div
                     onClick={() => {
                       selectLayer(layer.id);
@@ -705,15 +705,15 @@ export const TimelinePanel: React.FC = () => {
                     data-testid={`timeline-track-header-${layer.id}`}
                     className={`w-56 shrink-0 sticky left-0 z-10 px-3 flex items-center justify-between border-r cursor-pointer transition-colors ${
                       isClipSelectedOnTrack
-                        ? "bg-zinc-900 text-white border-zinc-950 dark:bg-zinc-100 dark:text-zinc-950 font-semibold"
+                        ? "bg-zinc-900 text-white border-zinc-950 dark:bg-white/15 dark:text-white dark:border-white/10 font-semibold"
                         : isLayerSelected
                         ? "bg-[#f8f8fa] dark:bg-zinc-800 font-medium text-[#18181b] dark:text-zinc-100 border-[#e5e5e7] dark:border-zinc-700"
-                        : "bg-white dark:bg-zinc-900 text-[#18181b] dark:text-zinc-100 border-[#e5e5e7] dark:border-zinc-800"
+                        : "bg-white dark:bg-[#141417] text-[#18181b] dark:text-zinc-100 border-[#e5e5e7] dark:border-[#27272a]"
                     }`}
                   >
                     <div className="flex items-center gap-2 truncate min-w-0 flex-1 mr-1">
                       {isClipSelectedOnTrack ? (
-                        <span className="truncate text-xs text-white dark:text-zinc-950">
+                        <span className="truncate text-xs text-white">
                           ⚡ {layer.name} · {selectedClip?.name || selectedClip?.preset}
                         </span>
                       ) : editingTrackLayerId === layer.id ? (
@@ -781,7 +781,7 @@ export const TimelinePanel: React.FC = () => {
                         className={`p-1 rounded ${
                           isClipSelectedOnTrack
                             ? "text-white/80 hover:text-white"
-                            : "text-[#a1a1aa] hover:text-[#18181b]"
+                            : "text-[#a1a1aa] hover:text-[#18181b] dark:text-zinc-400 dark:hover:text-zinc-100"
                         }`}
                         title={layer.style.opacity === 0 ? "Show Layer" : "Hide Layer"}
                       >
@@ -806,7 +806,7 @@ export const TimelinePanel: React.FC = () => {
                   >
                     {/* Active Scene Window Highlight in Track */}
                     <div
-                      className="absolute top-0 bottom-0 bg-[#7c3aed]/4 pointer-events-none border-x border-[#7c3aed]/10"
+                      className="absolute top-0 bottom-0 bg-zinc-900/5 dark:bg-white/5 pointer-events-none border-x border-zinc-900/10 dark:border-white/10"
                       style={{
                         left: `${(screenStartTime / maxSec) * 100}%`,
                         width: `${(activeTiming.duration / maxSec) * 100}%`,
@@ -834,7 +834,7 @@ export const TimelinePanel: React.FC = () => {
               );
             })
           ) : (
-            <div className="p-8 text-center text-xs text-[#a1a1aa]">
+            <div className="p-8 text-center text-xs text-[#a1a1aa] dark:text-zinc-500">
               No layers in scene.
             </div>
           )}

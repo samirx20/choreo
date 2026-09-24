@@ -107,7 +107,7 @@ export const MultiSelectionCard: React.FC<MultiSelectionCardProps> = ({
             className="flex-1 h-7 px-2.5 bg-muted hover:bg-muted/80 text-foreground text-xs font-medium rounded border border-border flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
             title="Create Mask Group (Ctrl+Alt+M)"
           >
-            <CircleDashed className="h-3.5 w-3.5 text-purple-400" />
+            <CircleDashed className="h-3.5 w-3.5 text-foreground" />
             <span>Mask Selection</span>
           </button>
 

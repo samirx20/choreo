@@ -421,7 +421,7 @@ export function buildCanvasElementMenu(params: {
       {
         id: "stagger-selection",
         label: "Stagger Animations...",
-        icon: <ListOrdered className="w-3.5 h-3.5 text-purple-400" />,
+        icon: <ListOrdered className="w-3.5 h-3.5 text-foreground" />,
         shortcut: "Shift+S",
         action: () => {
           if (typeof window !== "undefined") {
@@ -432,7 +432,7 @@ export function buildCanvasElementMenu(params: {
       {
         id: "mask-selection",
         label: "Mask Selection",
-        icon: <CircleDashed className="w-3.5 h-3.5 text-purple-400" />,
+        icon: <CircleDashed className="w-3.5 h-3.5 text-foreground" />,
         shortcut: "Ctrl+Alt+M",
         action: () => store.maskSelection(),
       },
@@ -478,7 +478,7 @@ export function buildCanvasElementMenu(params: {
         {
           id: "link-hug-other",
           label: `Hug Bounds of "${otherLayer.name}"`,
-          icon: <Maximize2 className="w-3.5 h-3.5 text-purple-400" />,
+          icon: <Maximize2 className="w-3.5 h-3.5 text-foreground" />,
           action: () => {
             store.addLayerBinding(layer.id, {
               id: `bind_${Date.now()}`,
@@ -494,7 +494,7 @@ export function buildCanvasElementMenu(params: {
         {
           id: "link-pin-other",
           label: `Pin to "${otherLayer.name}"`,
-          icon: <Pin className="w-3.5 h-3.5 text-blue-400" />,
+          icon: <Pin className="w-3.5 h-3.5 text-foreground" />,
           action: () => {
             store.addLayerBinding(layer.id, {
               id: `bind_${Date.now()}`,

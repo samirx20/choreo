@@ -98,7 +98,7 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
   return (
     <div
       data-testid="timeline-audio-track-row"
-      className="flex h-10 border-b border-[#e5e5e7] bg-[#fdfdfd] transition-colors hover:bg-[#fafafa]"
+      className="flex h-10 border-b border-[#e5e5e7] dark:border-[#27272a] bg-[#fdfdfd] dark:bg-[#141417] transition-colors hover:bg-[#fafafa] dark:hover:bg-zinc-800/40"
     >
       <input
         ref={fileInputRef}
@@ -109,11 +109,11 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
       />
 
       {/* Left Track Header */}
-      <div className="w-56 shrink-0 sticky left-0 z-10 px-3 flex items-center justify-between border-r border-[#e5e5e7] bg-[#fafafa]">
+      <div className="w-56 shrink-0 sticky left-0 z-10 px-3 flex items-center justify-between border-r border-[#e5e5e7] dark:border-[#27272a] bg-[#fafafa] dark:bg-[#18181b]">
         <div className="flex items-center gap-2 truncate min-w-0 flex-1 mr-1">
-          <Music className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+          <Music className="w-3.5 h-3.5 text-foreground shrink-0" />
           <span
-            className="truncate text-xs font-medium text-[#18181b]"
+            className="truncate text-xs font-medium text-foreground"
             title={audioTrack ? audioTrack.name : "Soundtrack Track"}
           >
             {audioTrack ? audioTrack.name : "Audio Track"}
@@ -125,13 +125,13 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
             <button
               type="button"
               onClick={() => toggleAudioMute(audioTrack.id)}
-              className="p-1 rounded text-[#71717a] hover:text-[#18181b] transition-colors"
+              className="p-1 rounded text-[#71717a] hover:text-foreground transition-colors"
               title={audioTrack.muted ? "Unmute Audio" : "Mute Audio"}
             >
               {audioTrack.muted ? (
                 <VolumeX className="w-3.5 h-3.5 text-red-500" />
               ) : (
-                <Volume2 className="w-3.5 h-3.5 text-purple-600" />
+                <Volume2 className="w-3.5 h-3.5 text-foreground" />
               )}
             </button>
             <button
@@ -149,7 +149,7 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1 rounded text-[#a1a1aa] hover:text-[#18181b] transition-colors"
+                className="p-1 rounded text-[#a1a1aa] hover:text-foreground transition-colors"
                 title="Hide Audio Lane"
               >
                 <X className="w-3 h-3" />
@@ -162,7 +162,7 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isProcessing}
-              className="text-[11px] font-medium text-purple-600 hover:text-purple-700 flex items-center gap-1 px-1.5 py-0.5 rounded border border-purple-200 bg-purple-50/50 hover:bg-purple-50"
+              className="text-[11px] font-medium text-foreground hover:bg-muted flex items-center gap-1 px-1.5 py-0.5 rounded border border-border bg-background transition-colors"
             >
               {isProcessing ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
@@ -177,7 +177,7 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1 rounded text-[#a1a1aa] hover:text-[#18181b] transition-colors"
+                className="p-1 rounded text-[#a1a1aa] hover:text-foreground transition-colors"
                 title="Hide Audio Lane"
               >
                 <X className="w-3 h-3" />
@@ -198,8 +198,8 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
             }}
             className={`absolute h-7 rounded border cursor-grab active:cursor-grabbing select-none flex items-center px-2 shadow-xs transition-shadow ${
               audioTrack.muted
-                ? "bg-zinc-100 border-zinc-300 opacity-60"
-                : "bg-purple-100/90 border-purple-300 hover:border-purple-400 hover:shadow-sm"
+                ? "bg-zinc-100 dark:bg-zinc-800 border-zinc-300 dark:border-zinc-700 opacity-60"
+                : "bg-zinc-200 dark:bg-zinc-800 border-zinc-400 dark:border-zinc-600 hover:border-zinc-500 hover:shadow-sm"
             }`}
           >
             {/* Waveform Visualization Canvas / SVG */}
@@ -212,28 +212,28 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
                       height: `${Math.max(10, peak * 100)}%`,
                     }}
                     className={`w-[2px] rounded-full shrink-0 ${
-                      audioTrack.muted ? "bg-zinc-400" : "bg-purple-600/80"
+                      audioTrack.muted ? "bg-zinc-400 dark:bg-zinc-600" : "bg-zinc-800 dark:bg-zinc-200"
                     }`}
                   />
                 ))
               ) : (
-                <div className="text-[10px] text-purple-700/60 font-mono">
+                <div className="text-[10px] text-muted-foreground font-mono">
                   Loading waveform...
                 </div>
               )}
             </div>
 
-            <span className="absolute right-1.5 bottom-0.5 text-[9px] font-mono text-purple-900/60 pointer-events-none select-none">
+            <span className="absolute right-1.5 bottom-0.5 text-[9px] font-mono text-zinc-600 dark:text-zinc-400 pointer-events-none select-none">
               {audioTrack.duration.toFixed(1)}s
             </span>
           </div>
         ) : (
           <div
             onClick={() => fileInputRef.current?.click()}
-            className="w-full h-full flex items-center justify-center cursor-pointer border border-dashed border-zinc-200 hover:border-purple-300 text-zinc-400 hover:text-purple-600 text-xs gap-1.5 select-none transition-colors"
+            className="w-full h-full flex items-center justify-center cursor-pointer border border-dashed border-border hover:border-foreground/40 text-muted-foreground hover:text-foreground text-xs gap-1.5 select-none transition-colors"
           >
             {isProcessing ? (
-              <span className="flex items-center gap-1.5 text-purple-600">
+              <span className="flex items-center gap-1.5 text-foreground">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>Decoding audio waveform...</span>
               </span>

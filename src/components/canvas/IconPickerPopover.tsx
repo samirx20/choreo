@@ -181,7 +181,7 @@ export const IconPickerPopover: React.FC<IconPickerPopoverProps> = ({
       {/* Header & Search */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
-          <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+          <Sparkles className="h-3.5 w-3.5 text-white" />
           <span>Lucide Icons</span>
           <span className="text-[10px] text-zinc-500 font-mono">({allIconNames.length})</span>
         </div>
@@ -208,7 +208,7 @@ export const IconPickerPopover: React.FC<IconPickerPopoverProps> = ({
           }}
           placeholder="Search 1,555 icons..."
           autoFocus
-          className="w-full h-8 pl-8 pr-7 bg-zinc-900 border border-[#27272a] rounded-lg text-xs text-white placeholder-zinc-500 outline-none focus:border-purple-500 transition-colors"
+          className="w-full h-8 pl-8 pr-7 bg-zinc-900 border border-[#27272a] rounded-lg text-xs text-white placeholder-zinc-500 outline-none focus:border-zinc-500 transition-colors"
         />
         {searchQuery && (
           <button
@@ -235,7 +235,7 @@ export const IconPickerPopover: React.FC<IconPickerPopoverProps> = ({
               className={cn(
                 "px-2 py-0.5 rounded-full whitespace-nowrap transition-colors",
                 activeCategory === cat
-                  ? "bg-purple-600 text-white font-medium"
+                  ? "bg-white text-zinc-950 font-semibold shadow-xs"
                   : "bg-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-700/80"
               )}
             >
@@ -265,7 +265,7 @@ export const IconPickerPopover: React.FC<IconPickerPopoverProps> = ({
                 className={cn(
                   "h-10 rounded-lg flex flex-col items-center justify-center p-1 transition-all cursor-pointer group relative",
                   isSelected
-                    ? "bg-purple-600/30 text-purple-300 border border-purple-500/50"
+                    ? "bg-white/15 text-white border border-white/20 font-medium"
                     : "hover:bg-white/10 hover:text-white text-zinc-300"
                 )}
               >
@@ -284,7 +284,7 @@ export const IconPickerPopover: React.FC<IconPickerPopoverProps> = ({
         <button
           type="button"
           onClick={() => setDisplayCount((prev) => prev + 100)}
-          className="text-center text-[10px] text-purple-400 hover:text-purple-300 py-1 font-medium cursor-pointer"
+          className="text-center text-[10px] text-zinc-300 hover:text-white py-1 font-medium cursor-pointer"
         >
           Load more ({filteredIconNames.length - displayedIcons.length} remaining)
         </button>

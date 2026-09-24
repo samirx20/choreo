@@ -145,7 +145,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                   setIsRenaming(false);
                 }
               }}
-              className="h-6 px-1.5 text-xs font-medium text-white bg-[#1f1f23] rounded border border-purple-500 outline-none w-full"
+              className="h-6 px-1.5 text-xs font-medium text-white bg-[#1f1f23] rounded border border-zinc-500 focus:border-zinc-300 outline-none w-full"
             />
           ) : (
             <h3

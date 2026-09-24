@@ -49,7 +49,7 @@ export const SpecializedLayerCard: React.FC<SpecializedLayerCardProps> = ({
         <div className="pt-3 border-t border-border space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <CircleDashed className="w-3.5 h-3.5 text-purple-400" />
+              <CircleDashed className="w-3.5 h-3.5 text-foreground" />
               Mask Group
             </span>
             <span className="text-[10px] text-muted-foreground font-mono">
@@ -82,7 +82,7 @@ export const SpecializedLayerCard: React.FC<SpecializedLayerCardProps> = ({
         <div className="pt-3 border-t border-border space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-              <Combine className="w-3.5 h-3.5 text-blue-400" />
+              <Combine className="w-3.5 h-3.5 text-foreground" />
               Boolean Group
             </span>
             <span className="text-[10px] text-muted-foreground font-mono uppercase">
@@ -99,7 +99,7 @@ export const SpecializedLayerCard: React.FC<SpecializedLayerCardProps> = ({
                 className={cn(
                   "py-1 text-[10px] font-medium rounded transition-all capitalize",
                   (selectedLayer as any).booleanOperation === op
-                    ? "bg-blue-600 text-white shadow-xs"
+                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 font-semibold shadow-xs"
                     : "text-muted-foreground hover:text-foreground"
                 )}
               >
