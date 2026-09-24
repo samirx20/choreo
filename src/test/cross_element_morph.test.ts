@@ -133,30 +133,38 @@ describe("Cross-Element Morph Transition Suite", () => {
       },
     };
 
-    it("dematerializes source layer during exit morph window", () => {
+    it("dematerializes source layer during exit morph window and disappears in mid-flight", () => {
       // Before morph start: full resting opacity
       const deltaPre = evaluateClipDelta(exitMorphClip, 0.5);
       expect(deltaPre.opacity).toBe(1);
 
-      // Mid-flight: opacity dissolving
+      // Early breakup (progress = 0.09, t = 1.09): dissolving into particles
+      const deltaBreak = evaluateClipDelta(exitMorphClip, 1.09);
+      expect(deltaBreak.opacity).toBeLessThan(1);
+      expect(deltaBreak.opacity).toBeGreaterThan(0);
+
+      // Mid-flight (progress = 0.5, t = 1.5): completely disappeared, only particles visible
       const deltaMid = evaluateClipDelta(exitMorphClip, 1.5);
-      expect(deltaMid.opacity).toBeLessThan(1);
-      expect(deltaMid.opacity).toBeGreaterThan(0);
+      expect(deltaMid.opacity).toBe(0);
 
       // After morph finish: completely transparent
       const deltaPost = evaluateClipDelta(exitMorphClip, 2.5);
       expect(deltaPost.opacity).toBe(0);
     });
 
-    it("keeps target layer hidden before morph and reveals it during transition", () => {
+    it("keeps target layer hidden before and during mid-flight morph, only revealing after particles arrive", () => {
       // Before morph start: target is hidden (opacity = 0)
       const deltaPre = evaluateClipDelta(inMorphClip, 0.5);
       expect(deltaPre.opacity).toBe(0);
 
-      // Mid-flight: target materializing
+      // Mid-flight (progress = 0.5, t = 1.5): target is strictly hidden (opacity = 0)
       const deltaMid = evaluateClipDelta(inMorphClip, 1.5);
-      expect(deltaMid.opacity).toBeGreaterThan(0);
-      expect(deltaMid.opacity).toBeLessThan(1);
+      expect(deltaMid.opacity).toBe(0);
+
+      // Late reveal (progress = 0.91, t = 1.91): target appearing as particles collapse
+      const deltaReveal = evaluateClipDelta(inMorphClip, 1.91);
+      expect(deltaReveal.opacity).toBeGreaterThan(0);
+      expect(deltaReveal.opacity).toBeLessThan(1);
 
       // After morph finish: fully visible (opacity = 1)
       const deltaPost = evaluateClipDelta(inMorphClip, 2.5);

@@ -2067,6 +2067,21 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 51 test suites (460 tests) pass 100%.
   - Production build (`npm run build`) succeeds with 0 errors in 10.39s.
 
+---
+
+### Decision 91: Strictly Zero Opacity in Mid-Flight Morph Window
+* **Context & Problem**:
+  - Previously, smooth power curves (`progress^3` and `(1 - progress)^3`) left residual opacity ($0.125$) on both elements in the middle of the transition, causing both shapes to be faintly visible at the same time as ghosts while the swarm was flying.
+* **The Solution**:
+  - **Discrete Temporal Cutoffs (`clipEvaluator.ts`)**:
+    - **Source Element**: After converting into particles at $progress = 0.18$, opacity is clamped to **strictly 0**. The source element completely disappears from screen during mid-flight ($progress \in [0.18, 1.0]$).
+    - **Target Element**: Opacity is held at **strictly 0** throughout flight and assembly ($progress \in [0, 0.82]$). Only after the particles are in place and assembling does the target element appear ($progress \in [0.82, 1.0]$) as particles collapse into it.
+    - **Mid-Flight Window ($progress \in [0.18, 0.82]$)**: **100% of the visual matter is carried by the particle swarm**. Neither the first nor the second element has any ghostly presence.
+* **Verification**:
+  - Added unit tests in `cross_element_morph.test.ts` verifying that at $t = 1.5$ ($progress = 0.50$), both source and target layers have exact `opacity === 0`.
+  - All 51 test suites (460 tests) pass cleanly.
+  - Production build compiles with 0 errors in 9.49s.
+
 
 
 

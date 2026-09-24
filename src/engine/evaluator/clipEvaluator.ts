@@ -162,34 +162,56 @@ export function evaluateClipDelta(
 
   if (preset === "morph") {
     if (type === "out") {
-      // Phase 1: Source expands slightly (1.0 -> 1.08) and shatters into particles
-      const expandProgress = Math.min(1, progress / 0.20);
-      const scaleExpansion = Math.sin(expandProgress * Math.PI * 0.5) * 0.08;
-      d.scaleX = 1 + scaleExpansion - progress * 0.05;
-      d.scaleY = 1 + scaleExpansion - progress * 0.05;
-      d.opacity = Math.pow(Math.max(0, 1 - progress), 3.0);
-      d.blur = Math.sin(progress * Math.PI) * 4 + progress * 2;
+      // Phase 1: Source expands slightly (1.0 -> 1.08) and converts into particles by progress = 0.18
+      if (progress < 0.18) {
+        const breakFrac = progress / 0.18;
+        const scaleExpansion = Math.sin(breakFrac * Math.PI * 0.5) * 0.08;
+        d.scaleX = 1 + scaleExpansion;
+        d.scaleY = 1 + scaleExpansion;
+        d.opacity = Math.max(0, 1 - breakFrac);
+        d.blur = breakFrac * 3;
+        return d;
+      }
+      // After converting into particles: completely disappeared
+      d.opacity = 0;
+      d.scaleX = 1.08;
+      d.scaleY = 1.08;
+      d.blur = 3;
       return d;
     } else {
-      // Phase 4: Target collapses (1.08 -> 1.0) and solidifies into resting shape
-      d.opacity = Math.pow(Math.min(1, progress), 3.0);
-      const appearProgress = Math.max(0, (progress - 0.72) / 0.28);
-      const scaleCollapse = (1 - appearProgress) * 0.08;
+      // Target only appears after particles are already in place (progress >= 0.82)
+      if (progress < 0.82) {
+        d.opacity = 0;
+        d.scaleX = 1.08;
+        d.scaleY = 1.08;
+        d.blur = 3;
+        return d;
+      }
+      const revealFrac = (progress - 0.82) / 0.18;
+      d.opacity = Math.min(1, revealFrac);
+      const scaleCollapse = (1 - revealFrac) * 0.08;
       d.scaleX = 1 + scaleCollapse;
       d.scaleY = 1 + scaleCollapse;
-      d.blur = (1 - progress) * 4;
+      d.blur = (1 - revealFrac) * 3;
       return d;
     }
   }
 
   if (preset === "morphIn") {
-    // Phase 4: Target collapses (1.08 -> 1.0) and solidifies into resting shape
-    d.opacity = Math.pow(Math.min(1, progress), 3.0);
-    const appearProgress = Math.max(0, (progress - 0.72) / 0.28);
-    const scaleCollapse = (1 - appearProgress) * 0.08;
+    // Target only appears after particles are already in place (progress >= 0.82)
+    if (progress < 0.82) {
+      d.opacity = 0;
+      d.scaleX = 1.08;
+      d.scaleY = 1.08;
+      d.blur = 3;
+      return d;
+    }
+    const revealFrac = (progress - 0.82) / 0.18;
+    d.opacity = Math.min(1, revealFrac);
+    const scaleCollapse = (1 - revealFrac) * 0.08;
     d.scaleX = 1 + scaleCollapse;
     d.scaleY = 1 + scaleCollapse;
-    d.blur = (1 - progress) * 4;
+    d.blur = (1 - revealFrac) * 3;
     return d;
   }
 

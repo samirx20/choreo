@@ -380,9 +380,9 @@ export function solveParticleSwarm(
     let opacity = 1;
     let rotation = 0;
 
-    // PHASE 1: Source Expansion & Breakup (t in [0, 0.20])
-    if (localT < 0.20) {
-      const p1 = localT / 0.20; // 0 to 1
+    // PHASE 1: Source Expansion & Breakup (t in [0, 0.18])
+    if (localT < 0.18) {
+      const p1 = localT / 0.18; // 0 to 1
       const burstDist = Math.sin(p1 * Math.PI) * (12 * (1 + chaosFactor * 0.5));
       posX = pStart.x + normSourceX * burstDist;
       posY = pStart.y + normSourceY * burstDist;
@@ -391,9 +391,10 @@ export function solveParticleSwarm(
       opacity = Math.min(1, p1 * 2.2);
       rotation = i * 36;
     }
-    // PHASE 2: Swarm Flight Across Canvas (t in [0.20, 0.72])
-    else if (localT < 0.72) {
-      const p2 = (localT - 0.20) / 0.52; // 0 to 1
+    // PHASE 2: Swarm Flight Across Canvas (t in [0.18, 0.82])
+    // During this phase, BOTH source and target elements have STRICTLY 0 OPACITY.
+    else if (localT < 0.82) {
+      const p2 = (localT - 0.18) / 0.64; // 0 to 1
       // Smooth cubic ease for flight
       const flightEase = p2 * p2 * (3 - 2 * p2);
 
@@ -412,12 +413,13 @@ export function solveParticleSwarm(
       opacity = 1.0;
       rotation = (i * 36 + p2 * 360) % 360;
     }
-    // PHASE 3: Target Shape Assembly (t in [0.72, 0.88])
-    else if (localT < 0.88) {
-      const p3 = (localT - 0.72) / 0.16; // 0 to 1
+    // PHASE 3: Target Shape Assembly (t in [0.82, 0.90])
+    // Particles arrive and lock into the exact target contour while target element is still 0 opacity.
+    else if (localT < 0.90) {
+      const p3 = (localT - 0.82) / 0.08; // 0 to 1
       // Decelerate and snap cleanly into the target contour position
       const settleEase = 1 - Math.pow(1 - p3, 2);
-      const remainingOffset = (1 - settleEase) * 6 * (hash(i * 47) - 0.5);
+      const remainingOffset = (1 - settleEase) * 4 * (hash(i * 47) - 0.5);
 
       posX = pEnd.x + perpX * remainingOffset;
       posY = pEnd.y + perpY * remainingOffset;
@@ -426,14 +428,14 @@ export function solveParticleSwarm(
       opacity = 1.0;
       rotation = i * 36;
     }
-    // PHASE 4: Collapse & Fusion into Target Element (t in [0.88, 1.0])
+    // PHASE 4: Collapse & Fusion into Target Element (t in [0.90, 1.0])
+    // Particles collapse inward and disappear as the solid target element appears.
     else {
-      const p4 = (localT - 0.88) / 0.12; // 0 to 1
-      // Particles collapse directly into the solid shape
+      const p4 = (localT - 0.90) / 0.10; // 0 to 1
       posX = pEnd.x;
       posY = pEnd.y;
 
-      scale = Math.max(0, 1 - p4 * 1.25);
+      scale = Math.max(0, 1 - p4 * 1.3);
       opacity = Math.max(0, 1 - p4);
       rotation = i * 36;
     }
