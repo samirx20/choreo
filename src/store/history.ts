@@ -15,8 +15,10 @@ export class TransactionalHistory {
   private future: SceneDocument[] = [];
   private transactionBaseline: SceneDocument | null = null;
   private isBatching = false;
+  private maxHistorySteps: number;
 
-  constructor(initialDocument: SceneDocument) {
+  constructor(initialDocument: SceneDocument, maxHistorySteps = MAX_HISTORY_STEPS) {
+    this.maxHistorySteps = maxHistorySteps;
     // Deep clone to ensure immutability
     this.present = JSON.parse(JSON.stringify(initialDocument));
   }
@@ -54,7 +56,7 @@ export class TransactionalHistory {
       const hasChanged = JSON.stringify(this.transactionBaseline) !== JSON.stringify(this.present);
       if (hasChanged) {
         this.past.push(this.transactionBaseline);
-        if (this.past.length > MAX_HISTORY_STEPS) {
+        if (this.past.length > this.maxHistorySteps) {
           this.past.shift();
         }
         this.future = [];
@@ -88,7 +90,7 @@ export class TransactionalHistory {
 
     // Discrete action: push current to past, clear redo future
     this.past.push(JSON.parse(JSON.stringify(this.present)));
-    if (this.past.length > MAX_HISTORY_STEPS) {
+    if (this.past.length > this.maxHistorySteps) {
       this.past.shift();
     }
     this.present = JSON.parse(JSON.stringify(newDocument));

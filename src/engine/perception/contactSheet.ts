@@ -88,7 +88,7 @@ export function generateContactSheet(doc: SceneDocument): StoryboardContactSheet
   });
 
   return {
-    projectTitle: doc.name,
+    projectTitle: doc.name || (doc as any).title || "Untitled Project",
     totalDuration: Math.round(currentTime * 100) / 100,
     resolution: { width: doc.settings.width, height: doc.settings.height },
     fps: doc.settings.fps,

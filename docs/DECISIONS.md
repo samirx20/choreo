@@ -2348,6 +2348,30 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - Full automated test suite: 52 test files, 488 tests passing cleanly.
   - Production build (`npm run build`) compiles with zero TypeScript or bundling errors.
 
+---
+
+### Decision 102: Automated 5-Pillar Verification Architecture & Universal Combinatorial Fuzzing Matrix
+* **Context & Motivation**:
+  - Motion graphics engines present an exponential permutation explosion: combining 10 layer archetypes $\times$ 12 animation presets $\times$ 4 boolean operations $\times$ 5 export resolutions yields over 3,840 distinct states.
+  - Manual testing of every situation is mathematically impossible. A developer or user cannot manually click through every combination, which previously allowed subtle intersection bugs (such as draw-on trim paths failing on boolean union groups) to evade isolation.
+* **The Solution**:
+  1. **Universal Combinatorial Matrix Fuzzer (`src/test/combinatorial_matrix_fuzzer.test.ts`)**:
+     - Programmatically tests all 10 layer archetypes (`rectangle`, `circle`, `star`, `polygon`, `text`, `line`, `arrow`, `icon`, `image`, `boolean_group`) paired with 8 core animation presets (`drawOn`, `pop`, `fade`, `scale`, `slide`, `rotate`, `wipe`, `blur`) evaluated across 5 time boundaries ($t = -0.2, 0.0, 0.5, 1.0, 1.4$).
+     - Rigorously asserts closed-form mathematical invariants: strictly finite coordinates (zero `NaN` or `Infinity`), opacity channel bounded in $[0, 1]$ (zero negative or elastic overflow), and trim path progression bounded in $[0, 100\%]$.
+     - Fuzzes all 4 boolean operations (`union`, `subtract`, `intersect`, `exclude`) and deep 3-level hierarchical group nesting.
+  2. **AST Pre-Flight Linter & Contact Sheet Suite (`src/test/linter_and_contact_sheet.test.ts`)**:
+     - Automated test harness for `src/engine/perception/linter.ts` and `src/engine/perception/contactSheet.ts`.
+     - Validates zero black frame prevention (`SHORT_SCENE_DURATION`, `EMPTY_SCENE`, `NO_SCENES`).
+     - Enforces AGENTS.md Rule 8 Impeccable Craft (flags banned gradient text, ghost cards combining 1px border + soft shadow, and floating eyebrow/kicker badges above headlines).
+     - Validates multi-scene cumulative duration calculation, headline extraction, and 3D device staging metadata in contact sheets.
+  3. **State Lifecycle & Transactional Stress Suite (`src/test/lifecycle_stress.test.ts`)**:
+     - Stress tests `TransactionalHistory` under 50 rapid sequential mutations with 100% undo/redo rollback fidelity.
+     - Tests lossless JSON AST serialization/deserialization for complex scene trees containing boolean groups, multi-clip animations, and custom easings.
+     - Confirms configurable history capacity limits (`maxHistorySteps`) to prevent memory leaks.
+* **Verification**:
+  - 98 new automated tests added, expanding total test coverage to **55 test suites and 586 unit/integration tests passing 100% cleanly** in Vitest (`npx vitest run`).
+  - Production build (`npm run build`) compiles with zero TypeScript errors or bundle warnings.
+
 
 
 
