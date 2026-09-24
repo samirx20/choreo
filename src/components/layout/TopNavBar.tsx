@@ -8,6 +8,8 @@ import {
   FileDown,
   Pencil,
   FileVideo,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useProjectStore, isMotionMode } from "@/store/useProjectStore";
 import {
@@ -39,6 +41,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     setZoom,
     uiMode,
     setUiMode,
+    theme,
+    toggleTheme,
   } = useProjectStore();
 
   const syncCurrentProjectName = useProjectRegistryStore(
@@ -231,7 +235,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             className={cn(
               "px-3.5 py-1 text-xs font-semibold rounded-md transition-all",
               !isMotionMode(uiMode)
-                ? "bg-[#7c3aed] text-white shadow-xs"
+                ? "bg-white text-zinc-950 shadow-xs"
                 : "text-[#a1a1aa] hover:text-white hover:bg-white/5"
             )}
           >
@@ -243,7 +247,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             className={cn(
               "px-3.5 py-1 text-xs font-semibold rounded-md transition-all",
               isMotionMode(uiMode)
-                ? "bg-[#7c3aed] text-white shadow-xs"
+                ? "bg-white text-zinc-950 shadow-xs"
                 : "text-[#a1a1aa] hover:text-white hover:bg-white/5"
             )}
           >
@@ -252,8 +256,19 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         </div>
       </div>
 
-      {/* Right: Zoom & Purple Export Button */}
+      {/* Right: Theme Toggle, Zoom & Export */}
       <div className="flex items-center gap-2">
+        {/* Dark / Light Mode Toggle */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          data-testid="theme-toggle-btn"
+          className="h-8 w-8 text-[#d4d4d8] hover:text-white hover:bg-white/5 rounded flex items-center justify-center transition-colors"
+        >
+          {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+
         {/* Zoom Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

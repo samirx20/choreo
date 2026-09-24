@@ -597,7 +597,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
       }}
       className={cn(
         "z-40 select-none group pointer-events-none",
-        isLocked ? "ring-1 ring-amber-500 shadow-xs" : "ring-1 ring-[#7c3aed]"
+        isLocked ? "ring-1 ring-amber-500 shadow-xs" : "ring-1 ring-zinc-900 dark:ring-zinc-100"
       )}
     >
       {/* Locked Badge Indicator */}
@@ -617,10 +617,10 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
             left: `${(layer.style.pivotX ?? 0.5) * 100}%`,
             top: `${(layer.style.pivotY ?? 0.5) * 100}%`,
           }}
-          className="absolute -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-[#7c3aed] flex items-center justify-center pointer-events-none z-30 shadow-xs"
+          className="absolute -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-zinc-900 dark:border-zinc-100 flex items-center justify-center pointer-events-none z-30 shadow-xs"
           title="Anchor / Pivot Point"
         >
-          <div className="w-1.5 h-1.5 rounded-full bg-[#7c3aed]" />
+          <div className="w-1.5 h-1.5 rounded-full bg-zinc-900 dark:bg-zinc-100" />
         </div>
       )}
       {/* Center Drag Body: Clicking and dragging anywhere inside the selection box moves the layer */}
@@ -687,7 +687,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
               {/* Start Endpoint Pin (P1) */}
               <div
                 style={{ left: 0, top: "50%", transform: "translate(-50%, -50%)" }}
-                className={`absolute w-3.5 h-3.5 bg-white border-2 border-[#7c3aed] rounded-full shadow-md hover:scale-125 transition-transform z-30 cursor-crosshair ${
+                className={`absolute w-3.5 h-3.5 bg-white dark:bg-zinc-950 border-2 border-zinc-900 dark:border-zinc-100 rounded-full shadow-md hover:scale-125 transition-transform z-30 cursor-crosshair ${
                   isPanMode ? "pointer-events-none" : "pointer-events-auto"
                 }`}
                 onPointerDown={(e) => handlePointerDown("endpoint-start", e)}
@@ -697,7 +697,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
               {/* End Endpoint Pin (P2) */}
               <div
                 style={{ left: "100%", top: "50%", transform: "translate(-50%, -50%)" }}
-                className={`absolute w-3.5 h-3.5 bg-white border-2 border-[#7c3aed] rounded-full shadow-md hover:scale-125 transition-transform z-30 cursor-crosshair ${
+                className={`absolute w-3.5 h-3.5 bg-white dark:bg-zinc-950 border-2 border-zinc-900 dark:border-zinc-100 rounded-full shadow-md hover:scale-125 transition-transform z-30 cursor-crosshair ${
                   isPanMode ? "pointer-events-none" : "pointer-events-auto"
                 }`}
                 onPointerDown={(e) => handlePointerDown("endpoint-end", e)}
@@ -716,8 +716,8 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
                     }`}
                     onPointerDown={(e) => handlePointerDown("rotate", e)}
                   >
-                    <div className="w-2.5 h-2.5 rounded-full bg-[#7c3aed] border-2 border-background shadow" />
-                    <div className="w-0.5 h-3.5 bg-[#7c3aed]" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-zinc-900 dark:bg-zinc-100 border-2 border-background shadow" />
+                    <div className="w-0.5 h-3.5 bg-zinc-900 dark:bg-zinc-100" />
                   </div>
 
                   {/* 4 Outer Corner Rotation Hit Areas (Figma Style) */}
@@ -763,7 +763,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
                 <div
                   key={h.pos}
                   style={{ ...h.style, cursor: getRotatedCursor(h.pos, rotation) }}
-                  className={`absolute w-2 h-2 bg-white border border-[#7c3aed] rounded-xs shadow-xs hover:scale-125 transition-transform z-20 ${
+                  className={`absolute w-2 h-2 bg-white dark:bg-zinc-950 border border-zinc-900 dark:border-zinc-100 rounded-xs shadow-xs hover:scale-125 transition-transform z-20 ${
                     isPanMode ? "pointer-events-none" : "pointer-events-auto"
                   }`}
                   onPointerDown={(e) => handlePointerDown(h.pos as HandleType, e)}

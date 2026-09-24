@@ -420,9 +420,9 @@ export const TimelinePanel: React.FC = () => {
             className={`h-6 px-1.5 gap-1 rounded flex items-center justify-center transition-colors text-[10px] font-medium ${
               hasAudioTrack
                 ? isAudioVisible
-                  ? "bg-[#7c3aed]/10 text-[#7c3aed]"
-                  : "text-[#7c3aed] hover:bg-[#f4f4f6]"
-                : "text-[#a1a1aa] hover:text-[#18181b]"
+                  ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950"
+                  : "text-zinc-900 dark:text-zinc-100 hover:bg-[#f4f4f6] dark:hover:bg-zinc-800"
+                : "text-[#a1a1aa] hover:text-[#18181b] dark:hover:text-zinc-200"
             }`}
             title={
               !hasAudioTrack
@@ -433,7 +433,7 @@ export const TimelinePanel: React.FC = () => {
             }
           >
             {isAudioProcessing ? (
-              <Loader2 className="h-3 w-3 animate-spin text-[#7c3aed]" />
+              <Loader2 className="h-3 w-3 animate-spin text-zinc-900 dark:text-zinc-100" />
             ) : (
               <Music className="h-3 w-3" />
             )}
@@ -570,7 +570,7 @@ export const TimelinePanel: React.FC = () => {
                     autoFocus
                     onClick={(e) => e.stopPropagation()}
                     onDoubleClick={(e) => e.stopPropagation()}
-                    className="h-4 px-1 bg-white text-[#18181b] border border-[#6d28d9] rounded text-[10px] outline-none min-w-[60px]"
+                    className="h-4 px-1 bg-white dark:bg-zinc-900 text-[#18181b] dark:text-zinc-100 border border-zinc-900 dark:border-zinc-100 rounded text-[10px] outline-none min-w-[60px]"
                   />
                 ) : (
                   <span
@@ -705,15 +705,15 @@ export const TimelinePanel: React.FC = () => {
                     data-testid={`timeline-track-header-${layer.id}`}
                     className={`w-56 shrink-0 sticky left-0 z-10 px-3 flex items-center justify-between border-r cursor-pointer transition-colors ${
                       isClipSelectedOnTrack
-                        ? "bg-[#6d28d9] text-white border-[#5b21b6] font-semibold"
+                        ? "bg-zinc-900 text-white border-zinc-950 dark:bg-zinc-100 dark:text-zinc-950 font-semibold"
                         : isLayerSelected
-                        ? "bg-[#f8f8fa] font-medium text-[#18181b] border-[#e5e5e7]"
-                        : "bg-white text-[#18181b] border-[#e5e5e7]"
+                        ? "bg-[#f8f8fa] dark:bg-zinc-800 font-medium text-[#18181b] dark:text-zinc-100 border-[#e5e5e7] dark:border-zinc-700"
+                        : "bg-white dark:bg-zinc-900 text-[#18181b] dark:text-zinc-100 border-[#e5e5e7] dark:border-zinc-800"
                     }`}
                   >
                     <div className="flex items-center gap-2 truncate min-w-0 flex-1 mr-1">
                       {isClipSelectedOnTrack ? (
-                        <span className="truncate text-xs text-white">
+                        <span className="truncate text-xs text-white dark:text-zinc-950">
                           ⚡ {layer.name} · {selectedClip?.name || selectedClip?.preset}
                         </span>
                       ) : editingTrackLayerId === layer.id ? (
@@ -739,7 +739,7 @@ export const TimelinePanel: React.FC = () => {
                               setEditingTrackLayerId(null);
                             }
                           }}
-                          className="w-full text-xs font-medium px-1 py-0.5 border border-[#6d28d9] rounded outline-none bg-white text-[#18181b]"
+                          className="w-full text-xs font-medium px-1 py-0.5 border border-zinc-900 dark:border-zinc-100 rounded outline-none bg-white dark:bg-zinc-900 text-[#18181b] dark:text-zinc-100"
                         />
                       ) : (
                         <>

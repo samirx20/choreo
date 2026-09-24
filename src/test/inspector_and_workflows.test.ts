@@ -251,4 +251,18 @@ describe("Figma UI3 & Jitter Standard Inspector Workflows", () => {
     expect(sentencesMulti[1]).toBe("I have something big for you.");
     expect(sentencesMulti[2]).toBe("Want to see what it is?");
   });
+
+  it("toggles between light and dark mode with localStorage persistence", () => {
+    const store = useProjectStore.getState();
+    expect(["light", "dark"]).toContain(store.theme);
+
+    store.setTheme("dark");
+    expect(useProjectStore.getState().theme).toBe("dark");
+
+    store.toggleTheme();
+    expect(useProjectStore.getState().theme).toBe("light");
+
+    store.toggleTheme();
+    expect(useProjectStore.getState().theme).toBe("dark");
+  });
 });

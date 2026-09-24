@@ -2,13 +2,18 @@
 
 > **Date**: September 24, 2026  
 > **Branch**: `main`  
-> **Session Baseline**: 52 test suites, 476 automated tests passing via Vitest (`npm test`). Production build succeeds with 0 errors in 9.85s (`npm run build`).
+> **Session Baseline**: 52 test suites, 477 automated tests passing via Vitest (`npm test`). Production build succeeds with 0 errors in 10.16s (`npm run build`).
 
 ---
 
 ## 1. Executive Summary & Current State
 
-1. **On-Demand Audio Track & High-Signal Timeline (`TimelinePanel.tsx`, `AudioTrackRow.tsx`)**:
+1. **Minimal Neutral Accents & Studio Dark/Light Theme Switching (`LeftSidebar.tsx`, `TopNavBar.tsx`, `TransformBox.tsx`)**:
+   - Fixed Left Sidebar hover bug: text no longer turns invisible on hover when an element or scene is selected.
+   - Replaced loud SaaS purple/blue chrome with sleek minimal neutral accents: dark shade in light mode (`zinc-900`), light shade in dark mode (`zinc-100`).
+   - Added `Sun` / `Moon` theme toggle button in `TopNavBar` with full document `.dark` class synchronization and `localStorage` persistence.
+   - Harmonized canvas transform handles, floating toolbar active buttons, scrubbable inputs, and timeline track selections.
+2. **On-Demand Audio Track & High-Signal Timeline (`TimelinePanel.tsx`, `AudioTrackRow.tsx`)**:
    - Reclaimed 40px of vertical timeline space by hiding the audio track lane by default when unused.
    - Added a compact, high-signal `Music` toggle button in the transport/playhead row (`timeline-audio-toggle`).
    - Clicking with no audio directly launches the native file picker (`.mp3`, `.wav`, `.ogg`, `.m4a`, `.aac`), analyzes waveform, and mounts the track. Clicking with existing audio toggles lane visibility or dismisses (`X`) without data loss.

@@ -2216,6 +2216,32 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 52 test suites (476 tests) pass cleanly (`npm test`).
   - Production build (`npm run build`) succeeds with 0 errors in 9.85s.
 
+---
+
+### Decision 97: Minimal Dark/Light Accent Harmonization, Left Sidebar Hover Bugfix, and Theme Toggle
+* **Context & Problem**:
+  - In `LeftSidebar.tsx`, hovering over the name of a selected layer or scene caused the text to turn `#6d28d9`, identical to the selected row's purple background, rendering the label 100% invisible.
+  - Saturated purple/blue chrome accents across the studio (`#6d28d9`, `#7c3aed`) conflicted with the user's artwork and generated unnecessary visual noise, contrary to AGENTS.md Rule 8 & 9 (Apple Keynote / Linear precision tool aesthetics).
+  - Users requested an elegant, minimal accent: a dark shade in light mode, and a light shade in dark mode, along with full dark/light theme switching.
+* **The Solution**:
+  1. **Left Sidebar Hover Invisibility Bugfix**:
+     - Removed unconditional `hover:text-[#6d28d9]` on layer and scene name labels.
+     - When selected, text remains `text-white dark:text-zinc-900` without changing color on hover; when unselected, text transitions cleanly to `hover:text-zinc-900 dark:hover:text-zinc-100`.
+  2. **Minimal Neutral Accent Harmonization (Dark-in-Light / Light-in-Dark)**:
+     - **Left Sidebar**: Selected rows use `bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 font-medium`. Drag guidelines, into-group drop boxes, and rename inputs adapt with `zinc-900` / `zinc-100`.
+     - **Canvas Transform Box**: Selection bounding ring uses `ring-1 ring-zinc-900 dark:ring-zinc-100`. Resize handles and vector endpoints use `bg-white dark:bg-zinc-950 border border-zinc-900 dark:border-zinc-100`.
+     - **Floating Toolbar**: Active tool buttons use `bg-white text-zinc-950 shadow-xs font-semibold` against the dark toolbar body, matching Figma and Keynote toolbar ergonomics.
+     - **Scrubbable Inputs**: Focus rings and drag states use `border-zinc-900 focus-within:ring-zinc-900/20 dark:border-zinc-100 dark:focus-within:ring-zinc-100/20`.
+     - **Timeline Selections**: Active clip outlines and track header highlights use `bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-950 font-semibold`.
+  3. **Studio Dark / Light Mode Switcher**:
+     - Added a `Sun` / `Moon` toggle button in `TopNavBar.tsx` (`data-testid="theme-toggle-btn"`) wired to `toggleTheme()`.
+     - Fully synchronizes with `document.documentElement.classList.toggle("dark")` and persists to `localStorage`.
+* **Verification**:
+  - Added theme toggle persistence test in `src/test/inspector_and_workflows.test.ts`.
+  - All 52 test suites (476 tests) pass cleanly (`npm test`).
+  - Production build (`npm run build`) compiles with 0 errors in 10.16s.
+
+
 
 
 

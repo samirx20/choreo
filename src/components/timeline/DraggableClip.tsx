@@ -193,8 +193,8 @@ export const DraggableClip: React.FC<DraggableClipProps> = ({
   const pillHeight = totalSubLanes > 1 ? 20 : 26;
 
   const clipStyles = isClipSelected
-    ? "bg-[#6d28d9] text-white border-[#5b21b6] ring-1 ring-[#5b21b6] shadow-sm z-20 font-semibold"
-    : "bg-[#c4b5fd]/60 hover:bg-[#c4b5fd]/80 text-[#4c1d95] border-[#a78bfa]/40 shadow-2xs z-10 font-medium";
+    ? "bg-zinc-900 text-white border-zinc-950 ring-1 ring-zinc-950 dark:bg-zinc-100 dark:text-zinc-950 dark:border-white shadow-sm z-20 font-semibold"
+    : "bg-zinc-200/80 hover:bg-zinc-300/80 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 border-zinc-300 dark:border-zinc-700 shadow-2xs z-10 font-medium";
 
   return (
     <div
@@ -271,7 +271,7 @@ export const DraggableClip: React.FC<DraggableClipProps> = ({
                 setIsEditingName(false);
               }
             }}
-            className="w-full text-[10px] font-semibold text-[#18181b] bg-white border border-[#6d28d9] rounded px-1 outline-none h-4"
+            className="w-full text-[10px] font-semibold text-zinc-900 dark:text-zinc-100 bg-white dark:bg-zinc-900 border border-zinc-900 dark:border-zinc-100 rounded px-1 outline-none h-4"
           />
         ) : (
           <span

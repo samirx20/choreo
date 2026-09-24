@@ -299,7 +299,7 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
         className={cn(
           "h-8 w-8 rounded-full flex items-center justify-center transition-all",
           activeTool === "select"
-            ? "bg-[#7c3aed] text-white shadow-xs"
+            ? "bg-white text-zinc-950 shadow-xs font-semibold"
             : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
         )}
         title="Select Tool (V)"
@@ -324,7 +324,7 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
         className={cn(
           "h-8 w-8 rounded-full flex items-center justify-center transition-all",
           activeTool === "frame"
-            ? "bg-[#7c3aed] text-white shadow-xs"
+            ? "bg-white text-zinc-950 shadow-xs font-semibold"
             : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
         )}
         title="Frame Container (F)"
@@ -341,7 +341,7 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
         className={cn(
           "h-8 w-8 rounded-full flex items-center justify-center transition-all font-serif font-bold text-sm",
           activeTool === "text"
-            ? "bg-[#7c3aed] text-white shadow-xs"
+            ? "bg-white text-zinc-950 shadow-xs font-semibold"
             : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
         )}
         title="Text (T)"
@@ -357,7 +357,7 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
             className={cn(
               "h-8 px-2 rounded-full flex items-center gap-1 transition-all",
               isShapeActive
-                ? "bg-[#7c3aed] text-white shadow-xs"
+                ? "bg-white text-zinc-950 shadow-xs font-semibold"
                 : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
             )}
             title="Shapes & Lines"
@@ -445,7 +445,7 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
             className={cn(
               "h-8 px-2 rounded-full flex items-center gap-1 transition-all",
               isVectorActive
-                ? "bg-[#7c3aed] text-white shadow-xs"
+                ? "bg-white text-zinc-950 shadow-xs font-semibold"
                 : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
             )}
             title="Vector Drawing (Pen & Pencil)"
@@ -532,7 +532,7 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
             className={cn(
               "h-8 w-8 rounded-full flex items-center justify-center transition-all",
               isIconPickerOpen
-                ? "bg-[#7c3aed] text-white shadow-xs"
+                ? "bg-white text-zinc-950 shadow-xs font-semibold"
                 : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
             )}
             title="Icons (1,555 Lucide Icons)"
@@ -567,7 +567,7 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
                 className={cn(
                   "h-8 w-8 rounded-full flex items-center justify-center transition-all",
                   isStaggerOpen
-                    ? "bg-[#7c3aed] text-white shadow-xs"
+                    ? "bg-white text-zinc-950 shadow-xs font-semibold"
                     : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
                 )}
                 title="Stagger Animations (Shift+S)"

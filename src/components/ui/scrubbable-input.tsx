@@ -310,10 +310,10 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
       onPointerDown={handlePointerDown}
       onDoubleClick={handleDoubleClick}
       className={cn(
-        "group relative flex items-center h-7 px-2 rounded bg-[#f4f4f6] hover:bg-[#ececee]",
-        "border border-transparent hover:border-[#e5e5e7] focus-within:border-[#6d28d9] focus-within:bg-white focus-within:ring-1 focus-within:ring-[#6d28d9]/20",
-        "transition-all select-none text-xs font-mono cursor-ew-resize",
-        isDragging && "border-[#6d28d9] bg-[#6d28d9]/10 cursor-ew-resize",
+        "group relative flex items-center h-7 px-2 rounded bg-[#f4f4f6] dark:bg-zinc-800/60 hover:bg-[#ececee] dark:hover:bg-zinc-800",
+        "border border-transparent hover:border-[#e5e5e7] dark:hover:border-zinc-700 focus-within:border-zinc-900 focus-within:bg-white focus-within:ring-1 focus-within:ring-zinc-900/20 dark:focus-within:border-zinc-100 dark:focus-within:bg-zinc-900 dark:focus-within:ring-zinc-100/20",
+        "transition-all select-none text-xs font-mono cursor-ew-resize text-zinc-900 dark:text-zinc-100",
+        isDragging && "border-zinc-900 bg-zinc-900/10 dark:border-zinc-100 dark:bg-zinc-100/10 cursor-ew-resize",
         disabled && "opacity-40 pointer-events-none",
         className
       )}
@@ -323,8 +323,8 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
       {label && (
         <span
           className={cn(
-            "text-[10px] font-sans font-medium text-[#71717a] group-hover:text-[#18181b] transition-colors mr-1 shrink-0 select-none",
-            isDragging && "text-[#6d28d9] font-bold"
+            "text-[10px] font-sans font-medium text-[#71717a] dark:text-zinc-400 group-hover:text-[#18181b] dark:group-hover:text-zinc-100 transition-colors mr-1 shrink-0 select-none",
+            isDragging && "text-zinc-900 dark:text-zinc-100 font-bold"
           )}
         >
           {label}
