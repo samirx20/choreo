@@ -152,7 +152,7 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
               {screen.name}
             </span>
           )}
-          <span className="text-[10px] text-[#a1a1aa] shrink-0 font-mono">· {screen.duration}s</span>
+          <span className="text-[10px] text-muted-foreground shrink-0 font-mono">· {screen.duration}s</span>
         </div>
 
         <div className="flex items-center gap-1">
@@ -177,12 +177,12 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
                 }),
               });
             }}
-            className="p-0.5 rounded hover:bg-black/5 text-[#a1a1aa] hover:text-[#18181b] transition-colors"
+            className="p-0.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
             title="Scene options"
           >
             <MoreHorizontal className="h-3 w-3" />
           </button>
-          <Sparkles className="h-3 w-3 text-[#a1a1aa]" />
+          <Sparkles className="h-3 w-3 text-muted-foreground" />
         </div>
       </div>
 
@@ -236,8 +236,8 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
         }}
         className={`rounded-[2px] transition-all ${
           isSelected
-            ? "ring-1.5 ring-zinc-900 dark:ring-zinc-100 shadow-sm"
-            : "border border-[#e5e5e7] dark:border-[#27272a] hover:border-[#a1a1aa] dark:hover:border-zinc-500"
+            ? "ring-1.5 ring-foreground shadow-sm"
+            : "border border-border hover:border-muted-foreground/60"
         }`}
       >
         {screen.layers.map((layer) => (

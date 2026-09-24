@@ -50,7 +50,7 @@ export const RightInspectorPanel: React.FC = () => {
   return (
     <aside
       id="right-inspector-panel"
-      className="w-[280px] h-full bg-white dark:bg-[#141417] border-l border-[#e5e5e7] dark:border-[#27272a] flex flex-col z-20 select-none shrink-0 text-[#18181b] dark:text-zinc-100 overflow-hidden relative"
+      className="w-[280px] h-full bg-card border-l border-border flex flex-col z-20 select-none shrink-0 text-card-foreground overflow-hidden relative"
     >
       {/* Panel Content */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">

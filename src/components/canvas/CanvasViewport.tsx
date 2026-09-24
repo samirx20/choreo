@@ -1054,7 +1054,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           items: buildCanvasPasteboardMenu({ store }),
         });
       }}
-      className={`flex-1 min-w-0 relative bg-[#f3f3f5] dark:bg-[#09090b] overflow-hidden select-none ${getCanvasCursor()}`}
+      className={`flex-1 min-w-0 relative bg-background overflow-hidden select-none ${getCanvasCursor()}`}
     >
       {/* Canvas Frame / World Transform Container */}
       <div
@@ -1234,7 +1234,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
                       height: "1px",
                     }
               }
-              className="absolute bg-[#ec4899] z-50 pointer-events-none"
+              className="absolute bg-pink-500 z-50 pointer-events-none"
             >
               {/* Subtle endpoint tick marks on segment-bounded guides */}
               {!guide.isCanvasAxis && (
@@ -1242,15 +1242,15 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
                   <div
                     className={
                       isVert
-                        ? "absolute -top-1 -left-[2px] w-[5px] h-[2px] bg-[#ec4899] rounded-xs"
-                        : "absolute -left-1 -top-[2px] h-[5px] w-[2px] bg-[#ec4899] rounded-xs"
+                        ? "absolute -top-1 -left-[2px] w-[5px] h-[2px] bg-pink-500 rounded-xs"
+                        : "absolute -left-1 -top-[2px] h-[5px] w-[2px] bg-pink-500 rounded-xs"
                     }
                   />
                   <div
                     className={
                       isVert
-                        ? "absolute -bottom-1 -left-[2px] w-[5px] h-[2px] bg-[#ec4899] rounded-xs"
-                        : "absolute -right-1 -top-[2px] h-[5px] w-[2px] bg-[#ec4899] rounded-xs"
+                        ? "absolute -bottom-1 -left-[2px] w-[5px] h-[2px] bg-pink-500 rounded-xs"
+                        : "absolute -right-1 -top-[2px] h-[5px] w-[2px] bg-pink-500 rounded-xs"
                     }
                   />
                 </>
@@ -1260,8 +1260,8 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
                 <div
                   className={
                     isVert
-                      ? "absolute top-1/2 -translate-y-1/2 left-2 px-1.5 py-0.5 rounded-full bg-[#ec4899] text-white text-[10px] font-mono font-medium shadow-xs whitespace-nowrap"
-                      : "absolute left-1/2 -translate-x-1/2 top-2 px-1.5 py-0.5 rounded-full bg-[#ec4899] text-white text-[10px] font-mono font-medium shadow-xs whitespace-nowrap"
+                      ? "absolute top-1/2 -translate-y-1/2 left-2 px-1.5 py-0.5 rounded-full bg-pink-500 text-white text-[10px] font-mono font-medium shadow-xs whitespace-nowrap"
+                      : "absolute left-1/2 -translate-x-1/2 top-2 px-1.5 py-0.5 rounded-full bg-pink-500 text-white text-[10px] font-mono font-medium shadow-xs whitespace-nowrap"
                   }
                 >
                   {guide.label}

@@ -2262,6 +2262,36 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - Production build verification (`npm run build`): passes with 0 TypeScript or bundling errors.
   - Zero saturated SaaS blues/purples remain in UI components.
 
+---
+
+### Decision 99: Systematic Semantic Design Token Refactor & Strict AGENTS.md Rule 2 Zero Hardcoding Compliance
+* **Context & Motivation**:
+  - A user bug report identified that numeric scrubbable inputs in dark mode were barely visible because their text color was hardcoded to dark zinc (`text-[#18181b]`).
+  - Furthermore, audit revealed 121 hardcoded ad-hoc Tailwind hex classes (`bg-[#...]`, `text-[#...]`, `border-[#...]`) scattered across 18 components, directly violating **AGENTS.md Rule 2: Absolute Zero Hardcoding (Config & Token Driven)**.
+  - Components like `TopNavBar`, `ExportPopover`, `FloatingDesignToolbar`, `IconPickerPopover`, `StaggerPopover`, `ProjectsWorkspace`, and `ProjectCard` had been hardcoded to dark-theme hexes (`#111113`, `#141416`, `#18181b`, `#27272a`), creating jarring theme asymmetry in light mode and maintenance fragility.
+* **The Solution**:
+  1. **ScrubbableInput & Select Restoration**:
+     - Converted `src/components/ui/scrubbable-input.tsx` from hardcoded `#18181b` to semantic `text-foreground` and `text-muted-foreground`, with semantic surfaces (`bg-muted hover:bg-muted/80`, `border-transparent hover:border-border`, `focus-within:border-primary focus-within:bg-card focus-within:ring-ring/20`). Number fields are now crisp, high-contrast, and legible in both light and dark themes.
+     - Refactored `src/components/ui/select.tsx` to 100% semantic design tokens (`bg-muted`, `bg-popover`, `border-border`, `text-popover-foreground`, `focus:bg-accent focus:text-accent-foreground`).
+  2. **Comprehensive Studio Chrome Token Migration**:
+     - Systematically converted all 18 files with hardcoded hexes to semantic HSL tokens:
+       - `TopNavBar.tsx`: `bg-card border-b border-border text-card-foreground`, `bg-muted`, `bg-popover`. Theme symmetrically adapts to light and dark modes.
+       - `LeftSidebar.tsx`: `bg-card`, `border-border`, `text-card-foreground`, `bg-primary text-primary-foreground`.
+       - `TimelinePanel.tsx` & `AudioTrackRow.tsx`: `bg-card`, `border-border`, `bg-muted/40`, `text-foreground`, `text-muted-foreground`.
+       - `CanvasViewport.tsx`: `bg-background` for pasteboard; `bg-pink-500` for alignment guides.
+       - `FloatingDesignToolbar.tsx`: `bg-card/90 border-border text-foreground`, `bg-primary text-primary-foreground`, `bg-popover`.
+       - `IconPickerPopover.tsx` & `StaggerPopover.tsx`: `bg-popover border-border text-popover-foreground`, `bg-primary text-primary-foreground`.
+       - `ExportPopover.tsx`: `bg-popover border-border text-popover-foreground`, `bg-muted`, `bg-primary`.
+       - `JitterEasingPopover.tsx`: Purged remaining blue `#3b82f6` / `#60a5fa` in favor of `bg-primary text-primary-foreground`, `bg-popover border-border`, and `stroke="currentColor"`.
+       - `AnimationCatalogSheet.tsx`: Purged all 33 hardcoded hexes in preview shapes and cards in favor of `text-muted-foreground`, `bg-muted/60`, and `bg-card`.
+       - `ClipDetailView.tsx`: Converted drawer portals from `bg-white dark:bg-[#141417]` to `bg-card`.
+       - `ProjectsWorkspace.tsx` & `ProjectCard.tsx`: Converted home dashboard to `bg-background`, `bg-card`, `border-border`, `text-foreground`, `bg-primary text-primary-foreground`.
+  3. **Zero Hardcoded Hex Count**:
+     - Automated scan of `src/components/` confirmed 0 remaining occurrences of `bg-[#...]`, `text-[#...]`, `border-[#...]`, or `fill-[#...]`.
+* **Verification**:
+  - All 52 Vitest test suites (477 unit/integration tests) pass 100%.
+  - Production build (`npm run build`) builds cleanly with zero TypeScript errors.
+
 
 
 

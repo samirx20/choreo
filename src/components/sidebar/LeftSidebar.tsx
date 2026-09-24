@@ -115,7 +115,7 @@ export const LeftSidebar: React.FC = () => {
   const getLayerIcon = (layer: Layer, isSelected: boolean) => {
     const iconClass = cn(
       "h-3.5 w-3.5 shrink-0",
-      isSelected ? "text-white" : "text-[#71717a]"
+      isSelected ? "text-primary-foreground" : "text-muted-foreground"
     );
     return <LayerIcon layer={layer} className={iconClass} />;
   };
@@ -213,8 +213,8 @@ export const LeftSidebar: React.FC = () => {
           className={cn(
             "group flex items-center justify-between h-8 pr-2 text-xs transition-colors cursor-pointer relative",
             isSelected
-              ? "bg-zinc-900 text-white dark:bg-white/15 dark:text-white font-medium"
-              : "text-[#18181b] dark:text-zinc-200 hover:bg-[#f4f4f6] dark:hover:bg-zinc-800/60",
+              ? "bg-primary text-primary-foreground font-medium"
+              : "text-foreground hover:bg-muted",
             isDragging && "opacity-40"
           )}
         >
@@ -222,7 +222,7 @@ export const LeftSidebar: React.FC = () => {
             {hasChildren && (
               <button
                 onClick={(e) => toggleGroupCollapse(layer.id, e)}
-                className="p-0.5 -ml-1 text-[#71717a] hover:text-inherit"
+                className="p-0.5 -ml-1 text-muted-foreground hover:text-foreground"
               >
                 {isCollapsed ? (
                   <ChevronRight className="h-3 w-3" />
@@ -239,13 +239,13 @@ export const LeftSidebar: React.FC = () => {
               if (parent && (parent as any).isMaskGroup) {
                 if (layer.isMask || (parent as any).children[0]?.id === layer.id) {
                   return (
-                    <span className="text-[9px] px-1 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-mono uppercase tracking-wider font-semibold">
+                    <span className="text-[9px] px-1 py-0.5 rounded bg-muted text-muted-foreground font-mono uppercase tracking-wider font-semibold">
                       Mask
                     </span>
                   );
                 }
                 return (
-                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono select-none -mr-0.5">
+                  <span className="text-[10px] text-muted-foreground font-mono select-none -mr-0.5">
                     ⤷
                   </span>
                 );
@@ -276,7 +276,7 @@ export const LeftSidebar: React.FC = () => {
                   }
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="h-5 px-1 bg-white dark:bg-zinc-900 border border-zinc-900 dark:border-zinc-100 rounded text-[11px] text-[#18181b] dark:text-zinc-100 outline-none w-full"
+                className="h-5 px-1 bg-card border border-primary rounded text-[11px] text-foreground outline-none w-full"
               />
             ) : (
               <span
@@ -288,8 +288,8 @@ export const LeftSidebar: React.FC = () => {
                 className={cn(
                   "truncate text-xs font-normal cursor-text transition-colors",
                   isSelected
-                    ? "text-white font-medium"
-                    : "hover:text-zinc-900 dark:hover:text-zinc-100"
+                    ? "text-primary-foreground font-medium"
+                    : "hover:text-foreground"
                 )}
                 title="Double-click, press F2, or right-click to rename"
               >
@@ -314,12 +314,12 @@ export const LeftSidebar: React.FC = () => {
               className={cn(
                 "p-0.5 rounded transition-colors",
                 isSelected
-                  ? "text-white/80 hover:text-white"
-                  : "text-[#71717a] hover:text-[#18181b]"
+                  ? "text-primary-foreground/80 hover:text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {layer.hidden ? (
-                <EyeOff className="h-3 w-3 text-red-400" />
+                <EyeOff className="h-3 w-3 text-destructive" />
               ) : (
                 <Eye className="h-3 w-3" />
               )}
@@ -334,12 +334,12 @@ export const LeftSidebar: React.FC = () => {
               className={cn(
                 "p-0.5 rounded transition-colors",
                 isSelected
-                  ? "text-white/80 hover:text-white"
-                  : "text-[#71717a] hover:text-[#18181b]"
+                  ? "text-primary-foreground/80 hover:text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               )}
             >
               {layer.locked ? (
-                <Lock className="h-3 w-3 text-amber-400" />
+                <Lock className="h-3 w-3 text-amber-500" />
               ) : (
                 <Unlock className="h-3 w-3" />
               )}
@@ -358,7 +358,7 @@ export const LeftSidebar: React.FC = () => {
   };
 
   return (
-    <aside className="w-[240px] h-full bg-white dark:bg-[#141417] border-r border-[#e5e5e7] dark:border-[#27272a] flex flex-col z-20 select-none shrink-0 text-[#18181b] dark:text-zinc-100 overflow-y-auto">
+    <aside className="w-[240px] h-full bg-card border-r border-border flex flex-col z-20 select-none shrink-0 text-card-foreground overflow-y-auto">
       {/* Unified Multi-Scene Outliner Tree (matching Jitter media_1789879347535.png) */}
       <div className="flex-1 flex flex-col py-1 overflow-y-auto">
         {doc.screens.map((screen) => {
@@ -400,10 +400,10 @@ export const LeftSidebar: React.FC = () => {
                 className={cn(
                   "group flex items-center justify-between h-9 px-3 text-xs cursor-pointer transition-colors select-none",
                   isScreenSelected
-                    ? "bg-zinc-900 text-white dark:bg-white/15 dark:text-white font-medium"
+                    ? "bg-primary text-primary-foreground font-medium"
                     : isScreenActive
-                    ? "bg-[#f4f4f6] dark:bg-white/5 text-[#18181b] dark:text-zinc-200 font-medium"
-                    : "text-[#18181b] dark:text-zinc-200 hover:bg-[#f4f4f6] dark:hover:bg-zinc-800/60"
+                    ? "bg-muted text-foreground font-medium"
+                    : "text-foreground hover:bg-muted"
                 )}
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -417,10 +417,10 @@ export const LeftSidebar: React.FC = () => {
                       }));
                     }}
                     className={cn(
-                      "p-0.5 -ml-1 rounded hover:bg-black/10 transition-colors",
+                      "p-0.5 -ml-1 rounded hover:bg-muted/80 transition-colors",
                       isScreenSelected
-                        ? "text-white hover:text-white"
-                        : "text-[#71717a] hover:text-[#18181b]"
+                        ? "text-primary-foreground hover:text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground"
                     )}
                     title={isCollapsed ? "Expand scene" : "Collapse scene"}
                   >
@@ -433,7 +433,7 @@ export const LeftSidebar: React.FC = () => {
                   <Play
                     className={cn(
                       "h-3.5 w-3.5 fill-current shrink-0",
-                      isScreenSelected ? "text-white" : "text-[#71717a]"
+                      isScreenSelected ? "text-primary-foreground" : "text-muted-foreground"
                     )}
                   />
                   {renamingSceneId === screen.id ? (
@@ -459,7 +459,7 @@ export const LeftSidebar: React.FC = () => {
                       }}
                       autoFocus
                       onClick={(e) => e.stopPropagation()}
-                      className="h-5 px-1 text-xs font-medium text-[#18181b] dark:text-zinc-100 bg-white dark:bg-zinc-900 border border-zinc-900 dark:border-zinc-100 rounded outline-none w-full"
+                      className="h-5 px-1 text-xs font-medium text-foreground bg-card border border-primary rounded outline-none w-full"
                     />
                   ) : (
                     <span
@@ -471,8 +471,8 @@ export const LeftSidebar: React.FC = () => {
                       className={cn(
                         "truncate font-medium cursor-text transition-colors",
                         isScreenSelected
-                          ? "text-white font-medium"
-                          : "hover:text-zinc-900 dark:hover:text-zinc-100"
+                          ? "text-primary-foreground font-medium"
+                          : "hover:text-foreground"
                       )}
                       title="Double-click or right-click to rename"
                     >
@@ -490,7 +490,7 @@ export const LeftSidebar: React.FC = () => {
                       .reverse()
                       .map((layer) => renderLayerNode(layer, 1, screen.id))
                   ) : (
-                    <div className="px-8 py-2 text-[11px] text-[#a1a1aa] italic">
+                    <div className="px-8 py-2 text-[11px] text-muted-foreground italic">
                       Empty scene
                     </div>
                   )}

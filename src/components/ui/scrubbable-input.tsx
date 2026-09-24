@@ -310,10 +310,10 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
       onPointerDown={handlePointerDown}
       onDoubleClick={handleDoubleClick}
       className={cn(
-        "group relative flex items-center h-7 px-2 rounded bg-[#f4f4f6] dark:bg-zinc-800/60 hover:bg-[#ececee] dark:hover:bg-zinc-800",
-        "border border-transparent hover:border-[#e5e5e7] dark:hover:border-zinc-700 focus-within:border-zinc-900 focus-within:bg-white focus-within:ring-1 focus-within:ring-zinc-900/20 dark:focus-within:border-zinc-100 dark:focus-within:bg-zinc-900 dark:focus-within:ring-zinc-100/20",
-        "transition-all select-none text-xs font-mono cursor-ew-resize text-zinc-900 dark:text-zinc-100",
-        isDragging && "border-zinc-900 bg-zinc-900/10 dark:border-zinc-100 dark:bg-zinc-100/10 cursor-ew-resize",
+        "group relative flex items-center h-7 px-2 rounded bg-muted hover:bg-muted/80",
+        "border border-transparent hover:border-border focus-within:border-primary focus-within:bg-card focus-within:ring-1 focus-within:ring-ring/20",
+        "transition-all select-none text-xs font-mono cursor-ew-resize text-foreground",
+        isDragging && "border-primary bg-primary/10 cursor-ew-resize",
         disabled && "opacity-40 pointer-events-none",
         className
       )}
@@ -323,8 +323,8 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
       {label && (
         <span
           className={cn(
-            "text-[10px] font-sans font-medium text-[#71717a] dark:text-zinc-400 group-hover:text-[#18181b] dark:group-hover:text-zinc-100 transition-colors mr-1 shrink-0 select-none",
-            isDragging && "text-zinc-900 dark:text-zinc-100 font-bold"
+            "text-[10px] font-sans font-medium text-muted-foreground group-hover:text-foreground transition-colors mr-1 shrink-0 select-none",
+            isDragging && "text-foreground font-bold"
           )}
         >
           {label}
@@ -341,13 +341,13 @@ export const ScrubbableInput: React.FC<ScrubbableInputProps> = ({
           onKeyDown={handleKeyDown}
           autoFocus
           onFocus={(e) => e.target.select()}
-          className="w-full h-full bg-transparent text-[#18181b] dark:text-zinc-100 text-xs font-mono outline-none text-center px-0 cursor-text"
+          className="w-full h-full bg-transparent text-foreground text-xs font-mono outline-none text-center px-0 cursor-text"
         />
       ) : (
-        <div className="w-full flex items-center justify-center text-xs text-[#18181b] dark:text-zinc-100 tabular-nums truncate">
+        <div className="w-full flex items-center justify-center text-xs text-foreground tabular-nums truncate">
           <span>{displayPrecision > 0 ? numVal.toFixed(displayPrecision) : numVal}</span>
           {displaySuffix && (
-            <span className="text-[#71717a] dark:text-zinc-400 text-[10px] ml-0.5">{displaySuffix}</span>
+            <span className="text-muted-foreground text-[10px] ml-0.5">{displaySuffix}</span>
           )}
         </div>
       )}

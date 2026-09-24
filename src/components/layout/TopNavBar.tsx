@@ -99,20 +99,20 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   };
 
   return (
-    <header className="h-12 w-full bg-[#111113] border-b border-[#222226] px-3 flex items-center justify-between z-30 relative select-none shrink-0 text-white">
+    <header className="h-12 w-full bg-card border-b border-border px-3 flex items-center justify-between z-30 relative select-none shrink-0 text-card-foreground">
       {/* Left: Back button & File Dropdown Menu */}
       <div className="flex items-center gap-2">
         {/* Back Arrow */}
         <button
           type="button"
           onClick={handleBack}
-          className="h-8 w-8 rounded flex items-center justify-center text-[#9ca3af] hover:text-white hover:bg-white/10 transition-colors"
+          className="h-8 w-8 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           title="Back to Projects"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
 
-        <div className="h-4 w-px bg-[#27272a]" />
+        <div className="h-4 w-px bg-border" />
 
         {/* File Name & Menu */}
         {isEditingTitle ? (
@@ -129,24 +129,24 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               }
             }}
             autoFocus
-            className="h-7 px-2 text-xs font-medium text-white bg-[#1f1f23] rounded border border-zinc-500 focus:border-zinc-300 outline-none w-44 text-left"
+            className="h-7 px-2 text-xs font-medium text-foreground bg-muted rounded border border-border focus:border-primary outline-none w-44 text-left"
           />
         ) : (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-[#e4e4e7] hover:text-white hover:bg-white/5 rounded transition-colors group cursor-pointer"
+                className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-foreground hover:bg-muted rounded transition-colors group cursor-pointer"
                 title="File Menu"
               >
                 <span className="max-w-[180px] truncate">{doc.name || "New file"}</span>
-                <span className="text-[10px] text-zinc-500 font-mono">.mtn</span>
-                <ChevronDown className="h-3 w-3 text-[#71717a] group-hover:text-zinc-300 transition-colors shrink-0" />
+                <span className="text-[10px] text-muted-foreground font-mono">.mtn</span>
+                <ChevronDown className="h-3 w-3 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="start"
-              className="w-56 bg-[#18181b] border border-[#27272a] text-zinc-200 shadow-xl"
+              className="w-56 bg-popover border border-border text-popover-foreground shadow-xl"
             >
               <DropdownMenuItem
                 onClick={() => {
@@ -161,7 +161,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 </div>
               </DropdownMenuItem>
 
-              <DropdownMenuSeparator className="bg-[#27272a]" />
+              <DropdownMenuSeparator className="bg-border" />
 
               <DropdownMenuItem
                 onClick={() => handleSave(false)}
@@ -169,10 +169,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 className="text-xs cursor-pointer flex items-center justify-between"
               >
                 <div className="flex items-center gap-2">
-                  <Save className="w-3.5 h-3.5 text-zinc-400" />
+                  <Save className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>Save</span>
                 </div>
-                <kbd className="text-[10px] font-mono text-zinc-500">Ctrl+S</kbd>
+                <kbd className="text-[10px] font-mono text-muted-foreground">Ctrl+S</kbd>
               </DropdownMenuItem>
 
               <DropdownMenuItem
@@ -181,10 +181,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 className="text-xs cursor-pointer flex items-center justify-between"
               >
                 <div className="flex items-center gap-2">
-                  <FileDown className="w-3.5 h-3.5 text-zinc-400" />
+                  <FileDown className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>Save As...</span>
                 </div>
-                <kbd className="text-[10px] font-mono text-zinc-500">Ctrl+Shift+S</kbd>
+                <kbd className="text-[10px] font-mono text-muted-foreground">Ctrl+Shift+S</kbd>
               </DropdownMenuItem>
 
               <DropdownMenuItem
@@ -192,29 +192,29 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 className="text-xs cursor-pointer flex items-center justify-between"
               >
                 <div className="flex items-center gap-2">
-                  <FolderOpen className="w-3.5 h-3.5 text-zinc-400" />
+                  <FolderOpen className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>Open (.mtn)...</span>
                 </div>
-                <kbd className="text-[10px] font-mono text-zinc-500">Ctrl+O</kbd>
+                <kbd className="text-[10px] font-mono text-muted-foreground">Ctrl+O</kbd>
               </DropdownMenuItem>
 
-              <DropdownMenuSeparator className="bg-[#27272a]" />
+              <DropdownMenuSeparator className="bg-border" />
 
               <DropdownMenuItem
                 onClick={() => window.dispatchEvent(new CustomEvent("motion-open-export-popover"))}
                 className="text-xs cursor-pointer flex items-center justify-between"
               >
                 <div className="flex items-center gap-2">
-                  <FileVideo className="w-3.5 h-3.5 text-zinc-400" />
+                  <FileVideo className="w-3.5 h-3.5 text-muted-foreground" />
                   <span>Export Video...</span>
                 </div>
               </DropdownMenuItem>
 
-              <DropdownMenuSeparator className="bg-[#27272a]" />
+              <DropdownMenuSeparator className="bg-border" />
 
               <DropdownMenuItem
                 onClick={handleBack}
-                className="text-xs cursor-pointer flex items-center justify-between text-zinc-400 hover:text-white"
+                className="text-xs cursor-pointer flex items-center justify-between text-muted-foreground hover:text-foreground"
               >
                 <div className="flex items-center gap-2">
                   <ArrowLeft className="w-3.5 h-3.5" />
@@ -228,15 +228,15 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
       {/* Center: Design vs Animate Mode Switcher */}
       <div className="absolute left-1/2 -translate-x-1/2 flex items-center">
-        <div className="bg-[#1f1f23] p-0.5 rounded-lg flex items-center border border-[#27272a] shadow-inner">
+        <div className="bg-muted p-0.5 rounded-lg flex items-center border border-border shadow-inner">
           <button
             type="button"
             onClick={() => setUiMode("design")}
             className={cn(
               "px-3.5 py-1 text-xs font-semibold rounded-md transition-all",
               !isMotionMode(uiMode)
-                ? "bg-white text-zinc-950 shadow-xs"
-                : "text-[#a1a1aa] hover:text-white hover:bg-white/5"
+                ? "bg-card text-card-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
             )}
           >
             Design
@@ -247,8 +247,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             className={cn(
               "px-3.5 py-1 text-xs font-semibold rounded-md transition-all",
               isMotionMode(uiMode)
-                ? "bg-white text-zinc-950 shadow-xs"
-                : "text-[#a1a1aa] hover:text-white hover:bg-white/5"
+                ? "bg-card text-card-foreground shadow-xs"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
             )}
           >
             Animate
@@ -264,7 +264,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           onClick={toggleTheme}
           title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
           data-testid="theme-toggle-btn"
-          className="h-8 w-8 text-[#d4d4d8] hover:text-white hover:bg-white/5 rounded flex items-center justify-center transition-colors"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted rounded flex items-center justify-center transition-colors"
         >
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
@@ -272,22 +272,22 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         {/* Zoom Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="h-8 text-xs px-2.5 gap-1 text-[#d4d4d8] hover:text-white hover:bg-white/5 rounded flex items-center transition-colors">
+            <button className="h-8 text-xs px-2.5 gap-1 text-muted-foreground hover:text-foreground hover:bg-muted rounded flex items-center transition-colors">
               <span>{Math.round(zoom * 100)}%</span>
-              <ChevronDown className="h-3 w-3 text-[#71717a]" />
+              <ChevronDown className="h-3 w-3 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-[#18181b] border-[#27272a] text-xs text-white">
+          <DropdownMenuContent align="end" className="bg-popover border-border text-xs text-popover-foreground">
             {!isMotionMode(uiMode) && (
               <>
-                <DropdownMenuItem onClick={() => setZoom(0.5)} className="hover:bg-white/10">50%</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setZoom(0.75)} className="hover:bg-white/10">75%</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setZoom(0.5)} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">50%</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setZoom(0.75)} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">75%</DropdownMenuItem>
               </>
             )}
-            <DropdownMenuItem onClick={() => setZoom(1)} className="hover:bg-white/10">100% (Fit)</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setZoom(1.25)} className="hover:bg-white/10">125%</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setZoom(1.5)} className="hover:bg-white/10">150%</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setZoom(2)} className="hover:bg-white/10">200%</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setZoom(1)} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">100% (Fit)</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setZoom(1.25)} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">125%</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setZoom(1.5)} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">150%</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setZoom(2)} className="hover:bg-accent hover:text-accent-foreground cursor-pointer">200%</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
 

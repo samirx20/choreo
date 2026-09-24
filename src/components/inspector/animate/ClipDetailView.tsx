@@ -1882,7 +1882,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               <div
                 onClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="absolute inset-0 z-40 bg-white dark:bg-[#141417] flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
+                className="absolute inset-0 z-40 bg-card flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
               >
                 {/* Header */}
                 <div className="h-12 px-3 border-b border-border flex items-center justify-between shrink-0">
@@ -2002,7 +2002,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               <div
                 onClick={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="absolute inset-0 z-40 bg-white dark:bg-[#141417] flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
+                className="absolute inset-0 z-40 bg-card flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
               >
                 {/* Header */}
                 <div className="h-12 px-3 border-b border-border flex items-center justify-between shrink-0">

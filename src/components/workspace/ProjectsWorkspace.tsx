@@ -114,46 +114,46 @@ export const ProjectsWorkspace: React.FC = () => {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className="min-h-screen w-full bg-[#0c0c0e] text-zinc-100 flex flex-col font-sans select-none relative"
+      className="min-h-screen w-full bg-background text-foreground flex flex-col font-sans select-none relative"
     >
       {/* File Drop Overlay for Workspace */}
       {isDraggingFile && (
         <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-8 pointer-events-none">
-          <div className="w-full max-w-md p-8 rounded-2xl border-2 border-dashed border-white/30 bg-[#141417]/95 flex flex-col items-center text-center shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-14 h-14 rounded-2xl bg-white/10 text-white flex items-center justify-center mb-4 border border-white/20 shadow-inner">
+          <div className="w-full max-w-md p-8 rounded-2xl border-2 border-dashed border-border bg-card/95 flex flex-col items-center text-center shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-14 h-14 rounded-2xl bg-muted text-foreground flex items-center justify-center mb-4 border border-border shadow-inner">
               <Film className="w-7 h-7" />
             </div>
-            <h3 className="text-base font-semibold text-white tracking-tight">
+            <h3 className="text-base font-semibold text-foreground tracking-tight">
               Drop .mtn project to open
             </h3>
-            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed max-w-xs">
+            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed max-w-xs">
               Instant loading and schema validation of project scenes, layers, spring physics, and timeline.
             </p>
           </div>
         </div>
       )}
       {/* 1. Workspace Top Bar */}
-      <header className="h-14 w-full bg-[#111113] border-b border-[#222226] px-6 flex items-center justify-between z-30 shrink-0">
+      <header className="h-14 w-full bg-card border-b border-border px-6 flex items-center justify-between z-30 shrink-0 text-card-foreground">
         {/* Left: Brand Mark */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-b from-zinc-700 to-zinc-900 flex items-center justify-center text-white shadow-sm border border-white/10">
+          <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
             <Film className="w-4 h-4" />
           </div>
-          <span className="font-semibold text-sm tracking-tight text-white">
+          <span className="font-semibold text-sm tracking-tight text-foreground">
             Motion Studio
           </span>
-          <span className="text-[11px] font-mono text-zinc-500 ml-1">v1.0</span>
+          <span className="text-[11px] font-mono text-muted-foreground ml-1">v1.0</span>
         </div>
 
         {/* Center: Search Bar */}
         <div className="relative w-80">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500 pointer-events-none" />
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search projects..."
-            className="h-8 w-full pl-8 pr-3 text-xs bg-[#18181b] border border-[#27272a] focus:border-zinc-500 rounded-md outline-none text-zinc-200 placeholder:text-zinc-600 transition-colors"
+            className="h-8 w-full pl-8 pr-3 text-xs bg-muted border border-border focus:border-ring rounded-md outline-none text-foreground placeholder:text-muted-foreground transition-colors"
           />
         </div>
 
@@ -171,10 +171,10 @@ export const ProjectsWorkspace: React.FC = () => {
           <button
             type="button"
             onClick={handleImportClick}
-            className="h-8 px-3 rounded text-xs font-medium text-zinc-300 hover:text-white bg-[#18181b] hover:bg-[#222226] border border-[#27272a] flex items-center gap-1.5 transition-colors"
+            className="h-8 px-3 rounded text-xs font-medium text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 border border-border flex items-center gap-1.5 transition-colors"
             title="Import project file (.mtn)"
           >
-            <Upload className="w-3.5 h-3.5 text-zinc-400" />
+            <Upload className="w-3.5 h-3.5 text-muted-foreground" />
             <span>Import</span>
           </button>
 
@@ -190,7 +190,7 @@ export const ProjectsWorkspace: React.FC = () => {
                 template: "blank",
               })
             }
-            className="h-8 px-3.5 rounded text-xs font-semibold text-zinc-950 bg-white hover:bg-zinc-200 flex items-center gap-1.5 shadow-xs transition-colors"
+            className="h-8 px-3.5 rounded text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 flex items-center gap-1.5 shadow-xs transition-colors"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Project</span>
@@ -203,7 +203,7 @@ export const ProjectsWorkspace: React.FC = () => {
         {/* Quick Start Formats Shelf */}
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-zinc-200 tracking-tight">
+            <h2 className="text-sm font-semibold text-foreground tracking-tight">
               Start from Format
             </h2>
           </div>
@@ -220,16 +220,16 @@ export const ProjectsWorkspace: React.FC = () => {
                   template: "blank",
                 })
               }
-              className="group p-3 rounded-lg bg-[#141416] border border-[#27272a] hover:border-zinc-500 text-left transition-colors flex items-center gap-3"
+              className="group p-3 rounded-lg bg-card border border-border hover:border-muted-foreground/60 text-left transition-colors flex items-center gap-3 shadow-xs hover:shadow-sm"
             >
-              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-white group-hover:bg-white/10 transition-colors">
+              <div className="p-2 rounded bg-muted text-muted-foreground group-hover:text-foreground group-hover:bg-muted/80 transition-colors">
                 <Monitor className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-medium text-zinc-200 group-hover:text-white">
+                <div className="text-xs font-medium text-foreground">
                   16:9 Landscape
                 </div>
-                <div className="text-[10px] text-zinc-500 font-mono">1920×1080</div>
+                <div className="text-[10px] text-muted-foreground font-mono">1920×1080</div>
               </div>
             </button>
 
@@ -244,16 +244,16 @@ export const ProjectsWorkspace: React.FC = () => {
                   template: "blank",
                 })
               }
-              className="group p-3 rounded-lg bg-[#141416] border border-[#27272a] hover:border-zinc-500 text-left transition-colors flex items-center gap-3"
+              className="group p-3 rounded-lg bg-card border border-border hover:border-muted-foreground/60 text-left transition-colors flex items-center gap-3 shadow-xs hover:shadow-sm"
             >
-              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-white group-hover:bg-white/10 transition-colors">
+              <div className="p-2 rounded bg-muted text-muted-foreground group-hover:text-foreground group-hover:bg-muted/80 transition-colors">
                 <Smartphone className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-medium text-zinc-200 group-hover:text-white">
+                <div className="text-xs font-medium text-foreground">
                   9:16 Vertical
                 </div>
-                <div className="text-[10px] text-zinc-500 font-mono">1080×1920</div>
+                <div className="text-[10px] text-muted-foreground font-mono">1080×1920</div>
               </div>
             </button>
 
@@ -268,16 +268,16 @@ export const ProjectsWorkspace: React.FC = () => {
                   template: "blank",
                 })
               }
-              className="group p-3 rounded-lg bg-[#141416] border border-[#27272a] hover:border-zinc-500 text-left transition-colors flex items-center gap-3"
+              className="group p-3 rounded-lg bg-card border border-border hover:border-muted-foreground/60 text-left transition-colors flex items-center gap-3 shadow-xs hover:shadow-sm"
             >
-              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-white group-hover:bg-white/10 transition-colors">
+              <div className="p-2 rounded bg-muted text-muted-foreground group-hover:text-foreground group-hover:bg-muted/80 transition-colors">
                 <Square className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-medium text-zinc-200 group-hover:text-white">
+                <div className="text-xs font-medium text-foreground">
                   1:1 Square
                 </div>
-                <div className="text-[10px] text-zinc-500 font-mono">1080×1080</div>
+                <div className="text-[10px] text-muted-foreground font-mono">1080×1080</div>
               </div>
             </button>
 
@@ -292,16 +292,16 @@ export const ProjectsWorkspace: React.FC = () => {
                   template: "blank",
                 })
               }
-              className="group p-3 rounded-lg bg-[#141416] border border-[#27272a] hover:border-zinc-500 text-left transition-colors flex items-center gap-3"
+              className="group p-3 rounded-lg bg-card border border-border hover:border-muted-foreground/60 text-left transition-colors flex items-center gap-3 shadow-xs hover:shadow-sm"
             >
-              <div className="p-2 rounded bg-zinc-800 text-zinc-300 group-hover:text-white group-hover:bg-white/10 transition-colors">
+              <div className="p-2 rounded bg-muted text-muted-foreground group-hover:text-foreground group-hover:bg-muted/80 transition-colors">
                 <LayoutTemplate className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <div className="text-xs font-medium text-zinc-200 group-hover:text-white">
+                <div className="text-xs font-medium text-foreground">
                   4:5 Portrait
                 </div>
-                <div className="text-[10px] text-zinc-500 font-mono">1080×1350</div>
+                <div className="text-[10px] text-muted-foreground font-mono">1080×1350</div>
               </div>
             </button>
           </div>
@@ -311,10 +311,10 @@ export const ProjectsWorkspace: React.FC = () => {
         <section className="flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h2 className="text-sm font-semibold text-zinc-200 tracking-tight">
+              <h2 className="text-sm font-semibold text-foreground tracking-tight">
                 Projects
               </h2>
-              <span className="text-xs font-mono text-zinc-500">
+              <span className="text-xs font-mono text-muted-foreground">
                 ({filteredProjects.length})
               </span>
             </div>
@@ -324,7 +324,7 @@ export const ProjectsWorkspace: React.FC = () => {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="h-7 px-2.5 rounded text-xs text-zinc-400 hover:text-zinc-200 bg-[#141416] border border-[#27272a] flex items-center gap-1.5 transition-colors"
+                  className="h-7 px-2.5 rounded text-xs text-muted-foreground hover:text-foreground bg-card border border-border flex items-center gap-1.5 transition-colors"
                 >
                   <ArrowUpDown className="w-3 h-3" />
                   <span>
@@ -339,7 +339,7 @@ export const ProjectsWorkspace: React.FC = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent
                 align="end"
-                className="w-36 bg-[#18181b] border border-[#27272a] text-zinc-200"
+                className="w-36 bg-popover border border-border text-popover-foreground"
               >
                 <DropdownMenuItem
                   onClick={() => setSortBy("updatedAt")}
@@ -380,12 +380,12 @@ export const ProjectsWorkspace: React.FC = () => {
             </div>
           ) : (
             /* Empty State */
-            <div className="w-full py-16 flex flex-col items-center justify-center text-center border border-dashed border-[#27272a] rounded-xl bg-[#111113]/50 p-6">
-              <Film className="w-8 h-8 text-zinc-600 mb-3" />
-              <h3 className="text-sm font-medium text-zinc-300">
+            <div className="w-full py-16 flex flex-col items-center justify-center text-center border border-dashed border-border rounded-xl bg-card/50 p-6">
+              <Film className="w-8 h-8 text-muted-foreground mb-3" />
+              <h3 className="text-sm font-medium text-foreground">
                 {searchQuery ? "No matching projects" : "No projects yet"}
               </h3>
-              <p className="text-xs text-zinc-500 mt-1 max-w-sm">
+              <p className="text-xs text-muted-foreground mt-1 max-w-sm">
                 {searchQuery
                   ? `No project matching "${searchQuery}". Check the query or reset your search.`
                   : "Create your first motion graphic project from a preset or start from blank."}
@@ -403,7 +403,7 @@ export const ProjectsWorkspace: React.FC = () => {
                       template: "blank",
                     })
                   }
-                  className="mt-4 px-3.5 py-1.5 rounded text-xs font-semibold text-zinc-950 bg-white hover:bg-zinc-200 shadow-xs transition-colors"
+                  className="mt-4 px-3.5 py-1.5 rounded text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 shadow-xs transition-colors"
                 >
                   Create Project
                 </button>

@@ -174,22 +174,22 @@ export const IconPickerPopover: React.FC<IconPickerPopoverProps> = ({
 
   return (
     <div
-      className="w-84 bg-[#18181b]/95 backdrop-blur-xl border border-[#27272a] text-zinc-200 shadow-2xl rounded-2xl p-3 select-none flex flex-col gap-2.5 max-h-[440px]"
+      className="w-84 bg-popover/95 backdrop-blur-xl border border-border text-popover-foreground shadow-2xl rounded-2xl p-3 select-none flex flex-col gap-2.5 max-h-[440px]"
       data-testid="icon-picker-popover"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header & Search */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-white">
-          <Sparkles className="h-3.5 w-3.5 text-white" />
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+          <Sparkles className="h-3.5 w-3.5 text-foreground" />
           <span>Lucide Icons</span>
-          <span className="text-[10px] text-zinc-500 font-mono">({allIconNames.length})</span>
+          <span className="text-[10px] text-muted-foreground font-mono">({allIconNames.length})</span>
         </div>
         {onClose && (
           <button
             type="button"
             onClick={onClose}
-            className="p-1 text-zinc-400 hover:text-white rounded-md hover:bg-white/10 transition-colors"
+            className="p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -198,7 +198,7 @@ export const IconPickerPopover: React.FC<IconPickerPopoverProps> = ({
 
       {/* Search Input */}
       <div className="relative flex items-center">
-        <Search className="absolute left-2.5 h-3.5 w-3.5 text-zinc-500 pointer-events-none" />
+        <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
         <input
           type="text"
           value={searchQuery}
@@ -208,13 +208,13 @@ export const IconPickerPopover: React.FC<IconPickerPopoverProps> = ({
           }}
           placeholder="Search 1,555 icons..."
           autoFocus
-          className="w-full h-8 pl-8 pr-7 bg-zinc-900 border border-[#27272a] rounded-lg text-xs text-white placeholder-zinc-500 outline-none focus:border-zinc-500 transition-colors"
+          className="w-full h-8 pl-8 pr-7 bg-muted/60 border border-border rounded-lg text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-ring transition-colors"
         />
         {searchQuery && (
           <button
             type="button"
             onClick={() => setSearchQuery("")}
-            className="absolute right-2 p-0.5 text-zinc-500 hover:text-white transition-colors"
+            className="absolute right-2 p-0.5 text-muted-foreground hover:text-foreground transition-colors"
           >
             <X className="h-3 w-3" />
           </button>
@@ -235,8 +235,8 @@ export const IconPickerPopover: React.FC<IconPickerPopoverProps> = ({
               className={cn(
                 "px-2 py-0.5 rounded-full whitespace-nowrap transition-colors",
                 activeCategory === cat
-                  ? "bg-white text-zinc-950 font-semibold shadow-xs"
-                  : "bg-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-700/80"
+                  ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
               )}
             >
               {cat}
@@ -246,9 +246,9 @@ export const IconPickerPopover: React.FC<IconPickerPopoverProps> = ({
       )}
 
       {/* Icon Grid */}
-      <div className="grid grid-cols-6 gap-1 overflow-y-auto max-h-60 p-0.5 pr-1 text-zinc-400">
+      <div className="grid grid-cols-6 gap-1 overflow-y-auto max-h-60 p-0.5 pr-1 text-muted-foreground">
         {displayedIcons.length === 0 ? (
-          <div className="col-span-6 py-8 text-center text-xs text-zinc-500">
+          <div className="col-span-6 py-8 text-center text-xs text-muted-foreground">
             No icons found for &ldquo;{searchQuery}&rdquo;
           </div>
         ) : (
@@ -265,8 +265,8 @@ export const IconPickerPopover: React.FC<IconPickerPopoverProps> = ({
                 className={cn(
                   "h-10 rounded-lg flex flex-col items-center justify-center p-1 transition-all cursor-pointer group relative",
                   isSelected
-                    ? "bg-white/15 text-white border border-white/20 font-medium"
-                    : "hover:bg-white/10 hover:text-white text-zinc-300"
+                    ? "bg-primary text-primary-foreground font-medium"
+                    : "hover:bg-muted hover:text-foreground text-foreground/80"
                 )}
               >
                 <IconComp className="h-4 w-4 shrink-0 transition-transform group-hover:scale-115" />
@@ -284,7 +284,7 @@ export const IconPickerPopover: React.FC<IconPickerPopoverProps> = ({
         <button
           type="button"
           onClick={() => setDisplayCount((prev) => prev + 100)}
-          className="text-center text-[10px] text-zinc-300 hover:text-white py-1 font-medium cursor-pointer"
+          className="text-center text-[10px] text-muted-foreground hover:text-foreground py-1 font-medium cursor-pointer"
         >
           Load more ({filteredIconNames.length - displayedIcons.length} remaining)
         </button>

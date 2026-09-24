@@ -415,7 +415,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
             style={{
               strokeDasharray: 24,
               animation: "anim-preview-arrowStem 1.8s ease-in-out infinite",
@@ -428,7 +428,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
             style={{
               animation: "anim-preview-arrowHead 1.8s ease-in-out infinite",
             }}
@@ -449,7 +449,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeDasharray="6 3"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
             style={{
               animation: "anim-preview-dashFlow 1.2s linear infinite",
             }}
@@ -470,7 +470,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             strokeWidth="2"
             strokeLinecap="round"
             strokeOpacity="0.2"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
           />
           <line
             x1="2"
@@ -481,7 +481,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             strokeWidth="2.5"
             strokeLinecap="round"
             pathLength="100"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
             style={{
               strokeDasharray: 100,
               animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
@@ -494,7 +494,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
     return (
       <div
         style={animStyle}
-        className="w-7 h-1 rounded-full bg-[#71717a] dark:bg-zinc-400 group-hover:bg-foreground transition-colors"
+        className="w-7 h-1 rounded-full bg-muted-foreground group-hover:bg-foreground transition-colors"
       />
     );
   }
@@ -504,7 +504,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
     return (
       <Sparkles
         style={animStyle}
-        className="w-5 h-5 text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+        className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors"
       />
     );
   }
@@ -514,9 +514,9 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
     return (
       <div
         style={animStyle}
-        className="w-7 h-5 rounded-[4px] bg-[#f4f4f7] dark:bg-zinc-800 border border-[#d4d4d8] dark:border-zinc-700 group-hover:bg-muted group-hover:border-foreground/30 flex items-center justify-center transition-colors shadow-2xs"
+        className="w-7 h-5 rounded-[4px] bg-muted/60 border border-border group-hover:bg-muted group-hover:border-foreground/30 flex items-center justify-center transition-colors shadow-2xs"
       >
-        <ImageIcon className="w-3.5 h-3.5 text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors" />
+        <ImageIcon className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground transition-colors" />
       </div>
     );
   }
@@ -538,7 +538,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             stroke="currentColor"
             strokeWidth="2"
             strokeOpacity="0.2"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
           />
           <circle
             cx="12"
@@ -549,7 +549,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             strokeWidth="2.5"
             strokeLinecap="round"
             pathLength="100"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
             style={{
               strokeDasharray: 100,
               animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
@@ -566,7 +566,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
           "w-6 h-6 rounded-full transition-all",
           isGlass
             ? "backdrop-blur-md bg-white/60 dark:bg-white/20 border border-white/90 dark:border-white/30 shadow-2xs"
-            : "bg-[#f4f4f7] dark:bg-zinc-800 border border-[#d4d4d8] dark:border-zinc-700 group-hover:bg-muted group-hover:border-foreground/30 group-hover:text-foreground"
+            : "bg-muted/60 border border-border group-hover:bg-muted group-hover:border-foreground/30 group-hover:text-foreground"
         )}
       />
     );
@@ -584,7 +584,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             stroke="currentColor"
             strokeWidth="6"
             strokeOpacity="0.2"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
           />
           <polygon
             points={starPts}
@@ -594,7 +594,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             strokeLinecap="round"
             strokeLinejoin="round"
             pathLength="100"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
             style={{
               strokeDasharray: 100,
               animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
@@ -613,7 +613,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             stroke="currentColor"
             strokeWidth="4"
             strokeLinejoin="round"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
           />
         </svg>
       </div>
@@ -633,7 +633,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             stroke="currentColor"
             strokeWidth="6"
             strokeOpacity="0.2"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
           />
           <polygon
             points={polyPts}
@@ -643,7 +643,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             strokeLinecap="round"
             strokeLinejoin="round"
             pathLength="100"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
             style={{
               strokeDasharray: 100,
               animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
@@ -662,7 +662,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
             stroke="currentColor"
             strokeWidth="4"
             strokeLinejoin="round"
-            className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+            className="text-muted-foreground group-hover:text-foreground transition-colors"
           />
         </svg>
       </div>
@@ -683,7 +683,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
           stroke="currentColor"
           strokeWidth="2"
           strokeOpacity="0.2"
-          className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+          className="text-muted-foreground group-hover:text-foreground transition-colors"
         />
         <rect
           x="2"
@@ -696,7 +696,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
           strokeWidth="2.5"
           strokeLinecap="round"
           pathLength="100"
-          className="text-[#71717a] dark:text-zinc-400 group-hover:text-foreground transition-colors"
+          className="text-muted-foreground group-hover:text-foreground transition-colors"
           style={{
             strokeDasharray: 100,
             animation: "anim-preview-drawOn-stroke 1.8s ease-in-out infinite",
@@ -713,7 +713,7 @@ const AdaptivePreviewShape: React.FC<AdaptivePreviewShapeProps> = ({
         "w-6 h-6 transition-all",
         isGlass
           ? "rounded-[5px] backdrop-blur-md bg-white/60 dark:bg-white/20 border border-white/90 dark:border-white/30 shadow-2xs"
-          : "rounded-[5px] bg-[#f4f4f7] dark:bg-zinc-800 border border-[#d4d4d8] dark:border-zinc-700 group-hover:bg-muted group-hover:border-foreground/30",
+          : "rounded-[5px] bg-muted/60 border border-border group-hover:bg-muted group-hover:border-foreground/30",
         preset.id === "circleIris" && "rounded-full"
       )}
     />
@@ -804,13 +804,13 @@ const AnimationCard: React.FC<{
         className={cn(
           "w-full h-[76px] rounded-xl flex items-center justify-center relative overflow-hidden transition-all shadow-2xs",
           isSelected
-            ? "bg-zinc-100 dark:bg-zinc-800 border-2 border-zinc-900 dark:border-zinc-100 ring-2 ring-zinc-900/20 dark:ring-white/20"
-            : "bg-[#f8f8fa] dark:bg-zinc-900/60 group-hover:bg-[#f0f0f4] dark:group-hover:bg-zinc-800 border border-[#e5e5e7] dark:border-[#27272a] group-hover:border-zinc-400 dark:group-hover:border-zinc-600"
+            ? "bg-primary/10 border-2 border-primary ring-2 ring-primary/20"
+            : "bg-muted/40 group-hover:bg-muted border border-border group-hover:border-muted-foreground/40"
         )}
       >
         {/* Selected badge */}
         {isSelected && (
-          <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-950 flex items-center justify-center shadow-xs z-10 animate-in zoom-in-50 duration-150">
+          <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-xs z-10 animate-in zoom-in-50 duration-150">
             <Check className="w-2.5 h-2.5 stroke-[3]" />
           </div>
         )}
@@ -836,8 +836,8 @@ const AnimationCard: React.FC<{
         className={cn(
           "mt-1.5 text-[11px] font-medium transition-colors text-center truncate max-w-full px-0.5",
           isSelected
-            ? "text-zinc-950 dark:text-white font-bold"
-            : "text-[#71717a] dark:text-zinc-400 group-hover:text-[#18181b] dark:group-hover:text-zinc-100"
+            ? "text-foreground font-bold"
+            : "text-muted-foreground group-hover:text-foreground"
         )}
       >
         {preset.name}
@@ -1042,7 +1042,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
       <div
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
-        className="absolute inset-0 z-40 bg-white dark:bg-[#141417] flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
+        className="absolute inset-0 z-40 bg-card flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
       >
         {/* Header */}
         <div className="h-12 px-3 border-b border-border flex items-center justify-between shrink-0">
@@ -1153,7 +1153,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
     <div
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
-      className="absolute inset-0 z-40 bg-white dark:bg-[#141417] flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
+      className="absolute inset-0 z-40 bg-card flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
     >
       {/* Scoped CSS Keyframes for live thumbnail previews */}
       <style>{`
@@ -1351,7 +1351,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                 <>
                   {/* Headline & Display Subgroup */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#71717a] dark:text-zinc-400 uppercase tracking-wider">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       <Type className="h-3 w-3 text-foreground" />
                       <span>Headline & Display (Single Word / Short)</span>
                     </div>
@@ -1371,7 +1371,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
 
                   {/* Paragraph & Reading Subgroup */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#71717a] uppercase tracking-wider">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       <Sparkles className="h-3 w-3 text-emerald-600" />
                       <span>Paragraph & Reading (Multi-Word / Body)</span>
                     </div>
@@ -1391,7 +1391,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                 </>
               ) : (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#71717a] uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                     <Sparkles className="h-3 w-3 text-emerald-600" />
                     <span>Entrance (In)</span>
                   </div>
@@ -1414,7 +1414,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
             {/* Action Group */}
             {(filterCategory === "all" || filterCategory === "action") && (
               <div className="space-y-2">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#71717a] uppercase tracking-wider">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                   <Zap className="h-3 w-3 text-amber-600" />
                   <span>Action / Loop</span>
                 </div>
@@ -1436,7 +1436,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
             {/* Exit Group */}
             {(filterCategory === "all" || filterCategory === "out") && (
               <div className="space-y-2">
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#71717a] uppercase tracking-wider">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                   <ArrowLeft className="h-3 w-3 text-rose-600 rotate-180" />
                   <span>Exit (Out)</span>
                 </div>
@@ -1462,8 +1462,8 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
       {activeTab === "CUSTOM" && (
         <div className="flex-1 overflow-y-auto p-3 space-y-4">
           {filteredCustomCategories.map((section, sIdx) => (
-            <div key={section.category} className={cn(sIdx > 0 && "border-t border-[#e5e5e7] dark:border-zinc-800 pt-3")}>
-              <h3 className="text-[13px] font-bold text-[#18181b] dark:text-zinc-100 tracking-tight px-2 pb-1.5">
+            <div key={section.category} className={cn(sIdx > 0 && "border-t border-border pt-3")}>
+              <h3 className="text-[13px] font-bold text-foreground tracking-tight px-2 pb-1.5">
                 {section.category}
               </h3>
               <div className="space-y-0.5">
@@ -1478,7 +1478,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                       className={cn(
                         "w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-left transition-colors cursor-pointer group",
                         isSelected
-                          ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-950 dark:text-white font-semibold"
+                          ? "bg-primary/10 text-foreground font-semibold"
                           : "hover:bg-muted text-foreground"
                       )}
                     >
@@ -1487,7 +1487,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                         <span
                           className={cn(
                             "text-[13px] truncate",
-                            isSelected ? "font-semibold text-zinc-950 dark:text-white" : "font-medium text-foreground"
+                            isSelected ? "font-semibold text-foreground" : "font-medium text-foreground"
                           )}
                         >
                           {item.name}
@@ -1508,7 +1508,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
       {/* TAB 3: EFFECTS (Continuous Loops) */}
       {activeTab === "EFFECTS" && (
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
-          <div className="text-[11px] text-[#71717a] pb-0.5 leading-snug">
+          <div className="text-[11px] text-muted-foreground pb-0.5 leading-snug">
             Continuous ambient loops and physical oscillations:
           </div>
 

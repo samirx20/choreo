@@ -98,7 +98,7 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
   return (
     <div
       data-testid="timeline-audio-track-row"
-      className="flex h-10 border-b border-[#e5e5e7] dark:border-[#27272a] bg-[#fdfdfd] dark:bg-[#141417] transition-colors hover:bg-[#fafafa] dark:hover:bg-zinc-800/40"
+      className="flex h-10 border-b border-border bg-card transition-colors hover:bg-muted/50"
     >
       <input
         ref={fileInputRef}
@@ -109,7 +109,7 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
       />
 
       {/* Left Track Header */}
-      <div className="w-56 shrink-0 sticky left-0 z-10 px-3 flex items-center justify-between border-r border-[#e5e5e7] dark:border-[#27272a] bg-[#fafafa] dark:bg-[#18181b]">
+      <div className="w-56 shrink-0 sticky left-0 z-10 px-3 flex items-center justify-between border-r border-border bg-card">
         <div className="flex items-center gap-2 truncate min-w-0 flex-1 mr-1">
           <Music className="w-3.5 h-3.5 text-foreground shrink-0" />
           <span
@@ -125,11 +125,11 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
             <button
               type="button"
               onClick={() => toggleAudioMute(audioTrack.id)}
-              className="p-1 rounded text-[#71717a] hover:text-foreground transition-colors"
+              className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
               title={audioTrack.muted ? "Unmute Audio" : "Mute Audio"}
             >
               {audioTrack.muted ? (
-                <VolumeX className="w-3.5 h-3.5 text-red-500" />
+                <VolumeX className="w-3.5 h-3.5 text-destructive" />
               ) : (
                 <Volume2 className="w-3.5 h-3.5 text-foreground" />
               )}
@@ -140,7 +140,7 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
                 removeAudioTrack(audioTrack.id);
                 onClose?.();
               }}
-              className="p-1 rounded text-[#a1a1aa] hover:text-red-600 transition-colors"
+              className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
               title="Delete Audio Track"
             >
               <Trash2 className="w-3 h-3" />
@@ -149,7 +149,7 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1 rounded text-[#a1a1aa] hover:text-foreground transition-colors"
+                className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
                 title="Hide Audio Lane"
               >
                 <X className="w-3 h-3" />
@@ -177,7 +177,7 @@ export const AudioTrackRow: React.FC<AudioTrackRowProps> = ({ maxSec, onClose })
               <button
                 type="button"
                 onClick={onClose}
-                className="p-1 rounded text-[#a1a1aa] hover:text-foreground transition-colors"
+                className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
                 title="Hide Audio Lane"
               >
                 <X className="w-3 h-3" />

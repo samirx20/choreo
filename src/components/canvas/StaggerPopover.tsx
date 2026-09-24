@@ -98,18 +98,18 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
 
   return (
     <div
-      className="w-80 p-3.5 bg-[#18181b] border border-[#27272a] rounded-xl shadow-2xl flex flex-col gap-3.5 select-none"
+      className="w-80 p-3.5 bg-popover border border-border text-popover-foreground rounded-xl shadow-2xl flex flex-col gap-3.5 select-none"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="h-6 w-6 rounded-md bg-white/10 text-white flex items-center justify-center">
+          <div className="h-6 w-6 rounded-md bg-muted text-foreground flex items-center justify-center">
             <ListOrdered className="h-3.5 w-3.5" />
           </div>
           <div>
-            <h4 className="text-xs font-semibold text-white tracking-tight">Stagger Cascade</h4>
-            <p className="text-[10px] text-zinc-400">
+            <h4 className="text-xs font-semibold text-foreground tracking-tight">Stagger Cascade</h4>
+            <p className="text-[10px] text-muted-foreground">
               {count} layers selected • Start at {baseStart.toFixed(2)}s
             </p>
           </div>
@@ -118,7 +118,7 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
           <button
             type="button"
             onClick={onClose}
-            className="p-1 text-zinc-400 hover:text-white rounded-md hover:bg-white/10 transition-colors"
+            className="p-1 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted transition-colors"
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -128,8 +128,8 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
       {/* Interval / Delay Section */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-[11px]">
-          <span className="text-zinc-400 font-medium">Stagger Interval</span>
-          <span className="text-white font-mono font-medium">{interval.toFixed(2)}s</span>
+          <span className="text-muted-foreground font-medium">Stagger Interval</span>
+          <span className="text-foreground font-mono font-medium">{interval.toFixed(2)}s</span>
         </div>
 
         {/* Quick pills */}
@@ -142,8 +142,8 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
               className={cn(
                 "py-1 px-1 text-[10px] rounded border text-center transition-all",
                 Math.abs(interval - item.val) < 0.005
-                  ? "bg-white text-zinc-950 border-white font-semibold shadow-xs"
-                  : "bg-zinc-900 border-[#27272a] text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
+                  : "bg-muted/60 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
               )}
             >
               {item.val}s
@@ -160,14 +160,14 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
             step={0.01}
             value={interval}
             onChange={(e) => setInterval(parseFloat(e.target.value))}
-            className="w-full h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-white"
+            className="w-full h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-foreground"
           />
         </div>
       </div>
 
       {/* Direction & Spatial Order */}
       <div className="flex flex-col gap-1.5">
-        <span className="text-[11px] text-zinc-400 font-medium">Cascade Direction</span>
+        <span className="text-[11px] text-muted-foreground font-medium">Cascade Direction</span>
         <div className="grid grid-cols-2 gap-1.5">
           {ORDER_OPTIONS.map((item) => {
             const isActive = order === item.id;
@@ -179,11 +179,11 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
                 className={cn(
                   "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-left text-[11px] transition-all",
                   isActive
-                    ? "bg-white/15 border-white/30 text-white font-semibold shadow-xs"
-                    : "bg-zinc-900/80 border-[#27272a] text-zinc-400 hover:text-white hover:bg-zinc-800"
+                    ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
+                    : "bg-muted/60 border-border text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
               >
-                <span className={isActive ? "text-white" : "text-zinc-500"}>
+                <span className={isActive ? "text-primary-foreground" : "text-muted-foreground"}>
                   {item.icon}
                 </span>
                 <span className="truncate">{item.label}</span>
@@ -196,15 +196,15 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
       {/* Animation Sync Dropdown */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between text-[11px]">
-          <span className="text-zinc-400 font-medium">Entrance Animation</span>
+          <span className="text-muted-foreground font-medium">Entrance Animation</span>
           {syncPreset && (
-            <span className="text-[10px] text-zinc-300 font-medium">Uniform Override</span>
+            <span className="text-[10px] text-foreground font-medium">Uniform Override</span>
           )}
         </div>
         <select
           value={syncPreset}
           onChange={(e) => setSyncPreset(e.target.value)}
-          className="w-full h-8 px-2.5 bg-zinc-900 border border-[#27272a] rounded-lg text-xs text-white outline-none focus:border-zinc-500 transition-colors"
+          className="w-full h-8 px-2.5 bg-muted/60 border border-border rounded-lg text-xs text-foreground outline-none focus:border-ring transition-colors"
         >
           {PRESET_OPTIONS.map((opt) => (
             <option key={opt.id} value={opt.id}>
@@ -215,10 +215,10 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
       </div>
 
       {/* Action Footer */}
-      <div className="flex flex-col gap-2 pt-1 border-t border-[#27272a]">
-        <div className="flex items-center justify-between text-[10px] text-zinc-400">
+      <div className="flex flex-col gap-2 pt-1 border-t border-border">
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
           <span>Cascade Span</span>
-          <span className="font-mono text-zinc-300">
+          <span className="font-mono text-foreground">
             {baseStart.toFixed(2)}s → {(baseStart + totalCascadeDuration).toFixed(2)}s (+
             {totalCascadeDuration.toFixed(2)}s)
           </span>
@@ -233,8 +233,8 @@ export const StaggerPopover: React.FC<StaggerPopoverProps> = ({ onClose }) => {
             justApplied
               ? "bg-emerald-600 text-white"
               : count >= 2
-              ? "bg-white hover:bg-zinc-200 text-zinc-950 font-semibold active:scale-[0.98]"
-              : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+              ? "bg-primary hover:bg-primary/90 text-primary-foreground font-semibold active:scale-[0.98]"
+              : "bg-muted text-muted-foreground cursor-not-allowed"
           )}
         >
           {justApplied ? (

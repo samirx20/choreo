@@ -168,33 +168,33 @@ export const ExportPopover: React.FC = () => {
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-88 p-4 bg-[#141417] border border-[#27272a] text-zinc-100 rounded-xl shadow-2xl z-50 select-none max-h-[90vh] overflow-y-auto"
+        className="w-88 p-4 bg-popover border border-border text-popover-foreground rounded-xl shadow-2xl z-50 select-none max-h-[90vh] overflow-y-auto"
       >
         {isExporting ? (
           /* Live Rendering Progress State */
           <div className="flex flex-col gap-3 py-1">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 text-zinc-200 animate-spin" />
-                <span className="text-xs font-semibold text-white">
+                <Loader2 className="w-4 h-4 text-foreground animate-spin" />
+                <span className="text-xs font-semibold text-foreground">
                   Exporting {format.toUpperCase()}...
                 </span>
               </div>
-              <span className="text-[11px] font-mono text-zinc-400">
+              <span className="text-[11px] font-mono text-muted-foreground">
                 {progress ? `${progress.percent}%` : "0%"}
               </span>
             </div>
 
             {/* Progress Bar */}
-            <div className="w-full h-2 bg-[#222226] rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
               <div
                 style={{ width: `${progress ? progress.percent : 0}%` }}
-                className="h-full bg-white rounded-full transition-all duration-150 ease-out"
+                className="h-full bg-primary rounded-full transition-all duration-150 ease-out"
               />
             </div>
 
             {/* Frame Counter & Rolling ETA */}
-            <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono">
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground font-mono">
               <span>
                 {progress ? `Frame ${progress.currentFrame} / ${progress.totalFrames}` : "Preparing..."}
               </span>
@@ -211,7 +211,7 @@ export const ExportPopover: React.FC = () => {
             <button
               type="button"
               onClick={handleCancel}
-              className="mt-2 w-full h-8 text-xs font-medium text-zinc-400 hover:text-red-400 bg-[#1c1c20] hover:bg-red-500/10 border border-[#2e2e33] hover:border-red-500/30 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+              className="mt-2 w-full h-8 text-xs font-medium text-muted-foreground hover:text-destructive bg-muted/60 hover:bg-destructive/10 border border-border hover:border-destructive/30 rounded-lg transition-colors flex items-center justify-center gap-1.5"
             >
               <XCircle className="w-3.5 h-3.5" />
               <span>Cancel Export</span>
@@ -220,9 +220,9 @@ export const ExportPopover: React.FC = () => {
         ) : isComplete ? (
           /* Success Flash State */
           <div className="flex flex-col items-center justify-center py-4 gap-2 text-center">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400 animate-in zoom-in-75 duration-200" />
-            <div className="text-xs font-medium text-white">Export Complete!</div>
-            <div className="text-[11px] text-zinc-400">
+            <CheckCircle2 className="w-8 h-8 text-emerald-500 animate-in zoom-in-75 duration-200" />
+            <div className="text-xs font-medium text-foreground">Export Complete!</div>
+            <div className="text-[11px] text-muted-foreground">
               {format.toUpperCase()} downloaded to your device
             </div>
           </div>
@@ -230,32 +230,32 @@ export const ExportPopover: React.FC = () => {
           /* Normal Option Controls */
           <div className="flex flex-col gap-3.5">
             {/* 1. Header & Live Dimensions */}
-            <div className="flex items-center justify-between border-b border-[#222226] pb-2.5">
+            <div className="flex items-center justify-between border-b border-border pb-2.5">
               <div className="flex items-center gap-2">
-                <Film className="w-4 h-4 text-zinc-300" />
-                <span className="text-xs font-semibold text-white tracking-tight">
+                <Film className="w-4 h-4 text-foreground" />
+                <span className="text-xs font-semibold text-foreground tracking-tight">
                   Export Video
                 </span>
               </div>
-              <span className="text-[11px] font-mono text-zinc-300 bg-[#1c1c20] px-2 py-0.5 rounded border border-[#27272a]">
+              <span className="text-[11px] font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded border border-border">
                 {exportWidth} × {exportHeight}
               </span>
             </div>
 
             {/* 2. Format Selection (MP4 vs WebM vs GIF) */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 Format
               </label>
-              <div className="grid grid-cols-3 gap-1.5 p-0.5 bg-[#1a1a1e] border border-[#27272a] rounded-lg">
+              <div className="grid grid-cols-3 gap-1.5 p-0.5 bg-muted/50 border border-border rounded-lg">
                 <button
                   type="button"
                   onClick={() => handleSelectFormat("mp4")}
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
                     format === "mp4"
-                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
-                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                   title="Universal MP4 (H.264 + Audio)"
                 >
@@ -267,8 +267,8 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
                     format === "webm"
-                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
-                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                   title="WebM (VP9 + Alpha Support)"
                 >
@@ -280,8 +280,8 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1 transition-all cursor-pointer",
                     format === "gif"
-                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
-                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                   title="Animated GIF (Looping)"
                 >
@@ -292,10 +292,10 @@ export const ExportPopover: React.FC = () => {
 
             {/* 3. Resolution / Scale */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 Resolution Scale
               </label>
-              <div className="grid grid-cols-3 gap-1.5 p-0.5 bg-[#1a1a1e] border border-[#27272a] rounded-lg">
+              <div className="grid grid-cols-3 gap-1.5 p-0.5 bg-muted/50 border border-border rounded-lg">
                 {[
                   { val: 0.5, label: "0.5× (Draft)" },
                   { val: 1.0, label: "1× (1080p)" },
@@ -308,8 +308,8 @@ export const ExportPopover: React.FC = () => {
                     className={cn(
                       "h-7 px-1.5 rounded-md text-[11px] font-medium flex items-center justify-center transition-all cursor-pointer",
                       scale === item.val
-                        ? "bg-white text-zinc-950 font-semibold shadow-xs"
-                        : "text-zinc-400 hover:text-white hover:bg-white/5"
+                        ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
                     )}
                   >
                     {item.label}
@@ -320,18 +320,18 @@ export const ExportPopover: React.FC = () => {
 
             {/* 4. Background Mode Selection */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 Background
               </label>
-              <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-[#1a1a1e] border border-[#27272a] rounded-lg">
+              <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-muted/50 border border-border rounded-lg">
                 <button
                   type="button"
                   onClick={() => handleSelectBackground("solid")}
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     backgroundMode === "solid"
-                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
-                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
                   <Square className="w-3 h-3 fill-current" />
@@ -343,8 +343,8 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     backgroundMode === "transparent"
-                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
-                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
                   <Grid className="w-3 h-3" />
@@ -352,7 +352,7 @@ export const ExportPopover: React.FC = () => {
                 </button>
               </div>
               {backgroundMode === "transparent" && (
-                <p className="text-[10px] text-zinc-400 font-mono text-center">
+                <p className="text-[10px] text-muted-foreground font-mono text-center">
                   Transparent alpha requires WebM format
                 </p>
               )}
@@ -360,18 +360,18 @@ export const ExportPopover: React.FC = () => {
 
             {/* 5. Scope Selection */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-[11px] font-medium text-zinc-400 uppercase tracking-wider">
+              <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
                 Scope
               </label>
-              <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-[#1a1a1e] border border-[#27272a] rounded-lg">
+              <div className="grid grid-cols-2 gap-1.5 p-0.5 bg-muted/50 border border-border rounded-lg">
                 <button
                   type="button"
                   onClick={() => setScopeMode("all")}
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     scopeMode === "all"
-                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
-                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
                   <Layers className="w-3 h-3" />
@@ -383,8 +383,8 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "h-8 px-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                     scopeMode === "current"
-                      ? "bg-white text-zinc-950 font-semibold shadow-xs"
-                      : "text-zinc-400 hover:text-white hover:bg-white/5"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
                   <Film className="w-3 h-3" />
@@ -395,14 +395,14 @@ export const ExportPopover: React.FC = () => {
 
             {/* 6. Audio Track Sync Toggle (Only if audio exists and format supports audio) */}
             {hasAudioTrack && format !== "gif" && (
-              <div className="flex items-center justify-between p-2 bg-[#1a1a1e] border border-[#27272a] rounded-lg">
+              <div className="flex items-center justify-between p-2 bg-muted/50 border border-border rounded-lg">
                 <div className="flex items-center gap-2">
                   {includeAudio ? (
-                    <Volume2 className="w-3.5 h-3.5 text-zinc-200" />
+                    <Volume2 className="w-3.5 h-3.5 text-foreground" />
                   ) : (
-                    <VolumeX className="w-3.5 h-3.5 text-zinc-500" />
+                    <VolumeX className="w-3.5 h-3.5 text-muted-foreground" />
                   )}
-                  <span className="text-[11px] font-medium text-zinc-200">
+                  <span className="text-[11px] font-medium text-foreground">
                     Audio Track Sync
                   </span>
                 </div>
@@ -412,8 +412,8 @@ export const ExportPopover: React.FC = () => {
                   className={cn(
                     "text-[10px] font-medium px-2 py-0.5 rounded border transition-all",
                     includeAudio
-                      ? "bg-white text-zinc-950 border-white font-semibold"
-                      : "bg-zinc-800 border-zinc-700 text-zinc-400"
+                      ? "bg-primary text-primary-foreground border-primary font-semibold"
+                      : "bg-muted border-border text-muted-foreground"
                   )}
                 >
                   {includeAudio ? "Include" : "Mute"}
@@ -422,7 +422,7 @@ export const ExportPopover: React.FC = () => {
             )}
 
             {/* 7. Format Footnote */}
-            <div className="text-[10px] text-zinc-500 font-mono text-center">
+            <div className="text-[10px] text-muted-foreground font-mono text-center">
               {format === "gif"
                 ? "Animated GIF • Loops Automatically"
                 : backgroundMode === "transparent"
@@ -434,7 +434,7 @@ export const ExportPopover: React.FC = () => {
             <button
               type="button"
               onClick={handleExport}
-              className="w-full h-9 bg-white hover:bg-zinc-200 text-zinc-950 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer active:scale-[0.98]"
+              className="w-full h-9 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer active:scale-[0.98]"
             >
               <Download className="w-4 h-4" />
               <span>

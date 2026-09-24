@@ -88,10 +88,10 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   return (
     <div
       onClick={() => onOpen(project.id)}
-      className="group relative flex flex-col bg-[#141416] border border-[#27272a] hover:border-zinc-500 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 select-none"
+      className="group relative flex flex-col bg-card border border-border hover:border-muted-foreground/60 rounded-lg overflow-hidden cursor-pointer transition-all duration-150 select-none shadow-xs hover:shadow-md"
     >
       {/* 1. Preview Container */}
-      <div className="relative w-full h-44 bg-[#0a0a0c] flex items-center justify-center p-4 border-b border-[#222226] overflow-hidden">
+      <div className="relative w-full h-44 bg-muted/30 flex items-center justify-center p-4 border-b border-border overflow-hidden">
         {/* Aspect-Ratio Canvas Stage Simulation */}
         <div
           style={{
@@ -99,36 +99,36 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             backgroundColor: project.backgroundColor || "#09090b",
           }}
           className={cn(
-            "relative max-w-full max-h-full rounded border border-[#27272a] flex items-center justify-center overflow-hidden shadow-inner",
+            "relative max-w-full max-h-full rounded border border-border/80 flex items-center justify-center overflow-hidden shadow-inner",
             isVertical ? "h-full w-auto" : "w-full h-auto"
           )}
         >
           {/* Subtle Stage Mock Elements */}
           <div className="flex flex-col items-center gap-1.5 opacity-60 pointer-events-none scale-75">
-            <div className="w-12 h-6 rounded bg-zinc-800/80 border border-zinc-700/50 flex items-center justify-center">
-              <Film className="w-3 h-3 text-zinc-400" />
+            <div className="w-12 h-6 rounded bg-muted border border-border flex items-center justify-center">
+              <Film className="w-3 h-3 text-muted-foreground" />
             </div>
-            <div className="w-16 h-1 rounded bg-zinc-700/40" />
-            <div className="w-10 h-1 rounded bg-zinc-700/30" />
+            <div className="w-16 h-1 rounded bg-muted-foreground/30" />
+            <div className="w-10 h-1 rounded bg-muted-foreground/20" />
           </div>
 
           {/* Aspect Badge */}
-          <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-sm text-[10px] font-mono text-zinc-300 border border-white/10">
+          <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-background/80 backdrop-blur-sm text-[10px] font-mono text-foreground border border-border">
             {aspectRatioLabel}
           </div>
         </div>
 
         {/* Hover Highlight Overlay */}
-        <div className="absolute inset-0 bg-white/[0.02] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+        <div className="absolute inset-0 bg-foreground/[0.02] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
         {/* Top-Right Duration Badge */}
-        <div className="absolute top-2.5 right-2.5 px-1.5 py-0.5 rounded bg-[#18181b]/80 border border-white/[0.08] text-[10px] font-mono text-zinc-300">
+        <div className="absolute top-2.5 right-2.5 px-1.5 py-0.5 rounded bg-background/80 backdrop-blur-sm border border-border text-[10px] font-mono text-foreground">
           {project.duration.toFixed(1)}s
         </div>
       </div>
 
       {/* 2. Metadata & Actions Bar */}
-      <div className="p-3 flex items-start justify-between gap-2 bg-[#141416]">
+      <div className="p-3 flex items-start justify-between gap-2 bg-card">
         <div className="min-w-0 flex-1">
           {isRenaming ? (
             <input
@@ -145,7 +145,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                   setIsRenaming(false);
                 }
               }}
-              className="h-6 px-1.5 text-xs font-medium text-white bg-[#1f1f23] rounded border border-zinc-500 focus:border-zinc-300 outline-none w-full"
+              className="h-6 px-1.5 text-xs font-medium text-foreground bg-muted rounded border border-border focus:border-ring outline-none w-full"
             />
           ) : (
             <h3
@@ -154,13 +154,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 setIsRenaming(true);
               }}
               title={project.name}
-              className="text-xs font-medium text-zinc-100 truncate hover:text-white"
+              className="text-xs font-medium text-card-foreground truncate hover:text-foreground"
             >
               {project.name}
             </h3>
           )}
 
-          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-zinc-500 font-mono">
+          <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
             <span>
               {project.width}×{project.height}
             </span>
@@ -178,7 +178,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="h-7 w-7 rounded flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+                className="h-7 w-7 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 title="Project Actions"
               >
                 <MoreVertical className="h-3.5 w-3.5" />
@@ -186,45 +186,45 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-44 bg-[#18181b] border border-[#27272a] text-zinc-200 shadow-xl"
+              className="w-44 bg-popover border border-border text-popover-foreground shadow-xl"
             >
               <DropdownMenuItem
                 onClick={() => onOpen(project.id)}
-                className="gap-2 text-xs cursor-pointer hover:bg-white/10"
+                className="gap-2 text-xs cursor-pointer hover:bg-muted"
               >
-                <FolderOpen className="h-3.5 w-3.5 text-zinc-400" />
+                <FolderOpen className="h-3.5 w-3.5 text-muted-foreground" />
                 <span>Open Project</span>
               </DropdownMenuItem>
 
               <DropdownMenuItem
                 onClick={() => setIsRenaming(true)}
-                className="gap-2 text-xs cursor-pointer hover:bg-white/10"
+                className="gap-2 text-xs cursor-pointer hover:bg-muted"
               >
-                <Edit2 className="h-3.5 w-3.5 text-zinc-400" />
+                <Edit2 className="h-3.5 w-3.5 text-muted-foreground" />
                 <span>Rename</span>
               </DropdownMenuItem>
 
               <DropdownMenuItem
                 onClick={() => onDuplicate(project.id)}
-                className="gap-2 text-xs cursor-pointer hover:bg-white/10"
+                className="gap-2 text-xs cursor-pointer hover:bg-muted"
               >
-                <Copy className="h-3.5 w-3.5 text-zinc-400" />
+                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                 <span>Duplicate</span>
               </DropdownMenuItem>
 
               <DropdownMenuItem
                 onClick={() => onExport(project.id)}
-                className="gap-2 text-xs cursor-pointer hover:bg-white/10"
+                className="gap-2 text-xs cursor-pointer hover:bg-muted"
               >
-                <Download className="h-3.5 w-3.5 text-zinc-400" />
+                <Download className="h-3.5 w-3.5 text-muted-foreground" />
                 <span>Export (.mtn)</span>
               </DropdownMenuItem>
 
-              <DropdownMenuSeparator className="bg-[#27272a]" />
+              <DropdownMenuSeparator className="bg-border" />
 
               <DropdownMenuItem
                 onClick={() => onDelete(project.id)}
-                className="gap-2 text-xs cursor-pointer text-red-400 hover:text-red-300 hover:bg-red-500/10 focus:text-red-300 focus:bg-red-500/10"
+                className="gap-2 text-xs cursor-pointer text-destructive hover:bg-destructive/10 focus:text-destructive focus:bg-destructive/10"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 <span>Delete Project</span>

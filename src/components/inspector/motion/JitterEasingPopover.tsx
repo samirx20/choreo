@@ -253,18 +253,18 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
   };
 
   return (
-    <div className="w-[268px] bg-[#18181b] border border-[#27272a] rounded-xl shadow-2xl p-3 text-white select-none z-50 flex flex-col">
+    <div className="w-[268px] bg-popover border border-border rounded-xl shadow-2xl p-3 text-popover-foreground select-none z-50 flex flex-col">
       {/* Top Header: [ ⊞ Grid | ∿ Curve ] (Grid first, Curve second) */}
-      <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-[#27272a]">
-        <div className="flex items-center bg-[#27272a] p-0.5 rounded-lg">
+      <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-border">
+        <div className="flex items-center bg-muted p-0.5 rounded-lg">
           <button
             type="button"
             onClick={() => setActiveTab("grid")}
             className={cn(
               "h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-colors text-xs font-medium cursor-pointer",
               activeTab === "grid"
-                ? "bg-[#3f3f46] text-white shadow-xs"
-                : "text-[#a1a1aa] hover:text-white"
+                ? "bg-card text-card-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
             )}
             title="Presets Grid"
           >
@@ -277,8 +277,8 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
             className={cn(
               "h-6 px-2.5 rounded-md flex items-center gap-1.5 transition-colors text-xs font-medium cursor-pointer",
               activeTab === "curve"
-                ? "bg-[#3f3f46] text-white shadow-xs"
-                : "text-[#a1a1aa] hover:text-white"
+                ? "bg-card text-card-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
             )}
             title="Interactive Curve Editor"
           >
@@ -300,8 +300,8 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
                 className={cn(
                   "h-[88px] rounded-lg flex flex-col items-center justify-between p-2.5 transition-all relative group",
                   isSelected
-                    ? "bg-[#3b82f6] text-white shadow-md ring-1 ring-[#60a5fa]"
-                    : "bg-[#27272a] hover:bg-[#323238] text-[#9ca3af] hover:text-white"
+                    ? "bg-primary text-primary-foreground shadow-md font-semibold"
+                    : "bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground"
                 )}
               >
                 {/* Main Card Click */}
@@ -336,7 +336,7 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
                   <span
                     className={cn(
                       "text-[11px] font-medium tracking-tight whitespace-nowrap",
-                      isSelected ? "text-white font-semibold" : "text-[#d4d4d8]"
+                      isSelected ? "text-primary-foreground font-semibold" : "text-muted-foreground"
                     )}
                   >
                     {item.label}
@@ -359,7 +359,7 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
                     );
                     setActiveTab("curve");
                   }}
-                  className="absolute top-1 right-1 p-1 rounded hover:bg-black/30 text-white/70 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                  className="absolute top-1 right-1 p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                   title={`Edit ${item.label} curve`}
                 >
                   <Sliders className="h-3 w-3" />
@@ -372,7 +372,7 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
         /* TAB 2: Truly Editable Interactive Bézier Curve Graph (No raw property boxes) */
         <div className="space-y-3">
           {/* Interactive Graph Box */}
-          <div className="bg-[#0f0f11] rounded-xl p-1.5 border border-[#27272a] relative">
+          <div className="bg-muted/40 rounded-xl p-1.5 border border-border relative">
             <svg
               ref={svgRef}
               viewBox={`0 0 ${graphWidth} ${graphHeight}`}
@@ -387,7 +387,8 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
                 y1={toGraphY(0)}
                 x2={graphWidth - padX}
                 y2={toGraphY(0)}
-                stroke="#27272a"
+                stroke="currentColor"
+                strokeOpacity="0.2"
                 strokeWidth="1"
               />
               {/* Ceiling (1.0) */}
@@ -396,7 +397,8 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
                 y1={toGraphY(1)}
                 x2={graphWidth - padX}
                 y2={toGraphY(1)}
-                stroke="#27272a"
+                stroke="currentColor"
+                strokeOpacity="0.2"
                 strokeWidth="1"
                 strokeDasharray="3 3"
               />
@@ -406,7 +408,8 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
                 y1={toGraphY(0.5)}
                 x2={graphWidth - padX}
                 y2={toGraphY(0.5)}
-                stroke="#1f1f23"
+                stroke="currentColor"
+                strokeOpacity="0.1"
                 strokeWidth="1"
                 strokeDasharray="2 2"
               />
@@ -419,18 +422,18 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
                     y1={toGraphY(0)}
                     x2={toGraphX(cp1.x)}
                     y2={toGraphY(cp1.y)}
-                    stroke="#60a5fa"
+                    stroke="currentColor"
                     strokeWidth="1.5"
-                    strokeOpacity="0.8"
+                    strokeOpacity="0.4"
                   />
                   <line
                     x1={toGraphX(1)}
                     y1={toGraphY(1)}
                     x2={toGraphX(cp2.x)}
                     y2={toGraphY(cp2.y)}
-                    stroke="#60a5fa"
+                    stroke="currentColor"
                     strokeWidth="1.5"
-                    strokeOpacity="0.8"
+                    strokeOpacity="0.4"
                   />
                 </>
               )}
@@ -439,7 +442,7 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
               <path
                 d={curvePath}
                 fill="none"
-                stroke="#3b82f6"
+                stroke="currentColor"
                 strokeWidth="3"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -450,7 +453,7 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
                 cx={toGraphX(0)}
                 cy={toGraphY(0)}
                 r="3.5"
-                fill="#60a5fa"
+                fill="currentColor"
                 pointerEvents="none"
               />
 
@@ -459,7 +462,7 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
                 cx={toGraphX(1)}
                 cy={toGraphY(1)}
                 r="3.5"
-                fill="#60a5fa"
+                fill="currentColor"
                 pointerEvents="none"
               />
 
@@ -478,8 +481,7 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
                     cx={toGraphX(cp1.x)}
                     cy={toGraphY(cp1.y)}
                     r="6.5"
-                    fill="#3b82f6"
-                    stroke="#ffffff"
+                    className="fill-primary stroke-background"
                     strokeWidth="2.5"
                     pointerEvents="none"
                   />
@@ -496,8 +498,7 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
                     cx={toGraphX(cp2.x)}
                     cy={toGraphY(cp2.y)}
                     r="6.5"
-                    fill="#3b82f6"
-                    stroke="#ffffff"
+                    className="fill-primary stroke-background"
                     strokeWidth="2.5"
                     pointerEvents="none"
                   />
@@ -509,7 +510,7 @@ export const JitterEasingPopover: React.FC<JitterEasingPopoverProps> = ({
 
           {/* Clean Coordinate Indicator */}
           {!isPhysics && (
-            <div className="flex items-center justify-between px-1 pt-1 text-[11px] text-[#a1a1aa] font-mono">
+            <div className="flex items-center justify-between px-1 pt-1 text-[11px] text-muted-foreground font-mono">
               <span>P1: ({cp1.x.toFixed(2)}, {cp1.y.toFixed(2)})</span>
               <span>P2: ({cp2.x.toFixed(2)}, {cp2.y.toFixed(2)})</span>
             </div>
