@@ -12,7 +12,6 @@ import { ComponentsDrawer } from "@/components/components/ComponentsDrawer";
 import { ShortcutsModal } from "@/components/modals/ShortcutsModal";
 import { UniversalContextMenuPortal } from "@/components/common/UniversalContextMenuPortal";
 import { cn } from "@/lib/utils";
-import { Film } from "lucide-react";
 
 const App: React.FC = () => {
   const {
@@ -42,8 +41,6 @@ const App: React.FC = () => {
   const [isComponentsDrawerOpen, setIsComponentsDrawerOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [isZenMode, setIsZenMode] = useState(false);
-  const [isDraggingFile, setIsDraggingFile] = useState(false);
-  const dragCounter = useRef(0);
 
   const theme = useProjectStore((s) => s.theme);
 
@@ -211,52 +208,8 @@ const App: React.FC = () => {
     openProjectFromFilePicker,
   ]);
 
-  // Omnipresent Drag and Drop for .mtn files
-  const handleDragEnter = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current += 1;
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      setIsDraggingFile(true);
-    }
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current -= 1;
-    if (dragCounter.current <= 0) {
-      dragCounter.current = 0;
-      setIsDraggingFile(false);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = "copy";
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDraggingFile(false);
-    dragCounter.current = 0;
-
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      await loadProjectFromFileBlob(file);
-    }
-  };
-
   return (
-    <div
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      className="h-screen w-screen overflow-hidden relative select-none"
-    >
+    <div className="h-screen w-screen overflow-hidden relative select-none">
       {/* 1. Projects Management Workspace (Dashboard / Home View) */}
       {currentView === "workspace" ? (
         <ProjectsWorkspace />
@@ -322,23 +275,6 @@ const App: React.FC = () => {
 
           {/* Universal Context Menu Portal (Zones A-G) */}
           <UniversalContextMenuPortal />
-        </div>
-      )}
-
-      {/* Omnipresent Drag & Drop .mtn Overlay */}
-      {isDraggingFile && (
-        <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-8 pointer-events-none">
-          <div className="w-full max-w-md p-8 rounded-2xl border-2 border-dashed border-purple-500 bg-[#141417]/95 flex flex-col items-center text-center shadow-2xl animate-in fade-in zoom-in-95 duration-150">
-            <div className="w-14 h-14 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-4 border border-purple-500/30 shadow-inner">
-              <Film className="w-7 h-7" />
-            </div>
-            <h3 className="text-base font-semibold text-white tracking-tight">
-              Drop .mtn project to open
-            </h3>
-            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed max-w-xs">
-              Instant loading and schema validation of project scenes, layers, spring physics, and timeline.
-            </p>
-          </div>
         </div>
       )}
     </div>

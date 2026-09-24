@@ -1,4 +1,4 @@
-import React, { useRef, useMemo } from "react";
+import React, { useRef, useMemo, useState } from "react";
 import {
   Plus,
   Search,
@@ -67,8 +67,71 @@ export const ProjectsWorkspace: React.FC = () => {
     createNewProject(options);
   };
 
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const dragCounter = useRef(0);
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      dragCounter.current += 1;
+      setIsDraggingFile(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      dragCounter.current -= 1;
+      if (dragCounter.current <= 0) {
+        dragCounter.current = 0;
+        setIsDraggingFile(false);
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes("Files")) {
+      e.preventDefault();
+      setIsDraggingFile(false);
+      dragCounter.current = 0;
+      const file = e.dataTransfer.files?.[0];
+      if (file) {
+        await loadProjectFromFileBlob(file);
+      }
+    }
+  };
+
   return (
-    <div className="min-h-screen w-full bg-[#0c0c0e] text-zinc-100 flex flex-col font-sans select-none">
+    <div
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className="min-h-screen w-full bg-[#0c0c0e] text-zinc-100 flex flex-col font-sans select-none relative"
+    >
+      {/* File Drop Overlay for Workspace */}
+      {isDraggingFile && (
+        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-8 pointer-events-none">
+          <div className="w-full max-w-md p-8 rounded-2xl border-2 border-dashed border-purple-500 bg-[#141417]/95 flex flex-col items-center text-center shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-14 h-14 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center mb-4 border border-purple-500/30 shadow-inner">
+              <Film className="w-7 h-7" />
+            </div>
+            <h3 className="text-base font-semibold text-white tracking-tight">
+              Drop .mtn project to open
+            </h3>
+            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed max-w-xs">
+              Instant loading and schema validation of project scenes, layers, spring physics, and timeline.
+            </p>
+          </div>
+        </div>
+      )}
       {/* 1. Workspace Top Bar */}
       <header className="h-14 w-full bg-[#111113] border-b border-[#222226] px-6 flex items-center justify-between z-30 shrink-0">
         {/* Left: Brand Mark */}
