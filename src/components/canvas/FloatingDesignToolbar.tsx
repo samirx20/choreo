@@ -23,6 +23,7 @@ import {
   Blend,
   Split,
   Layers,
+  ListOrdered,
 } from "lucide-react";
 import { useProjectStore, CanvasTool } from "@/store/useProjectStore";
 import { THEME_TOKENS } from "@/theme/tokens";
@@ -35,6 +36,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { IconPickerPopover } from "./IconPickerPopover";
+import { StaggerPopover } from "./StaggerPopover";
 
 interface FloatingDesignToolbarProps {
   onOpenAiBar?: () => void;
@@ -60,6 +62,13 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedShape, setSelectedShape] = useState<CanvasTool>("rectangle");
   const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
+  const [isStaggerOpen, setIsStaggerOpen] = useState(false);
+
+  React.useEffect(() => {
+    const handleOpenStagger = () => setIsStaggerOpen(true);
+    window.addEventListener("motion-open-stagger-popover", handleOpenStagger);
+    return () => window.removeEventListener("motion-open-stagger-popover", handleOpenStagger);
+  }, []);
 
   const activeScreen =
     doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
@@ -534,6 +543,37 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
           >
             <Layers className="h-4 w-4" />
           </button>
+        </>
+      )}
+
+      {/* Kinetic Stagger Cascade (Shift+S) */}
+      {selectedLayerIds.length >= 2 && (
+        <>
+          <div className="h-4 w-px bg-[#3f3f46] mx-0.5" />
+          <DropdownMenu open={isStaggerOpen} onOpenChange={setIsStaggerOpen}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "h-8 w-8 rounded-full flex items-center justify-center transition-all",
+                  isStaggerOpen
+                    ? "bg-[#7c3aed] text-white shadow-xs"
+                    : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
+                )}
+                title="Stagger Animations (Shift+S)"
+              >
+                <ListOrdered className="h-4 w-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="top"
+              sideOffset={12}
+              align="center"
+              className="p-0 border-0 bg-transparent shadow-none"
+            >
+              <StaggerPopover onClose={() => setIsStaggerOpen(false)} />
+            </DropdownMenuContent>
+          </DropdownMenu>
         </>
       )}
 

@@ -1761,6 +1761,45 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 35 tests across the motion design vector suites pass cleanly in 2.6s.
   - Production build (`tsc -b && vite build`) succeeds without errors.
 
+---
+
+### Decision 79: Kinetic Stagger & Multi-Layer Cascade System
+* **Context & Motivation**:
+  - In motion graphics, animating multiple elements simultaneously without timing offsets creates stiff, unnatural entrances.
+  - While newly created toolbar elements receive default `0.5s` spacing, real-world compositions require tight micro-staggers (`0.04s` to `0.12s`) across duplicated components (`Ctrl+D`), imported SVG layers, multi-card layouts, or multi-line typographic lockups.
+  - Animators need tactile, one-click spatial cascading (Left-to-Right, Top-to-Bottom, Center-Outward) without manually dragging dozens of timeline bars by milliseconds.
+* **The Solution**:
+  1. **Analytical Stagger Engine (`src/engine/choreography/staggerEngine.ts`)**:
+     - `getLayerCenter(layer)` & `getCentroid(layers)`: calculates visual centers and collective geometric center-of-mass.
+     - `sortLayersForStagger(layers, order)`: supports 8 spatial and hierarchical cascade modes:
+       - `left-to-right`: sorts by horizontal center $x_c$ ascending.
+       - `right-to-left`: sorts by $x_c$ descending.
+       - `top-to-bottom`: sorts by vertical center $y_c$ ascending.
+       - `bottom-to-top`: sorts by $y_c$ descending.
+       - `center-out`: sorts radially by Euclidean distance from collective centroid $d = \sqrt{(x-C_x)^2 + (y-C_y)^2}$ ascending.
+       - `edges-in`: sorts radially by distance from centroid descending.
+       - `layer-order` & `reverse-layer-order`: preserves or inverts document layer hierarchy.
+       - `random`: deterministic pseudo-random hash shuffle.
+     - `staggerLayers(layers, config)`: shifts primary entrance clips to $t_k = \text{baseStartTime} + k \times \text{interval}$ while propagating exact delta shifts $\Delta$ across subsequent clips (Action, Emphasis, Out) to preserve each layer's internal choreography. Automatically instantiates entrance clips for un-animated layers.
+  2. **Zustand Store Integration (`src/store/slices/animationSlice.ts` & `src/store/types.ts`)**:
+     - `staggerSelectedLayers(config)`: atomic document mutation with full history undo/redo support via `commitDoc`.
+  3. **Precision User Interface (`src/components/canvas/StaggerPopover.tsx`)**:
+     - Compact, high-signal floating popover conforming to Rule 9.
+     - **Quick Interval Presets**: `0.04s (Rapid)`, `0.06s (Smooth)`, `0.08s (Brisk)`, `0.12s (Spaced)`.
+     - **Fine Interval Slider**: `0.01s` to `0.30s` with live time span readout.
+     - **Direction Grid**: Visual buttons for Left $\to$ Right, Right $\to$ Left, Top $\to$ Bottom, Bottom $\to$ Top, Center Out, Edges In, Layer Order, Shuffle.
+     - **Uniform Entrance Override (Optional)**: In 1 click, uniformize entrances across selection (e.g. `Slide Up`, `Pop`, `Fade In`, `Grow`, `Blur In`, `Baseline Rise`).
+  4. **Multi-Surface Access**:
+     - **Floating Design Toolbar (`FloatingDesignToolbar.tsx`)**: reveals dedicated Stagger button (`ListOrdered`) when 2+ layers are selected.
+     - **Canvas Context Menu (`CanvasContextMenu.tsx` & `contextMenuBuilders.tsx`)**: right-click on 2+ layers shows `Stagger Animations...` with shortcut `Shift+S`.
+     - **Timeline Transport Header (`TimelinePanel.tsx`)**: quick Stagger button in the timeline transport bar.
+     - **Global Shortcut**: `Shift + S` opens the Stagger popover instantly when 2+ layers are selected.
+* **Verification**:
+  - 11 unit tests in `src/test/stagger_engine.test.ts` (spatial sorting, centroid, multi-clip delta preservation, un-animated fallback).
+  - 3 integration tests in `src/test/stagger_integration.test.ts` (store mutation, preset override, undo/redo).
+  - Production build (`tsc -b && vite build`) compiles with zero errors in 20.6s.
+
+
 
 
 

@@ -20,6 +20,7 @@ import {
   Pin,
   MoveHorizontal,
   CircleDashed,
+  ListOrdered,
 } from "lucide-react";
 import { findParentGroupInTree } from "@/store/helpers/treeHelpers";
 
@@ -422,6 +423,17 @@ export function buildCanvasElementMenu(params: {
     );
   } else if (store.selectedLayerIds && store.selectedLayerIds.length >= 2) {
     items.push(
+      {
+        id: "stagger-selection",
+        label: "Stagger Animations...",
+        icon: <ListOrdered className="w-3.5 h-3.5 text-purple-400" />,
+        shortcut: "Shift+S",
+        action: () => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("motion-open-stagger-popover"));
+          }
+        },
+      },
       {
         id: "mask-selection",
         label: "Mask Selection",

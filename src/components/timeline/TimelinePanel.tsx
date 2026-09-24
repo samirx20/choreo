@@ -12,6 +12,7 @@ import {
   EyeOff,
   icons,
   Smile,
+  ListOrdered,
 } from "lucide-react";
 import {
   useProjectStore,
@@ -301,6 +302,23 @@ export const TimelinePanel: React.FC = () => {
               </span>
             )}
           </button>
+
+          {/* Stagger Button for Multi-Selection */}
+          {selectedLayerIds.length >= 2 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.dispatchEvent(new CustomEvent("motion-open-stagger-popover"));
+                }
+              }}
+              className="h-6 px-1.5 gap-1 rounded flex items-center justify-center transition-colors text-[10px] font-medium bg-[#7c3aed]/10 text-[#7c3aed] hover:bg-[#7c3aed]/20"
+              title="Stagger Animations (Shift+S)"
+            >
+              <ListOrdered className="h-3 w-3" />
+              <span>Stagger</span>
+            </button>
+          )}
         </div>
 
         {/* Ruler Lane */}

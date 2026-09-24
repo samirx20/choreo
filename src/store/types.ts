@@ -13,6 +13,7 @@ import {
   UiMode,
 } from "@/types/scene";
 import { RazorSplitResult } from "@/engine/video/razorSplit";
+import { StaggerConfig } from "@/engine/choreography/staggerEngine";
 
 export type CanvasTool =
   | "select"
@@ -235,6 +236,9 @@ export interface ProjectStoreState {
       params?: Record<string, any>;
     }
   ) => string | null;
+
+  // Kinetic Stagger & Multi-Layer Cascade Actions
+  staggerSelectedLayers: (config: StaggerConfig) => void;
 
   // Interactive Split Mode Actions
   enterSplitMode: (layerId: string) => void;

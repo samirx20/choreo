@@ -195,6 +195,18 @@ export function useCanvasHotkeys({
         // Ctrl + E: Flatten Selection
         e.preventDefault();
         store.flattenSelection();
+      } else if (
+        e.shiftKey &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey &&
+        (e.key === "s" || e.key === "S") &&
+        !isInput &&
+        selectedLayerIds.length >= 2
+      ) {
+        // Shift + S: Open Stagger Popover for multi-selection
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("motion-open-stagger-popover"));
       } else if (e.shiftKey && e.key === "Enter" && !isInput) {
         // Shift + Enter: Ascend hierarchy to parent group
         if (selectedLayerIds[0]) {

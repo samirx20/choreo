@@ -2,6 +2,7 @@ import { ProjectStoreState } from "../types";
 import { SceneDocument, Layer, LayerAnimation, AnimationClip, getLayerClips } from "@/types/scene";
 import { findLayerInTree, mutateLayerInTree, findParentGroupInTree } from "../helpers/treeHelpers";
 import { commitDoc } from "../historyManager";
+import { staggerLayers } from "@/engine/choreography/staggerEngine";
 
 export type AnimationSlice = Pick<
   ProjectStoreState,
@@ -16,6 +17,7 @@ export type AnimationSlice = Pick<
   | "openAnimationCatalog"
   | "closeAnimationCatalog"
   | "applyAnimationPreset"
+  | "staggerSelectedLayers"
 >;
 
 export const createAnimationSlice = (
@@ -586,5 +588,38 @@ export const createAnimationSlice = (
       selectedClipIds: newClipId ? [newClipId] : [],
     });
     return newClipId;
+  },
+
+  staggerSelectedLayers: (config) => {
+    const { document: doc, activeScreenId, selectedLayerIds } = get();
+    if (!selectedLayerIds || selectedLayerIds.length < 2) return;
+
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    const selectedLayers: Layer[] = [];
+    for (const id of selectedLayerIds) {
+      const l = findLayerInTree(activeScreen.layers, id);
+      if (l) selectedLayers.push(l);
+    }
+
+    if (selectedLayers.length < 2) return;
+
+    const { updatedLayers } = staggerLayers(selectedLayers, config);
+    const updatedMap = new Map(updatedLayers.map((l) => [l.id, l]));
+
+    let currentScreenLayers = activeScreen.layers;
+    for (const [id, updated] of updatedMap.entries()) {
+      currentScreenLayers = mutateLayerInTree(currentScreenLayers, id, () => updated);
+    }
+
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((screen) =>
+        screen.id === activeScreenId ? { ...screen, layers: currentScreenLayers } : screen
+      ),
+    };
+
+    commitDoc(set, nextDoc);
   },
 });
