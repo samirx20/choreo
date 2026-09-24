@@ -1696,6 +1696,38 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - 10 automated unit and integration tests in `src/test/svg_import_and_decomposition.test.ts`.
   - Production build (`tsc -b && vite build`) succeeds without errors.
 
+---
+
+### Decision 77: Pen (`P`) & Pencil (`Shift + P`) Vector Drawing Tools
+* **Context & Motivation**:
+  - World-class motion design suites (After Effects, Cavalry, Rive) require first-class authoring tools for custom vector paths, custom kinetic masks, stylized hand-drawn flourishes, and signature calligraphic flourishes.
+  - Previously, Motion Studio only supported pre-built geometric shapes (rectangles, stars, circles, polygons) and SVG file import, but lacked manual in-app vector path creation.
+* **The Solution**:
+  1. **Vector Spline & Curve Math Engine (`src/engine/vector/vectorCurveFitting.ts`)**:
+     - `smoothPointsToPath(points, closed)`: converts freehand pointer trajectories into smooth $C^1$ continuous cubic Bézier paths using analytical Catmull-Rom to Bézier conversion with adaptive distance decimation (`simplifyPoints`).
+     - `penVerticesToPath(vertices, closed)`: converts authored pen anchor points into precise SVG paths, supporting linear segments (`L`) and smooth dual-tangent Bézier arms (`C`).
+  2. **Interactive Drawing Overlay (`src/components/canvas/VectorDrawingOverlay.tsx`)**:
+     - Mounted dynamically inside the active artboard when `activeTool === "pen"` or `activeTool === "pencil"`.
+     - **Pencil Mode**: captures real-time pointer gestures with silky smooth cubic Bézier stroke preview (`stroke="#3b82f6"`, width: 3, linecap: round). On pointer release, calculates tight bounds and instantiates a `ShapeLayer` (`shapeType: 'path'`).
+     - **Pen Mode**:
+       - Click to place linear anchor vertices.
+       - Click & drag to pull out symmetric Bézier tangent arms with real-time visual handle rendering.
+       - Dashed rubberband preview line connecting the active vertex to cursor.
+       - Clicking near the initial anchor point ($\le 12\text{px}$) closes the loop (`Z`) and finalizes the shape.
+       - `Enter` or double-click commits the open path.
+       - `Escape` cancels or resets current drawing.
+  3. **Data Model & Type System (`src/store/types.ts`)**:
+     - Extended `CanvasTool` with `"pen"` and `"pencil"`.
+     - Generated layers instantiate as first-class `ShapeLayer` models (`shapeType: 'path'`) with calculated `viewBox`, `strokeCap: 'round'`, `strokeJoin: 'round'`, and tight spatial coordinates.
+     - Immediate compatibility with **Trim Path Draw-On** (`trimStart`, `trimEnd`) and SVG contour animations.
+  4. **UI & Keyboard Shortcuts (`FloatingDesignToolbar.tsx` & `useCanvasHotkeys.ts`)**:
+     - Added dedicated **Pen Tool (`P`)** and **Pencil Tool (`Shift + P`)** buttons to the floating design toolbar with active state styling.
+     - Global hotkeys: `P` activates Pen tool; `Shift + P` activates Pencil tool; `Escape` exits to Select tool.
+* **Verification**:
+  - 8 automated tests in `src/test/vector_drawing_tools.test.ts`.
+  - All 28 tests across the 4 core foundations pass cleanly in 2.5s.
+  - Production build (`tsc -b && vite build`) succeeds without errors.
+
 
 
 

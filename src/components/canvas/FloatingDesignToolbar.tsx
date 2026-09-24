@@ -16,6 +16,8 @@ import {
   ChevronDown,
   Smile,
   Component,
+  PenTool,
+  Pencil,
 } from "lucide-react";
 import { useProjectStore, CanvasTool } from "@/store/useProjectStore";
 import { THEME_TOKENS } from "@/theme/tokens";
@@ -391,6 +393,38 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <div className="h-4 w-px bg-[#3f3f46] mx-0.5" />
+
+      {/* Pen Tool (P) */}
+      <button
+        type="button"
+        onClick={() => handleToolClick("pen")}
+        className={cn(
+          "h-8 w-8 rounded-full flex items-center justify-center transition-all",
+          activeTool === "pen"
+            ? "bg-[#7c3aed] text-white shadow-xs"
+            : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
+        )}
+        title="Pen Tool - Vector Paths (P)"
+      >
+        <PenTool className="h-4 w-4" />
+      </button>
+
+      {/* Pencil Tool (Shift+P) */}
+      <button
+        type="button"
+        onClick={() => handleToolClick("pencil")}
+        className={cn(
+          "h-8 w-8 rounded-full flex items-center justify-center transition-all",
+          activeTool === "pencil"
+            ? "bg-[#7c3aed] text-white shadow-xs"
+            : "text-[#a1a1aa] hover:text-white hover:bg-white/10"
+        )}
+        title="Pencil Tool - Freehand Drawing (Shift+P)"
+      >
+        <Pencil className="h-4 w-4" />
+      </button>
 
       <div className="h-4 w-px bg-[#3f3f46] mx-0.5" />
 

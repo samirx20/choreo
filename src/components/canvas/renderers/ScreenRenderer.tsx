@@ -3,6 +3,7 @@ import { Screen, ProjectSettings } from "@/types/scene";
 import { LayerRenderer } from "./LayerRenderer";
 import { MorphTransitionRenderer } from "./MorphTransitionRenderer";
 import { SafeZoneOverlay } from "../SafeZoneOverlay";
+import { VectorDrawingOverlay } from "../VectorDrawingOverlay";
 import { Play, Sparkles, MoreHorizontal } from "lucide-react";
 import { useContextMenuStore } from "@/store/useContextMenuStore";
 import { useProjectStore } from "@/store/useProjectStore";
@@ -37,6 +38,8 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
 }) => {
   const updateScreen = useProjectStore((s) => s.updateScreen);
   const currentTime = useProjectStore((s) => s.currentTime);
+  const activeScreenId = useProjectStore((s) => s.activeScreenId);
+  const activeTool = useProjectStore((s) => s.activeTool);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(screen.name);
 
@@ -262,6 +265,16 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
             width={width}
             height={height}
             config={settings.safeZones}
+          />
+        )}
+
+        {/* Interactive Pen & Pencil Vector Drawing Overlay */}
+        {screen.id === activeScreenId && (activeTool === "pen" || activeTool === "pencil") && (
+          <VectorDrawingOverlay
+            screenId={screen.id}
+            screenWidth={width}
+            screenHeight={height}
+            domScale={domScale || 1}
           />
         )}
       </div>

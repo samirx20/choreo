@@ -26,6 +26,8 @@ export type CanvasTool =
   | "polygon"
   | "line"
   | "arrow"
+  | "pen"
+  | "pencil"
   | "media";
 
 export type { UiMode };

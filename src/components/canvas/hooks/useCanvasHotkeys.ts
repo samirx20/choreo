@@ -272,6 +272,13 @@ export function useCanvasHotkeys({
           store.setTool("rectangle");
         } else if (e.key === "o" || e.key === "O") {
           store.setTool("circle");
+        } else if (e.key === "p" || e.key === "P") {
+          e.preventDefault();
+          if (e.shiftKey) {
+            store.setTool("pencil");
+          } else {
+            store.setTool("pen");
+          }
         }
       }
     };
