@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { useProjectStore } from "@/store/useProjectStore";
 import { isContainerLayer } from "@/store/helpers/treeHelpers";
 import { RelationalLinksCard } from "@/components/inspector/design/RelationalLinksCard";
@@ -149,15 +149,45 @@ describe("Parent-Child Relational Linking Architecture", () => {
     render(<RelationalLinksCard selectedLayer={updatedCard} />);
 
     // Shows Relational Linking header and child count
-    expect(screen.getByText("Relational Linking")).toBeInTheDocument();
-    expect(screen.getByText("1 child")).toBeInTheDocument();
+    expect(screen.getByText("Relational Linking")).toBeDefined();
+    expect(screen.getByText("1 child")).toBeDefined();
 
-    // Mode buttons: Hug, Stack, Free
-    expect(screen.getByText("Hug")).toBeInTheDocument();
-    expect(screen.getByText("Stack")).toBeInTheDocument();
-    expect(screen.getByText("Free")).toBeInTheDocument();
+    // Modular link options: Hug Bounds, Reflow Stack, Clip Content
+    expect(screen.getByText("Hug Bounds")).toBeDefined();
+    expect(screen.getByText("Reflow Stack")).toBeDefined();
+    expect(screen.getByText("Clip Content")).toBeDefined();
 
     // Detach button
-    expect(screen.getByText("Detach")).toBeInTheDocument();
+    expect(screen.getByText("Detach")).toBeDefined();
+  });
+
+  it("supports enabling multiple link options simultaneously (Hug Bounds AND Reflow Stack)", () => {
+    const store = useProjectStore.getState();
+    store.reorderLayer("text_child", "card_parent", "inside");
+
+    // Enable both Hug Bounds AND Reflow Stack
+    store.updateLayerContainerLayout("card_parent", {
+      hug: {
+        enabled: true,
+        dimension: "both",
+        paddingX: 24,
+        paddingY: 18,
+        physics: "spring",
+      },
+      stack: {
+        enabled: true,
+        axis: "vertical",
+        gap: 12,
+        align: "start",
+      },
+      clip: {
+        enabled: true,
+      },
+    });
+
+    const card = useProjectStore.getState().document.screens[0].layers[0];
+    expect((card as any).containerLayout.hug.enabled).toBe(true);
+    expect((card as any).containerLayout.stack.enabled).toBe(true);
+    expect((card as any).containerLayout.clip.enabled).toBe(true);
   });
 });

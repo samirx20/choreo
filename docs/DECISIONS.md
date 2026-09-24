@@ -1862,19 +1862,20 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   2. **Zero-Noise Inspector Card (`RelationalLinksCard.tsx` & `DesignInspector.tsx`)**:
      - Completely removed the old abstract driver selection form and empty state clutter.
      - If an element has no children and is not a connector, the Relational Linking card returns `null` (zero visual noise, Rule 9).
-     - When a parent container has children, it exposes high-signal, motion-first relational modes:
-       - **Hug Content**: Dynamically dilates card width and height to hug child elements with 2D scrubbable padding (`Pad X`, `Pad Y`) and spring physics toggle (`Spring` vs `Instant`).
-       - **Reflow Stack**: Arranges children in a responsive flex layout with axis control (`Vertical` vs `Horizontal`), scrubbable `Gap`, alignment, and spring impulse.
-       - **Freeform**: Children position with freeform local offsets moving locked with the parent frame.
+     - When a parent container has children, it exposes modular, independent relational options that can be enabled **individually or simultaneously**:
+       - **Hug Bounds**: Dynamically dilates card width and height to hug child elements with 2D scrubbable padding (`Pad X`, `Pad Y`), dimension control (`Both`, `Width`, `Height`), and spring physics toggle (`Spring` vs `Instant`).
+       - **Reflow Stack**: Arranges children in a responsive flex layout with axis control (`Vertical` vs `Horizontal`), scrubbable `Gap`, and alignment (`Start`, `Center`, `End`).
+       - **Simultaneous Hug + Stack**: When both are enabled, children automatically stack with the authored gap AND the parent card automatically springs to hug the stacked dimensions + padding!
+       - **Clip Content**: Non-destructive boundary stencil clipping child overflow.
        - **Detach Action**: Dedicated "Detach" button on each child instantly unparents it back to the root coordinate frame with 0.0000px visual shift.
   3. **Connector Pinning for 1D Elements**:
-     - For Line and Arrow layers, exposes a clean endpoint target pinning selector to track other layers on stage dynamically.
+     - For Line and Arrow layers, exposes clean endpoint target and anchor pinning selectors to track other layers on stage dynamically.
   4. **Dynamic Canvas & Evaluation Engine (`ShapeRenderer.tsx`, `LayerRenderer.tsx`, `dependencyEngine.ts`)**:
-     - `ShapeRenderer` renders nested children inside cards with automatic stack reflow or absolute coordinates.
-     - `dependencyEngine.ts` dynamically resolves the bounding box of child elements for parent cards in `hug` mode, supporting deterministic $O(1)$ evaluation and scrubbing.
+     - `ShapeRenderer` renders nested children inside cards with automatic stack reflow, padding, and clipping.
+     - `dependencyEngine.ts` dynamically resolves compound stacked + hugged bounding boxes in $O(1)$ time for deterministic scrubbing and export.
 * **Verification**:
-  - 6 dedicated automated tests in `src/test/parent_child_relational_linking.test.tsx` verifying universal nesting, 0.0000px coordinate preservation, container layout updates, child detachment, and zero-noise inspector rendering.
-  - All 52 test suites (460 tests) passing via Vitest.
+  - 7 dedicated automated tests in `src/test/parent_child_relational_linking.test.tsx` verifying universal nesting, 0.0000px coordinate preservation, container layout updates, child detachment, zero-noise inspector rendering, and simultaneous multi-linking.
+  - All 52 test suites (461 tests) passing via Vitest.
   - Production build (`tsc -b && vite build`) compiles with zero TypeScript errors.
 
 

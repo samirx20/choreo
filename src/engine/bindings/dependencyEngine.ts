@@ -760,19 +760,42 @@ export function resolveSceneBindings(
     resolved[layerId] = layerStyle;
   }
 
-  // Resolve parent container dynamic hugging
+  // Resolve parent container dynamic hugging & multi-linking
   for (const [layerId, layer] of layerMap.entries()) {
+    const isHugActive =
+      Boolean(layer.containerLayout?.hug?.enabled) ||
+      layer.containerLayout?.mode === 'hug';
+    const isStackActive =
+      Boolean(layer.containerLayout?.stack?.enabled) ||
+      layer.containerLayout?.mode === 'stack';
+    const isClipActive = Boolean(layer.containerLayout?.clip?.enabled);
+
+    if (isClipActive) {
+      resolved[layerId] = {
+        ...(resolved[layerId] || {}),
+        overflow: 'hidden',
+      };
+    }
+
     if (
-      layer.containerLayout?.mode === 'hug' &&
+      isHugActive &&
       Array.isArray((layer as any).children) &&
       (layer as any).children.length > 0
     ) {
       const children = (layer as any).children as Layer[];
-      const padX = layer.containerLayout.paddingX ?? 20;
-      const padY = layer.containerLayout.paddingY ?? 14;
+      const padX = layer.containerLayout?.hug?.paddingX ?? layer.containerLayout?.paddingX ?? 20;
+      const padY = layer.containerLayout?.hug?.paddingY ?? layer.containerLayout?.paddingY ?? 14;
+      const dimension = layer.containerLayout?.hug?.dimension || 'both';
+      const stackAxis = layer.containerLayout?.stack?.axis ?? layer.containerLayout?.stackAxis ?? 'vertical';
+      const stackGap = layer.containerLayout?.stack?.gap ?? layer.containerLayout?.stackGap ?? 16;
 
-      let maxX = 0;
-      let maxY = 0;
+      let sumW = 0;
+      let sumH = 0;
+      let maxChildW = 0;
+      let maxChildH = 0;
+      let maxFreeX = 0;
+      let maxFreeY = 0;
+
       for (const child of children) {
         const childResolved = resolved[child.id];
         let cw = typeof child.style.width === 'number' ? child.style.width : 100;
@@ -793,20 +816,43 @@ export function resolveSceneBindings(
           ch = child.style.fontSize * 1.3;
         }
 
+        sumW += cw;
+        sumH += ch;
+        maxChildW = Math.max(maxChildW, cw);
+        maxChildH = Math.max(maxChildH, ch);
+
         const cx = child.style.x || 0;
         const cy = child.style.y || 0;
-        maxX = Math.max(maxX, cx + cw);
-        maxY = Math.max(maxY, cy + ch);
+        maxFreeX = Math.max(maxFreeX, cx + cw);
+        maxFreeY = Math.max(maxFreeY, cy + ch);
       }
 
-      const huggedW = Math.round(maxX + padX * 2);
-      const huggedH = Math.round(maxY + padY * 2);
+      let huggedW = 0;
+      let huggedH = 0;
 
-      resolved[layerId] = {
-        ...(resolved[layerId] || {}),
-        width: `${huggedW}px`,
-        height: `${huggedH}px`,
-      };
+      if (isStackActive) {
+        const gapTotal = Math.max(0, children.length - 1) * stackGap;
+        if (stackAxis === 'horizontal') {
+          huggedW = Math.round(sumW + gapTotal + padX * 2);
+          huggedH = Math.round(maxChildH + padY * 2);
+        } else {
+          huggedW = Math.round(maxChildW + padX * 2);
+          huggedH = Math.round(sumH + gapTotal + padY * 2);
+        }
+      } else {
+        huggedW = Math.round(maxFreeX + padX * 2);
+        huggedH = Math.round(maxFreeY + padY * 2);
+      }
+
+      const nextStyle = { ...(resolved[layerId] || {}) };
+      if (dimension === 'both' || dimension === 'width') {
+        nextStyle.width = `${huggedW}px`;
+      }
+      if (dimension === 'both' || dimension === 'height') {
+        nextStyle.height = `${huggedH}px`;
+      }
+
+      resolved[layerId] = nextStyle;
     }
   }
 

@@ -279,40 +279,49 @@ export const ShapeRenderer: React.FC<ShapeRendererProps> = ({
         </svg>
       )}
 
-      {layer.children && layer.children.length > 0 && (
-        <div
-          className={cn(
-            "w-full h-full pointer-events-auto",
-            layer.containerLayout?.mode === "stack" ? "flex" : "relative"
-          )}
-          style={{
-            ...(layer.containerLayout?.mode === "stack"
-              ? {
-                  display: "flex",
-                  flexDirection: layer.containerLayout.stackAxis === "horizontal" ? "row" : "column",
-                  alignItems:
-                    layer.containerLayout.stackAlign === "center"
-                      ? "center"
-                      : layer.containerLayout.stackAlign === "end"
-                      ? "flex-end"
-                      : "flex-start",
-                  gap: `${layer.containerLayout.stackGap ?? 16}px`,
-                  padding: `${layer.containerLayout.paddingY ?? 14}px ${layer.containerLayout.paddingX ?? 20}px`,
-                  boxSizing: "border-box",
-                }
-              : {
-                  position: "absolute",
-                  inset: 0,
-                }),
-          }}
-        >
-          {layer.children.map((child: Layer) =>
-            renderChild
-              ? renderChild(child, layer.containerLayout?.mode === "stack")
-              : null
-          )}
-        </div>
-      )}
+      {layer.children && layer.children.length > 0 && (() => {
+        const isStack = Boolean(layer.containerLayout?.stack?.enabled) || layer.containerLayout?.mode === "stack";
+        const stackAxis = layer.containerLayout?.stack?.axis ?? layer.containerLayout?.stackAxis ?? "vertical";
+        const stackGap = layer.containerLayout?.stack?.gap ?? layer.containerLayout?.stackGap ?? 16;
+        const stackAlign = layer.containerLayout?.stack?.align ?? layer.containerLayout?.stackAlign ?? "start";
+        const padX = layer.containerLayout?.hug?.paddingX ?? layer.containerLayout?.paddingX ?? 20;
+        const padY = layer.containerLayout?.hug?.paddingY ?? layer.containerLayout?.paddingY ?? 14;
+        const isClip = Boolean(layer.containerLayout?.clip?.enabled);
+
+        return (
+          <div
+            className={cn(
+              "w-full h-full pointer-events-auto",
+              isStack ? "flex" : "relative"
+            )}
+            style={{
+              overflow: isClip ? "hidden" : "visible",
+              ...(isStack
+                ? {
+                    display: "flex",
+                    flexDirection: stackAxis === "horizontal" ? "row" : "column",
+                    alignItems:
+                      stackAlign === "center"
+                        ? "center"
+                        : stackAlign === "end"
+                        ? "flex-end"
+                        : "flex-start",
+                    gap: `${stackGap}px`,
+                    padding: `${padY}px ${padX}px`,
+                    boxSizing: "border-box",
+                  }
+                : {
+                    position: "absolute",
+                    inset: 0,
+                  }),
+            }}
+          >
+            {layer.children.map((child: Layer) =>
+              renderChild ? renderChild(child, isStack) : null
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 };

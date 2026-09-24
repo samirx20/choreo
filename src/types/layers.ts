@@ -245,8 +245,37 @@ export interface GridCoordinates {
 
 export type ContainerLayoutMode = 'hug' | 'stack' | 'freeform';
 
+export interface HugLinkOptions {
+  enabled: boolean;
+  dimension?: 'both' | 'width' | 'height';
+  paddingX?: number;
+  paddingY?: number;
+  physics?: 'spring' | 'instant';
+  stiffness?: number;
+  damping?: number;
+}
+
+export interface StackLinkOptions {
+  enabled: boolean;
+  axis?: 'vertical' | 'horizontal';
+  gap?: number;
+  align?: 'start' | 'center' | 'end';
+  physics?: 'spring' | 'instant';
+}
+
+export interface ClipLinkOptions {
+  enabled: boolean;
+}
+
+export interface PinLinkOptions {
+  enabled: boolean;
+  anchor?: ConstraintAnchor;
+  offsetX?: number;
+  offsetY?: number;
+}
+
 export interface ContainerLayoutConfig {
-  mode: ContainerLayoutMode;
+  mode?: ContainerLayoutMode;
   paddingX?: number;
   paddingY?: number;
   physics?: 'spring' | 'instant';
@@ -255,6 +284,12 @@ export interface ContainerLayoutConfig {
   stackAxis?: 'vertical' | 'horizontal';
   stackGap?: number;
   stackAlign?: 'start' | 'center' | 'end';
+
+  // Multi-link modular options (can be just one or multiple simultaneously!)
+  hug?: HugLinkOptions;
+  stack?: StackLinkOptions;
+  clip?: ClipLinkOptions;
+  pin?: PinLinkOptions;
 }
 
 export interface BaseLayer {
