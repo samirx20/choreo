@@ -41,12 +41,10 @@ import { useCanvasHotkeys } from "./hooks/useCanvasHotkeys";
 
 interface CanvasViewportProps {
   onOpenComponentsDrawer: () => void;
-  onOpenAiBar?: () => void;
 }
 
 export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   onOpenComponentsDrawer,
-  onOpenAiBar,
 }) => {
   const {
     document: doc,
@@ -1340,7 +1338,6 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       {/* Floating Design Toolbar in Design Mode */}
       {!isMotionMode(uiMode) && (
         <FloatingDesignToolbar
-          onOpenAiBar={onOpenAiBar}
           onOpenComponentsDrawer={onOpenComponentsDrawer}
         />
       )}

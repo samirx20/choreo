@@ -24,13 +24,11 @@ import { useProjectRegistryStore } from "@/store/useProjectRegistryStore";
 import { ExportPopover } from "@/components/export/ExportPopover";
 
 interface TopNavBarProps {
-  onOpenAiBar?: () => void;
   onToggleZenMode?: () => void;
   onBackToWorkspace?: () => void;
 }
 
 export const TopNavBar: React.FC<TopNavBarProps> = ({
-  onOpenAiBar,
   onToggleZenMode,
   onBackToWorkspace,
 }) => {

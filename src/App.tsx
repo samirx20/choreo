@@ -3,11 +3,11 @@ import { useProjectStore, isMotionMode } from "@/store/useProjectStore";
 import { useProjectRegistryStore } from "@/store/useProjectRegistryStore";
 import { ProjectsWorkspace } from "@/components/workspace/ProjectsWorkspace";
 import { TopNavBar } from "@/components/layout/TopNavBar";
+import { DesktopTitleBar } from "@/components/layout/DesktopTitleBar";
 import { LeftSidebar } from "@/components/sidebar/LeftSidebar";
 import { CanvasViewport } from "@/components/canvas/CanvasViewport";
 import { RightInspectorPanel } from "@/components/inspector/RightInspectorPanel";
 import { TimelinePanel } from "@/components/timeline/TimelinePanel";
-import { AICommandBar } from "@/components/ai/AICommandBar";
 import { ComponentsDrawer } from "@/components/components/ComponentsDrawer";
 import { ShortcutsModal } from "@/components/modals/ShortcutsModal";
 import { UniversalContextMenuPortal } from "@/components/common/UniversalContextMenuPortal";
@@ -37,7 +37,6 @@ const App: React.FC = () => {
     loadProjectFromFileBlob,
   } = useProjectRegistryStore();
 
-  const [isAiBarOpen, setIsAiBarOpen] = useState(false);
   const [isComponentsDrawerOpen, setIsComponentsDrawerOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [isZenMode, setIsZenMode] = useState(false);
@@ -78,13 +77,6 @@ const App: React.FC = () => {
       if (e.key === "Escape" && isZenMode) {
         e.preventDefault();
         setIsZenMode(false);
-        return;
-      }
-
-      // 1. AI Command Bar: Ctrl+K or Cmd+K
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        setIsAiBarOpen((prev) => !prev);
         return;
       }
 
@@ -209,17 +201,21 @@ const App: React.FC = () => {
   ]);
 
   return (
-    <div className="h-screen w-screen overflow-hidden relative select-none">
+    <div className="h-screen w-screen overflow-hidden relative select-none flex flex-col bg-background text-foreground">
+      {/* 0. Native Desktop Window Title Bar with MCP Switch & Agent Setup */}
+      {!isZenMode && <DesktopTitleBar />}
+
       {/* 1. Projects Management Workspace (Dashboard / Home View) */}
       {currentView === "workspace" ? (
-        <ProjectsWorkspace />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <ProjectsWorkspace />
+        </div>
       ) : (
         /* 2. Motion Studio Canvas Editor View */
-        <div className="h-full w-full flex flex-col bg-background text-foreground overflow-hidden font-sans select-none relative">
+        <div className="flex-1 min-h-0 w-full flex flex-col bg-background text-foreground overflow-hidden font-sans select-none relative">
           {/* 1. Global Tool Header */}
           {!isZenMode && (
             <TopNavBar
-              onOpenAiBar={() => setIsAiBarOpen(true)}
               onToggleZenMode={() => setIsZenMode((prev) => !prev)}
               onBackToWorkspace={closeProject}
             />
@@ -233,7 +229,6 @@ const App: React.FC = () => {
             {/* Center: Studio Viewport */}
             <CanvasViewport
               onOpenComponentsDrawer={() => setIsComponentsDrawerOpen(true)}
-              onOpenAiBar={() => setIsAiBarOpen(true)}
             />
 
             {/* Right Sidebar Inspector (Jitter Design & Animate Switcher) */}
@@ -258,11 +253,6 @@ const App: React.FC = () => {
           )}
 
           {/* 4. Floating Overlays & Modals */}
-          <AICommandBar
-            isOpen={isAiBarOpen}
-            onClose={() => setIsAiBarOpen(false)}
-          />
-
           <ComponentsDrawer
             isOpen={isComponentsDrawerOpen}
             onClose={() => setIsComponentsDrawerOpen(false)}

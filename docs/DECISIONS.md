@@ -2372,6 +2372,34 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - 98 new automated tests added, expanding total test coverage to **55 test suites and 586 unit/integration tests passing 100% cleanly** in Vitest (`npx vitest run`).
   - Production build (`npm run build`) compiles with zero TypeScript errors or bundle warnings.
 
+---
+
+### Decision 103: Native Desktop Window Title Bar, MCP Active Toggle, 1-Click Agent Setup, and Stdio MCP Server
+* **Context & Motivation**:
+  - The previous in-app `AICommandBar` was an unnecessary distraction for professional motion designers; external AI agents (Claude Desktop, Cursor, Antigravity) are the primary drivers of choreography.
+  - Relying on fixed network ports (TCP/HTTP/SSE) causes severe reliability issues on Windows systems where Hyper-V, WSL2, or Docker dynamically reserve blocks of thousands of ports (`netsh interface ipv4 show excludedportrange protocol=tcp`).
+  - Users need a clean, cross-platform desktop UX to toggle MCP access, copy agent instructions with 1 click, and allow external agents to operate tool-by-tool directly on native `.mtn` files.
+* **The Solution**:
+  1. **Purge of In-App AI Command Bar**:
+     - Excised `AICommandBar.tsx` and removed the Sparkles AI Wand button from `FloatingDesignToolbar.tsx`.
+     - Removed unused `onOpenAiBar` and `isAiBarOpen` hooks and hotkeys across `App.tsx`, `TopNavBar.tsx`, and `CanvasViewport.tsx`.
+  2. **Custom Desktop Window Title Bar (`src/components/layout/DesktopTitleBar.tsx`)**:
+     - Rendered at the top of the window with native dragging (`data-tauri-drag-region`).
+     - Displays Motion Studio branding and active project `.mtn` filename.
+     - **MCP Toggle**: Pill switch powered by `useMcpStore` with live indicator (emerald dot when `MCP: Active`, muted when `MCP: Off`).
+     - **1-Click Agent Setup Popover**:
+       - 1-click **"Copy Config"**: Copies the standard MCP `stdio` server JSON snippet ready for `claude_desktop_config.json` or Cursor settings.
+       - 1-click **"Copy Prompt"**: Copies system instructions explaining available tools (`create_scene`, `place_element`, `apply_animation`, `lint_storyboard`) to guide the external agent.
+     - **Native Window Controls**: Minimize, Maximize, and Close buttons wired to Tauri v2's `getCurrentWindow()`.
+  3. **Zero-Port Standard Stdio MCP Server (`mcp.js`)**:
+     - Built a standalone Node.js JSON-RPC 2.0 stdio runner requiring zero external dependencies or network ports.
+     - Directly manipulates `.mtn` project files tool-by-tool (`create_scene`, `place_element`, `apply_animation`, `get_storyboard_state`, `lint_storyboard`).
+     - 100% immune to Hyper-V port reservations, firewalls, and proxy conflicts.
+* **Verification**:
+  - All 55 test files and 586 unit tests pass 100% cleanly in Vitest.
+  - Production build (`npm run build`) compiles with zero TypeScript errors or bundle warnings.
+  - Stdio MCP server verified with automated JSON-RPC handshake (`initialize`, `tools/list`, and `tools/call`).
+
 
 
 

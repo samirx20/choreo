@@ -12,7 +12,6 @@ import {
   Minus,
   ArrowUpRight,
   Image as ImageIcon,
-  Sparkles,
   ChevronDown,
   Smile,
   Component,
@@ -35,12 +34,10 @@ import { IconPickerPopover } from "./IconPickerPopover";
 import { StaggerPopover } from "./StaggerPopover";
 
 interface FloatingDesignToolbarProps {
-  onOpenAiBar?: () => void;
   onOpenComponentsDrawer?: () => void;
 }
 
 export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
-  onOpenAiBar,
   onOpenComponentsDrawer,
 }) => {
   const {
@@ -599,17 +596,6 @@ export const FloatingDesignToolbar: React.FC<FloatingDesignToolbarProps> = ({
         </button>
       )}
 
-      {/* AI Assistant Wand */}
-      {onOpenAiBar && (
-        <button
-          type="button"
-          onClick={onOpenAiBar}
-          className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          title="AI Assistant (Cmd+K)"
-        >
-          <Sparkles className="h-4 w-4 text-primary" />
-        </button>
-      )}
     </div>
   );
 };
