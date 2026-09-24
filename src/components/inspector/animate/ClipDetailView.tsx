@@ -83,11 +83,30 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
   const doc = useProjectStore((s) => s.document);
   const activeScreenId = useProjectStore((s) => s.activeScreenId);
   const activeScreen = doc.screens.find((s) => s.id === activeScreenId) || doc.screens[0];
-  const candidateLayers = (activeScreen?.layers || []).filter((l) => l.id !== clipLayer.id);
 
-  const targetLayer = selectedClip.params?.targetLayerId
-    ? findLayerInTree(activeScreen?.layers || [], selectedClip.params.targetLayerId)
+  const sourceLayerId =
+    selectedClip.params?.sourceLayerId ||
+    (selectedClip.preset === "morph" ? clipLayer.id : undefined);
+
+  const targetLayerId =
+    selectedClip.params?.targetLayerId ||
+    (selectedClip.preset === "morphIn" ? clipLayer.id : undefined);
+
+  const sourceLayer = sourceLayerId
+    ? findLayerInTree(activeScreen?.layers || [], sourceLayerId)
+    : selectedClip.preset === "morph"
+    ? clipLayer
     : null;
+
+  const targetLayer = targetLayerId
+    ? findLayerInTree(activeScreen?.layers || [], targetLayerId)
+    : selectedClip.preset === "morphIn"
+    ? clipLayer
+    : null;
+
+  const candidateLayers = (activeScreen?.layers || []).filter(
+    (l) => l.id !== (sourceLayerId || clipLayer.id)
+  );
 
   const currentMorphStyle: MorphStyle = selectedClip.params?.morphStyle || "stardust";
   const currentParticleCount: number = selectedClip.params?.particleCount ?? 80;
@@ -206,7 +225,10 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
     selectedClip.preset === "morphIn" ||
     selectedClip.params?.morphAmount !== undefined;
 
-  const isCrossMorph = selectedClip.preset === "morph" || selectedClip.preset === "morphIn";
+  const isCrossMorph =
+    selectedClip.preset === "morph" ||
+    selectedClip.preset === "morphIn" ||
+    Boolean(selectedClip.params?.morphGroupId);
 
   const isStrokeBased =
     selectedClip.preset === "custom_stroke" ||
@@ -330,7 +352,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               className="text-sm font-bold text-foreground capitalize truncate cursor-pointer hover:underline"
               title="Double-click to rename animation"
             >
-              {selectedClip.name || selectedClip.preset.replace("custom_", "")}
+              {isCrossMorph ? "Morph Transition" : (selectedClip.name || selectedClip.preset.replace("custom_", ""))}
             </span>
           )}
         </div>
@@ -391,7 +413,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
       </div>
 
       {/* Universal Mode [ In | Action | Out ] for all animations */}
-      {!selectedClip.loop && (
+      {!selectedClip.loop && !isCrossMorph && (
         <div className="py-3 flex items-center justify-between border-b border-border/60">
           <span className="text-[13px] text-muted-foreground font-medium">Mode</span>
           <div className="flex items-center bg-muted p-0.5 rounded-md">
@@ -1342,17 +1364,17 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
       {/* Cross-Element Morph Transition Properties */}
       {isCrossMorph && (
         <div className="space-y-3 py-3 border-b border-border/60">
-          {/* Target Element */}
+          {/* Connected Elements */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="text-[13px] text-muted-foreground font-medium">Target Element</span>
+              <span className="text-[13px] text-muted-foreground font-medium">Connected Elements</span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
                     className="text-[11px] font-bold text-[#6d28d9] hover:underline cursor-pointer"
                   >
-                    Change
+                    Change Target
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52">
@@ -1362,7 +1384,7 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
                       (l.type === "text" && (l as any).text
                         ? (l as any).text.slice(0, 18)
                         : l.type.charAt(0).toUpperCase() + l.type.slice(1));
-                    const isCurrent = l.id === selectedClip.params?.targetLayerId;
+                    const isCurrent = l.id === targetLayerId;
                     return (
                       <DropdownMenuItem
                         key={l.id}
@@ -1382,23 +1404,42 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
               </DropdownMenu>
             </div>
 
-            <div className="p-2 rounded-lg bg-[#f8f8fa] border border-[#e5e5e7] flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
+            <div className="p-2.5 rounded-lg bg-[#f8f8fa] border border-[#e5e5e7] flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
                 <div className="w-6 h-6 rounded bg-white shadow-2xs flex items-center justify-center text-[#7c3aed] shrink-0">
                   <Shapes className="w-3.5 h-3.5" />
                 </div>
-                <span className="text-xs font-semibold text-[#18181b] truncate">
-                  {targetLayer
-                    ? targetLayer.name ||
-                      (targetLayer.type === "text" && (targetLayer as any).text
-                        ? (targetLayer as any).text.slice(0, 20)
-                        : targetLayer.type.charAt(0).toUpperCase() + targetLayer.type.slice(1))
-                    : "No target selected"}
-                </span>
+                <div className="min-w-0">
+                  <div className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">From</div>
+                  <div className="text-xs font-semibold text-[#18181b] truncate" title={sourceLayer?.name || "Source"}>
+                    {sourceLayer
+                      ? sourceLayer.name ||
+                        (sourceLayer.type === "text" && (sourceLayer as any).text
+                          ? (sourceLayer as any).text.slice(0, 16)
+                          : sourceLayer.type.charAt(0).toUpperCase() + sourceLayer.type.slice(1))
+                      : "Source"}
+                  </div>
+                </div>
               </div>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">
-                {targetLayer?.type || "none"}
-              </span>
+
+              <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+
+              <div className="flex items-center gap-2 min-w-0 flex-1 justify-end text-right">
+                <div className="min-w-0">
+                  <div className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">To</div>
+                  <div className="text-xs font-semibold text-[#18181b] truncate" title={targetLayer?.name || "Target"}>
+                    {targetLayer
+                      ? targetLayer.name ||
+                        (targetLayer.type === "text" && (targetLayer as any).text
+                          ? (targetLayer as any).text.slice(0, 16)
+                          : targetLayer.type.charAt(0).toUpperCase() + targetLayer.type.slice(1))
+                      : "No target selected"}
+                  </div>
+                </div>
+                <div className="w-6 h-6 rounded bg-[#ede9fe] shadow-2xs flex items-center justify-center text-[#6d28d9] shrink-0">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+              </div>
             </div>
           </div>
 

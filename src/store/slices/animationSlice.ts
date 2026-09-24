@@ -20,6 +20,78 @@ export type AnimationSlice = Pick<
   | "staggerSelectedLayers"
 >;
 
+function findPartnerMorphClip(
+  layers: Layer[],
+  currentLayerId: string,
+  currentClip: AnimationClip
+): { partnerLayer: Layer; partnerClip: AnimationClip } | null {
+  const isMorph =
+    currentClip.preset === "morph" ||
+    currentClip.preset === "morphIn" ||
+    Boolean(currentClip.params?.morphGroupId);
+  if (!isMorph) return null;
+
+  const partnerClipId = currentClip.params?.partnerClipId;
+  const morphGroupId = currentClip.params?.morphGroupId;
+  const partnerLayerId =
+    currentClip.params?.sourceLayerId === currentLayerId
+      ? currentClip.params?.targetLayerId
+      : currentClip.params?.sourceLayerId || currentClip.params?.targetLayerId;
+
+  // 1. Search by direct partnerClipId
+  if (partnerClipId) {
+    const search = (list: Layer[]): { partnerLayer: Layer; partnerClip: AnimationClip } | null => {
+      for (const l of list) {
+        const cMatch = getLayerClips(l).find((c) => c.id === partnerClipId);
+        if (cMatch) return { partnerLayer: l, partnerClip: cMatch };
+        if (l.type === "group" && (l as any).children) {
+          const res = search((l as any).children);
+          if (res) return res;
+        }
+      }
+      return null;
+    };
+    const found = search(layers);
+    if (found) return found;
+  }
+
+  // 2. Search by morphGroupId
+  if (morphGroupId) {
+    const search = (list: Layer[]): { partnerLayer: Layer; partnerClip: AnimationClip } | null => {
+      for (const l of list) {
+        const cMatch = getLayerClips(l).find(
+          (c) => c.params?.morphGroupId === morphGroupId && c.id !== currentClip.id
+        );
+        if (cMatch) return { partnerLayer: l, partnerClip: cMatch };
+        if (l.type === "group" && (l as any).children) {
+          const res = search((l as any).children);
+          if (res) return res;
+        }
+      }
+      return null;
+    };
+    const found = search(layers);
+    if (found) return found;
+  }
+
+  // 3. Search by partnerLayerId and morph preset
+  if (partnerLayerId && partnerLayerId !== currentLayerId) {
+    const partnerLayer = findLayerInTree(layers, partnerLayerId);
+    if (partnerLayer) {
+      const partnerPreset = currentClip.preset === "morph" ? "morphIn" : "morph";
+      const partnerClip = getLayerClips(partnerLayer).find(
+        (c) =>
+          c.preset === partnerPreset ||
+          c.params?.sourceLayerId === currentLayerId ||
+          c.params?.targetLayerId === currentLayerId
+      );
+      if (partnerClip) return { partnerLayer, partnerClip };
+    }
+  }
+
+  return null;
+}
+
 export const createAnimationSlice = (
   set: (fn: Partial<ProjectStoreState> | ((prev: ProjectStoreState) => Partial<ProjectStoreState>)) => void,
   get: () => ProjectStoreState
@@ -334,10 +406,56 @@ export const createAnimationSlice = (
       animPatch.emphasis = updatedTarget;
     }
 
-    const mutatedLayers = mutateLayerInTree(activeScreen.layers, layerId, (layer) => ({
+    let mutatedLayers = mutateLayerInTree(activeScreen.layers, layerId, (layer) => ({
       ...layer,
       animation: { ...(layer.animation || {}), ...animPatch },
     } as Layer));
+
+    // Synchronize morph partner clip across elements in lockstep
+    const partnerInfo = findPartnerMorphClip(activeScreen.layers, layerId, targetClip);
+    if (partnerInfo && partnerInfo.partnerLayer.id !== layerId) {
+      const partnerClips = getLayerClips(partnerInfo.partnerLayer);
+      const partnerUpdates: Partial<AnimationClip> = {};
+
+      if (updates.start !== undefined) partnerUpdates.start = updates.start;
+      if (updates.duration !== undefined) partnerUpdates.duration = updates.duration;
+      if (updates.easing !== undefined) partnerUpdates.easing = updates.easing;
+      if (updates.name !== undefined) partnerUpdates.name = updates.name;
+
+      if (updates.params !== undefined) {
+        partnerUpdates.params = {
+          ...(partnerInfo.partnerClip.params || {}),
+          ...(updates.params.morphStyle !== undefined ? { morphStyle: updates.params.morphStyle } : {}),
+          ...(updates.params.particleCount !== undefined ? { particleCount: updates.params.particleCount } : {}),
+          ...(updates.params.particleShape !== undefined ? { particleShape: updates.params.particleShape } : {}),
+          ...(updates.params.chaos !== undefined ? { chaos: updates.params.chaos } : {}),
+          ...(updates.params.morphAmount !== undefined ? { morphAmount: updates.params.morphAmount } : {}),
+          ...(updates.params.sourceLayerId !== undefined ? { sourceLayerId: updates.params.sourceLayerId } : {}),
+          ...(updates.params.targetLayerId !== undefined ? { targetLayerId: updates.params.targetLayerId } : {}),
+        };
+      }
+
+      const nextPartnerClips = partnerClips
+        .map((c) => (c.id === partnerInfo.partnerClip.id ? { ...c, ...partnerUpdates } : c))
+        .sort((a, b) => a.start - b.start);
+
+      const partnerUpdatedTarget = nextPartnerClips.find((c) => c.id === partnerInfo.partnerClip.id);
+      const partnerAnimPatch: Partial<LayerAnimation> = {
+        clips: nextPartnerClips,
+      };
+      if (partnerUpdatedTarget?.type === "in") {
+        partnerAnimPatch.in = partnerUpdatedTarget;
+      } else if (partnerUpdatedTarget?.type === "out") {
+        partnerAnimPatch.out = partnerUpdatedTarget;
+      } else if (partnerUpdatedTarget?.type === "emphasis") {
+        partnerAnimPatch.emphasis = partnerUpdatedTarget;
+      }
+
+      mutatedLayers = mutateLayerInTree(mutatedLayers, partnerInfo.partnerLayer.id, (layer) => ({
+        ...layer,
+        animation: { ...(layer.animation || {}), ...partnerAnimPatch },
+      } as Layer));
+    }
 
     const nextDoc: SceneDocument = {
       ...doc,
@@ -355,6 +473,7 @@ export const createAnimationSlice = (
 
     const currentClips = getLayerClips(targetLayer);
     const removingClip = currentClips.find((c) => c.id === clipId);
+    if (!removingClip) return;
     const nextClips = currentClips.filter((c) => c.id !== clipId);
 
     const animPatch: Partial<LayerAnimation> = {
@@ -370,7 +489,7 @@ export const createAnimationSlice = (
       animPatch.emphasis = undefined;
     }
 
-    const mutatedLayers = mutateLayerInTree(activeScreen.layers, layerId, (layer) => {
+    let mutatedLayers = mutateLayerInTree(activeScreen.layers, layerId, (layer) => {
       const existing = { ...(layer.animation || {}) };
       if (animPatch.in === undefined) delete existing.in;
       if (animPatch.out === undefined) delete existing.out;
@@ -381,12 +500,46 @@ export const createAnimationSlice = (
       } as Layer;
     });
 
+    let updatedSelectedClipIds = selectedClipIds.filter((id) => id !== clipId);
+
+    // If removing a morph clip, also remove its partner clip on the linked layer
+    const partnerInfo = findPartnerMorphClip(activeScreen.layers, layerId, removingClip);
+    if (partnerInfo && partnerInfo.partnerLayer.id !== layerId) {
+      const partnerClips = getLayerClips(partnerInfo.partnerLayer);
+      const nextPartnerClips = partnerClips.filter((c) => c.id !== partnerInfo.partnerClip.id);
+      const partnerAnimPatch: Partial<LayerAnimation> = {
+        clips: nextPartnerClips,
+      };
+      if (partnerInfo.partnerClip.type === "in" || partnerInfo.partnerLayer.animation?.in?.id === partnerInfo.partnerClip.id) {
+        partnerAnimPatch.in = undefined;
+      }
+      if (partnerInfo.partnerClip.type === "out" || partnerInfo.partnerLayer.animation?.out?.id === partnerInfo.partnerClip.id) {
+        partnerAnimPatch.out = undefined;
+      }
+      if (partnerInfo.partnerClip.type === "emphasis" || partnerInfo.partnerLayer.animation?.emphasis?.id === partnerInfo.partnerClip.id) {
+        partnerAnimPatch.emphasis = undefined;
+      }
+
+      mutatedLayers = mutateLayerInTree(mutatedLayers, partnerInfo.partnerLayer.id, (layer) => {
+        const existing = { ...(layer.animation || {}) };
+        if (partnerAnimPatch.in === undefined) delete existing.in;
+        if (partnerAnimPatch.out === undefined) delete existing.out;
+        if (partnerAnimPatch.emphasis === undefined) delete existing.emphasis;
+        return {
+          ...layer,
+          animation: { ...existing, clips: nextPartnerClips },
+        } as Layer;
+      });
+
+      updatedSelectedClipIds = updatedSelectedClipIds.filter((id) => id !== partnerInfo.partnerClip.id);
+    }
+
     const nextDoc: SceneDocument = {
       ...doc,
       screens: doc.screens.map((s) => (s.id === activeScreenId ? { ...s, layers: mutatedLayers } : s)),
     };
     commitDoc(set, nextDoc, {
-      selectedClipIds: selectedClipIds.filter((id) => id !== clipId),
+      selectedClipIds: updatedSelectedClipIds,
     });
   },
 
@@ -552,36 +705,102 @@ export const createAnimationSlice = (
       return clipId;
     }
 
-    const playheadTime = state.currentTime || 0;
+    const activeScreen = state.document.screens.find((s) => s.id === state.activeScreenId);
+    const targetLayer = activeScreen ? findLayerInTree(activeScreen.layers, layerId) : null;
+    const currentClips = targetLayer ? getLayerClips(targetLayer) : [];
+
+    // General animation rule: When adding a new animation to an object,
+    // nest it sequentially after existing animations end rather than starting at 0.
+    const endOfOldAnimations = currentClips.length > 0
+      ? Math.max(...currentClips.map((c) => c.start + c.duration))
+      : 0;
+    const clipStart = preset.params?.start !== undefined ? preset.params.start : endOfOldAnimations;
+
+    // Special unified handling for Morph transition across two elements:
+    if (preset.id === "morph" && preset.params?.targetLayerId) {
+      const targetId = preset.params.targetLayerId;
+      const morphGroupId = `morph_grp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const morphDuration = preset.duration ?? 0.8;
+      const morphEasing = (preset.easing || "smooth") as any;
+
+      // 1. Exit clip on source layer
+      const sourceClipId = state.addAnimationClip(layerId, {
+        name: "Morph",
+        type: "out",
+        preset: "morph",
+        start: clipStart,
+        duration: morphDuration,
+        easing: morphEasing,
+        loop: false,
+        params: {
+          morphGroupId,
+          sourceLayerId: layerId,
+          targetLayerId: targetId,
+          morphStyle: preset.params?.morphStyle || "stardust",
+          particleCount: preset.params?.particleCount ?? 80,
+          chaos: preset.params?.chaos ?? 30,
+          particleShape: preset.params?.particleShape || "star",
+          ...(preset.params || {}),
+        },
+      });
+
+      // 2. Coordinated entrance clip on target layer (starts at exact same time and has exact same duration)
+      const targetClipId = state.addAnimationClip(targetId, {
+        name: "Morph",
+        type: "in",
+        preset: "morphIn",
+        start: clipStart,
+        duration: morphDuration,
+        easing: morphEasing,
+        loop: false,
+        params: {
+          morphGroupId,
+          sourceLayerId: layerId,
+          targetLayerId: targetId,
+          partnerClipId: sourceClipId,
+          morphStyle: preset.params?.morphStyle || "stardust",
+          particleCount: preset.params?.particleCount ?? 80,
+          chaos: preset.params?.chaos ?? 30,
+          particleShape: preset.params?.particleShape || "star",
+          ...(preset.params || {}),
+        },
+      });
+
+      // Link targetClipId back to source clip
+      if (sourceClipId && targetClipId) {
+        state.updateAnimationClip(layerId, sourceClipId, {
+          params: {
+            morphGroupId,
+            sourceLayerId: layerId,
+            targetLayerId: targetId,
+            partnerClipId: targetClipId,
+            morphStyle: preset.params?.morphStyle || "stardust",
+            particleCount: preset.params?.particleCount ?? 80,
+            chaos: preset.params?.chaos ?? 30,
+            particleShape: preset.params?.particleShape || "star",
+            ...(preset.params || {}),
+          },
+        });
+      }
+
+      set({
+        animationCatalogState: { isOpen: false, selectedClipId: null },
+        selectedClipIds: sourceClipId && targetClipId ? [sourceClipId, targetClipId] : [sourceClipId || targetClipId],
+      });
+      return sourceClipId;
+    }
+
     const newClipId = state.addAnimationClip(layerId, {
       name: preset.name,
       type: preset.type as any,
       preset: preset.id as any,
-      start: playheadTime,
+      start: clipStart,
       duration: preset.duration,
       easing: preset.easing as any,
       loop: preset.params?.loop ?? false,
       params: { ...(preset.params || {}) },
       ...(preset.params || {}),
     });
-
-    // If applying a morph exit clip and a targetLayerId is provided,
-    // automatically attach a coordinated morphIn entrance clip to the target element!
-    if (preset.id === "morph" && preset.params?.targetLayerId) {
-      const targetId = preset.params.targetLayerId;
-      state.addAnimationClip(targetId, {
-        name: "Morph In",
-        type: "in",
-        preset: "morphIn",
-        start: playheadTime,
-        duration: preset.duration,
-        easing: preset.easing as any,
-        params: {
-          sourceLayerId: layerId,
-          morphStyle: preset.params.morphStyle || "stardust",
-        },
-      });
-    }
 
     set({
       animationCatalogState: { isOpen: false, selectedClipId: null },

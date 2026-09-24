@@ -1982,6 +1982,34 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 51 test suites (458 tests) passing cleanly.
   - Clean production build (`npm run build`).
 
+---
+
+### Decision 88: Sequential Animation Chaining & Unified Morph Clip Linkage Across Elements
+* **Context & Rationale**:
+  - Previously, adding a new animation preset to an element that already had animations (e.g. an "In" animation) hard-coded `start: playheadTime`. When the playhead was at 0, the new action or out animation was placed directly on top of the in animation, causing jarring collision and visual overlap.
+  - Furthermore, cross-element Morph transitions created two separate disconnected animation clips on source and target layers. They could be dragged independently in the timeline, adjusted independently in the inspector, and opened different property states, leading to broken de-synced animations and orphaned clips.
+* **Architectural Decisions & Implementation**:
+  1. **Automatic Sequential Animation Chaining (`animationSlice.ts`)**:
+     - When applying an animation preset without an explicit `start` time, the engine checks existing clips on the layer:
+       `const endOfOldAnimations = currentClips.length > 0 ? Math.max(...currentClips.map((c) => c.start + c.duration)) : 0;`
+     - New animations naturally nest immediately after previous animations conclude, preventing accidental collisions.
+  2. **Unified Bipartite Morph Lifecycle (`animationSlice.ts`)**:
+     - Morph transitions are authored as a single coordinated bipartite animation link across source and target layers sharing a `morphGroupId` and reciprocal `partnerClipId`.
+     - **Lockstep Movement & Trimming**: Updating `start`, `duration`, `easing`, or `params` on either clip via `updateAnimationClip` automatically synchronizes the partner clip in the same atomic document commit.
+     - **Coordinated Deletion**: Removing either side via `removeAnimationClip` automatically removes the linked partner clip, leaving zero orphaned half-morphs.
+  3. **Synchronized Timeline Interaction (`DraggableClip.tsx`)**:
+     - Clicking or dragging either the source exit or target entrance clip selects both clips (`setSelectedClips([clip.id, partnerClipId])`), visually highlighting the connected pair across tracks.
+     - Dragging or resizing one clip moves both in real-time lockstep.
+     - Displays unified "Morph" label with `Sparkles` icon and linked transition badge.
+  4. **Symmetric Inspector Properties (`ClipDetailView.tsx`)**:
+     - Inspecting either clip resolves both `sourceLayer` and `targetLayer` symmetrically.
+     - Displays unified "Morph Transition" title with connected `[From: Source Layer] ➔ [To: Target Layer]` indicator and target switcher dropdown.
+     - Editing duration, start time, easing, effect style, particle count, chaos, or shape updates both elements simultaneously.
+* **Verification**:
+  - Expanded test suite `src/test/cross_element_morph.test.ts` to 10 comprehensive tests.
+  - All 51 test suites (460 tests) pass 100%.
+  - Clean production build (`npm run build`) in 10.35s with 0 errors.
+
 
 
 

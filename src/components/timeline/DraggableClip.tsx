@@ -34,7 +34,15 @@ export const DraggableClip: React.FC<DraggableClipProps> = ({
     toggleClipSelection,
   } = store;
 
-  const isClipSelected = selectedClipIds.includes(clip.id);
+  const isMorph =
+    clip.preset === "morph" ||
+    clip.preset === "morphIn" ||
+    Boolean(clip.params?.morphGroupId);
+  const partnerClipId = clip.params?.partnerClipId;
+  const isClipSelected =
+    selectedClipIds.includes(clip.id) ||
+    (partnerClipId ? selectedClipIds.includes(partnerClipId) : false);
+
   const [isDragging, setIsDragging] = useState<"move" | "start" | "end" | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(clip.name || clip.preset);
@@ -74,7 +82,11 @@ export const DraggableClip: React.FC<DraggableClipProps> = ({
     if (isShift) {
       toggleClipSelection(clip.id, true);
     } else {
-      setSelectedClips([clip.id]);
+      if (isMorph && partnerClipId) {
+        setSelectedClips([clip.id, partnerClipId]);
+      } else {
+        setSelectedClips([clip.id]);
+      }
     }
 
     const trackEl = (e.target as HTMLElement).closest(".timeline-track-lane");
@@ -167,8 +179,9 @@ export const DraggableClip: React.FC<DraggableClipProps> = ({
   // Visual color token mapping per clip type
   let colorStyles = "bg-emerald-500/15 border-emerald-500/50 text-emerald-800 dark:text-emerald-200";
   let TypeIcon = Sparkles;
-
-  if (clip.type === "out") {
+  if (isMorph) {
+    TypeIcon = Sparkles;
+  } else if (clip.type === "out") {
     colorStyles = "bg-rose-500/15 border-rose-500/50 text-rose-800 dark:text-rose-200";
     TypeIcon = ArrowUpRight;
   } else if (clip.type === "action" || clip.type === "emphasis") {
@@ -200,7 +213,11 @@ export const DraggableClip: React.FC<DraggableClipProps> = ({
         if (e.shiftKey) {
           toggleClipSelection(clip.id, true);
         } else {
-          setSelectedClips([clip.id]);
+          if (isMorph && partnerClipId) {
+            setSelectedClips([clip.id, partnerClipId]);
+          } else {
+            setSelectedClips([clip.id]);
+          }
         }
       }}
       onContextMenu={handleContextMenu}
@@ -259,9 +276,9 @@ export const DraggableClip: React.FC<DraggableClipProps> = ({
         ) : (
           <span
             className="text-[10px] font-medium truncate capitalize hover:underline"
-            title="Double-click to rename animation clip"
+            title={isMorph ? "Morph Transition (Linked across elements)" : "Double-click to rename animation clip"}
           >
-            {clip.name || clip.preset}
+            {isMorph ? "Morph" : (clip.name || clip.preset)}
           </span>
         )}
         {clip.loop && (
