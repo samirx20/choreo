@@ -3663,23 +3663,40 @@ if (portArg && !isNaN(portArg)) {
         return;
       }
 
-      if (req.method === "GET" && (req.url === "/health" || req.url === "/")) {
+      const parsedUrl = new URL(req.url, "http://localhost");
+      const pathname = parsedUrl.pathname;
+
+      if (req.method === "GET" && (pathname === "/health" || pathname === "/")) {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ status: "running", name: "motion-studio", port: portArg, tools: TOOLS.length }));
         return;
       }
 
-      if (req.method === "GET" && req.url === "/sse") {
+      if (req.method === "GET" && (pathname === "/sse" || pathname === "/events" || pathname === "/mcp")) {
         res.writeHead(200, {
           "Content-Type": "text/event-stream",
           "Cache-Control": "no-cache",
           "Connection": "keep-alive",
+          "Access-Control-Allow-Origin": "*",
         });
-        res.write(":connected\n\nevent: endpoint\ndata: /mcp\n\n");
+        const sessionId = parsedUrl.searchParams.get("sessionId") || Date.now().toString(36);
+        res.write(`:connected\n\nevent: endpoint\ndata: /mcp?sessionId=${sessionId}\n\n`);
+
+        const pingInterval = setInterval(() => {
+          try {
+            res.write(":ping\n\n");
+          } catch {
+            clearInterval(pingInterval);
+          }
+        }, 15000);
+
+        req.on("close", () => {
+          clearInterval(pingInterval);
+        });
         return;
       }
 
-      if (req.method === "POST" && (req.url === "/mcp" || req.url === "/message")) {
+      if (req.method === "POST" && (pathname === "/mcp" || pathname === "/message" || pathname === "/sse" || pathname === "/")) {
         let body = "";
         req.on("data", (chunk) => { body += chunk; });
         req.on("end", () => {
@@ -3700,8 +3717,18 @@ if (portArg && !isNaN(portArg)) {
       res.end(JSON.stringify({ error: "Not found" }));
     });
 
-    server.listen(portArg, "0.0.0.0", () => {
-      process.stderr.write(`[MCP Server] Running on http://127.0.0.1:${portArg} (SSE: /sse, RPC: /mcp) with ${TOOLS.length} tools\n`);
+    server.on("error", (err) => {
+      process.stderr.write(`[MCP Server Error]: ${err.message}\n`);
+      if (err.code === "EADDRINUSE") {
+        process.stderr.write(`[MCP Server Error]: Port ${portArg} is already in use.\n`);
+      }
+      process.exit(1);
+    });
+
+    // Binding without "0.0.0.0" host argument enables dual-stack IPv4 and IPv6 [::1] on modern OSes
+    server.listen(portArg, () => {
+      process.stderr.write(`[MCP Server] Running on port ${portArg} (SSE: http://localhost:${portArg}/sse, RPC: http://localhost:${portArg}/mcp) with ${TOOLS.length} tools\n`);
     });
   });
 }
+

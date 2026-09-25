@@ -2869,6 +2869,36 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - Added unit test suite [`src/test/mcp_splitting_and_guardrails.test.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/test/mcp_splitting_and_guardrails.test.ts) covering space advance calculation, shape decomposition, fill preservation, and arrowhead detachment.
   - All 59 test suites (613 tests) pass cleanly (`npm run test`).
 
+---
+
+### Decision 124: MCP Dual-Stack IPv4/IPv6 Binding, Automatic Desktop Lifecycle, and Packaging Resilience
+* **Context & Motivation**:
+  - External agent sessions (Antigravity, Cursor, Codex) failed to connect to Motion Studio's MCP server with errors:
+    `Post "http://localhost:8765/sse": dial tcp [::1]:8765: connectex: No connection could be made because the target machine actively refused it.`
+  - Investigation revealed three architectural gaps:
+    1. **IPv4-Only Binding Flaw**: `mcp.js` bound to `"0.0.0.0"`. On Windows, Go/Codex/Cursor resolve `localhost` to IPv6 `[::1]` first, which Windows actively refused because the port was only bound on IPv4.
+    2. **Missing Desktop Lifecycle Auto-Start**: `useMcpStore.startServer()` was only callable from an unmounted inspector dropdown in the editor view. On app launch (defaulting to the Projects Workspace), port 8765 was never opened.
+    3. **Tauri Packaging & Node Resolution Gap**: `tauri.conf.json` did not bundle `mcp.js` in `bundle.resources`, and `lib.rs` attempted to locate `mcp.js` only relative to `current_dir()`, which fails in packaged desktop installations.
+* **The Solution**:
+  1. **Dual-Stack IPv4/IPv6 Binding in `mcp.js`**:
+     - Removed hardcoded `"0.0.0.0"` host parameter from `server.listen(portArg)`. Node automatically binds dual-stack `::` with IPv4 mapping, allowing seamless connections from `localhost`, `127.0.0.1`, and `[::1]`.
+     - Standardized URL path parsing using `new URL(req.url, "http://localhost").pathname` and supported both `/mcp`, `/sse`, `/message`, and `/` for JSON-RPC POST requests to accommodate different MCP client implementations (Go `modelcontextprotocol`, Cursor, Codex, Antigravity).
+     - Added SSE heartbeat ping (`:ping\n\n` every 15s) and `EADDRINUSE` process diagnostics.
+  2. **Application Launch Auto-Start**:
+     - In `src/App.tsx`, hooked `useMcpStore` on mount to automatically check and start the MCP server when `isMcpEnabled` is true.
+     - Added health-check short-circuiting in `useMcpStore.startServer()`: if port 8765 is already running a live Motion Studio MCP instance (e.g. via terminal daemon `npm run mcp`), it connects seamlessly without restarting or conflicting.
+  3. **Tauri Packaging & Resource Resolution**:
+     - Added `bundle.resources: ["../mcp.js"]` in `src-tauri/tauri.conf.json`.
+     - Updated `start_mcp_server` in `src-tauri/src/lib.rs` to resolve `mcp.js` from `app.path().resource_dir()`, next to `current_exe()`, and local `cwd`.
+     - Implemented `resolve_node_cmd()` checking executable directories, system `PATH`, and standard Windows install paths (`C:\Program Files\nodejs\node.exe`, `%LOCALAPPDATA%\Programs\node\node.exe`), running with `CREATE_NO_WINDOW (0x08000000)` and cleaned up on `RunEvent::ExitRequested`.
+  4. **Standalone Terminal Daemon**:
+     - Added `"mcp": "node mcp.js --port 8765"` script to `package.json` for independent headless usage.
+* **Verification**:
+  - Added automated test [`src/test/mcp_server_connectivity.test.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/test/mcp_server_connectivity.test.ts) testing IPv4 (`127.0.0.1`), dual-stack IPv6 (`[::1]` and `localhost`), POST to `/mcp`, and POST to `/sse`.
+  - All 60 test suites (614 tests) pass cleanly (`npm run test`).
+  - Rust backend verified with `cargo check`.
+
+
 
 
 

@@ -10,6 +10,7 @@ import { TimelinePanel } from "@/components/timeline/TimelinePanel";
 import { ComponentsDrawer } from "@/components/components/ComponentsDrawer";
 import { ShortcutsModal } from "@/components/modals/ShortcutsModal";
 import { UniversalContextMenuPortal } from "@/components/common/UniversalContextMenuPortal";
+import { useMcpStore } from "@/store/useMcpStore";
 import { cn } from "@/lib/utils";
 
 const App: React.FC = () => {
@@ -36,6 +37,13 @@ const App: React.FC = () => {
     loadProjectFromFileBlob,
   } = useProjectRegistryStore();
 
+  const {
+    isMcpEnabled,
+    status: mcpStatus,
+    startServer: startMcpServer,
+    checkStatus: checkMcpStatus,
+  } = useMcpStore();
+
   const [isComponentsDrawerOpen, setIsComponentsDrawerOpen] = useState(false);
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false);
   const [isZenMode, setIsZenMode] = useState(false);
@@ -46,6 +54,13 @@ const App: React.FC = () => {
     (window as any).__store = useProjectStore;
     (window as any).__registryStore = useProjectRegistryStore;
     loadRegistry();
+
+    // Auto-start or check MCP server on application launch
+    if (isMcpEnabled && mcpStatus !== "running") {
+      startMcpServer();
+    } else {
+      checkMcpStatus();
+    }
   }, [loadRegistry]);
 
   // Synchronize document theme class

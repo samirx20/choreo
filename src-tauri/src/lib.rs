@@ -1,6 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::io::Write;
+use tauri::Manager;
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -40,6 +41,68 @@ fn resolve_ffmpeg_cmd() -> Option<Command> {
     #[cfg(target_os = "windows")]
     cmd.creation_flags(0x08000000);
     return Some(cmd);
+  }
+
+  None
+}
+
+fn resolve_node_cmd() -> Option<Command> {
+  // 1. Next to executable
+  if let Ok(exe_path) = std::env::current_exe() {
+    if let Some(dir) = exe_path.parent() {
+      let local_node = dir.join("node.exe");
+      if local_node.exists() {
+        let mut cmd = Command::new(local_node);
+        #[cfg(target_os = "windows")]
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        return Some(cmd);
+      }
+    }
+  }
+
+  // 2. PATH check
+  let mut check_cmd = Command::new("node");
+  check_cmd.arg("-v");
+  #[cfg(target_os = "windows")]
+  check_cmd.creation_flags(0x08000000);
+  if check_cmd.output().is_ok() {
+    let mut cmd = Command::new("node");
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
+    return Some(cmd);
+  }
+
+  // 3. Common Windows install locations
+  #[cfg(target_os = "windows")]
+  {
+    let candidates = [
+      r"C:\Program Files\nodejs\node.exe",
+      r"C:\Program Files (x86)\nodejs\node.exe",
+    ];
+    for c in &candidates {
+      let p = std::path::Path::new(c);
+      if p.exists() {
+        let mut cmd = Command::new(p);
+        cmd.creation_flags(0x08000000);
+        return Some(cmd);
+      }
+    }
+    if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
+      let p = std::path::Path::new(&local_app_data).join("Programs").join("node").join("node.exe");
+      if p.exists() {
+        let mut cmd = Command::new(p);
+        cmd.creation_flags(0x08000000);
+        return Some(cmd);
+      }
+    }
+    if let Ok(app_data) = std::env::var("APPDATA") {
+      let p = std::path::Path::new(&app_data).join("npm").join("node.exe");
+      if p.exists() {
+        let mut cmd = Command::new(p);
+        cmd.creation_flags(0x08000000);
+        return Some(cmd);
+      }
+    }
   }
 
   None
@@ -175,29 +238,71 @@ fn cancel_ffmpeg_export(
 }
 
 #[tauri::command]
-fn start_mcp_server(state: tauri::State<McpServerState>, port: u16) -> Result<String, String> {
+fn start_mcp_server(app: tauri::AppHandle, state: tauri::State<McpServerState>, port: u16) -> Result<String, String> {
   let mut lock = state.0.lock().map_err(|e| e.to_string())?;
   if let Some(mut existing) = lock.take() {
     let _ = existing.kill();
   }
 
-  let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
-  let script_path = if cwd.join("mcp.js").exists() {
-    cwd.join("mcp.js")
-  } else if cwd.join("..").join("mcp.js").exists() {
-    cwd.join("..").join("mcp.js")
-  } else {
-    std::path::PathBuf::from("mcp.js")
-  };
+  let mut script_path: Option<std::path::PathBuf> = None;
 
-  let child = std::process::Command::new("node")
-    .arg(script_path)
-    .arg("--port")
-    .arg(port.to_string())
-    .spawn()
-    .map_err(|e| format!("Failed to spawn node mcp.js: {}", e))?;
+  // 1. Check Tauri resource directory
+  if let Ok(res_dir) = app.path().resource_dir() {
+    let candidate = res_dir.join("mcp.js");
+    if candidate.exists() {
+      script_path = Some(candidate);
+    } else {
+      let candidate2 = res_dir.join("_up_").join("mcp.js");
+      if candidate2.exists() {
+        script_path = Some(candidate2);
+      }
+    }
+  }
+
+  // 2. Check next to executable
+  if script_path.is_none() {
+    if let Ok(exe_path) = std::env::current_exe() {
+      if let Some(dir) = exe_path.parent() {
+        let candidate = dir.join("mcp.js");
+        if candidate.exists() {
+          script_path = Some(candidate);
+        } else {
+          let candidate_res = dir.join("resources").join("mcp.js");
+          if candidate_res.exists() {
+            script_path = Some(candidate_res);
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Check CWD and parent CWD
+  if script_path.is_none() {
+    let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+    if cwd.join("mcp.js").exists() {
+      script_path = Some(cwd.join("mcp.js"));
+    } else if cwd.join("..").join("mcp.js").exists() {
+      script_path = Some(cwd.join("..").join("mcp.js"));
+    }
+  }
+
+  let target_script = script_path.unwrap_or_else(|| std::path::PathBuf::from("mcp.js"));
+
+  let mut cmd = resolve_node_cmd().ok_or_else(|| {
+    "Node.js runtime not found on system. Please ensure Node.js is installed to run the MCP server.".to_string()
+  })?;
+
+  cmd.arg(&target_script);
+  cmd.arg("--port");
+  cmd.arg(port.to_string());
+  cmd.stdin(Stdio::null());
+  cmd.stdout(Stdio::piped());
+  cmd.stderr(Stdio::piped());
+
+  let child = cmd.spawn().map_err(|e| format!("Failed to spawn node {:?}: {}", target_script, e))?;
 
   *lock = Some(child);
+  log_msg(&format!("MCP Server started on port {} with script {:?}", port, target_script));
   Ok(format!("MCP Server running on port {}", port))
 }
 
@@ -206,6 +311,7 @@ fn stop_mcp_server(state: tauri::State<McpServerState>) -> Result<(), String> {
   let mut lock = state.0.lock().map_err(|e| e.to_string())?;
   if let Some(mut child) = lock.take() {
     let _ = child.kill();
+    log_msg("MCP Server stopped");
   }
   Ok(())
 }
@@ -261,8 +367,10 @@ fn log_msg(msg: &str) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   log_msg("run() started");
-  let mcp_state = McpServerState(Arc::new(Mutex::new(None)));
+  let mcp_child_arc = Arc::new(Mutex::new(None));
+  let mcp_state = McpServerState(Arc::clone(&mcp_child_arc));
   let ffmpeg_state = FfmpegExportState(Arc::new(Mutex::new(None)));
+  let mcp_cleanup = Arc::clone(&mcp_child_arc);
 
   tauri::Builder::default()
     .manage(mcp_state)
@@ -312,13 +420,19 @@ pub fn run() {
     ])
     .build(tauri::generate_context!())
     .expect("error while building tauri application")
-    .run(|_app_handle, event| {
+    .run(move |_app_handle, event| {
       match event {
         tauri::RunEvent::Ready => {
           log_msg("RunEvent::Ready");
         }
         tauri::RunEvent::ExitRequested { code, .. } => {
           log_msg(&format!("RunEvent::ExitRequested with code {:?}", code));
+          if let Ok(mut lock) = mcp_cleanup.lock() {
+            if let Some(mut child) = lock.take() {
+              let _ = child.kill();
+              log_msg("Killed MCP server child on app exit");
+            }
+          }
         }
         tauri::RunEvent::WindowEvent { label, event, .. } => {
           // Window event

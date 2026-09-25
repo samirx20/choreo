@@ -69,6 +69,24 @@ export const useMcpStore = create<McpState>((set, get) => {
       const targetPort = customPort || get().port;
       set({ status: "starting", error: null });
 
+      // First check if an MCP server is already alive on targetPort
+      try {
+        const res = await fetch(`http://127.0.0.1:${targetPort}/health`, { signal: AbortSignal.timeout(600) });
+        if (res.ok) {
+          const data = await res.json().catch(() => null);
+          if (data?.name === "motion-studio") {
+            set({ status: "running", port: targetPort, isMcpEnabled: true, error: null });
+            if (typeof window !== "undefined" && window.localStorage) {
+              window.localStorage.setItem(STORAGE_KEY_PORT, String(targetPort));
+              window.localStorage.setItem(STORAGE_KEY_ENABLED, "true");
+            }
+            return true;
+          }
+        }
+      } catch {
+        // Not running yet, proceed with starting
+      }
+
       const isDesktop =
         typeof window !== "undefined" &&
         ("__TAURI_INTERNALS__" in window || "__TAURI__" in window);
@@ -136,22 +154,23 @@ export const useMcpStore = create<McpState>((set, get) => {
         try {
           const { invoke } = await import("@tauri-apps/api/core");
           const isRunning = await invoke<boolean>("is_mcp_server_running");
-          set({ status: isRunning ? "running" : "stopped", isMcpEnabled: isRunning });
-          return isRunning;
+          if (isRunning) {
+            set({ status: "running", isMcpEnabled: true });
+            return true;
+          }
         } catch {
-          set({ status: "stopped" });
-          return false;
+          // Fall through to health check
         }
-      } else {
-        try {
-          const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(800) });
-          const isRunning = res.ok;
-          set({ status: isRunning ? "running" : "stopped", isMcpEnabled: isRunning });
-          return isRunning;
-        } catch {
-          set({ status: "stopped" });
-          return false;
-        }
+      }
+
+      try {
+        const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(800) });
+        const isRunning = res.ok;
+        set({ status: isRunning ? "running" : "stopped", isMcpEnabled: isRunning });
+        return isRunning;
+      } catch {
+        set({ status: "stopped" });
+        return false;
       }
     },
   };

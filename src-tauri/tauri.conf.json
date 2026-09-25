@@ -39,6 +39,9 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": [
+      "../mcp.js"
+    ],
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }
