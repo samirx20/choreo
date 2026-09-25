@@ -38,6 +38,13 @@ pub fn run() {
         }
         tauri::WindowEvent::Focused(f) => {
           eprintln!(">>> [WINDOW {:?}] Focused: {}", window.label(), f);
+          eprintln!(">>> [WINDOW] is_visible: {:?}", window.is_visible());
+          eprintln!(">>> [WINDOW] outer_position: {:?}", window.outer_position());
+          eprintln!(">>> [WINDOW] outer_size: {:?}", window.outer_size());
+          eprintln!(">>> [WINDOW] is_minimized: {:?}", window.is_minimized());
+          let _ = window.unminimize();
+          let _ = window.show();
+          let _ = window.set_focus();
         }
         tauri::WindowEvent::CloseRequested { .. } => {
           eprintln!(">>> [WINDOW {:?}] Close requested", window.label());
