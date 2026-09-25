@@ -258,16 +258,58 @@ export function placeElement(
     }
   }
 
-  // 5. Entrance Animation Preset
+  // 5. Animation Presets & Clips
+  const initialClips: any[] = [];
   if (input.enter) {
+    initialClips.push({
+      id: `clip_${Math.random().toString(36).slice(2, 8)}`,
+      name: `${input.enter.preset || "pop"} in`,
+      type: "in",
+      preset: input.enter.preset || "pop",
+      start: input.enter.delay ?? 0,
+      duration: input.enter.duration ?? 0.6,
+      easing: (input.enter.easing as any) || "bouncy",
+      direction: input.enter.direction,
+    });
+  }
+
+  if (Array.isArray(input.animations)) {
+    for (const anim of input.animations) {
+      const role = anim.type || (anim as any).target || "in";
+      initialClips.push({
+        id: anim.id || `clip_${Math.random().toString(36).slice(2, 8)}`,
+        name: `${anim.preset} ${role}`,
+        type: role,
+        preset: anim.preset,
+        start: anim.start !== undefined ? anim.start : (anim.delay ?? 0),
+        duration: anim.duration ?? 0.6,
+        easing: (anim.easing as any) || "snappy",
+        direction: anim.direction,
+        loop: anim.loop,
+        loopCount: anim.loopCount,
+        fillMode: anim.fillMode || (role === "action" ? "forwards" : "none"),
+        splitBy: anim.splitBy,
+        stagger: anim.stagger,
+        params: anim.params,
+        spring: anim.spring,
+      });
+    }
+  }
+
+  if (initialClips.length > 0) {
     createdLayer.animation = {
-      in: {
-        preset: input.enter.preset || "pop",
-        duration: input.enter.duration ?? 0.6,
-        start: input.enter.delay ?? 0,
-        easing: (input.enter.easing as any) || "bouncy",
-      },
+      clips: initialClips.sort((a, b) => a.start - b.start),
     };
+    const inClip = initialClips.find((c) => c.type === "in");
+    if (inClip) {
+      createdLayer.animation.in = {
+        preset: inClip.preset,
+        duration: inClip.duration,
+        start: inClip.start,
+        easing: inClip.easing as any,
+        direction: inClip.direction,
+      };
+    }
   }
 
   if (input.isMask) {

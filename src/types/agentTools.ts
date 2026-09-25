@@ -43,19 +43,7 @@ export const EasingTypeSchema = z.enum([
   "custom",
 ]);
 
-export const AnimationPresetSchema = z.enum([
-  "pop",
-  "fade",
-  "slide",
-  "wipe",
-  "scale",
-  "blur",
-  "boil",
-  "spin",
-  "float",
-  "pulse",
-  "custom",
-]);
+export const AnimationPresetSchema = z.string();
 
 export const LayerTypeSchema = z.enum([
   "text",
@@ -168,6 +156,34 @@ export const PlaceElementInputSchema = z.object({
       direction: z.enum(["up", "down", "left", "right"]).optional(),
     })
     .optional(),
+  animations: z
+    .array(
+      z.object({
+        id: z.string().optional(),
+        name: z.string().optional(),
+        type: z.enum(["in", "out", "emphasis", "action", "custom"]).default("in"),
+        preset: AnimationPresetSchema,
+        duration: z.number().min(0.05).max(10).default(0.6),
+        delay: z.number().min(0).max(60).default(0),
+        start: z.number().min(0).max(300).optional(),
+        easing: EasingTypeSchema.default("snappy"),
+        direction: z.enum(["up", "down", "left", "right"]).optional(),
+        loop: z.boolean().optional(),
+        loopCount: z.number().optional(),
+        fillMode: z.enum(["none", "forwards", "backwards", "both"]).optional(),
+        splitBy: z.enum(["all", "word", "character", "line"]).optional(),
+        stagger: z.number().optional(),
+        params: z.record(z.string(), z.any()).optional(),
+        spring: z
+          .object({
+            stiffness: z.number(),
+            damping: z.number(),
+            mass: z.number().optional(),
+          })
+          .optional(),
+      })
+    )
+    .optional(),
   parentId: z.string().optional(),
   isMask: z.boolean().optional(),
   isMaskGroup: z.boolean().optional(),
@@ -176,15 +192,23 @@ export const PlaceElementInputSchema = z.object({
 
 export type PlaceElementInput = z.input<typeof PlaceElementInputSchema>;
 
-export const ApplyAnimationInputSchema = z.object({
-  sceneId: z.string().optional(),
-  layerId: z.string(),
-  target: z.enum(["in", "out", "emphasis"]).default("in"),
+export const AnimationClipInputSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().optional(),
+  type: z.enum(["in", "out", "emphasis", "action", "custom"]).default("in"),
+  target: z.enum(["in", "out", "emphasis", "action", "custom"]).optional(),
   preset: AnimationPresetSchema,
   duration: z.number().min(0.05).max(10).default(0.6),
   delay: z.number().min(0).max(60).default(0),
+  start: z.number().min(0).max(300).optional(),
   easing: EasingTypeSchema.default("snappy"),
   direction: z.enum(["up", "down", "left", "right"]).optional(),
+  loop: z.boolean().optional(),
+  loopCount: z.number().optional(),
+  fillMode: z.enum(["none", "forwards", "backwards", "both"]).optional(),
+  splitBy: z.enum(["all", "word", "character", "line"]).optional(),
+  stagger: z.number().optional(),
+  params: z.record(z.string(), z.any()).optional(),
   spring: z
     .object({
       stiffness: z.number(),
@@ -192,6 +216,36 @@ export const ApplyAnimationInputSchema = z.object({
       mass: z.number().optional(),
     })
     .optional(),
+});
+
+export type AnimationClipInput = z.infer<typeof AnimationClipInputSchema>;
+
+export const ApplyAnimationInputSchema = z.object({
+  sceneId: z.string().optional(),
+  layerId: z.string(),
+  mode: z.enum(["append", "replace"]).default("append"),
+  target: z.enum(["in", "out", "emphasis", "action", "custom"]).default("in"),
+  type: z.enum(["in", "out", "emphasis", "action", "custom"]).optional(),
+  preset: AnimationPresetSchema.optional(),
+  duration: z.number().min(0.05).max(10).optional(),
+  delay: z.number().min(0).max(60).optional(),
+  start: z.number().min(0).max(300).optional(),
+  easing: EasingTypeSchema.default("snappy"),
+  direction: z.enum(["up", "down", "left", "right"]).optional(),
+  loop: z.boolean().optional(),
+  loopCount: z.number().optional(),
+  fillMode: z.enum(["none", "forwards", "backwards", "both"]).optional(),
+  splitBy: z.enum(["all", "word", "character", "line"]).optional(),
+  stagger: z.number().optional(),
+  params: z.record(z.string(), z.any()).optional(),
+  spring: z
+    .object({
+      stiffness: z.number(),
+      damping: z.number(),
+      mass: z.number().optional(),
+    })
+    .optional(),
+  animations: z.array(AnimationClipInputSchema).optional(),
 });
 
 export type ApplyAnimationInput = z.input<typeof ApplyAnimationInputSchema>;

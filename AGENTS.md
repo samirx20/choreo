@@ -126,6 +126,16 @@ Never generate or suggest cheap SaaS cliches, decorative gimmicks, or lazy UI tr
   * Display objects must use center pivot math `pivot.set(w * pivotX, h * pivotY)` so scale and rotation animate in place rather than drifting from the top-left corner.
   * Text layers and compound split-text groups must replicate DOM flexbox alignment and advance offsets with mathematical precision.
 
+### Rule 14: Multi-Clip Animation Timelines, Recursive Layer Resolution & Perceptual Telemetry
+* **Complete Lifecycle Choreography**: Elements can hold multiple animation clips across their lifecycle:
+  * `in`: Scene entrance reveal (`fade`, `pop`, `slide`, `cardSettlePop`, `elevationRise`, `wordCascade`).
+  * `action`: Mid-scene movement, scale change, or rotation (e.g. moving a hero card aside to reveal details). Actions default to `fillMode: 'forwards'` so transformed coordinates persist without snapping back.
+  * `emphasis`: Mid-scene attention pulses or bounces (`pulse`, `bounce`, `shake`).
+  * `out`: Exit animations (`fade`, `slide`, `scale`).
+* **Batch or Sequential Chaining**: Elements can be provisioned with full animation suites at creation via `animations: [...]` or chained sequentially using `apply_animation` (`mode: 'append'`).
+* **Deep Recursive Layer Resolution**: Tools must never assume elements only exist at the top level of a scene. Elements inside groups, frames, compound cards, and masks must be found and modified seamlessly without "layer not found" errors.
+* **Perceptual Telemetry Before Modifying**: When choreographing or refining scenes, agents can call `get_storyboard_state` or `get_contact_sheet` to inspect exact spatial bounds `(x, y, width, height, rotation, opacity, zIndex)`, typography copy, colors, counter parameters, and clip timeline timestamps.
+
 ---
 
 ## 3. The Agent Workflow Pattern
@@ -138,9 +148,10 @@ When building or choreographing a motion graphic, agents follow the **Two-Stage 
 
 [Stage 2: Choreographer]
   └─► Step 1: create_beat({ id, duration, transition, camera })
-  └─► Step 2: place_element({ beatId, id, type, grid, enter, style })
-  └─► Step 3: Repeat for subsequent beats (Magic Move triggers by ID)
-  └─► Step 4: get_contact_sheet() to visually inspect the composition
+  └─► Step 2: place_element({ beatId, id, type, grid, enter, animations, style })
+  └─► Step 3: apply_animation({ id, role: 'action', preset: 'move', to: { x, y }, mode: 'append' })
+  └─► Step 4: Repeat for subsequent beats (Magic Move triggers by matching IDs across beats)
+  └─► Step 5: get_storyboard_state() / get_contact_sheet() to inspect spatial bounds and timing
 ```
 
 ---

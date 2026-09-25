@@ -360,12 +360,12 @@ describe("Milestone 4: Agent Tools, Modular Grid, Linter & Orchestrator", () => 
   // 4. Two-Stage AI Director & Choreographer Orchestrator
   describe("Two-Stage AI Director & Choreographer Orchestrator", () => {
     it("Director synthesizes prompt into structured narrative beats", () => {
-      const plan = generateDirectorPlan("Create a 15-second iPhone 16 Pro launch video");
-      expect(plan.title).toContain("iPhone 16 Pro");
+      const plan = generateDirectorPlan("Create a 15-second Motion Studio launch video");
+      expect(plan.title).toContain("Motion Studio");
       expect(plan.mood).toBe("product-showcase");
       expect(plan.beats.length).toBe(3);
-      expect(plan.beats[0].headline).toBe("iPhone 16 Pro");
-      expect(plan.beats[1].featuredElement?.type).toBe("mockup-3d");
+      expect(plan.beats[0].headline).toBe("Introducing Motion Studio");
+      expect(plan.beats[1].featuredElement?.type).toBe("icon");
     });
 
     it("Director detects collage mood from user prompt", () => {

@@ -388,6 +388,29 @@ const TOOLS = [
             },
           },
         },
+        animations: {
+          type: "array",
+          description: "Full sequence of animation clips (entrance, action moves/scales mid-scene, emphasis loops, exit) to apply upon placement",
+          items: {
+            type: "object",
+            properties: {
+              preset: { type: "string", description: "Animation preset (e.g. 'pop', 'custom_move', 'custom_scale', 'drawOn', 'fade')" },
+              type: { type: "string", enum: ["in", "action", "out", "emphasis", "custom"], description: "Animation role ('in', 'action', 'out', 'emphasis', 'custom')" },
+              duration: { type: "number", description: "Clip duration in seconds" },
+              start: { type: "number", description: "Clip start timestamp in scene" },
+              delay: { type: "number", description: "Alternative alias for start" },
+              easing: { type: "string", description: "Easing curve profile" },
+              direction: { type: "string", enum: ["up", "down", "left", "right"] },
+              loop: { type: "boolean" },
+              loopCount: { type: "number" },
+              fillMode: { type: "string", enum: ["forwards", "backwards", "both", "none"] },
+              splitBy: { type: "string", enum: ["all", "word", "character", "line"] },
+              stagger: { type: "number" },
+              params: { type: "object" },
+            },
+            required: ["preset"],
+          },
+        },
       },
       required: ["sceneId", "name", "type"],
     },
@@ -675,12 +698,38 @@ const TOOLS = [
           enum: ["all", "word", "character", "line"],
           description: "Typographic split unit for kinetic text reveals ('word', 'character', 'line')",
         },
-        stagger: {
-          type: "number",
-          description: "Stagger delay in seconds between sequential words or characters (e.g. 0.08)",
+        mode: {
+          type: "string",
+          enum: ["append", "replace"],
+          description: "Whether to append new clip(s) to the layer (default: 'append') or replace all existing clips ('replace')",
+        },
+        animations: {
+          type: "array",
+          description: "Batch array of animation clip objects to apply (allows sequencing in/action/out clips in one step)",
+          items: {
+            type: "object",
+            properties: {
+              preset: { type: "string" },
+              type: { type: "string", enum: ["in", "action", "out", "emphasis", "custom"] },
+              duration: { type: "number" },
+              start: { type: "number" },
+              delay: { type: "number" },
+              direction: { type: "string", enum: ["up", "down", "left", "right"] },
+              loop: { type: "boolean" },
+              loopCount: { type: "number" },
+              fillMode: { type: "string", enum: ["forwards", "backwards", "both", "none"] },
+              easing: { type: "string" },
+              spring: { type: "object" },
+              params: { type: "object" },
+              from: { type: "object" },
+              splitBy: { type: "string", enum: ["all", "word", "character", "line"] },
+              stagger: { type: "number" },
+            },
+            required: ["preset"],
+          },
         },
       },
-      required: ["layerId", "preset", "duration"],
+      required: ["layerId"],
     },
   },
   {
@@ -899,7 +948,11 @@ const TOOLS = [
         },
         alignment: {
           type: "string",
-          enum: ["left", "center", "right", "top", "middle", "bottom", "distribute-horizontal", "distribute-vertical"],
+          enum: [
+            "left", "center", "right", "top", "middle", "bottom",
+            "distribute-horizontal", "distribute-vertical",
+            "distribute_horizontal", "distribute_vertical"
+          ],
           description: "Alignment or distribution mode",
         },
         relativeTo: {
@@ -1076,6 +1129,39 @@ function handleToolCall(name, args) {
     if (pkg.document.settings) pkg.document.settings.name = args.newName;
     writeMtnFile(resolvedPath, pkg);
     return { text: `Renamed project in ${path.basename(resolvedPath)} to "${args.newName}".` };
+  }
+
+  /**
+   * Recursively locates a layer in an array of layers (including nested groups/frames/masks/compounds).
+   * Returns { layer, parentList, parentGroup, index } or null.
+   */
+  function findLayerInTree(layers, targetId, parentGroup = null) {
+    if (!Array.isArray(layers)) return null;
+    for (let i = 0; i < layers.length; i++) {
+      const l = layers[i];
+      if (l.id === targetId) {
+        return { layer: l, parentList: layers, parentGroup, index: i };
+      }
+      if (Array.isArray(l.children) && l.children.length > 0) {
+        const nested = findLayerInTree(l.children, targetId, l);
+        if (nested) return nested;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Searches across all scenes in a document for a target layer ID.
+   * Returns { layer, screen, parentList, parentGroup, index } or null.
+   */
+  function findLayerInDoc(doc, targetId) {
+    for (const screen of doc.screens || []) {
+      const res = findLayerInTree(screen.layers || [], targetId);
+      if (res) {
+        return { ...res, screen };
+      }
+    }
+    return null;
   }
 
   const filePath = args.file || "project.mtn";
@@ -1397,6 +1483,7 @@ function handleToolCall(name, args) {
       if (args.visible !== undefined) newLayer.visible = args.visible;
       if (args.zIndex !== undefined) newLayer.zIndex = args.zIndex;
 
+      const allClips = [];
       if (args.enter) {
         let enterEasing = args.enter.easing || "snappy";
         const isOptical = ["fade", "fadeIn", "fadeOut", "blurIn", "glassIris"].includes(args.enter.preset);
@@ -1405,7 +1492,7 @@ function handleToolCall(name, args) {
           notices.push("NON-SPATIAL MONOTONICITY: Easing for opacity/blur downgraded to 'smooth' to prevent numerical blowouts.");
         }
 
-        const enterClip = {
+        allClips.push({
           id: "clip_" + Math.random().toString(36).slice(2, 8),
           name: `${args.enter.preset || "pop"} in`,
           type: "in",
@@ -1423,35 +1510,77 @@ function handleToolCall(name, args) {
           ...(args.enter.scaleAmount !== undefined ? { scaleAmount: args.enter.scaleAmount } : {}),
           ...(args.enter.rotationDegrees !== undefined ? { rotationDegrees: args.enter.rotationDegrees } : {}),
           ...(args.enter.params ? { params: args.enter.params } : {}),
-        };
+        });
+      }
 
+      if (Array.isArray(args.animations)) {
+        for (const anim of args.animations) {
+          let clipEasing = anim.easing || "snappy";
+          const isOptical = ["fade", "fadeIn", "fadeOut", "blurIn", "glassIris"].includes(anim.preset);
+          if (isOptical && (clipEasing === "bouncy" || clipEasing === "elastic")) {
+            clipEasing = "smooth";
+            notices.push("NON-SPATIAL MONOTONICITY: Easing for opacity/blur downgraded to 'smooth' to prevent numerical blowouts.");
+          }
+          const role = anim.type || anim.target || "in";
+          allClips.push({
+            id: anim.id || ("clip_" + Math.random().toString(36).slice(2, 8)),
+            name: `${anim.preset || "pop"} ${role}`,
+            type: role,
+            preset: anim.preset || "pop",
+            start: anim.start !== undefined ? anim.start : (anim.delay || 0),
+            duration: anim.duration || 0.6,
+            easing: clipEasing,
+            direction: anim.direction,
+            loop: anim.loop,
+            loopCount: anim.loopCount,
+            fillMode: anim.fillMode || (role === "action" ? "forwards" : "none"),
+            splitBy: anim.splitBy,
+            stagger: anim.stagger,
+            params: anim.params,
+            spring: anim.spring,
+          });
+        }
+      }
+
+      if (allClips.length > 0) {
         newLayer.animation = {
-          clips: [enterClip],
+          clips: allClips.sort((a, b) => a.start - b.start),
         };
       }
 
-      targetScreen.layers.push(newLayer);
+      if (args.parentId) {
+        const parentRes = findLayerInDoc(doc, args.parentId);
+        if (parentRes && (parentRes.layer.type === "group" || parentRes.layer.type === "frame")) {
+          if (!parentRes.layer.children) parentRes.layer.children = [];
+          parentRes.layer.children.push(newLayer);
+        } else {
+          targetScreen.layers.push(newLayer);
+        }
+      } else {
+        targetScreen.layers.push(newLayer);
+      }
+
       writeMtnFile(resolvedPath, pkg);
       const noticeStr = notices.length > 0 ? " [" + notices.join(" | ") + "]" : "";
       return {
         text: `Placed ${args.type} layer "${args.name}" (id: ${layerId}) in scene "${targetScreen.name}" at [${x}, ${y}, ${width}x${height}].${noticeStr}`,
+        layer: {
+          id: newLayer.id,
+          name: newLayer.name,
+          bounds: { x, y, width, height },
+          clips: newLayer.animation?.clips || [],
+        },
       };
     }
 
     case "update_element": {
-      let foundLayer = null;
-      let targetScreen = null;
-      for (const sc of doc.screens) {
-        const found = sc.layers.find((l) => l.id === args.layerId);
-        if (found) {
-          foundLayer = found;
-          targetScreen = sc;
-          break;
-        }
-      }
-      if (!foundLayer) {
+      const res = findLayerInDoc(doc, args.layerId);
+      if (!res) {
         return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
       }
+      const foundLayer = res.layer;
+      const targetScreen = res.screen;
+
       if (args.name) foundLayer.name = args.name;
       if (args.content !== undefined) foundLayer.content = args.content;
       if (args.shapeType) foundLayer.shapeType = args.shapeType;
@@ -1497,6 +1626,8 @@ function handleToolCall(name, args) {
       if (args.visible !== undefined) foundLayer.visible = args.visible;
       if (args.zIndex !== undefined) foundLayer.zIndex = args.zIndex;
 
+      if (!foundLayer.style) foundLayer.style = {};
+
       if (args.bounds) {
         foundLayer.style.x = Math.round(args.bounds.x);
         foundLayer.style.y = Math.round(args.bounds.y);
@@ -1528,44 +1659,39 @@ function handleToolCall(name, args) {
       writeMtnFile(resolvedPath, pkg);
       return {
         text: `Updated layer "${foundLayer.name}" (id: ${args.layerId}) in scene "${targetScreen.name}".`,
+        layer: {
+          id: foundLayer.id,
+          name: foundLayer.name,
+          bounds: {
+            x: foundLayer.style.x ?? 0,
+            y: foundLayer.style.y ?? 0,
+            width: foundLayer.style.width ?? 0,
+            height: foundLayer.style.height ?? 0,
+          },
+          style: foundLayer.style,
+        },
       };
     }
 
     case "delete_element": {
-      let foundIndex = -1;
-      let targetScreen = null;
-      for (const sc of doc.screens) {
-        const idx = sc.layers.findIndex((l) => l.id === args.layerId);
-        if (idx !== -1) {
-          foundIndex = idx;
-          targetScreen = sc;
-          break;
-        }
-      }
-      if (!targetScreen || foundIndex === -1) {
+      const res = findLayerInDoc(doc, args.layerId);
+      if (!res) {
         return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
       }
-      const removed = targetScreen.layers.splice(foundIndex, 1)[0];
+      const removed = res.parentList.splice(res.index, 1)[0];
       writeMtnFile(resolvedPath, pkg);
       return {
-        text: `Deleted layer "${removed.name}" (id: ${args.layerId}) from scene "${targetScreen.name}".`,
+        text: `Deleted layer "${removed.name}" (id: ${args.layerId}) from scene "${res.screen.name}".`,
       };
     }
 
     case "duplicate_element": {
-      let sourceLayer = null;
-      let sourceScreen = null;
-      for (const sc of doc.screens) {
-        const found = sc.layers.find((l) => l.id === args.layerId);
-        if (found) {
-          sourceLayer = found;
-          sourceScreen = sc;
-          break;
-        }
-      }
-      if (!sourceLayer) {
+      const res = findLayerInDoc(doc, args.layerId);
+      if (!res) {
         return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
       }
+      const sourceLayer = res.layer;
+      const sourceScreen = res.screen;
 
       const targetScreen = args.targetSceneId
         ? doc.screens.find((s) => s.id === args.targetSceneId) || sourceScreen
@@ -1593,7 +1719,11 @@ function handleToolCall(name, args) {
         clone.style.y = Math.round(clone.grid.row * cellHeight);
       }
 
-      targetScreen.layers.push(clone);
+      if (targetScreen === sourceScreen) {
+        res.parentList.splice(res.index + 1, 0, clone);
+      } else {
+        targetScreen.layers.push(clone);
+      }
       writeMtnFile(resolvedPath, pkg);
       return {
         text: `Duplicated layer "${sourceLayer.name}" to "${clone.name}" (id: ${clone.id}) in scene "${targetScreen.name}".`,
@@ -1601,38 +1731,30 @@ function handleToolCall(name, args) {
     }
 
     case "reorder_element": {
-      let foundIndex = -1;
-      let targetScreen = null;
-      for (const sc of doc.screens) {
-        const idx = sc.layers.findIndex((l) => l.id === args.layerId);
-        if (idx !== -1) {
-          foundIndex = idx;
-          targetScreen = sc;
-          break;
-        }
-      }
-      if (!targetScreen || foundIndex === -1) {
+      const res = findLayerInDoc(doc, args.layerId);
+      if (!res) {
         return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
       }
-
-      const layer = targetScreen.layers.splice(foundIndex, 1)[0];
+      const list = res.parentList;
+      const idx = res.index;
+      const layer = list.splice(idx, 1)[0];
       switch (args.action) {
         case "bringToFront":
-          targetScreen.layers.push(layer);
+          list.push(layer);
           break;
         case "sendToBack":
-          targetScreen.layers.unshift(layer);
+          list.unshift(layer);
           break;
         case "bringForward":
-          targetScreen.layers.splice(Math.min(targetScreen.layers.length, foundIndex + 1), 0, layer);
+          list.splice(Math.min(list.length, idx + 1), 0, layer);
           break;
         case "sendBackward":
-          targetScreen.layers.splice(Math.max(0, foundIndex - 1), 0, layer);
+          list.splice(Math.max(0, idx - 1), 0, layer);
           break;
       }
       writeMtnFile(resolvedPath, pkg);
       return {
-        text: `Reordered layer "${layer.name}" (${args.action}) in scene "${targetScreen.name}".`,
+        text: `Reordered layer "${layer.name}" (${args.action}) in scene "${res.screen.name}".`,
       };
     }
 
@@ -1686,27 +1808,17 @@ function handleToolCall(name, args) {
     }
 
     case "ungroup_elements": {
-      let targetScreen = null;
-      let groupIndex = -1;
-      for (const sc of doc.screens) {
-        const idx = sc.layers.findIndex((l) => l.id === args.groupId && (l.type === "group" || l.type === "frame"));
-        if (idx !== -1) {
-          groupIndex = idx;
-          targetScreen = sc;
-          break;
-        }
-      }
-
-      if (!targetScreen || groupIndex === -1) {
+      const res = findLayerInDoc(doc, args.groupId);
+      if (!res || (res.layer.type !== "group" && res.layer.type !== "frame")) {
         return { text: `Error: Group layer "${args.groupId}" not found in any scene.` };
       }
 
-      const groupLayer = targetScreen.layers[groupIndex];
+      const groupLayer = res.layer;
       const children = groupLayer.children || [];
-      targetScreen.layers.splice(groupIndex, 1, ...children);
+      res.parentList.splice(res.index, 1, ...children);
       writeMtnFile(resolvedPath, pkg);
       return {
-        text: `Ungrouped "${groupLayer.name}" (id: ${args.groupId}) into ${children.length} elements in scene "${targetScreen.name}".`,
+        text: `Ungrouped "${groupLayer.name}" (id: ${args.groupId}) into ${children.length} elements in scene "${res.screen.name}".`,
       };
     }
 
@@ -1717,7 +1829,7 @@ function handleToolCall(name, args) {
       }
       const layerIds = args.layerIds || [];
       const layers = layerIds
-        .map((id) => targetScreen.layers.find((l) => l.id === id))
+        .map((id) => findLayerInTree(targetScreen.layers, id)?.layer)
         .filter(Boolean);
 
       if (layers.length === 0) {
@@ -1755,7 +1867,8 @@ function handleToolCall(name, args) {
         refCenterY = (minY + maxY) / 2;
       }
 
-      if (args.alignment === "distribute-horizontal") {
+      const normAlign = (args.alignment || "").replace("-", "_");
+      if (normAlign === "distribute_horizontal") {
         if (layers.length < 3) {
           return { text: "Error: Distribute horizontal requires at least 3 layers." };
         }
@@ -1779,12 +1892,13 @@ function handleToolCall(name, args) {
             const l = sorted[i];
             const lw = typeof l.style?.width === "number" ? l.style.width : 100;
             if (i > 0 && i < sorted.length - 1) {
+              if (!l.style) l.style = {};
               l.style.x = Math.round(curX);
             }
             curX += lw + gap;
           }
         }
-      } else if (args.alignment === "distribute-vertical") {
+      } else if (normAlign === "distribute_vertical") {
         if (layers.length < 3) {
           return { text: "Error: Distribute vertical requires at least 3 layers." };
         }
@@ -1808,6 +1922,7 @@ function handleToolCall(name, args) {
             const l = sorted[i];
             const lh = typeof l.style?.height === "number" ? l.style.height : 50;
             if (i > 0 && i < sorted.length - 1) {
+              if (!l.style) l.style = {};
               l.style.y = Math.round(curY);
             }
             curY += lh + gap;
@@ -1820,22 +1935,22 @@ function handleToolCall(name, args) {
           const lh = typeof l.style.height === "number" ? l.style.height : 50;
           switch (args.alignment) {
             case "left":
-              l.style.x = refLeft;
+              l.style.x = Math.round(refLeft);
               break;
             case "center":
               l.style.x = Math.round(refCenterX - lw / 2);
               break;
             case "right":
-              l.style.x = refRight - lw;
+              l.style.x = Math.round(refRight - lw);
               break;
             case "top":
-              l.style.y = refTop;
+              l.style.y = Math.round(refTop);
               break;
             case "middle":
               l.style.y = Math.round(refCenterY - lh / 2);
               break;
             case "bottom":
-              l.style.y = refBottom - lh;
+              l.style.y = Math.round(refBottom - lh);
               break;
           }
         }
@@ -2162,83 +2277,96 @@ function handleToolCall(name, args) {
     }
 
     case "apply_animation": {
-      let foundLayer = null;
-      let targetScreen = null;
-      for (const sc of doc.screens) {
-        const found = sc.layers.find((l) => l.id === args.layerId);
-        if (found) {
-          foundLayer = found;
-          targetScreen = sc;
-          break;
-        }
-      }
-
-      if (!foundLayer) {
+      const res = findLayerInDoc(doc, args.layerId);
+      if (!res) {
         return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
       }
+      const foundLayer = res.layer;
+      const targetScreen = res.screen;
 
       if (!foundLayer.animation) foundLayer.animation = { clips: [] };
       if (!foundLayer.animation.clips) foundLayer.animation.clips = [];
 
-      const clipId = "clip_" + Math.random().toString(36).slice(2, 8);
-      const startTime = args.start !== undefined ? args.start : (args.delay || 0);
-
-      let easing = args.easing || "snappy";
-      const isOptical = ["fade", "fadeIn", "fadeOut", "blurIn", "glassIris"].includes(args.preset);
-      let notice = "";
-      if (isOptical && (easing === "bouncy" || easing === "elastic")) {
-        easing = "smooth";
-        notice = " (Notice: Easing downgraded to 'smooth' to preserve optical channel monotonicity)";
+      if (args.mode === "replace") {
+        foundLayer.animation.clips = [];
       }
 
-      const newClip = {
-        id: clipId,
-        name: `${args.preset} ${args.type || "in"}`,
-        type: args.type || "in",
-        preset: args.preset,
-        start: startTime,
-        duration: args.duration,
-        easing,
-      };
+      const notices = [];
+      const clipsToAdd = [];
 
-      if (args.direction) newClip.direction = args.direction;
-      if (args.loop) newClip.loop = args.loop;
-      if (args.loopCount !== undefined) newClip.loopCount = args.loopCount;
-      if (args.spring) newClip.spring = args.spring;
-      if (args.splitBy) newClip.splitBy = args.splitBy;
-      if (args.animateBy) newClip.animateBy = args.animateBy;
-      if (args.stagger !== undefined) newClip.stagger = args.stagger;
-      if (args.staggerDelay !== undefined) newClip.staggerDelay = args.staggerDelay;
-      if (args.distance !== undefined) newClip.distance = args.distance;
-      if (args.scaleAmount !== undefined) newClip.scaleAmount = args.scaleAmount;
-      if (args.rotationDegrees !== undefined) newClip.rotationDegrees = args.rotationDegrees;
-      if (args.params) newClip.params = args.params;
-      if (args.from) newClip.from = args.from;
-      if (args.fillMode) newClip.fillMode = args.fillMode;
-      else if (newClip.type === "action") newClip.fillMode = "forwards";
-      if (args.properties) newClip.properties = args.properties;
-      if (args.stepFps !== undefined) newClip.stepFps = args.stepFps;
+      const rawClips = Array.isArray(args.animations) && args.animations.length > 0
+        ? args.animations
+        : (args.preset ? [args] : []);
 
-      foundLayer.animation.clips.push(newClip);
+      if (rawClips.length === 0) {
+        return { text: `Error: apply_animation requires either 'preset' or an 'animations' array.` };
+      }
+
+      for (const item of rawClips) {
+        const clipId = item.id || ("clip_" + Math.random().toString(36).slice(2, 8));
+        const startTime = item.start !== undefined ? item.start : (item.delay || 0);
+
+        let easing = item.easing || "snappy";
+        const isOptical = ["fade", "fadeIn", "fadeOut", "blurIn", "glassIris"].includes(item.preset);
+        if (isOptical && (easing === "bouncy" || easing === "elastic")) {
+          easing = "smooth";
+          notices.push("Notice: Easing downgraded to 'smooth' to preserve optical channel monotonicity");
+        }
+
+        const role = item.type || item.target || "in";
+        const newClip = {
+          id: clipId,
+          name: `${item.preset} ${role}`,
+          type: role,
+          preset: item.preset,
+          start: startTime,
+          duration: item.duration || 0.6,
+          easing,
+        };
+
+        if (item.direction) newClip.direction = item.direction;
+        if (item.loop) newClip.loop = item.loop;
+        if (item.loopCount !== undefined) newClip.loopCount = item.loopCount;
+        if (item.spring) newClip.spring = item.spring;
+        if (item.splitBy) newClip.splitBy = item.splitBy;
+        if (item.animateBy) newClip.animateBy = item.animateBy;
+        if (item.stagger !== undefined) newClip.stagger = item.stagger;
+        if (item.staggerDelay !== undefined) newClip.staggerDelay = item.staggerDelay;
+        if (item.distance !== undefined) newClip.distance = item.distance;
+        if (item.scaleAmount !== undefined) newClip.scaleAmount = item.scaleAmount;
+        if (item.rotationDegrees !== undefined) newClip.rotationDegrees = item.rotationDegrees;
+        if (item.params) newClip.params = item.params;
+        if (item.from) newClip.from = item.from;
+        if (item.fillMode) newClip.fillMode = item.fillMode;
+        else if (newClip.type === "action") newClip.fillMode = "forwards";
+        if (item.properties) newClip.properties = item.properties;
+        if (item.stepFps !== undefined) newClip.stepFps = item.stepFps;
+
+        clipsToAdd.push(newClip);
+      }
+
+      foundLayer.animation.clips.push(...clipsToAdd);
+      foundLayer.animation.clips.sort((a, b) => a.start - b.start);
       writeMtnFile(resolvedPath, pkg);
-      const splitInfo = (args.splitBy || args.animateBy) ? ` [kinetic split: ${args.splitBy || args.animateBy}, stagger: ${args.stagger ?? args.staggerDelay ?? 0.08}s]` : "";
+
+      const clipSummaries = clipsToAdd.map(c => `"${c.preset}" (${c.type}, ${c.duration}s, start: ${c.start}s, easing: ${c.easing}${c.fillMode ? `, fill: ${c.fillMode}` : ""})`).join(", ");
+      const noticeStr = notices.length > 0 ? " [" + notices.join("; ") + "]" : "";
       return {
-        text: `Applied "${args.preset}" (${newClip.type}, ${args.duration}s, start: ${startTime}s, easing: ${newClip.easing})${splitInfo} to layer "${foundLayer.name}" in scene "${targetScreen.name}".${notice}`,
+        text: `Applied ${clipsToAdd.length} animation clip(s) [${clipSummaries}] to layer "${foundLayer.name}" (total clips: ${foundLayer.animation.clips.length}) in scene "${targetScreen.name}".${noticeStr}`,
+        layer: {
+          id: foundLayer.id,
+          name: foundLayer.name,
+          clips: foundLayer.animation.clips,
+        },
       };
     }
 
     case "remove_animation": {
-      let foundLayer = null;
-      for (const sc of doc.screens) {
-        const found = sc.layers.find((l) => l.id === args.layerId);
-        if (found) {
-          foundLayer = found;
-          break;
-        }
-      }
-      if (!foundLayer) {
+      const res = findLayerInDoc(doc, args.layerId);
+      if (!res) {
         return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
       }
+      const foundLayer = res.layer;
 
       if (args.clipId && foundLayer.animation?.clips) {
         foundLayer.animation.clips = foundLayer.animation.clips.filter((c) => c.id !== args.clipId);
@@ -2252,17 +2380,11 @@ function handleToolCall(name, args) {
     }
 
     case "update_animation_clip": {
-      let targetLayer = null;
-      for (const sc of doc.screens) {
-        const found = sc.layers.find((l) => l.id === args.layerId);
-        if (found) {
-          targetLayer = found;
-          break;
-        }
-      }
-      if (!targetLayer) {
+      const res = findLayerInDoc(doc, args.layerId);
+      if (!res) {
         return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
       }
+      const targetLayer = res.layer;
 
       if (!targetLayer.animation) {
         targetLayer.animation = { clips: [] };
@@ -2302,8 +2424,11 @@ function handleToolCall(name, args) {
         if (args.loop !== undefined) clip.loop = args.loop;
         if (args.loopCount !== undefined) clip.loopCount = args.loopCount;
         if (args.spring !== undefined) clip.spring = args.spring;
+        if (args.fillMode !== undefined) clip.fillMode = args.fillMode;
+        if (args.params !== undefined) clip.params = args.params;
       }
 
+      targetLayer.animation.clips.sort((a, b) => a.start - b.start);
       writeMtnFile(resolvedPath, pkg);
       return {
         text: `Updated animation clip "${clip.name}" (id: ${clip.id}) on layer "${targetLayer.name}" [preset: ${clip.preset}, start: ${clip.start}s, duration: ${clip.duration}s, easing: ${clip.easing}].`,
@@ -2319,13 +2444,8 @@ function handleToolCall(name, args) {
 
       const matchedLayers = [];
       for (const id of args.layerIds) {
-        for (const sc of doc.screens) {
-          const found = sc.layers.find((l) => l.id === id);
-          if (found) {
-            matchedLayers.push(found);
-            break;
-          }
-        }
+        const res = findLayerInDoc(doc, id);
+        if (res) matchedLayers.push(res.layer);
       }
 
       const getCentroid = (l) => ({
@@ -2385,15 +2505,13 @@ function handleToolCall(name, args) {
     }
 
     case "link_elements": {
-      let driverLayer = null;
-      let drivenLayer = null;
-      for (const sc of doc.screens) {
-        if (!driverLayer) driverLayer = sc.layers.find((l) => l.id === args.driverId);
-        if (!drivenLayer) drivenLayer = sc.layers.find((l) => l.id === args.drivenId);
-      }
-      if (!driverLayer || !drivenLayer) {
+      const driverRes = findLayerInDoc(doc, args.driverId);
+      const drivenRes = findLayerInDoc(doc, args.drivenId);
+      if (!driverRes || !drivenRes) {
         return { text: `Error: driverId "${args.driverId}" or drivenId "${args.drivenId}" not found.` };
       }
+      const driverLayer = driverRes.layer;
+      const drivenLayer = drivenRes.layer;
 
       if (!drivenLayer.bindings) drivenLayer.bindings = [];
       drivenLayer.bindings = drivenLayer.bindings.filter((b) => b.driverLayerId !== args.driverId);
@@ -2421,17 +2539,11 @@ function handleToolCall(name, args) {
     }
 
     case "unlink_elements": {
-      let targetLayer = null;
-      for (const sc of doc.screens) {
-        const found = sc.layers.find((l) => l.id === args.layerId);
-        if (found) {
-          targetLayer = found;
-          break;
-        }
-      }
-      if (!targetLayer) {
+      const res = findLayerInDoc(doc, args.layerId);
+      if (!res) {
         return { text: `Error: Layer "${args.layerId}" not found.` };
       }
+      const targetLayer = res.layer;
 
       if (args.driverId && targetLayer.bindings) {
         targetLayer.bindings = targetLayer.bindings.filter((b) => b.driverLayerId !== args.driverId);
@@ -2446,19 +2558,12 @@ function handleToolCall(name, args) {
     }
 
     case "split_text": {
-      let textLayer = null;
-      let targetScreen = null;
-      for (const sc of doc.screens) {
-        const found = sc.layers.find((l) => l.id === args.layerId);
-        if (found && (found.type === "text" || found.type === "chunk")) {
-          textLayer = found;
-          targetScreen = sc;
-          break;
-        }
-      }
-      if (!textLayer) {
+      const res = findLayerInDoc(doc, args.layerId);
+      if (!res || (res.layer.type !== "text" && res.layer.type !== "chunk")) {
         return { text: `Error: Text layer "${args.layerId}" not found.` };
       }
+      const textLayer = res.layer;
+      const targetScreen = res.screen;
 
       const content = textLayer.content || textLayer.name || "";
       const splitBy = args.splitBy || "word";
@@ -2616,12 +2721,7 @@ function handleToolCall(name, args) {
         children: chunks,
       };
 
-      const origIdx = targetScreen.layers.findIndex((l) => l.id === args.layerId);
-      if (origIdx !== -1) {
-        targetScreen.layers.splice(origIdx, 1, compoundGroup);
-      } else {
-        targetScreen.layers.push(compoundGroup);
-      }
+      res.parentList.splice(res.index, 1, compoundGroup);
 
       writeMtnFile(resolvedPath, pkg);
       return {
@@ -2630,19 +2730,12 @@ function handleToolCall(name, args) {
     }
 
     case "split_shape": {
-      let shapeLayer = null;
-      let targetScreen = null;
-      for (const sc of doc.screens) {
-        const found = sc.layers.find((l) => l.id === args.layerId);
-        if (found) {
-          shapeLayer = found;
-          targetScreen = sc;
-          break;
-        }
-      }
-      if (!shapeLayer) {
+      const res = findLayerInDoc(doc, args.layerId);
+      if (!res) {
         return { text: `Error: Shape layer "${args.layerId}" not found.` };
       }
+      const shapeLayer = res.layer;
+      const targetScreen = res.screen;
 
       const w = typeof shapeLayer.style?.width === "number" ? shapeLayer.style.width : 200;
       const h = typeof shapeLayer.style?.height === "number" ? shapeLayer.style.height : 200;
@@ -2777,12 +2870,7 @@ function handleToolCall(name, args) {
         children,
       };
 
-      const origIdx = targetScreen.layers.findIndex((l) => l.id === args.layerId);
-      if (origIdx !== -1) {
-        targetScreen.layers.splice(origIdx, 1, compoundGroup);
-      } else {
-        targetScreen.layers.push(compoundGroup);
-      }
+      res.parentList.splice(res.index, 1, compoundGroup);
 
       writeMtnFile(resolvedPath, pkg);
       return {
@@ -2791,19 +2879,12 @@ function handleToolCall(name, args) {
     }
 
     case "split_line": {
-      let lineLayer = null;
-      let targetScreen = null;
-      for (const sc of doc.screens) {
-        const found = sc.layers.find((l) => l.id === args.layerId);
-        if (found) {
-          lineLayer = found;
-          targetScreen = sc;
-          break;
-        }
-      }
-      if (!lineLayer) {
+      const res = findLayerInDoc(doc, args.layerId);
+      if (!res) {
         return { text: `Error: Line layer "${args.layerId}" not found.` };
       }
+      const lineLayer = res.layer;
+      const targetScreen = res.screen;
 
       const totalWidth = typeof lineLayer.style?.width === "number" ? lineLayer.style.width : 200;
       const totalHeight = typeof lineLayer.style?.height === "number" ? lineLayer.style.height : 20;
@@ -2959,12 +3040,7 @@ function handleToolCall(name, args) {
         children,
       };
 
-      const origIdx = targetScreen.layers.findIndex((l) => l.id === args.layerId);
-      if (origIdx !== -1) {
-        targetScreen.layers.splice(origIdx, 1, compoundGroup);
-      } else {
-        targetScreen.layers.push(compoundGroup);
-      }
+      res.parentList.splice(res.index, 1, compoundGroup);
 
       writeMtnFile(resolvedPath, pkg);
       return {
@@ -2973,24 +3049,12 @@ function handleToolCall(name, args) {
     }
 
     case "separate_stroke_fill": {
-      let targetScreen = null;
-      let orig = null;
-      if (args.sceneId) {
-        targetScreen = doc.screens.find((s) => s.id === args.sceneId);
-        if (targetScreen) orig = targetScreen.layers.find((l) => l.id === args.layerId);
-      } else {
-        for (const sc of doc.screens) {
-          const found = sc.layers.find((l) => l.id === args.layerId);
-          if (found) {
-            targetScreen = sc;
-            orig = found;
-            break;
-          }
-        }
-      }
-      if (!targetScreen || !orig) {
+      const res = findLayerInDoc(doc, args.layerId);
+      if (!res) {
         return { text: `Error: Layer "${args.layerId}" not found.` };
       }
+      const orig = res.layer;
+      const targetScreen = res.screen;
 
       const width = typeof orig.style?.width === "number" ? orig.style.width : 200;
       const height = typeof orig.style?.height === "number" ? orig.style.height : 150;
@@ -3074,8 +3138,7 @@ function handleToolCall(name, args) {
         children: [fillLayer, strokeLayer],
       };
 
-      const idx = targetScreen.layers.findIndex((l) => l.id === args.layerId);
-      targetScreen.layers.splice(idx, 1, group);
+      res.parentList.splice(res.index, 1, group);
       writeMtnFile(resolvedPath, pkg);
       return {
         text: `Separated stroke and fill for layer "${orig.name}" into compound group "${group.name}" (id: ${group.id}) with 0.0000px layout shift.`,
@@ -3099,7 +3162,7 @@ function handleToolCall(name, args) {
         return { text: `Error: Scene containing specified lines not found.` };
       }
       const lines = lineIds
-        .map((id) => targetScreen.layers.find((l) => l.id === id))
+        .map((id) => findLayerInTree(targetScreen.layers, id)?.layer)
         .filter(Boolean);
 
       if (lines.length < 2) {
@@ -3373,18 +3436,23 @@ function handleToolCall(name, args) {
         const elements = [];
         const transitions = [];
 
-        sc.layers.forEach((l) => {
-          if (l.type === "text" && l.content) {
-            headlines.push(`"${l.content.slice(0, 40)}"`);
+        function collectLayerInfo(l) {
+          if ((l.type === "text" || l.content) && l.content) {
+            headlines.push(`"${String(l.content).slice(0, 50)}"`);
           } else {
             elements.push(`${l.type}: ${l.name}`);
           }
           if (l.animation?.clips) {
             l.animation.clips.forEach((c) => {
-              transitions.push(`${l.name} -> ${c.preset} (${c.type}, ${c.duration}s)`);
+              transitions.push(`${l.name} -> ${c.preset} (${c.type}, ${c.duration}s, t=${c.start}s)`);
             });
           }
-        });
+          if (Array.isArray(l.children)) {
+            l.children.forEach(collectLayerInfo);
+          }
+        }
+
+        (sc.layers || []).forEach(collectLayerInfo);
 
         return {
           sceneId: sc.id,
@@ -3393,10 +3461,11 @@ function handleToolCall(name, args) {
           duration,
           timeWindow,
           mood: sc.mood || "product-showcase",
-          layerCount: sc.layers.length,
-          headlines: headlines.slice(0, 3),
-          keyElements: elements.slice(0, 6),
-          transitions: transitions.slice(0, 4),
+          transition: sc.transition,
+          layerCount: elements.length + headlines.length,
+          headlines: headlines.slice(0, 5),
+          keyElements: elements.slice(0, 10),
+          transitions: transitions.slice(0, 10),
         };
       });
 
@@ -3414,29 +3483,113 @@ function handleToolCall(name, args) {
 
     case "get_storyboard_state": {
       const totalDur = doc.screens.reduce((s, sc) => s + (sc.duration || 0), 0);
+
+      function mapLayerForState(l) {
+        const s = l.style || {};
+        const t = l.text || {};
+        const textContent = l.content !== undefined ? l.content : (t.content !== undefined ? t.content : undefined);
+
+        return {
+          id: l.id,
+          name: l.name,
+          type: l.type,
+          shapeType: l.shapeType,
+          visible: l.visible !== false,
+          locked: !!l.locked,
+          grid: l.grid,
+          bounds: {
+            x: s.x ?? 0,
+            y: s.y ?? 0,
+            width: s.width ?? 0,
+            height: s.height ?? 0,
+            rotation: s.rotation ?? 0,
+            opacity: s.opacity ?? 1,
+            zIndex: s.zIndex ?? 0,
+          },
+          style: {
+            backgroundColor: s.backgroundColor,
+            borderColor: s.borderColor,
+            borderWidth: s.borderWidth,
+            borderRadius: s.borderRadius,
+            shadowColor: s.shadowColor,
+            shadowBlur: s.shadowBlur,
+            padding: s.padding,
+            color: s.color,
+          },
+          text: (l.type === "text" || textContent !== undefined) ? {
+            content: textContent ?? "",
+            fontSize: t.fontSize ?? s.fontSize,
+            fontWeight: t.fontWeight ?? s.fontWeight,
+            fontFamily: t.fontFamily ?? s.fontFamily,
+            color: t.color ?? s.color,
+            textAlign: t.textAlign ?? s.textAlign,
+          } : undefined,
+          counter: l.counterConfig || (l.startValue !== undefined ? {
+            startValue: l.startValue,
+            endValue: l.endValue,
+            prefix: l.prefix,
+            suffix: l.suffix,
+            decimals: l.decimals,
+            counterMode: l.counterMode,
+          } : undefined),
+          icon: l.iconName,
+          points: l.points,
+          clips: (l.animation?.clips || []).map((c) => ({
+            id: c.id,
+            name: c.name,
+            type: c.type || "in",
+            preset: c.preset,
+            start: c.start,
+            duration: c.duration,
+            end: Math.round(((c.start || 0) + (c.duration || 0)) * 100) / 100,
+            easing: c.easing,
+            fillMode: c.fillMode,
+            direction: c.direction,
+            loop: c.loop,
+            params: c.params,
+            spring: c.spring,
+          })),
+          bindings: (l.bindings || []).map((b) => ({
+            id: b.id,
+            mode: b.mode,
+            driverLayerId: b.driverLayerId,
+            targetLayerId: b.targetLayerId,
+            gap: b.reflowGap ?? b.gap,
+            padding: b.padding,
+            anchor: b.targetAnchor ?? b.anchor,
+          })),
+          children: Array.isArray(l.children) ? l.children.map(mapLayerForState) : undefined,
+        };
+      }
+
+      function countAllLayers(layers) {
+        if (!Array.isArray(layers)) return 0;
+        let count = layers.length;
+        for (const l of layers) {
+          if (Array.isArray(l.children)) count += countAllLayers(l.children);
+        }
+        return count;
+      }
+
       const summary = {
         file: path.basename(resolvedPath),
         projectTitle: doc.name,
         resolution: `${doc.settings.width}x${doc.settings.height}`,
         fps: doc.settings.fps,
-        totalDuration: `${totalDur}s`,
+        backgroundColor: doc.settings.backgroundColor || "#09090b",
+        totalDuration: `${Math.round(totalDur * 100) / 100}s`,
         sceneCount: doc.screens.length,
         scenes: doc.screens.map((sc) => ({
           id: sc.id,
           name: sc.name,
           duration: `${sc.duration}s`,
           mood: sc.mood || "product-showcase",
-          backgroundColor: sc.backgroundColor,
-          layerCount: sc.layers.length,
-          layers: sc.layers.map((l) => ({
-            id: l.id,
-            name: l.name,
-            type: l.type,
-            shapeType: l.shapeType,
-            grid: l.grid,
-            clips: l.animation?.clips?.map((c) => c.preset) || [],
-            bindings: l.bindings?.map((b) => b.mode) || [],
-          })),
+          backgroundColor: sc.backgroundColor || doc.settings.backgroundColor || "#09090b",
+          transition: sc.transition,
+          camera: sc.camera,
+          layerCount: countAllLayers(sc.layers),
+          rootLayerCount: sc.layers.length,
+          layers: sc.layers.map(mapLayerForState),
         })),
       };
       return { text: JSON.stringify(summary, null, 2) };
@@ -3679,29 +3832,34 @@ process.on("unhandledRejection", (reason) => {
   process.stderr.write(`[MCP Unhandled Rejection]: ${reason?.stack || reason?.message || reason}\n`);
 });
 
-// 1. JSON-RPC 2.0 stdio loop
-process.stdin.on("error", () => {});
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-  terminal: false,
-});
-rl.on("error", () => {});
+// Guard stdio and HTTP server for direct execution
+const isDirectExecution = process.argv[1] && (process.argv[1].endsWith("mcp.js") || process.argv[1].includes("mcp"));
 
-rl.on("line", (line) => {
-  const trimmed = line.trim();
-  if (!trimmed) return;
+if (isDirectExecution) {
+  // 1. JSON-RPC 2.0 stdio loop
+  process.stdin.on("error", () => {});
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    terminal: false,
+  });
+  rl.on("error", () => {});
 
-  try {
-    const msg = JSON.parse(trimmed);
-    const response = processRpcMessage(msg);
-    if (response) {
-      process.stdout.write(JSON.stringify(response) + "\n");
+  rl.on("line", (line) => {
+    const trimmed = line.trim();
+    if (!trimmed) return;
+
+    try {
+      const msg = JSON.parse(trimmed);
+      const response = processRpcMessage(msg);
+      if (response) {
+        process.stdout.write(JSON.stringify(response) + "\n");
+      }
+    } catch (err) {
+      process.stderr.write(`[MCP Error]: ${err.message}\n`);
     }
-  } catch (err) {
-    process.stderr.write(`[MCP Error]: ${err.message}\n`);
-  }
-});
+  });
+}
 
 // 2. HTTP/SSE Server if --port is passed
 const portArgIndex = process.argv.indexOf("--port");
@@ -3789,4 +3947,4 @@ if (portArg && !isNaN(portArg)) {
   });
 }
 
-export { TOOLS };
+export { TOOLS, handleToolCall, processRpcMessage, readMtnFile, writeMtnFile };
