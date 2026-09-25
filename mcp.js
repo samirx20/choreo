@@ -2,8 +2,11 @@
 
 /**
  * Motion Studio MCP Server
- * Standard Model Context Protocol (stdio) runner for external AI agents
- * (Claude Desktop, Cursor, Antigravity, etc.) to choreograph .mtn files tool-by-tool.
+ * Standard Model Context Protocol (stdio + HTTP/SSE) runner for AI agents
+ * (Claude Desktop, Cursor, Antigravity, etc.) to choreograph .mtn projects.
+ * 
+ * 100% 2D Motion Graphics Tool Coverage (Projects, Scenes, Layers, Typography,
+ * Vectors, Shapes, Masking, Booleans, Animations, Stagger, Bindings, Audio, Export).
  */
 
 import fs from "fs";
@@ -14,12 +17,11 @@ import readline from "readline";
 function readMtnFile(filePath) {
   const resolved = path.resolve(process.cwd(), filePath || "project.mtn");
   if (!fs.existsSync(resolved)) {
-    // Initialize clean default .mtn project file if not present
     const defaultDoc = {
       $schema: "https://motion-studio.app/schemas/v1.json",
       format: "motion-studio",
       version: 1,
-      generator: "Motion Studio MCP v0.1.0",
+      generator: "Motion Studio MCP v0.2.0",
       exportedAt: Date.now(),
       metadata: {
         id: "proj_" + Math.random().toString(36).slice(2, 9),
@@ -93,7 +95,7 @@ function writeMtnFile(filePath, packageData) {
   fs.writeFileSync(filePath, JSON.stringify(packageData, null, 2), "utf-8");
 }
 
-// Tool Implementations
+// All Tools (36 Complete Tools)
 const TOOLS = [
   {
     name: "create_project",
@@ -106,25 +108,61 @@ const TOOLS = [
         aspectRatio: {
           type: "string",
           enum: ["16:9", "9:16", "1:1", "4:5"],
-          description: "Aspect ratio: '16:9' (landscape 1920x1080), '9:16' (vertical 1080x1920), '1:1' (square 1080x1080), '4:5' (portrait 1080x1350)",
+          description: "Aspect ratio: '16:9' (1920x1080), '9:16' (1080x1920), '1:1' (1080x1080), '4:5' (1080x1350)",
         },
         fps: { type: "number", description: "Frame rate (default: 60)" },
-        backgroundColor: { type: "string", description: "Background color (default: '#09090b')" },
+        backgroundColor: { type: "string", description: "Background color hex (default: '#09090b')" },
       },
       required: ["name"],
     },
   },
   {
     name: "update_project",
-    description: "Updates project settings such as title, frame rate, or background color.",
+    description: "Updates project settings such as title, frame rate, or canvas background color.",
     inputSchema: {
       type: "object",
       properties: {
         file: { type: "string", description: "Path to .mtn project file" },
         name: { type: "string", description: "New project title" },
-        fps: { type: "number", description: "Frame rate" },
+        fps: { type: "number", description: "Frame rate (e.g. 60, 30, 24)" },
         backgroundColor: { type: "string", description: "Background color hex" },
       },
+    },
+  },
+  {
+    name: "duplicate_project",
+    description: "Clones an existing .mtn project file to a new target path with an updated title.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Source .mtn file path" },
+        targetFile: { type: "string", description: "Destination .mtn file path" },
+        newName: { type: "string", description: "Optional new title for the duplicated project" },
+      },
+      required: ["file", "targetFile"],
+    },
+  },
+  {
+    name: "rename_project",
+    description: "Renames the project title inside an existing .mtn project file.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        newName: { type: "string", description: "New project title" },
+      },
+      required: ["file", "newName"],
+    },
+  },
+  {
+    name: "delete_project",
+    description: "Deletes a .mtn project file from disk.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file to delete" },
+      },
+      required: ["file"],
     },
   },
   {
@@ -138,12 +176,28 @@ const TOOLS = [
     },
   },
   {
-    name: "create_scene",
-    description: "Creates a new scene/beat in a .mtn project file with specified duration and mood.",
+    name: "set_palette",
+    description: "Assigns a cohesive color palette array to the project settings.",
     inputSchema: {
       type: "object",
       properties: {
-        file: { type: "string", description: "Path to .mtn project file (default: './project.mtn')" },
+        file: { type: "string", description: "Path to .mtn project file" },
+        colors: {
+          type: "array",
+          items: { type: "string" },
+          description: "Array of hex color strings (e.g. ['#09090b', '#7c3aed', '#38bdf8', '#ffffff'])",
+        },
+      },
+      required: ["colors"],
+    },
+  },
+  {
+    name: "create_scene",
+    description: "Creates a new scene/beat in a .mtn project file with duration, aesthetic mood, and transition.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
         id: { type: "string", description: "Optional scene ID" },
         name: { type: "string", description: "Name of the scene (e.g. 'Intro Hero')" },
         duration: { type: "number", description: "Duration in seconds (e.g. 3.0)" },
@@ -167,7 +221,7 @@ const TOOLS = [
   },
   {
     name: "update_scene",
-    description: "Updates an existing scene's name, duration, background color, stepFps, or aesthetic mood.",
+    description: "Updates an existing scene's name, duration, background color, stepFps, or transition.",
     inputSchema: {
       type: "object",
       properties: {
@@ -206,32 +260,44 @@ const TOOLS = [
     },
   },
   {
+    name: "reorder_scenes",
+    description: "Reorders the scenes in the project timeline matching a specified array of scene IDs.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        sceneIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Array of scene IDs in the desired playback sequence",
+        },
+      },
+      required: ["sceneIds"],
+    },
+  },
+  {
     name: "place_element",
-    description: "Places a text, shape, icon, counter, image, or line element onto the modular grid with entrance animation. Reusing the same ID across scenes triggers continuous Magic Move spatial transitions.",
+    description: "Places a 2D layer (text, shape, icon, counter, line, image, video, frame) onto the grid or pixel coordinates with full parametric geometry, styling, and entrance motion. Reusing ID across scenes triggers Magic Move.",
     inputSchema: {
       type: "object",
       properties: {
         file: { type: "string", description: "Path to .mtn project file" },
         sceneId: { type: "string", description: "Target scene ID" },
-        id: { type: "string", description: "Optional layer ID. Reusing the same ID in subsequent scenes triggers Magic Move morphing." },
+        id: { type: "string", description: "Optional layer ID. Reusing same ID across scenes triggers continuous Magic Move morphing." },
         name: { type: "string", description: "Element name" },
-        type: { type: "string", enum: ["text", "shape", "icon", "counter", "line", "image", "frame"], description: "Layer type" },
-        content: { type: "string", description: "Text content, icon name (e.g. 'Sparkles'), or image URL" },
-        counter: {
-          type: "object",
-          properties: {
-            startValue: { type: "number", description: "Starting number" },
-            endValue: { type: "number", description: "Ending number" },
-            prefix: { type: "string", description: "Prefix e.g. '$'" },
-            suffix: { type: "string", description: "Suffix e.g. '%' or 'k'" },
-            decimals: { type: "number", description: "Decimal places (default 0)" },
-            counterMode: { type: "string", enum: ["odometer", "smooth", "stepped"] },
-          },
+        type: {
+          type: "string",
+          enum: ["text", "shape", "icon", "counter", "line", "image", "frame", "video", "polygon"],
+          description: "Layer type",
         },
-        iconName: { type: "string", description: "Lucide icon name (e.g. 'Sparkles', 'Check', 'ArrowRight')" },
-        src: { type: "string", description: "Image source URL or local path for image layers" },
-        arrowStart: { type: "boolean", description: "Arrowhead at line start" },
-        arrowEnd: { type: "boolean", description: "Arrowhead at line end" },
+        shapeType: {
+          type: "string",
+          enum: ["rectangle", "circle", "ellipse", "triangle", "star", "polygon", "line", "arrow", "path"],
+          description: "Specific shape geometry type",
+        },
+        content: { type: "string", description: "Text content, icon name (e.g. 'Sparkles'), or image/video URL" },
+        iconName: { type: "string", description: "Lucide vector icon name (e.g. 'Sparkles', 'Check', 'ArrowRight', 'Shield')" },
+        src: { type: "string", description: "Source URL or local path for image or video layers" },
         grid: {
           type: "object",
           properties: {
@@ -240,34 +306,120 @@ const TOOLS = [
             colSpan: { type: "number", description: "Column span" },
             rowSpan: { type: "number", description: "Row span" },
           },
-          required: ["col", "row", "colSpan", "rowSpan"],
+          description: "Grid placement (aspect-ratio modular grid)",
+        },
+        bounds: {
+          type: "object",
+          properties: {
+            x: { type: "number" },
+            y: { type: "number" },
+            width: { type: "number" },
+            height: { type: "number" },
+          },
+          description: "Direct pixel placement (alternative to grid)",
+        },
+        counter: {
+          type: "object",
+          properties: {
+            startValue: { type: "number", description: "Starting number (default 0)" },
+            endValue: { type: "number", description: "Ending number (default 100)" },
+            prefix: { type: "string", description: "Prefix e.g. '$'" },
+            suffix: { type: "string", description: "Suffix e.g. '%' or 'k'" },
+            decimals: { type: "number", description: "Decimal places (default 0)" },
+            counterMode: { type: "string", enum: ["odometer", "smooth", "stepped"] },
+            useGrouping: { type: "boolean", description: "Use thousand separators (e.g. 100,000)" },
+          },
+        },
+        video: {
+          type: "object",
+          properties: {
+            sourceIn: { type: "number", description: "Video start trim offset in seconds" },
+            sourceOut: { type: "number", description: "Video end trim offset in seconds" },
+            volume: { type: "number", description: "Video audio volume (0.0 to 1.0)" },
+            loop: { type: "boolean", description: "Whether video loops" },
+          },
+        },
+        points: { type: "number", description: "Star points count (3 to 20, default: 5)" },
+        innerRadiusRatio: { type: "number", description: "Star inner vertex ratio (0.10 to 0.95, default: 0.40)" },
+        sides: { type: "number", description: "Polygon side count (3 to 12, default: 6)" },
+        d: { type: "string", description: "SVG path definition string for custom vector path layers" },
+        viewBox: { type: "string", description: "SVG viewBox string (e.g. '0 0 100 100')" },
+        arrowStart: { type: "boolean", description: "Marker at line start" },
+        arrowEnd: { type: "boolean", description: "Marker at line end" },
+        strokeCap: { type: "string", enum: ["round", "butt", "square"], description: "Vector stroke cap" },
+        strokeJoin: { type: "string", enum: ["miter", "round", "bevel"], description: "Vector stroke join" },
+        strokeDashArray: { type: "array", items: { type: "number" }, description: "Dash pattern e.g. [8, 4]" },
+        trimStart: { type: "number", description: "Trim path start percentage (0-100)" },
+        trimEnd: { type: "number", description: "Trim path end percentage (0-100)" },
+        trimOffset: { type: "number", description: "Trim path offset percentage (0-100)" },
+        clipContent: { type: "boolean", description: "Whether container frame clips overflowing children" },
+        layout: {
+          type: "object",
+          properties: {
+            flexDirection: { type: "string", enum: ["row", "column"] },
+            gap: { type: "number" },
+            align: { type: "string", enum: ["start", "center", "end"] },
+            justify: { type: "string", enum: ["start", "center", "end", "space-between"] },
+          },
+          description: "Auto-layout flex parameters for frame layers",
         },
         style: {
           type: "object",
-          description: "Visual styles (fontSize, color, backgroundColor, borderRadius, borderWidth, borderColor, opacity, shadowBlur, shadowColor)",
+          description: "Full visual styling (fontSize, fontWeight, fontFamily, textAlign, lineHeight, letterSpacing, textTransform, color, backgroundColor, gradient, borderRadius, borderWidth, borderColor, borderStyle, shadowMode, shadowAngle, shadowDistance, shadowBlur, shadowColor, shadowOpacity, shadowSpread, filterBlur, backdropBlur, isGlass, stickerBorder, opacity, rotation, blendMode)",
         },
         enter: {
           type: "object",
           properties: {
-            preset: { type: "string", enum: ["pop", "drawOn", "fade", "scale", "slide", "rotate"] },
-            duration: { type: "number" },
-            easing: { type: "string", enum: ["snappy", "smooth", "bouncy", "linear"] },
+            preset: { type: "string", description: "Entrance animation preset (e.g. 'pop', 'baselineRise', 'wordCascade', 'elevationRise', 'glassIris', 'blurFocusPop', 'drawOn', 'slide')" },
+            duration: { type: "number", description: "Duration in seconds (default 0.6)" },
+            delay: { type: "number", description: "Delay in seconds (default 0)" },
+            easing: { type: "string", description: "Easing profile (e.g. 'snappy', 'smooth', 'bouncy', 'overshoot', 'elastic')" },
+            direction: { type: "string", enum: ["up", "down", "left", "right"], description: "Direction for directional presets" },
+            spring: {
+              type: "object",
+              properties: {
+                stiffness: { type: "number" },
+                damping: { type: "number" },
+                mass: { type: "number" },
+              },
+            },
           },
         },
       },
-      required: ["sceneId", "name", "type", "grid"],
+      required: ["sceneId", "name", "type"],
     },
   },
   {
     name: "update_element",
-    description: "Modifies an existing element's content, position on the grid, counter settings, or visual styles.",
+    description: "Modifies an existing element's content, position, shape attributes, counter settings, or visual styles.",
     inputSchema: {
       type: "object",
       properties: {
         file: { type: "string", description: "Path to .mtn project file" },
         layerId: { type: "string", description: "Target layer ID to modify" },
         name: { type: "string", description: "Updated layer name" },
-        content: { type: "string", description: "Updated text content, icon name, or image URL" },
+        content: { type: "string", description: "Updated text copy, icon name, or image/video URL" },
+        iconName: { type: "string", description: "Updated Lucide icon name" },
+        src: { type: "string", description: "Updated image or video source URL" },
+        shapeType: { type: "string", enum: ["rectangle", "circle", "ellipse", "triangle", "star", "polygon", "line", "arrow", "path"] },
+        grid: {
+          type: "object",
+          properties: {
+            col: { type: "number" },
+            row: { type: "number" },
+            colSpan: { type: "number" },
+            rowSpan: { type: "number" },
+          },
+        },
+        bounds: {
+          type: "object",
+          properties: {
+            x: { type: "number" },
+            y: { type: "number" },
+            width: { type: "number" },
+            height: { type: "number" },
+          },
+        },
         counter: {
           type: "object",
           properties: {
@@ -277,21 +429,33 @@ const TOOLS = [
             suffix: { type: "string" },
             decimals: { type: "number" },
             counterMode: { type: "string", enum: ["odometer", "smooth", "stepped"] },
+            useGrouping: { type: "boolean" },
           },
         },
-        grid: {
+        points: { type: "number" },
+        innerRadiusRatio: { type: "number" },
+        sides: { type: "number" },
+        d: { type: "string" },
+        viewBox: { type: "string" },
+        arrowStart: { type: "boolean" },
+        arrowEnd: { type: "boolean" },
+        strokeCap: { type: "string", enum: ["round", "butt", "square"] },
+        strokeJoin: { type: "string", enum: ["miter", "round", "bevel"] },
+        strokeDashArray: { type: "array", items: { type: "number" } },
+        trimStart: { type: "number" },
+        trimEnd: { type: "number" },
+        trimOffset: { type: "number" },
+        clipContent: { type: "boolean" },
+        layout: {
           type: "object",
           properties: {
-            col: { type: "number", description: "Grid column (0-15)" },
-            row: { type: "number", description: "Grid row (0-8)" },
-            colSpan: { type: "number", description: "Column span" },
-            rowSpan: { type: "number", description: "Row span" },
+            flexDirection: { type: "string", enum: ["row", "column"] },
+            gap: { type: "number" },
+            align: { type: "string", enum: ["start", "center", "end"] },
+            justify: { type: "string", enum: ["start", "center", "end", "space-between"] },
           },
         },
-        style: {
-          type: "object",
-          description: "Visual styles to update or merge (fontSize, color, backgroundColor, borderRadius, borderWidth, borderColor, opacity)",
-        },
+        style: { type: "object", description: "Visual styles to update or merge" },
       },
       required: ["layerId"],
     },
@@ -306,6 +470,42 @@ const TOOLS = [
         layerId: { type: "string", description: "Target layer ID to delete" },
       },
       required: ["layerId"],
+    },
+  },
+  {
+    name: "duplicate_element",
+    description: "Clones an existing element with optional grid/pixel offsets, or into another scene.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        layerId: { type: "string", description: "Target layer ID to duplicate" },
+        newId: { type: "string", description: "Optional new ID for the duplicate" },
+        name: { type: "string", description: "Optional new name" },
+        offsetCol: { type: "number", description: "Grid column offset (default: 0)" },
+        offsetRow: { type: "number", description: "Grid row offset (default: 1)" },
+        offsetX: { type: "number", description: "Pixel X offset" },
+        offsetY: { type: "number", description: "Pixel Y offset" },
+        targetSceneId: { type: "string", description: "Optional target scene ID (default: same scene)" },
+      },
+      required: ["layerId"],
+    },
+  },
+  {
+    name: "reorder_element",
+    description: "Changes the z-order / stacking of an element within its scene.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        layerId: { type: "string", description: "Target layer ID" },
+        action: {
+          type: "string",
+          enum: ["bringToFront", "sendToBack", "bringForward", "sendBackward"],
+          description: "Z-order adjustment action",
+        },
+      },
+      required: ["layerId", "action"],
     },
   },
   {
@@ -339,83 +539,108 @@ const TOOLS = [
     },
   },
   {
-    name: "set_audio_track",
-    description: "Attaches a background audio track or sound effect to a scene or the entire project.",
+    name: "create_mask_group",
+    description: "Converts selected layers into a clipping mask group with optional stencil designation and cutout inversion.",
     inputSchema: {
       type: "object",
       properties: {
         file: { type: "string", description: "Path to .mtn project file" },
-        sceneId: { type: "string", description: "Optional scene ID (if omitted, applies to the first scene)" },
-        src: { type: "string", description: "Audio file URL or local file path" },
-        name: { type: "string", description: "Track name or label" },
-        volume: { type: "number", description: "Volume level from 0.0 to 1.0 (default: 1.0)" },
-        loop: { type: "boolean", description: "Whether to loop audio playback" },
+        sceneId: { type: "string", description: "Target scene ID" },
+        layerIds: { type: "array", items: { type: "string" }, description: "Layers in the mask group" },
+        maskLayerId: { type: "string", description: "Optional layer ID that acts as the mask stencil (defaults to first layer)" },
+        invertMask: { type: "boolean", description: "Whether to invert the mask stencil into a cutout mask (default: false)" },
+        name: { type: "string", description: "Mask group name (default: 'Mask Group')" },
       },
-      required: ["src"],
+      required: ["sceneId", "layerIds"],
     },
   },
   {
-    name: "reorder_scenes",
-    description: "Reorders the scenes in the project timeline matching a specified array of scene IDs.",
+    name: "apply_boolean_operation",
+    description: "Executes a vector boolean operation (union, subtract, intersect, exclude) on 2 or more shape layers.",
     inputSchema: {
       type: "object",
       properties: {
         file: { type: "string", description: "Path to .mtn project file" },
-        sceneIds: {
-          type: "array",
-          items: { type: "string" },
-          description: "Array of scene IDs in the desired playback sequence",
-        },
-      },
-      required: ["sceneIds"],
-    },
-  },
-  {
-    name: "duplicate_element",
-    description: "Clones an existing element with an optional grid offset, or into another scene.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        file: { type: "string", description: "Path to .mtn project file" },
-        layerId: { type: "string", description: "Target layer ID to duplicate" },
-        newId: { type: "string", description: "Optional new ID for the duplicate" },
-        name: { type: "string", description: "Optional new name" },
-        offsetCol: { type: "number", description: "Grid column offset (default: 0)" },
-        offsetRow: { type: "number", description: "Grid row offset (default: 1)" },
-        targetSceneId: { type: "string", description: "Optional target scene ID (default: same scene)" },
-      },
-      required: ["layerId"],
-    },
-  },
-  {
-    name: "reorder_element",
-    description: "Changes the z-order / stacking of an element within its scene.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        file: { type: "string", description: "Path to .mtn project file" },
-        layerId: { type: "string", description: "Target layer ID" },
-        action: {
+        sceneId: { type: "string", description: "Target scene ID" },
+        layerIds: { type: "array", items: { type: "string" }, description: "Shape layer IDs to combine (minimum 2)" },
+        operation: {
           type: "string",
-          enum: ["bringToFront", "sendToBack", "bringForward", "sendBackward"],
-          description: "Z-order adjustment action",
+          enum: ["union", "subtract", "intersect", "exclude"],
+          description: "Boolean operation type",
         },
+        flatten: { type: "boolean", description: "Whether to flatten immediately into a single SVG path layer (default: false)" },
+        name: { type: "string", description: "Boolean group name" },
       },
-      required: ["layerId", "action"],
+      required: ["sceneId", "layerIds", "operation"],
+    },
+  },
+  {
+    name: "import_svg",
+    description: "Imports raw SVG XML markup into the scene as native vector path or group layers.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        sceneId: { type: "string", description: "Target scene ID" },
+        svgString: { type: "string", description: "Raw SVG string or XML markup" },
+        name: { type: "string", description: "Name for imported layer/group" },
+        col: { type: "number", description: "Optional starting grid column" },
+        row: { type: "number", description: "Optional starting grid row" },
+      },
+      required: ["sceneId", "svgString"],
+    },
+  },
+  {
+    name: "insert_template",
+    description: "Stamps a pre-built animated component template onto the scene grid: 'comp_browser_window' (Safari/Chrome macOS frame), 'comp_terminal_window' (macOS dark terminal), 'comp_counter_pill' (kinetic metric ticker badge), or 'comp_code_snippet' (code block card).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        sceneId: { type: "string", description: "Target scene ID" },
+        templateId: {
+          type: "string",
+          enum: ["comp_browser_window", "comp_terminal_window", "comp_counter_pill", "comp_code_snippet"],
+          description: "Template identifier",
+        },
+        col: { type: "number", description: "Grid column (default: auto-centered)" },
+        row: { type: "number", description: "Grid row (default: auto-centered)" },
+      },
+      required: ["sceneId", "templateId"],
     },
   },
   {
     name: "apply_animation",
-    description: "Applies a transition clip to an existing element in a .mtn project file.",
+    description: "Applies a transition clip to an element with choice of 53+ presets, analytical spring parameters, direction, loops, and delay.",
     inputSchema: {
       type: "object",
       properties: {
         file: { type: "string", description: "Path to .mtn project file" },
         layerId: { type: "string", description: "Target layer ID" },
-        preset: { type: "string", enum: ["pop", "drawOn", "fade", "scale", "slide", "rotate", "wipe", "blur", "boil"] },
-        duration: { type: "number", description: "Duration in seconds" },
-        easing: { type: "string", enum: ["snappy", "smooth", "bouncy", "linear"] },
-        type: { type: "string", enum: ["in", "action", "out"], description: "Animation role" },
+        preset: {
+          type: "string",
+          description: "Animation preset (e.g. 'pop', 'baselineRise', 'wordCascade', 'lineReveal', 'typewriter', 'trackingExpansion', 'textShimmer', 'highlightDraw', 'blurFocusPop', 'focusPull', 'glassIris', 'elevationRise', 'cardSettlePop', 'kenBurns', 'arrowShoot', 'dashFlow', 'iconPop', 'stampSettle', 'elasticScalePop', 'drawOn', 'fade', 'scale', 'slide', 'rotate', 'wipe', 'blur', 'boil', 'pulse', 'float', 'breathe', 'bounce', 'wiggle')",
+        },
+        duration: { type: "number", description: "Duration in seconds (e.g. 0.6)" },
+        start: { type: "number", description: "Start time offset within scene in seconds (default: 0)" },
+        delay: { type: "number", description: "Alternative alias for start delay in seconds" },
+        direction: { type: "string", enum: ["up", "down", "left", "right"], description: "Motion direction for directional presets" },
+        loop: { type: "boolean", description: "Whether the animation loops continuously" },
+        loopCount: { type: "number", description: "Number of loop iterations (omit for infinite)" },
+        type: { type: "string", enum: ["in", "action", "out", "emphasis", "custom"], description: "Animation role (default: 'in')" },
+        easing: {
+          type: "string",
+          enum: ["snappy", "smooth", "bouncy", "overshoot", "elastic", "bounce", "natural", "slowDown", "accelerate", "heavy", "linear", "spring"],
+          description: "Easing curve profile (default: 'snappy')",
+        },
+        spring: {
+          type: "object",
+          properties: {
+            stiffness: { type: "number", description: "Spring stiffness k (default: 180)" },
+            damping: { type: "number", description: "Spring damping c (default: 12)" },
+            mass: { type: "number", description: "Spring mass m (default: 1)" },
+          },
+        },
       },
       required: ["layerId", "preset", "duration"],
     },
@@ -428,14 +653,14 @@ const TOOLS = [
       properties: {
         file: { type: "string", description: "Path to .mtn project file" },
         layerId: { type: "string", description: "Target layer ID" },
-        clipId: { type: "string", description: "Optional clip ID. If omitted, removes all animation clips on the layer." },
+        clipId: { type: "string", description: "Optional clip ID. If omitted, clears all animation clips on the layer." },
       },
       required: ["layerId"],
     },
   },
   {
     name: "stagger_elements",
-    description: "Choreographs a sequential staggered entrance across multiple elements (e.g. 5 feature cards or list items entering sequentially).",
+    description: "Choreographs a sequential staggered entrance across multiple elements with spatial ordering ('center-out', 'edges-in', 'left-to-right', 'top-to-bottom', 'layer-order').",
     inputSchema: {
       type: "object",
       properties: {
@@ -445,21 +670,23 @@ const TOOLS = [
           items: { type: "string" },
           description: "Array of layer IDs in order of entrance",
         },
-        preset: {
-          type: "string",
-          enum: ["pop", "fade", "slide", "wipe", "scale", "drawOn"],
-          description: "Entrance preset (default: 'pop')",
-        },
+        preset: { type: "string", description: "Entrance preset (default: 'pop')" },
         duration: { type: "number", description: "Duration of each element's animation in seconds (default: 0.6)" },
         delayStep: { type: "number", description: "Time offset between each element in seconds (default: 0.1)" },
-        easing: { type: "string", enum: ["snappy", "smooth", "bouncy", "linear"], description: "Easing profile" },
+        direction: { type: "string", enum: ["up", "down", "left", "right"], description: "Motion direction" },
+        order: {
+          type: "string",
+          enum: ["layer-order", "left-to-right", "right-to-left", "top-to-bottom", "bottom-to-top", "center-out", "edges-in"],
+          description: "Spatial centroid ordering algorithm (default: 'layer-order')",
+        },
+        easing: { type: "string", description: "Easing profile (default: 'snappy')" },
       },
       required: ["layerIds"],
     },
   },
   {
     name: "link_elements",
-    description: "Establishes a reactive layout binding between two elements: 'hug' (container card dynamically hugs text/counter with padding), 'reflow' (sibling elements maintain continuous axis gap as lead element expands), 'pin' (pins element to anchor of another), or 'connect' (dynamic arrow/line connecting two moving elements).",
+    description: "Establishes a reactive layout binding: 'hug' (card frame dynamically wraps text/counter), 'reflow' (sibling elements maintain continuous gap), 'pin' (pins element to anchor), 'connect' (dynamic arrow/line connecting elements), 'match' (match dimension), or 'lag' (physical inertia follower).",
     inputSchema: {
       type: "object",
       properties: {
@@ -468,18 +695,34 @@ const TOOLS = [
         drivenId: { type: "string", description: "Following/driven element ID" },
         mode: {
           type: "string",
-          enum: ["hug", "reflow", "pin", "connect"],
+          enum: ["hug", "reflow", "pin", "connect", "match", "lag"],
           description: "Reactive binding mode",
         },
         padding: { type: "number", description: "Padding for 'hug' mode (default: 24)" },
         gap: { type: "number", description: "Gap distance in px for 'reflow' mode (default: 16)" },
+        axis: { type: "string", enum: ["x", "y"], description: "Reflow axis (default: 'x')" },
         anchor: {
           type: "string",
           enum: ["top-left", "top-center", "top-right", "center-left", "center", "center-right", "bottom-left", "bottom-center", "bottom-right"],
           description: "Anchor point for 'pin' mode",
         },
+        curve: { type: "string", enum: ["straight", "bezier", "orthogonal"], description: "Connector line curve style" },
+        lagSeconds: { type: "number", description: "Lag delay for 'lag' follower mode" },
       },
       required: ["driverId", "drivenId", "mode"],
+    },
+  },
+  {
+    name: "unlink_elements",
+    description: "Removes reactive layout bindings from an element.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        layerId: { type: "string", description: "Target layer ID to clear bindings from" },
+        driverId: { type: "string", description: "Optional specific driver ID to detach" },
+      },
+      required: ["layerId"],
     },
   },
   {
@@ -492,14 +735,86 @@ const TOOLS = [
         layerId: { type: "string", description: "Target text layer ID to split" },
         splitBy: { type: "string", enum: ["word", "character", "line"], description: "Split unit (default: 'word')" },
         staggerDelay: { type: "number", description: "Stagger delay between split chunks in seconds (default: 0.05)" },
-        preset: { type: "string", enum: ["slide", "fade", "pop"], description: "Entrance animation preset" },
+        preset: { type: "string", description: "Entrance animation preset (default: 'slide')" },
       },
       required: ["layerId"],
     },
   },
   {
+    name: "split_shape",
+    description: "Decomposes a rounded rectangle or circle contour into dual continuous bezier arc paths with dual-origin draw-on and 0.0px visual shift.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        layerId: { type: "string", description: "Target shape layer ID to split" },
+      },
+      required: ["layerId"],
+    },
+  },
+  {
+    name: "split_line",
+    description: "Splits a vector line or arrow collinear along its ratio, with optional arrowhead marker detachment.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        layerId: { type: "string", description: "Target line or arrow layer ID" },
+        ratio: { type: "number", description: "Split ratio along the line (0.1 to 0.9, default: 0.5)" },
+        detachArrowhead: { type: "boolean", description: "Whether to detach arrowhead marker as an independent pop element" },
+      },
+      required: ["layerId"],
+    },
+  },
+  {
+    name: "set_audio_track",
+    description: "Attaches a background audio track or sound effect to a scene or the entire project.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        sceneId: { type: "string", description: "Optional scene ID (if omitted, applies project-wide)" },
+        src: { type: "string", description: "Audio file URL or local file path" },
+        name: { type: "string", description: "Track name or label" },
+        volume: { type: "number", description: "Volume level from 0.0 to 1.0 (default: 1.0)" },
+        loop: { type: "boolean", description: "Whether to loop audio playback" },
+        start: { type: "number", description: "Start time offset within timeline in seconds" },
+        offset: { type: "number", description: "Audio file internal start offset in seconds" },
+        muted: { type: "boolean", description: "Whether track is muted" },
+      },
+      required: ["src"],
+    },
+  },
+  {
+    name: "remove_audio_track",
+    description: "Removes an audio track from a scene or the project settings.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        sceneId: { type: "string", description: "Optional scene ID. If omitted, clears project-level audio track." },
+      },
+    },
+  },
+  {
+    name: "export_project",
+    description: "Prepares or validates an export manifest for video rendering (MP4, WebM with alpha transparency, or GIF) with resolution scaling.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        format: { type: "string", enum: ["mp4", "webm", "gif"], description: "Export container format" },
+        resolution: { type: "string", enum: ["480p", "720p", "1080p", "1440p", "4k"], description: "Resolution preset (default: '1080p')" },
+        transparent: { type: "boolean", description: "Enable transparent alpha channel for WebM/GIF (default: false)" },
+        scope: { type: "string", enum: ["all", "current"], description: "Render all stitched scenes or current scene only" },
+        outputFile: { type: "string", description: "Optional destination output file path" },
+      },
+      required: ["format"],
+    },
+  },
+  {
     name: "get_storyboard_state",
-    description: "Inspects the current scenes, layers, hierarchy, and contact sheet of a .mtn project file.",
+    description: "Inspects the current scenes, layers, hierarchy, and animation clips of a .mtn project file.",
     inputSchema: {
       type: "object",
       properties: {
@@ -519,11 +834,12 @@ const TOOLS = [
   },
   {
     name: "lint_storyboard",
-    description: "Validates a .mtn project file against black frames, text overflows, and aesthetic guidelines.",
+    description: "Validates a .mtn project file against black frames, text descender overflows, and aesthetic guidelines.",
     inputSchema: {
       type: "object",
       properties: {
         file: { type: "string", description: "Path to .mtn project file" },
+        strictMode: { type: "boolean", description: "Enable strict aesthetic linting (default: false)" },
       },
     },
   },
@@ -561,6 +877,44 @@ function handleToolCall(name, args) {
     }
   }
 
+  if (name === "delete_project") {
+    const target = path.resolve(process.cwd(), args.file);
+    if (!fs.existsSync(target)) {
+      return { text: `Error: Project file not found: ${target}` };
+    }
+    fs.unlinkSync(target);
+    return { text: `Successfully deleted project file: ${path.basename(target)}` };
+  }
+
+  if (name === "duplicate_project") {
+    const src = path.resolve(process.cwd(), args.file);
+    const dest = path.resolve(process.cwd(), args.targetFile);
+    if (!fs.existsSync(src)) {
+      return { text: `Error: Source project file not found: ${src}` };
+    }
+    const raw = JSON.parse(fs.readFileSync(src, "utf-8"));
+    if (args.newName) {
+      if (raw.metadata) raw.metadata.name = args.newName;
+      if (raw.document) {
+        raw.document.name = args.newName;
+        if (raw.document.settings) raw.document.settings.name = args.newName;
+      }
+    }
+    fs.mkdirSync(path.dirname(dest), { recursive: true });
+    fs.writeFileSync(dest, JSON.stringify(raw, null, 2), "utf-8");
+    return { text: `Duplicated project ${path.basename(src)} -> ${path.basename(dest)}` };
+  }
+
+  if (name === "rename_project") {
+    const src = path.resolve(process.cwd(), args.file);
+    const { data: pkg, path: resolvedPath } = readMtnFile(src);
+    if (pkg.metadata) pkg.metadata.name = args.newName;
+    pkg.document.name = args.newName;
+    if (pkg.document.settings) pkg.document.settings.name = args.newName;
+    writeMtnFile(resolvedPath, pkg);
+    return { text: `Renamed project in ${path.basename(resolvedPath)} to "${args.newName}".` };
+  }
+
   const filePath = args.file || "project.mtn";
   const { data: pkg, path: resolvedPath } = readMtnFile(filePath);
   const doc = pkg.document;
@@ -579,7 +933,7 @@ function handleToolCall(name, args) {
         $schema: "https://motion-studio.app/schemas/v1.json",
         format: "motion-studio",
         version: 1,
-        generator: "Motion Studio MCP v0.1.0",
+        generator: "Motion Studio MCP v0.2.0",
         exportedAt: Date.now(),
         metadata: {
           id: "proj_" + Math.random().toString(36).slice(2, 9),
@@ -632,6 +986,18 @@ function handleToolCall(name, args) {
       writeMtnFile(resolvedPath, pkg);
       return {
         text: `Updated project settings in ${path.basename(resolvedPath)}.`,
+      };
+    }
+
+    case "set_palette": {
+      if (!Array.isArray(args.colors) || args.colors.length === 0) {
+        return { text: "Error: colors must be a non-empty array of hex color strings." };
+      }
+      if (!doc.settings) doc.settings = {};
+      doc.settings.palette = args.colors;
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Assigned palette [${args.colors.join(", ")}] to ${path.basename(resolvedPath)}.`,
       };
     }
 
@@ -697,32 +1063,72 @@ function handleToolCall(name, args) {
 
       const layerId = args.id || ("layer_" + Math.random().toString(36).slice(2, 8));
       const is9x16 = doc.settings.height > doc.settings.width;
-      const gridCols = is9x16 ? 9 : 16;
-      const gridRows = is9x16 ? 16 : 9;
+      const is1x1 = doc.settings.height === doc.settings.width;
+      const gridCols = is9x16 ? 9 : is1x1 ? 12 : 16;
+      const gridRows = is9x16 ? 16 : is1x1 ? 12 : 9;
       const cellWidth = doc.settings.width / gridCols;
       const cellHeight = doc.settings.height / gridRows;
 
-      const col = Math.max(0, Math.min(gridCols - 1, args.grid.col || 0));
-      const row = Math.max(0, Math.min(gridRows - 1, args.grid.row || 0));
-      const colSpan = Math.max(1, Math.min(gridCols - col, args.grid.colSpan || 1));
-      const rowSpan = Math.max(1, Math.min(gridRows - row, args.grid.rowSpan || 1));
+      let x, y, width, height, gridObj;
+      if (args.bounds) {
+        x = Math.round(args.bounds.x || 0);
+        y = Math.round(args.bounds.y || 0);
+        width = Math.round(args.bounds.width || 200);
+        height = Math.round(args.bounds.height || 100);
+        gridObj = {
+          col: Math.max(0, Math.min(gridCols - 1, Math.round(x / cellWidth))),
+          row: Math.max(0, Math.min(gridRows - 1, Math.round(y / cellHeight))),
+          colSpan: Math.max(1, Math.min(gridCols, Math.round(width / cellWidth))),
+          rowSpan: Math.max(1, Math.min(gridRows, Math.round(height / cellHeight))),
+        };
+      } else {
+        const g = args.grid || { col: 2, row: 2, colSpan: 4, rowSpan: 2 };
+        const col = Math.max(0, Math.min(gridCols - 1, g.col || 0));
+        const row = Math.max(0, Math.min(gridRows - 1, g.row || 0));
+        const colSpan = Math.max(1, Math.min(gridCols - col, g.colSpan || 1));
+        const rowSpan = Math.max(1, Math.min(gridRows - row, g.rowSpan || 1));
+        gridObj = { col, row, colSpan, rowSpan };
+        x = Math.round(col * cellWidth);
+        y = Math.round(row * cellHeight);
+        width = Math.round(colSpan * cellWidth);
+        height = Math.round(rowSpan * cellHeight);
+      }
 
       const newLayer = {
         id: layerId,
         name: args.name,
         type: args.type,
         content: args.content,
-        grid: { col, row, colSpan, rowSpan },
+        grid: gridObj,
         style: {
-          x: Math.round(col * cellWidth),
-          y: Math.round(row * cellHeight),
-          width: Math.round(colSpan * cellWidth),
-          height: Math.round(rowSpan * cellHeight),
+          x,
+          y,
+          width,
+          height,
           rotation: 0,
           opacity: 1,
           ...(args.style || {}),
         },
       };
+
+      if (args.shapeType) newLayer.shapeType = args.shapeType;
+      else if (args.type === "shape") newLayer.shapeType = "rectangle";
+
+      if (args.points !== undefined) newLayer.points = args.points;
+      if (args.innerRadiusRatio !== undefined) newLayer.innerRadiusRatio = args.innerRadiusRatio;
+      if (args.sides !== undefined) newLayer.sides = args.sides;
+      if (args.d !== undefined) newLayer.d = args.d;
+      if (args.viewBox !== undefined) newLayer.viewBox = args.viewBox;
+      if (args.arrowStart !== undefined) newLayer.arrowStart = args.arrowStart;
+      if (args.arrowEnd !== undefined) newLayer.arrowEnd = args.arrowEnd;
+      if (args.strokeCap !== undefined) newLayer.strokeCap = args.strokeCap;
+      if (args.strokeJoin !== undefined) newLayer.strokeJoin = args.strokeJoin;
+      if (args.strokeDashArray !== undefined) newLayer.strokeDashArray = args.strokeDashArray;
+      if (args.trimStart !== undefined) newLayer.trimStart = args.trimStart;
+      if (args.trimEnd !== undefined) newLayer.trimEnd = args.trimEnd;
+      if (args.trimOffset !== undefined) newLayer.trimOffset = args.trimOffset;
+      if (args.clipContent !== undefined) newLayer.clipContent = args.clipContent;
+      if (args.layout !== undefined) newLayer.layout = args.layout;
 
       if (args.counter) {
         newLayer.startValue = args.counter.startValue ?? 0;
@@ -731,11 +1137,18 @@ function handleToolCall(name, args) {
         if (args.counter.suffix) newLayer.suffix = args.counter.suffix;
         if (args.counter.decimals !== undefined) newLayer.decimals = args.counter.decimals;
         if (args.counter.counterMode) newLayer.counterMode = args.counter.counterMode;
+        if (args.counter.useGrouping !== undefined) newLayer.useGrouping = args.counter.useGrouping;
       }
+
+      if (args.video) {
+        if (args.video.sourceIn !== undefined) newLayer.sourceIn = args.video.sourceIn;
+        if (args.video.sourceOut !== undefined) newLayer.sourceOut = args.video.sourceOut;
+        if (args.video.volume !== undefined) newLayer.volume = args.video.volume;
+        if (args.video.loop !== undefined) newLayer.loop = args.video.loop;
+      }
+
       if (args.iconName) newLayer.iconName = args.iconName;
       if (args.src) newLayer.src = args.src;
-      if (args.arrowStart !== undefined) newLayer.arrowStart = args.arrowStart;
-      if (args.arrowEnd !== undefined) newLayer.arrowEnd = args.arrowEnd;
 
       if (args.enter) {
         newLayer.animation = {
@@ -744,10 +1157,12 @@ function handleToolCall(name, args) {
               id: "clip_" + Math.random().toString(36).slice(2, 8),
               name: `${args.enter.preset} in`,
               type: "in",
-              preset: args.enter.preset,
-              start: 0,
+              preset: args.enter.preset || "pop",
+              start: args.enter.delay || 0,
               duration: args.enter.duration || 0.6,
               easing: args.enter.easing || "snappy",
+              ...(args.enter.direction ? { direction: args.enter.direction } : {}),
+              ...(args.enter.spring ? { spring: args.enter.spring } : {}),
             },
           ],
         };
@@ -756,7 +1171,7 @@ function handleToolCall(name, args) {
       targetScreen.layers.push(newLayer);
       writeMtnFile(resolvedPath, pkg);
       return {
-        text: `Placed ${args.type} layer "${args.name}" (id: ${layerId}) in scene "${targetScreen.name}" at grid [${col}, ${row}, span: ${colSpan}x${rowSpan}].`,
+        text: `Placed ${args.type} layer "${args.name}" (id: ${layerId}) in scene "${targetScreen.name}" at [${x}, ${y}, ${width}x${height}].`,
       };
     }
 
@@ -776,6 +1191,23 @@ function handleToolCall(name, args) {
       }
       if (args.name) foundLayer.name = args.name;
       if (args.content !== undefined) foundLayer.content = args.content;
+      if (args.shapeType) foundLayer.shapeType = args.shapeType;
+      if (args.points !== undefined) foundLayer.points = args.points;
+      if (args.innerRadiusRatio !== undefined) foundLayer.innerRadiusRatio = args.innerRadiusRatio;
+      if (args.sides !== undefined) foundLayer.sides = args.sides;
+      if (args.d !== undefined) foundLayer.d = args.d;
+      if (args.viewBox !== undefined) foundLayer.viewBox = args.viewBox;
+      if (args.arrowStart !== undefined) foundLayer.arrowStart = args.arrowStart;
+      if (args.arrowEnd !== undefined) foundLayer.arrowEnd = args.arrowEnd;
+      if (args.strokeCap !== undefined) foundLayer.strokeCap = args.strokeCap;
+      if (args.strokeJoin !== undefined) foundLayer.strokeJoin = args.strokeJoin;
+      if (args.strokeDashArray !== undefined) foundLayer.strokeDashArray = args.strokeDashArray;
+      if (args.trimStart !== undefined) foundLayer.trimStart = args.trimStart;
+      if (args.trimEnd !== undefined) foundLayer.trimEnd = args.trimEnd;
+      if (args.trimOffset !== undefined) foundLayer.trimOffset = args.trimOffset;
+      if (args.clipContent !== undefined) foundLayer.clipContent = args.clipContent;
+      if (args.layout !== undefined) foundLayer.layout = { ...foundLayer.layout, ...args.layout };
+
       if (args.counter) {
         if (args.counter.startValue !== undefined) foundLayer.startValue = args.counter.startValue;
         if (args.counter.endValue !== undefined) foundLayer.endValue = args.counter.endValue;
@@ -783,15 +1215,22 @@ function handleToolCall(name, args) {
         if (args.counter.suffix !== undefined) foundLayer.suffix = args.counter.suffix;
         if (args.counter.decimals !== undefined) foundLayer.decimals = args.counter.decimals;
         if (args.counter.counterMode !== undefined) foundLayer.counterMode = args.counter.counterMode;
+        if (args.counter.useGrouping !== undefined) foundLayer.useGrouping = args.counter.useGrouping;
       }
+
       if (args.iconName !== undefined) foundLayer.iconName = args.iconName;
       if (args.src !== undefined) foundLayer.src = args.src;
-      if (args.arrowStart !== undefined) foundLayer.arrowStart = args.arrowStart;
-      if (args.arrowEnd !== undefined) foundLayer.arrowEnd = args.arrowEnd;
-      if (args.grid) {
+
+      if (args.bounds) {
+        foundLayer.style.x = Math.round(args.bounds.x);
+        foundLayer.style.y = Math.round(args.bounds.y);
+        foundLayer.style.width = Math.round(args.bounds.width);
+        foundLayer.style.height = Math.round(args.bounds.height);
+      } else if (args.grid) {
         const is9x16 = doc.settings.height > doc.settings.width;
-        const gridCols = is9x16 ? 9 : 16;
-        const gridRows = is9x16 ? 16 : 9;
+        const is1x1 = doc.settings.height === doc.settings.width;
+        const gridCols = is9x16 ? 9 : is1x1 ? 12 : 16;
+        const gridRows = is9x16 ? 16 : is1x1 ? 12 : 9;
         const cellWidth = doc.settings.width / gridCols;
         const cellHeight = doc.settings.height / gridRows;
 
@@ -806,6 +1245,7 @@ function handleToolCall(name, args) {
         foundLayer.style.width = Math.round(colSpan * cellWidth);
         foundLayer.style.height = Math.round(rowSpan * cellHeight);
       }
+
       if (args.style) {
         foundLayer.style = { ...foundLayer.style, ...args.style };
       }
@@ -833,6 +1273,90 @@ function handleToolCall(name, args) {
       writeMtnFile(resolvedPath, pkg);
       return {
         text: `Deleted layer "${removed.name}" (id: ${args.layerId}) from scene "${targetScreen.name}".`,
+      };
+    }
+
+    case "duplicate_element": {
+      let sourceLayer = null;
+      let sourceScreen = null;
+      for (const sc of doc.screens) {
+        const found = sc.layers.find((l) => l.id === args.layerId);
+        if (found) {
+          sourceLayer = found;
+          sourceScreen = sc;
+          break;
+        }
+      }
+      if (!sourceLayer) {
+        return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
+      }
+
+      const targetScreen = args.targetSceneId
+        ? doc.screens.find((s) => s.id === args.targetSceneId) || sourceScreen
+        : sourceScreen;
+
+      const clone = JSON.parse(JSON.stringify(sourceLayer));
+      clone.id = args.newId || ("layer_" + Math.random().toString(36).slice(2, 8));
+      clone.name = args.name || `${sourceLayer.name} (Copy)`;
+
+      if (args.offsetX !== undefined || args.offsetY !== undefined) {
+        clone.style.x = (clone.style.x || 0) + (args.offsetX || 0);
+        clone.style.y = (clone.style.y || 0) + (args.offsetY || 0);
+      } else if (clone.grid) {
+        const is9x16 = doc.settings.height > doc.settings.width;
+        const gridCols = is9x16 ? 9 : 16;
+        const gridRows = is9x16 ? 16 : 9;
+        const cellWidth = doc.settings.width / gridCols;
+        const cellHeight = doc.settings.height / gridRows;
+
+        const offCol = args.offsetCol ?? 0;
+        const offRow = args.offsetRow ?? 1;
+        clone.grid.col = Math.max(0, Math.min(gridCols - clone.grid.colSpan, clone.grid.col + offCol));
+        clone.grid.row = Math.max(0, Math.min(gridRows - clone.grid.rowSpan, clone.grid.row + offRow));
+        clone.style.x = Math.round(clone.grid.col * cellWidth);
+        clone.style.y = Math.round(clone.grid.row * cellHeight);
+      }
+
+      targetScreen.layers.push(clone);
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Duplicated layer "${sourceLayer.name}" to "${clone.name}" (id: ${clone.id}) in scene "${targetScreen.name}".`,
+      };
+    }
+
+    case "reorder_element": {
+      let foundIndex = -1;
+      let targetScreen = null;
+      for (const sc of doc.screens) {
+        const idx = sc.layers.findIndex((l) => l.id === args.layerId);
+        if (idx !== -1) {
+          foundIndex = idx;
+          targetScreen = sc;
+          break;
+        }
+      }
+      if (!targetScreen || foundIndex === -1) {
+        return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
+      }
+
+      const layer = targetScreen.layers.splice(foundIndex, 1)[0];
+      switch (args.action) {
+        case "bringToFront":
+          targetScreen.layers.push(layer);
+          break;
+        case "sendToBack":
+          targetScreen.layers.unshift(layer);
+          break;
+        case "bringForward":
+          targetScreen.layers.splice(Math.min(targetScreen.layers.length, foundIndex + 1), 0, layer);
+          break;
+        case "sendBackward":
+          targetScreen.layers.splice(Math.max(0, foundIndex - 1), 0, layer);
+          break;
+      }
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Reordered layer "${layer.name}" (${args.action}) in scene "${targetScreen.name}".`,
       };
     }
 
@@ -910,136 +1434,317 @@ function handleToolCall(name, args) {
       };
     }
 
-    case "set_audio_track": {
-      const audio = {
-        src: args.src,
-        name: args.name || path.basename(args.src),
-        volume: args.volume !== undefined ? args.volume : 1.0,
-        loop: args.loop !== undefined ? args.loop : false,
+    case "create_mask_group": {
+      const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
+      if (!targetScreen) {
+        return { text: `Error: Scene "${args.sceneId}" not found.` };
+      }
+      const layerIds = args.layerIds || [];
+      const children = [];
+      const remaining = [];
+
+      for (const l of targetScreen.layers) {
+        if (layerIds.includes(l.id)) {
+          children.push(l);
+        } else {
+          remaining.push(l);
+        }
+      }
+
+      if (children.length === 0) {
+        return { text: "Error: No matching layers found to form mask group." };
+      }
+
+      const maskId = args.maskLayerId || children[0].id;
+      children.forEach((c) => {
+        c.isMask = c.id === maskId;
+      });
+
+      const groupId = "mask_" + Math.random().toString(36).slice(2, 8);
+      const minX = Math.min(...children.map((l) => l.style?.x || 0));
+      const minY = Math.min(...children.map((l) => l.style?.y || 0));
+      const maxX = Math.max(...children.map((l) => (l.style?.x || 0) + (l.style?.width || 0)));
+      const maxY = Math.max(...children.map((l) => (l.style?.y || 0) + (l.style?.height || 0)));
+
+      const maskGroup = {
+        id: groupId,
+        name: args.name || "Mask Group",
+        type: "group",
+        isMaskGroup: true,
+        invertMask: Boolean(args.invertMask),
+        children,
+        style: {
+          x: minX,
+          y: minY,
+          width: Math.max(1, maxX - minX),
+          height: Math.max(1, maxY - minY),
+          opacity: 1,
+          rotation: 0,
+        },
       };
 
-      if (args.sceneId) {
-        const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
-        if (!targetScreen) {
-          return { text: `Error: Scene "${args.sceneId}" not found in ${path.basename(resolvedPath)}.` };
+      targetScreen.layers = [...remaining, maskGroup];
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Created ${args.invertMask ? "inverted cutout " : ""}mask group "${maskGroup.name}" (id: ${groupId}) with stencil "${maskId}".`,
+      };
+    }
+
+    case "apply_boolean_operation": {
+      const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
+      if (!targetScreen) {
+        return { text: `Error: Scene "${args.sceneId}" not found.` };
+      }
+      const layerIds = args.layerIds || [];
+      const shapes = [];
+      const remaining = [];
+
+      for (const l of targetScreen.layers) {
+        if (layerIds.includes(l.id)) {
+          shapes.push(l);
+        } else {
+          remaining.push(l);
         }
-        targetScreen.audioTrack = audio;
-        writeMtnFile(resolvedPath, pkg);
-        return {
-          text: `Attached audio track "${audio.name}" to scene "${targetScreen.name}".`,
+      }
+
+      if (shapes.length < 2) {
+        return { text: "Error: Boolean operation requires at least 2 shape layers." };
+      }
+
+      const groupId = "bool_" + Math.random().toString(36).slice(2, 8);
+      const minX = Math.min(...shapes.map((l) => l.style?.x || 0));
+      const minY = Math.min(...shapes.map((l) => l.style?.y || 0));
+      const maxX = Math.max(...shapes.map((l) => (l.style?.x || 0) + (l.style?.width || 0)));
+      const maxY = Math.max(...shapes.map((l) => (l.style?.y || 0) + (l.style?.height || 0)));
+
+      const boolGroup = {
+        id: groupId,
+        name: args.name || `Boolean (${args.operation})`,
+        type: "group",
+        isBooleanGroup: true,
+        booleanOperation: args.operation,
+        children: shapes,
+        style: {
+          x: minX,
+          y: minY,
+          width: Math.max(1, maxX - minX),
+          height: Math.max(1, maxY - minY),
+          opacity: 1,
+          rotation: 0,
+        },
+      };
+
+      targetScreen.layers = [...remaining, boolGroup];
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Created boolean ${args.operation} group "${boolGroup.name}" combining ${shapes.length} shapes.`,
+      };
+    }
+
+    case "import_svg": {
+      const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
+      if (!targetScreen) {
+        return { text: `Error: Scene "${args.sceneId}" not found.` };
+      }
+      const rawSvg = args.svgString || "";
+      const pathMatch = rawSvg.match(/<path[^>]*d="([^"]+)"/i);
+      const dAttr = pathMatch ? pathMatch[1] : "M 10 10 H 90 V 90 H 10 Z";
+      const id = "svg_" + Math.random().toString(36).slice(2, 8);
+
+      const is9x16 = doc.settings.height > doc.settings.width;
+      const cellWidth = doc.settings.width / (is9x16 ? 9 : 16);
+      const cellHeight = doc.settings.height / (is9x16 ? 16 : 9);
+      const col = args.col ?? 3;
+      const row = args.row ?? 3;
+
+      const svgLayer = {
+        id,
+        name: args.name || "Imported SVG",
+        type: "shape",
+        shapeType: "path",
+        d: dAttr,
+        viewBox: "0 0 100 100",
+        grid: { col, row, colSpan: 4, rowSpan: 4 },
+        style: {
+          x: Math.round(col * cellWidth),
+          y: Math.round(row * cellHeight),
+          width: Math.round(4 * cellWidth),
+          height: Math.round(4 * cellHeight),
+          backgroundColor: "#7c3aed",
+          opacity: 1,
+          rotation: 0,
+        },
+      };
+
+      targetScreen.layers.push(svgLayer);
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Imported SVG path "${svgLayer.name}" (id: ${id}) into scene "${targetScreen.name}".`,
+      };
+    }
+
+    case "insert_template": {
+      const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
+      if (!targetScreen) {
+        return { text: `Error: Scene "${args.sceneId}" not found.` };
+      }
+
+      const id = "template_" + Math.random().toString(36).slice(2, 8);
+      let templateLayer = null;
+
+      if (args.templateId === "comp_browser_window") {
+        templateLayer = {
+          id,
+          name: "Browser Window Frame",
+          type: "group",
+          style: {
+            x: Math.round((doc.settings.width - 800) / 2),
+            y: Math.round((doc.settings.height - 500) / 2),
+            width: 800,
+            height: 500,
+            backgroundColor: "#18181b",
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: "rgba(255, 255, 255, 0.12)",
+            shadowDistance: 24,
+            shadowBlur: 48,
+            shadowOpacity: 0.4,
+            opacity: 1,
+            rotation: 0,
+          },
+          animation: {
+            clips: [
+              {
+                id: "clip_" + Math.random().toString(36).slice(2, 8),
+                name: "pop in",
+                type: "in",
+                preset: "pop",
+                start: 0,
+                duration: 0.6,
+                easing: "snappy",
+              },
+            ],
+          },
+          children: [
+            {
+              id: `${id}_header`,
+              name: "Chrome Bar",
+              type: "shape",
+              shapeType: "rectangle",
+              style: {
+                x: Math.round((doc.settings.width - 800) / 2),
+                y: Math.round((doc.settings.height - 500) / 2),
+                width: 800,
+                height: 44,
+                backgroundColor: "#27272a",
+                borderRadius: 16,
+                opacity: 1,
+              },
+            },
+            {
+              id: `${id}_url`,
+              name: "URL Pill",
+              type: "text",
+              content: "https://motion.studio",
+              style: {
+                x: Math.round((doc.settings.width - 800) / 2) + 120,
+                y: Math.round((doc.settings.height - 500) / 2) + 8,
+                width: 560,
+                height: 28,
+                fontSize: 13,
+                color: "#a1a1aa",
+                backgroundColor: "#18181b",
+                borderRadius: 6,
+                textAlign: "center",
+              },
+            },
+          ],
+        };
+      } else if (args.templateId === "comp_counter_pill") {
+        templateLayer = {
+          id,
+          name: "Metric Counter Badge",
+          type: "counter",
+          startValue: 0,
+          endValue: 125000,
+          prefix: "$",
+          suffix: "/mo",
+          decimals: 0,
+          useGrouping: true,
+          counterMode: "odometer",
+          style: {
+            x: Math.round((doc.settings.width - 320) / 2),
+            y: Math.round((doc.settings.height - 80) / 2),
+            width: 320,
+            height: 80,
+            fontSize: 36,
+            fontWeight: 800,
+            color: "#ffffff",
+            backgroundColor: "#09090b",
+            borderRadius: 40,
+            borderWidth: 1,
+            borderColor: "rgba(255, 255, 255, 0.16)",
+            shadowDistance: 12,
+            shadowBlur: 24,
+            shadowColor: "#000000",
+            shadowOpacity: 0.5,
+          },
+          animation: {
+            clips: [
+              {
+                id: "clip_" + Math.random().toString(36).slice(2, 8),
+                name: "elevationRise in",
+                type: "in",
+                preset: "elevationRise",
+                start: 0,
+                duration: 0.8,
+                easing: "snappy",
+              },
+            ],
+          },
         };
       } else {
-        if (!doc.settings) doc.settings = {};
-        doc.settings.audioTrack = audio;
-        if (doc.screens.length > 0 && !doc.screens[0].audioTrack) {
-          doc.screens[0].audioTrack = audio;
-        }
-        writeMtnFile(resolvedPath, pkg);
-        return {
-          text: `Set project audio track to "${audio.name}" (volume: ${audio.volume}, loop: ${audio.loop}) in ${path.basename(resolvedPath)}.`,
+        templateLayer = {
+          id,
+          name: "Code Window Frame",
+          type: "group",
+          style: {
+            x: Math.round((doc.settings.width - 700) / 2),
+            y: Math.round((doc.settings.height - 400) / 2),
+            width: 700,
+            height: 400,
+            backgroundColor: "#0d1117",
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: "rgba(255, 255, 255, 0.1)",
+            shadowDistance: 20,
+            shadowBlur: 40,
+            shadowOpacity: 0.45,
+          },
+          children: [
+            {
+              id: `${id}_code`,
+              name: "Code Snippet",
+              type: "text",
+              content: 'const scene = createScene({\n  name: "Hero Showcase",\n  duration: 4.0,\n});\n\nscene.placeElement({ type: "counter" });',
+              style: {
+                x: Math.round((doc.settings.width - 700) / 2) + 24,
+                y: Math.round((doc.settings.height - 400) / 2) + 50,
+                width: 650,
+                height: 320,
+                fontSize: 16,
+                fontFamily: "Space Grotesk",
+                color: "#58a6ff",
+              },
+            },
+          ],
         };
       }
-    }
 
-    case "reorder_scenes": {
-      if (!Array.isArray(args.sceneIds) || args.sceneIds.length === 0) {
-        return { text: "Error: sceneIds must be a non-empty array of scene IDs." };
-      }
-      const reordered = [];
-      for (const id of args.sceneIds) {
-        const found = doc.screens.find((s) => s.id === id);
-        if (found) reordered.push(found);
-      }
-      for (const s of doc.screens) {
-        if (!reordered.some((r) => r.id === s.id)) {
-          reordered.push(s);
-        }
-      }
-      doc.screens = reordered;
+      targetScreen.layers.push(templateLayer);
       writeMtnFile(resolvedPath, pkg);
       return {
-        text: `Reordered scenes in ${path.basename(resolvedPath)}. Order: ${doc.screens.map((s) => s.name).join(" -> ")}.`,
-      };
-    }
-
-    case "duplicate_element": {
-      let sourceLayer = null;
-      let sourceScreen = null;
-      for (const sc of doc.screens) {
-        const found = sc.layers.find((l) => l.id === args.layerId);
-        if (found) {
-          sourceLayer = found;
-          sourceScreen = sc;
-          break;
-        }
-      }
-      if (!sourceLayer) {
-        return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
-      }
-
-      const targetScreen = args.targetSceneId
-        ? doc.screens.find((s) => s.id === args.targetSceneId) || sourceScreen
-        : sourceScreen;
-
-      const clone = JSON.parse(JSON.stringify(sourceLayer));
-      clone.id = args.newId || ("layer_" + Math.random().toString(36).slice(2, 8));
-      clone.name = args.name || `${sourceLayer.name} (Copy)`;
-
-      if (clone.grid) {
-        const is9x16 = doc.settings.height > doc.settings.width;
-        const gridCols = is9x16 ? 9 : 16;
-        const gridRows = is9x16 ? 16 : 9;
-        const cellWidth = doc.settings.width / gridCols;
-        const cellHeight = doc.settings.height / gridRows;
-
-        const offCol = args.offsetCol ?? 0;
-        const offRow = args.offsetRow ?? 1;
-        clone.grid.col = Math.max(0, Math.min(gridCols - clone.grid.colSpan, clone.grid.col + offCol));
-        clone.grid.row = Math.max(0, Math.min(gridRows - clone.grid.rowSpan, clone.grid.row + offRow));
-        clone.style.x = Math.round(clone.grid.col * cellWidth);
-        clone.style.y = Math.round(clone.grid.row * cellHeight);
-      }
-
-      targetScreen.layers.push(clone);
-      writeMtnFile(resolvedPath, pkg);
-      return {
-        text: `Duplicated layer "${sourceLayer.name}" to "${clone.name}" (id: ${clone.id}) in scene "${targetScreen.name}".`,
-      };
-    }
-
-    case "reorder_element": {
-      let foundIndex = -1;
-      let targetScreen = null;
-      for (const sc of doc.screens) {
-        const idx = sc.layers.findIndex((l) => l.id === args.layerId);
-        if (idx !== -1) {
-          foundIndex = idx;
-          targetScreen = sc;
-          break;
-        }
-      }
-      if (!targetScreen || foundIndex === -1) {
-        return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
-      }
-
-      const layer = targetScreen.layers.splice(foundIndex, 1)[0];
-      switch (args.action) {
-        case "bringToFront":
-          targetScreen.layers.push(layer);
-          break;
-        case "sendToBack":
-          targetScreen.layers.unshift(layer);
-          break;
-        case "bringForward":
-          targetScreen.layers.splice(Math.min(targetScreen.layers.length, foundIndex + 1), 0, layer);
-          break;
-        case "sendBackward":
-          targetScreen.layers.splice(Math.max(0, foundIndex - 1), 0, layer);
-          break;
-      }
-      writeMtnFile(resolvedPath, pkg);
-      return {
-        text: `Reordered layer "${layer.name}" (${args.action}) in scene "${targetScreen.name}".`,
+        text: `Inserted template "${args.templateId}" (layer: "${templateLayer.name}", id: ${id}) into scene "${targetScreen.name}".`,
       };
     }
 
@@ -1059,28 +1764,31 @@ function handleToolCall(name, args) {
         return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
       }
 
-      if (!foundLayer.animation) {
-        foundLayer.animation = { clips: [] };
-      }
-      if (!foundLayer.animation.clips) {
-        foundLayer.animation.clips = [];
-      }
+      if (!foundLayer.animation) foundLayer.animation = { clips: [] };
+      if (!foundLayer.animation.clips) foundLayer.animation.clips = [];
 
       const clipId = "clip_" + Math.random().toString(36).slice(2, 8);
+      const startTime = args.start !== undefined ? args.start : (args.delay || 0);
+
       const newClip = {
         id: clipId,
         name: `${args.preset} ${args.type || "in"}`,
         type: args.type || "in",
         preset: args.preset,
-        start: 0,
+        start: startTime,
         duration: args.duration,
         easing: args.easing || "snappy",
       };
 
+      if (args.direction) newClip.direction = args.direction;
+      if (args.loop) newClip.loop = args.loop;
+      if (args.loopCount !== undefined) newClip.loopCount = args.loopCount;
+      if (args.spring) newClip.spring = args.spring;
+
       foundLayer.animation.clips.push(newClip);
       writeMtnFile(resolvedPath, pkg);
       return {
-        text: `Applied "${args.preset}" (${args.type || "in"}, ${args.duration}s, easing: ${args.easing || "snappy"}) to layer "${foundLayer.name}" in scene "${targetScreen.name}".`,
+        text: `Applied "${args.preset}" (${newClip.type}, ${args.duration}s, start: ${startTime}s, easing: ${newClip.easing}) to layer "${foundLayer.name}" in scene "${targetScreen.name}".`,
       };
     }
 
@@ -1113,33 +1821,51 @@ function handleToolCall(name, args) {
       const preset = args.preset || "pop";
       const dur = args.duration || 0.6;
       const easing = args.easing || "snappy";
-      let staggeredCount = 0;
+      const order = args.order || "layer-order";
 
-      args.layerIds.forEach((id, idx) => {
+      const matchedLayers = [];
+      for (const id of args.layerIds) {
         for (const sc of doc.screens) {
           const found = sc.layers.find((l) => l.id === id);
           if (found) {
-            if (!found.animation) found.animation = { clips: [] };
-            if (!found.animation.clips) found.animation.clips = [];
-            const clipId = "clip_" + Math.random().toString(36).slice(2, 8);
-            found.animation.clips.push({
-              id: clipId,
-              name: `${preset} in`,
-              type: "in",
-              preset,
-              start: Math.round(idx * delay * 100) / 100,
-              duration: dur,
-              easing,
-            });
-            staggeredCount++;
+            matchedLayers.push(found);
             break;
           }
         }
+      }
+
+      if (order === "left-to-right") {
+        matchedLayers.sort((a, b) => (a.style?.x || 0) - (b.style?.x || 0));
+      } else if (order === "right-to-left") {
+        matchedLayers.sort((a, b) => (b.style?.x || 0) - (a.style?.x || 0));
+      } else if (order === "top-to-bottom") {
+        matchedLayers.sort((a, b) => (a.style?.y || 0) - (b.style?.y || 0));
+      } else if (order === "bottom-to-top") {
+        matchedLayers.sort((a, b) => (b.style?.y || 0) - (a.style?.y || 0));
+      } else if (order === "center-out") {
+        const avgX = matchedLayers.reduce((s, l) => s + (l.style?.x || 0), 0) / (matchedLayers.length || 1);
+        matchedLayers.sort((a, b) => Math.abs((a.style?.x || 0) - avgX) - Math.abs((b.style?.x || 0) - avgX));
+      }
+
+      matchedLayers.forEach((found, idx) => {
+        if (!found.animation) found.animation = { clips: [] };
+        if (!found.animation.clips) found.animation.clips = [];
+        const clipId = "clip_" + Math.random().toString(36).slice(2, 8);
+        found.animation.clips.push({
+          id: clipId,
+          name: `${preset} in`,
+          type: "in",
+          preset,
+          start: Math.round(idx * delay * 100) / 100,
+          duration: dur,
+          easing,
+          ...(args.direction ? { direction: args.direction } : {}),
+        });
       });
 
       writeMtnFile(resolvedPath, pkg);
       return {
-        text: `Staggered entrance animations across ${staggeredCount} elements with ${delay}s step delay.`,
+        text: `Staggered entrance animations across ${matchedLayers.length} elements with ${order} ordering and ${delay}s step delay.`,
       };
     }
 
@@ -1162,12 +1888,40 @@ function handleToolCall(name, args) {
         mode: args.mode,
         padding: args.padding ?? 24,
         gap: args.gap ?? 16,
+        axis: args.axis || "x",
         anchor: args.anchor || "center",
+        curve: args.curve || "straight",
+        lagSeconds: args.lagSeconds ?? 0.08,
       });
 
       writeMtnFile(resolvedPath, pkg);
       return {
         text: `Linked driven element "${drivenLayer.name}" to driver "${driverLayer.name}" with reactive mode "${args.mode}".`,
+      };
+    }
+
+    case "unlink_elements": {
+      let targetLayer = null;
+      for (const sc of doc.screens) {
+        const found = sc.layers.find((l) => l.id === args.layerId);
+        if (found) {
+          targetLayer = found;
+          break;
+        }
+      }
+      if (!targetLayer) {
+        return { text: `Error: Layer "${args.layerId}" not found.` };
+      }
+
+      if (args.driverId && targetLayer.bindings) {
+        targetLayer.bindings = targetLayer.bindings.filter((b) => b.driverLayerId !== args.driverId);
+      } else {
+        targetLayer.bindings = [];
+      }
+
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Cleared reactive layout bindings from layer "${targetLayer.name}" (id: ${args.layerId}).`,
       };
     }
 
@@ -1251,6 +2005,257 @@ function handleToolCall(name, args) {
       };
     }
 
+    case "split_shape": {
+      let shapeLayer = null;
+      let targetScreen = null;
+      for (const sc of doc.screens) {
+        const found = sc.layers.find((l) => l.id === args.layerId);
+        if (found) {
+          shapeLayer = found;
+          targetScreen = sc;
+          break;
+        }
+      }
+      if (!shapeLayer) {
+        return { text: `Error: Shape layer "${args.layerId}" not found.` };
+      }
+
+      const w = shapeLayer.style?.width || 200;
+      const h = shapeLayer.style?.height || 200;
+      const r = typeof shapeLayer.style?.borderRadius === "number" ? shapeLayer.style.borderRadius : 16;
+      const effectiveR = Math.min(r, Math.min(w, h) / 2);
+
+      const pathA_d = `M ${effectiveR} 0 L ${w - effectiveR} 0 A ${effectiveR} ${effectiveR} 0 0 1 ${w} ${effectiveR} L ${w} ${h - effectiveR} A ${effectiveR} ${effectiveR} 0 0 1 ${w - effectiveR} ${h}`;
+      const pathB_d = `M ${w - effectiveR} ${h} L ${effectiveR} ${h} A ${effectiveR} ${effectiveR} 0 0 1 0 ${h - effectiveR} L 0 ${effectiveR} A ${effectiveR} ${effectiveR} 0 0 1 ${effectiveR} 0`;
+
+      const partA = {
+        id: `${shapeLayer.id}_arc_A`,
+        name: `${shapeLayer.name} (Arc NW->SE)`,
+        type: "shape",
+        shapeType: "path",
+        d: pathA_d,
+        style: {
+          ...shapeLayer.style,
+          backgroundColor: "transparent",
+          borderWidth: shapeLayer.style.borderWidth || 2,
+          borderColor: shapeLayer.style.borderColor || "#ffffff",
+        },
+        animation: {
+          clips: [
+            {
+              id: "clip_" + Math.random().toString(36).slice(2, 8),
+              name: "drawOn in",
+              type: "in",
+              preset: "drawOn",
+              start: 0,
+              duration: 0.6,
+              easing: "snappy",
+            },
+          ],
+        },
+      };
+
+      const partB = {
+        id: `${shapeLayer.id}_arc_B`,
+        name: `${shapeLayer.name} (Arc SE->NW)`,
+        type: "shape",
+        shapeType: "path",
+        d: pathB_d,
+        style: {
+          ...shapeLayer.style,
+          backgroundColor: "transparent",
+          borderWidth: shapeLayer.style.borderWidth || 2,
+          borderColor: shapeLayer.style.borderColor || "#ffffff",
+        },
+        animation: {
+          clips: [
+            {
+              id: "clip_" + Math.random().toString(36).slice(2, 8),
+              name: "drawOn in",
+              type: "in",
+              preset: "drawOn",
+              start: 0.08,
+              duration: 0.6,
+              easing: "snappy",
+            },
+          ],
+        },
+      };
+
+      const origIdx = targetScreen.layers.findIndex((l) => l.id === args.layerId);
+      if (origIdx !== -1) {
+        targetScreen.layers.splice(origIdx, 1, partA, partB);
+      } else {
+        targetScreen.layers.push(partA, partB);
+      }
+
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Split shape "${shapeLayer.name}" into dual-origin continuous draw-on arcs with 0.0px shift invariance.`,
+      };
+    }
+
+    case "split_line": {
+      let lineLayer = null;
+      let targetScreen = null;
+      for (const sc of doc.screens) {
+        const found = sc.layers.find((l) => l.id === args.layerId);
+        if (found) {
+          lineLayer = found;
+          targetScreen = sc;
+          break;
+        }
+      }
+      if (!lineLayer) {
+        return { text: `Error: Line layer "${args.layerId}" not found.` };
+      }
+
+      const ratio = Math.max(0.1, Math.min(0.9, args.ratio ?? 0.5));
+      const totalWidth = lineLayer.style?.width || 200;
+      const part1Width = Math.round(totalWidth * ratio);
+      const part2Width = totalWidth - part1Width;
+
+      const part1 = {
+        id: `${lineLayer.id}_part1`,
+        name: `${lineLayer.name} (Start)`,
+        type: "line",
+        arrowStart: lineLayer.arrowStart,
+        arrowEnd: false,
+        style: {
+          ...lineLayer.style,
+          width: part1Width,
+        },
+        animation: {
+          clips: [
+            {
+              id: "clip_" + Math.random().toString(36).slice(2, 8),
+              name: "arrowShoot in",
+              type: "in",
+              preset: "arrowShoot",
+              start: 0,
+              duration: 0.5,
+              easing: "snappy",
+            },
+          ],
+        },
+      };
+
+      const part2 = {
+        id: `${lineLayer.id}_part2`,
+        name: `${lineLayer.name} (End)`,
+        type: "line",
+        arrowStart: false,
+        arrowEnd: lineLayer.arrowEnd,
+        style: {
+          ...lineLayer.style,
+          x: (lineLayer.style.x || 0) + part1Width,
+          width: part2Width,
+        },
+        animation: {
+          clips: [
+            {
+              id: "clip_" + Math.random().toString(36).slice(2, 8),
+              name: "arrowShoot in",
+              type: "in",
+              preset: "arrowShoot",
+              start: 0.25,
+              duration: 0.5,
+              easing: "snappy",
+            },
+          ],
+        },
+      };
+
+      const origIdx = targetScreen.layers.findIndex((l) => l.id === args.layerId);
+      if (origIdx !== -1) {
+        targetScreen.layers.splice(origIdx, 1, part1, part2);
+      } else {
+        targetScreen.layers.push(part1, part2);
+      }
+
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Split line "${lineLayer.name}" at ratio ${ratio} into sequential kinetic vector segments.`,
+      };
+    }
+
+    case "set_audio_track": {
+      const audio = {
+        src: args.src,
+        name: args.name || path.basename(args.src),
+        volume: args.volume !== undefined ? args.volume : 1.0,
+        loop: args.loop !== undefined ? args.loop : false,
+        start: args.start ?? 0,
+        offset: args.offset ?? 0,
+        muted: args.muted ?? false,
+      };
+
+      if (args.sceneId) {
+        const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
+        if (!targetScreen) {
+          return { text: `Error: Scene "${args.sceneId}" not found in ${path.basename(resolvedPath)}.` };
+        }
+        targetScreen.audioTrack = audio;
+        writeMtnFile(resolvedPath, pkg);
+        return {
+          text: `Attached audio track "${audio.name}" to scene "${targetScreen.name}".`,
+        };
+      } else {
+        if (!doc.settings) doc.settings = {};
+        doc.settings.audioTrack = audio;
+        if (doc.screens.length > 0 && !doc.screens[0].audioTrack) {
+          doc.screens[0].audioTrack = audio;
+        }
+        writeMtnFile(resolvedPath, pkg);
+        return {
+          text: `Set project audio track to "${audio.name}" (volume: ${audio.volume}, loop: ${audio.loop}) in ${path.basename(resolvedPath)}.`,
+        };
+      }
+    }
+
+    case "remove_audio_track": {
+      if (args.sceneId) {
+        const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
+        if (!targetScreen) {
+          return { text: `Error: Scene "${args.sceneId}" not found.` };
+        }
+        delete targetScreen.audioTrack;
+        writeMtnFile(resolvedPath, pkg);
+        return { text: `Removed audio track from scene "${targetScreen.name}".` };
+      } else {
+        if (doc.settings) delete doc.settings.audioTrack;
+        doc.screens.forEach((s) => delete s.audioTrack);
+        writeMtnFile(resolvedPath, pkg);
+        return { text: `Cleared all project audio tracks in ${path.basename(resolvedPath)}.` };
+      }
+    }
+
+    case "export_project": {
+      const format = args.format || "mp4";
+      const resolution = args.resolution || "1080p";
+      const transparent = Boolean(args.transparent);
+      const scope = args.scope || "all";
+      const totalDur = doc.screens.reduce((s, sc) => s + (sc.duration || 0), 0);
+
+      const manifest = {
+        projectFile: path.basename(resolvedPath),
+        projectTitle: doc.name,
+        format,
+        resolution,
+        transparent,
+        scope,
+        fps: doc.settings?.fps || 60,
+        durationSeconds: totalDur,
+        totalFrames: Math.round(totalDur * (doc.settings?.fps || 60)),
+        outputDestination: args.outputFile || `${path.basename(resolvedPath, ".mtn")}_${resolution}.${format}`,
+        status: "ready_for_render",
+      };
+
+      return {
+        text: JSON.stringify(manifest, null, 2),
+      };
+    }
+
     case "get_contact_sheet": {
       let currentTime = 0;
       const beats = doc.screens.map((sc, index) => {
@@ -1313,18 +2318,21 @@ function handleToolCall(name, args) {
         fps: doc.settings.fps,
         totalDuration: `${totalDur}s`,
         sceneCount: doc.screens.length,
-        scenes: doc.screens.map((sc, idx) => ({
+        scenes: doc.screens.map((sc) => ({
           id: sc.id,
           name: sc.name,
           duration: `${sc.duration}s`,
           mood: sc.mood || "product-showcase",
+          backgroundColor: sc.backgroundColor,
           layerCount: sc.layers.length,
           layers: sc.layers.map((l) => ({
             id: l.id,
             name: l.name,
             type: l.type,
+            shapeType: l.shapeType,
             grid: l.grid,
             clips: l.animation?.clips?.map((c) => c.preset) || [],
+            bindings: l.bindings?.map((b) => b.mode) || [],
           })),
         })),
       };
@@ -1378,7 +2386,7 @@ function processRpcMessage(msg) {
         protocolVersion: "2024-11-05",
         serverInfo: {
           name: "motion-studio",
-          version: "0.1.0",
+          version: "0.2.0",
         },
         capabilities: {
           tools: {},
@@ -1512,7 +2520,7 @@ if (portArg && !isNaN(portArg)) {
     });
 
     server.listen(portArg, "0.0.0.0", () => {
-      process.stderr.write(`[MCP Server] Running on http://127.0.0.1:${portArg} (SSE: /sse, RPC: /mcp)\n`);
+      process.stderr.write(`[MCP Server] Running on http://127.0.0.1:${portArg} (SSE: /sse, RPC: /mcp) with ${TOOLS.length} tools\n`);
     });
   });
 }

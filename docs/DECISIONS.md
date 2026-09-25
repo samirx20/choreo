@@ -2666,6 +2666,48 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - `npm run build` succeeds cleanly in 9.79s.
   - Vitest test suite: 55/55 test files pass (586/586 tests).
 
+---
+
+### Decision 117: Complete 36-Tool MCP Suite — Vector Booleans, Mask Groups, 53+ Presets, Spatial Stagger & Component Templates
+* **Context & Motivation**:
+  - A comprehensive 3-subagent audit revealed critical gaps between what the GUI/Engine could do vs. what external AI agents could control via MCP.
+  - While fundamental layers were present, advanced vector operations (boolean union/subtract/intersect/exclude, clipping mask groups with cutout inversion, raw SVG imports, shape and line splitting), full 53+ animation presets (typographic reveals, optical camera racks, ambient loops), parametric geometry (stars, polygons, trim paths), and component templates were absent or constrained.
+  - Furthermore, Antigravity's local MCP tool schema cache in `C:\Users\Sam\.gemini\antigravity\mcp\motion-studio\` only had 5 legacy tools.
+* **The Solution (36 Complete Tools & Full Schema Parity)**:
+  1. **Layer & Vector Geometry Enrichment (`place_element`, `update_element`)**:
+     - Added `shapeType` (`rectangle`, `circle`, `ellipse`, `triangle`, `star`, `polygon`, `line`, `arrow`, `path`).
+     - Added parametric star attributes (`points` 3–20, `innerRadiusRatio` 0.10–0.95) and polygon `sides` (3–12).
+     - Added custom SVG paths (`d`, `viewBox`) and vector trim paths (`trimStart`, `trimEnd`, `trimOffset` 0–100%).
+     - Added line marker customization (`arrowStart`, `arrowEnd`), stroke cap (`round`, `butt`, `square`), and dash arrays.
+     - Added direct pixel positioning (`bounds: { x, y, width, height }`) alongside aspect-ratio modular grids.
+     - Added full visual styling: `gradient` (linear/radial), polar shadows (`shadowAngle`, `shadowDistance`, `shadowOpacity`, `shadowSpread`, `shadowMode`), optics (`filterBlur`, `backdropBlur`, `isGlass`), `stickerBorder`, and rich typography (`fontFamily`, `lineHeight`, `letterSpacing`, `textTransform`).
+     - Added auto-layout frame controls (`clipContent`, `layout: { flexDirection, gap, align, justify }`) and video layers (`sourceIn`, `sourceOut`, `volume`, `loop`).
+  2. **Advanced Vector & Grouping Tools**:
+     - `create_mask_group`: Clipping masks with designated stencil layers and optional inverted cutout masking (`invertMask`).
+     - `apply_boolean_operation`: Vector boolean operations (`union`, `subtract`, `intersect`, `exclude`) with live boolean groups or path flattening.
+     - `import_svg`: Imports raw SVG XML markup into native vector path and group layers.
+     - `split_shape`: Decomposes rounded rectangles and circles into dual-origin draw-on bezier arcs with 0.0000px shift invariance.
+     - `split_line`: Collinear ratio line splitting with optional arrowhead tip detachment.
+  3. **Templates & Project Management**:
+     - `insert_template`: Stamps pre-built animated component frames onto the scene (`comp_browser_window`, `comp_terminal_window`, `comp_counter_pill`, `comp_code_snippet`).
+     - `duplicate_project`, `rename_project`, `delete_project`.
+     - `set_palette`: Assigns cohesive project color themes.
+  4. **Animation, Choreography & Physics**:
+     - Expanded `apply_animation` to all 53+ engine presets (`baselineRise`, `wordCascade`, `lineReveal`, `typewriter`, `elevationRise`, `glassIris`, `blurFocusPop`, `kenBurns`, `arrowShoot`, `dashFlow`, `iconPop`, `stampSettle`, `elasticScalePop`, `pulse`, `float`, `breathe`, etc.).
+     - Added explicit `start` / `delay`, motion `direction`, continuous `loop` / `loopCount`, and analytical `spring: { stiffness, damping, mass }`.
+     - Upgraded `stagger_elements` with spatial centroid ordering (`layer-order`, `left-to-right`, `right-to-left`, `top-to-bottom`, `bottom-to-top`, `center-out`, `edges-in`).
+  5. **Reactive Layout & Audio**:
+     - Expanded `link_elements` with modes `hug`, `reflow`, `pin`, `connect`, `match`, `lag`, reflow axes, and leader line curves.
+     - Added `unlink_elements` to cleanly detach reactive bindings.
+     - Added `remove_audio_track` and audio timing controls (`start`, `offset`, `muted`).
+  6. **Export & Antigravity Client Sync**:
+     - Added `export_project` manifest generator for MP4, WebM (with alpha transparency), and GIF.
+     - Synchronized all 36 JSON tool schemas and updated `instructions.md` in `C:\Users\Sam\.gemini\antigravity\mcp\motion-studio\`.
+* **Verification**:
+  - `node -c mcp.js` passes with 0 syntax errors.
+  - `npm test`: 55/55 test suites pass (586/586 tests).
+  - `npm run build`: Production build passes in 9.42s with 0 errors.
+
 
 
 
