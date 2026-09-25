@@ -115,6 +115,19 @@ const TOOLS = [
     },
   },
   {
+    name: "update_project",
+    description: "Updates project settings such as title, frame rate, or background color.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        name: { type: "string", description: "New project title" },
+        fps: { type: "number", description: "Frame rate" },
+        backgroundColor: { type: "string", description: "Background color hex" },
+      },
+    },
+  },
+  {
     name: "create_scene",
     description: "Creates a new scene/beat in a .mtn project file with specified duration and mood.",
     inputSchema: {
@@ -134,8 +147,39 @@ const TOOLS = [
     },
   },
   {
+    name: "update_scene",
+    description: "Updates an existing scene's name, duration, or aesthetic mood.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        sceneId: { type: "string", description: "Target scene ID" },
+        name: { type: "string", description: "New scene name" },
+        duration: { type: "number", description: "New duration in seconds" },
+        mood: {
+          type: "string",
+          enum: ["product-showcase", "paper-collage", "kinetic-editorial", "analog-retro"],
+          description: "Aesthetic mood profile",
+        },
+      },
+      required: ["sceneId"],
+    },
+  },
+  {
+    name: "delete_scene",
+    description: "Deletes a scene from the .mtn project file.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        sceneId: { type: "string", description: "Target scene ID to delete" },
+      },
+      required: ["sceneId"],
+    },
+  },
+  {
     name: "place_element",
-    description: "Places a text, shape, icon, counter, or line element onto the modular grid with entrance animation. Reusing the same ID across scenes triggers continuous Magic Move spatial transitions.",
+    description: "Places a text, shape, icon, counter, image, or line element onto the modular grid with entrance animation. Reusing the same ID across scenes triggers continuous Magic Move spatial transitions.",
     inputSchema: {
       type: "object",
       properties: {
@@ -143,8 +187,8 @@ const TOOLS = [
         sceneId: { type: "string", description: "Target scene ID" },
         id: { type: "string", description: "Optional layer ID. Reusing the same ID in subsequent scenes triggers Magic Move morphing." },
         name: { type: "string", description: "Element name" },
-        type: { type: "string", enum: ["text", "shape", "icon", "counter", "line", "mockup3d"], description: "Layer type" },
-        content: { type: "string", description: "Text content, icon name (e.g. 'Sparkles'), or 3D mockup model" },
+        type: { type: "string", enum: ["text", "shape", "icon", "counter", "line", "image", "frame"], description: "Layer type" },
+        content: { type: "string", description: "Text content, icon name (e.g. 'Sparkles'), or image URL" },
         grid: {
           type: "object",
           properties: {
@@ -157,7 +201,7 @@ const TOOLS = [
         },
         style: {
           type: "object",
-          description: "Visual styles (fontSize, color, backgroundColor, borderRadius, borderWidth, borderColor)",
+          description: "Visual styles (fontSize, color, backgroundColor, borderRadius, borderWidth, borderColor, opacity)",
         },
         enter: {
           type: "object",
@@ -169,6 +213,45 @@ const TOOLS = [
         },
       },
       required: ["sceneId", "name", "type", "grid"],
+    },
+  },
+  {
+    name: "update_element",
+    description: "Modifies an existing element's content, position on the grid, or visual styles.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        layerId: { type: "string", description: "Target layer ID to modify" },
+        name: { type: "string", description: "Updated layer name" },
+        content: { type: "string", description: "Updated text content, icon name, or image URL" },
+        grid: {
+          type: "object",
+          properties: {
+            col: { type: "number", description: "Grid column (0-15)" },
+            row: { type: "number", description: "Grid row (0-8)" },
+            colSpan: { type: "number", description: "Column span" },
+            rowSpan: { type: "number", description: "Row span" },
+          },
+        },
+        style: {
+          type: "object",
+          description: "Visual styles to update or merge (fontSize, color, backgroundColor, borderRadius, borderWidth, borderColor, opacity)",
+        },
+      },
+      required: ["layerId"],
+    },
+  },
+  {
+    name: "delete_element",
+    description: "Deletes an element from its scene in the .mtn project file.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        layerId: { type: "string", description: "Target layer ID to delete" },
+      },
+      required: ["layerId"],
     },
   },
   {
@@ -270,6 +353,20 @@ function handleToolCall(name, args) {
       };
     }
 
+    case "update_project": {
+      if (args.name) {
+        doc.name = args.name;
+        doc.settings.name = args.name;
+        if (pkg.metadata) pkg.metadata.name = args.name;
+      }
+      if (args.fps) doc.settings.fps = args.fps;
+      if (args.backgroundColor) doc.settings.backgroundColor = args.backgroundColor;
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Updated project settings in ${path.basename(resolvedPath)}.`,
+      };
+    }
+
     case "create_scene": {
       const sceneId = args.id || ("scene_" + Math.random().toString(36).slice(2, 8));
       const newScene = {
@@ -284,6 +381,37 @@ function handleToolCall(name, args) {
       writeMtnFile(resolvedPath, pkg);
       return {
         text: `Created scene "${args.name}" (id: ${sceneId}) with duration ${args.duration}s in ${path.basename(resolvedPath)}. Total scenes: ${doc.screens.length}.`,
+      };
+    }
+
+    case "update_scene": {
+      const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
+      if (!targetScreen) {
+        return { text: `Error: Scene "${args.sceneId}" not found in ${path.basename(resolvedPath)}.` };
+      }
+      if (args.name) targetScreen.name = args.name;
+      if (args.duration) targetScreen.duration = args.duration;
+      if (args.mood) targetScreen.mood = args.mood;
+      doc.settings.duration = doc.screens.reduce((s, sc) => s + (sc.duration || 0), 0);
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Updated scene "${targetScreen.name}" (id: ${args.sceneId}). New duration: ${targetScreen.duration}s.`,
+      };
+    }
+
+    case "delete_scene": {
+      if (doc.screens.length <= 1) {
+        return { text: `Error: Cannot delete the last remaining scene in ${path.basename(resolvedPath)}.` };
+      }
+      const idx = doc.screens.findIndex((s) => s.id === args.sceneId);
+      if (idx === -1) {
+        return { text: `Error: Scene "${args.sceneId}" not found in ${path.basename(resolvedPath)}.` };
+      }
+      const removed = doc.screens.splice(idx, 1)[0];
+      doc.settings.duration = doc.screens.reduce((s, sc) => s + (sc.duration || 0), 0);
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Deleted scene "${removed.name}" (id: ${args.sceneId}). Remaining scenes: ${doc.screens.length}.`,
       };
     }
 
@@ -342,6 +470,70 @@ function handleToolCall(name, args) {
       writeMtnFile(resolvedPath, pkg);
       return {
         text: `Placed ${args.type} layer "${args.name}" (id: ${layerId}) in scene "${targetScreen.name}" at grid [${col}, ${row}, span: ${colSpan}x${rowSpan}].`,
+      };
+    }
+
+    case "update_element": {
+      let foundLayer = null;
+      let targetScreen = null;
+      for (const sc of doc.screens) {
+        const found = sc.layers.find((l) => l.id === args.layerId);
+        if (found) {
+          foundLayer = found;
+          targetScreen = sc;
+          break;
+        }
+      }
+      if (!foundLayer) {
+        return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
+      }
+      if (args.name) foundLayer.name = args.name;
+      if (args.content !== undefined) foundLayer.content = args.content;
+      if (args.grid) {
+        const is9x16 = doc.settings.height > doc.settings.width;
+        const gridCols = is9x16 ? 9 : 16;
+        const gridRows = is9x16 ? 16 : 9;
+        const cellWidth = doc.settings.width / gridCols;
+        const cellHeight = doc.settings.height / gridRows;
+
+        const col = Math.max(0, Math.min(gridCols - 1, args.grid.col ?? foundLayer.grid?.col ?? 0));
+        const row = Math.max(0, Math.min(gridRows - 1, args.grid.row ?? foundLayer.grid?.row ?? 0));
+        const colSpan = Math.max(1, Math.min(gridCols - col, args.grid.colSpan ?? foundLayer.grid?.colSpan ?? 1));
+        const rowSpan = Math.max(1, Math.min(gridRows - row, args.grid.rowSpan ?? foundLayer.grid?.rowSpan ?? 1));
+
+        foundLayer.grid = { col, row, colSpan, rowSpan };
+        foundLayer.style.x = Math.round(col * cellWidth);
+        foundLayer.style.y = Math.round(row * cellHeight);
+        foundLayer.style.width = Math.round(colSpan * cellWidth);
+        foundLayer.style.height = Math.round(rowSpan * cellHeight);
+      }
+      if (args.style) {
+        foundLayer.style = { ...foundLayer.style, ...args.style };
+      }
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Updated layer "${foundLayer.name}" (id: ${args.layerId}) in scene "${targetScreen.name}".`,
+      };
+    }
+
+    case "delete_element": {
+      let foundIndex = -1;
+      let targetScreen = null;
+      for (const sc of doc.screens) {
+        const idx = sc.layers.findIndex((l) => l.id === args.layerId);
+        if (idx !== -1) {
+          foundIndex = idx;
+          targetScreen = sc;
+          break;
+        }
+      }
+      if (!targetScreen || foundIndex === -1) {
+        return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
+      }
+      const removed = targetScreen.layers.splice(foundIndex, 1)[0];
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Deleted layer "${removed.name}" (id: ${args.layerId}) from scene "${targetScreen.name}".`,
       };
     }
 

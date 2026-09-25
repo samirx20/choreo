@@ -74,9 +74,9 @@ export const McpDropdown: React.FC<McpDropdownProps> = ({ className }) => {
     const httpUrl = `http://localhost:${port}/mcp`;
     const promptText = `There is an MCP server for Motion Studio running on this host at ${sseUrl} (HTTP: ${httpUrl}).
 
-Motion Studio is a motion graphics application for creating product showcase videos, animated beats, kinetic typography, and 3D device staging.
+Motion Studio is a motion graphics application for creating product showcase videos, animated beats, kinetic typography, and graphic layouts.
 
-Connect to this MCP server to access its tools (create_project, create_scene, place_element, apply_animation, get_storyboard_state, lint_storyboard) to create and edit videos.`;
+Connect to this MCP server to access its tools (create_project, create_scene, place_element, update_element, delete_element, apply_animation, get_storyboard_state, lint_storyboard) to create and edit videos.`;
 
     navigator.clipboard.writeText(promptText);
     setCopied(true);
