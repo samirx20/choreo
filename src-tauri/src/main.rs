@@ -11,7 +11,6 @@ fn main() {
       }
       let _ = std::fs::write(path, &msg);
     }
-    eprintln!("{}", msg);
   }));
 
   app_lib::run();

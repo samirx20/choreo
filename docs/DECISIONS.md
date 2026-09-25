@@ -2542,6 +2542,29 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - `cargo check --manifest-path src-tauri/Cargo.toml` finishes in 7.10s with 0 errors.
   - All Vitest test suites pass.
 
+---
+
+### Decision 112: Windows GUI Subsystem Stderr Panic Fix & Interactive Session Bridging
+* **Root Cause Diagnostics**:
+  1. **Rust Panic on Windows GUI Subsystem (`os error 232: The pipe is being closed`)**:
+     - When Windows GUI applications (`windows_subsystem = "windows"`) run without an attached console or when stdout/stderr pipes close, unhandled `eprintln!` calls panic in the Rust runtime (`failed printing to stderr: The pipe is being closed (os error 232)`). This caused both the installed MSI/NSIS application and dev sessions to exit immediately upon startup.
+  2. **Agent Sandbox Desktop Isolation (`exebox-...` vs `WinSta0\Default`)**:
+     - Subshell execution within automated coding environments runs inside a sandboxed virtual desktop (`exebox-TH7RZFZEXJMYUPSUYPRYX33TM5`) on `WinSta0`. Child processes spawned directly from the agent subshell create HWNDs on the isolated virtual desktop, appearing in Task Manager under "Background processes" rather than mapping to the user's interactive monitor (`Default`).
+* **The Solution**:
+  1. **Zero-Panic Logging**:
+     - Replaced raw `eprintln!` in Rust with safe, file-backed diagnostic logging (`%LOCALAPPDATA%\app.motionstudio\app.log`) using non-panicking file operations.
+     - Stripped all unhandled stderr writes from `main.rs` and `lib.rs`.
+  2. **Window Centering & Direct Focus**:
+     - Configured `"center": true`, `"visible": true`, `"shadow": true`, `"decorations": true` in `tauri.conf.json`.
+     - In `.setup()`, explicitly invoked `unminimize()`, `show()`, and `set_focus()` on the main `WebviewWindow`.
+  3. **Interactive Dev Execution**:
+     - Created `run_dev.cmd` to reliably launch `npm run desktop:dev` with full working directory resolution and clean console management.
+     - Provided automated interactive execution via Windows Task Scheduler (`-LogonType Interactive`) to bridge execution directly onto the user's physical interactive screen (`WinSta0\Default`).
+* **Verification**:
+  - `app.log` confirms: `hwnd: Ok(...)`, `visible: Ok(true)`, `RunEvent::Ready` on `WinSta0\Default`.
+  - Vite dev server running and serving `http://127.0.0.1:5173/` with HTTP 200.
+  - Vitest: 55/55 test files pass (586/586 tests).
+
 
 
 
