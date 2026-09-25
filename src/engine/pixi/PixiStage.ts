@@ -10,6 +10,7 @@ export interface PixiStageOptions {
   artboardWidth: number;
   artboardHeight: number;
   backgroundColor?: string;
+  isHeadless?: boolean;
   onLayerSelect?: (layerId: string, isShift: boolean) => void;
   onLayerDoubleClick?: (layerId: string) => void;
   onViewportChange?: (zoom: number, pan: { x: number; y: number }) => void;
@@ -38,40 +39,49 @@ export class PixiStage {
   }
 
   public async init(): Promise<void> {
+    const isHeadless = Boolean(this.options.isHeadless);
     await this.app.init({
       canvas: this.options.canvas,
       width: this.options.width,
       height: this.options.height,
-      resolution: window.devicePixelRatio || 1,
-      autoDensity: true,
+      resolution: isHeadless ? 1 : (typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1),
+      autoDensity: !isHeadless,
       antialias: true,
       backgroundColor: 0x09090b, // Zinc-950
       backgroundAlpha: 1,
       preference: "webgl",
+      preserveDrawingBuffer: true,
     });
 
-    // Create Viewport
-    this.viewport = new Viewport({
-      screenWidth: this.options.width,
-      screenHeight: this.options.height,
-      worldWidth: this.options.artboardWidth * 3,
-      worldHeight: this.options.artboardHeight * 3,
-      events: this.app.renderer.events,
-    });
+    if (isHeadless) {
+      // Direct 1:1 artboard attachment for headless export (no zoom margins or middle-click drag)
+      this.app.stage.addChild(this.artboardContainer);
+      this.artboardContainer.x = 0;
+      this.artboardContainer.y = 0;
+    } else {
+      // Create Interactive Viewport
+      this.viewport = new Viewport({
+        screenWidth: this.options.width,
+        screenHeight: this.options.height,
+        worldWidth: this.options.artboardWidth * 3,
+        worldHeight: this.options.artboardHeight * 3,
+        events: this.app.renderer.events,
+      });
 
-    this.app.stage.addChild(this.viewport);
+      this.app.stage.addChild(this.viewport);
 
-    // Setup Viewport plugins: Drag (Spacebar or middle click), Pinch, Wheel zoom, Decelerate
-    this.viewport
-      .drag({ mouseButtons: "middle" })
-      .pinch()
-      .wheel({ percent: 0.1, smooth: 3 })
-      .decelerate();
+      // Setup Viewport plugins: Drag (Spacebar or middle click), Pinch, Wheel zoom, Decelerate
+      this.viewport
+        .drag({ mouseButtons: "middle" })
+        .pinch()
+        .wheel({ percent: 0.1, smooth: 3 })
+        .decelerate();
 
-    // Center viewport on the artboard
-    this.viewport.addChild(this.artboardContainer);
-    this.artboardContainer.x = (this.viewport.worldWidth - this.options.artboardWidth) / 2;
-    this.artboardContainer.y = (this.viewport.worldHeight - this.options.artboardHeight) / 2;
+      // Center viewport on the artboard
+      this.viewport.addChild(this.artboardContainer);
+      this.artboardContainer.x = (this.viewport.worldWidth - this.options.artboardWidth) / 2;
+      this.artboardContainer.y = (this.viewport.worldHeight - this.options.artboardHeight) / 2;
+    }
 
     // Draw artboard background & shadow
     this.updateArtboardBackground(
@@ -87,18 +97,20 @@ export class PixiStage {
     // Apply mask so layers don't bleed outside canvas bounds
     this.layersContainer.mask = this.artboardMask;
 
-    // Center view
-    this.centerOnArtboard();
+    // Center view if interactive
+    if (!isHeadless) {
+      this.centerOnArtboard();
 
-    // Viewport change listener
-    this.viewport.on("moved", () => {
-      if (this.viewport && this.options.onViewportChange) {
-        this.options.onViewportChange(this.viewport.scale.x, {
-          x: this.viewport.x,
-          y: this.viewport.y,
-        });
-      }
-    });
+      // Viewport change listener
+      this.viewport?.on("moved", () => {
+        if (this.viewport && this.options.onViewportChange) {
+          this.options.onViewportChange(this.viewport.scale.x, {
+            x: this.viewport.x,
+            y: this.viewport.y,
+          });
+        }
+      });
+    }
 
     this.isReady = true;
   }
@@ -144,15 +156,25 @@ export class PixiStage {
     }
     const colorNum = parseInt(cleanHex.replace("#", ""), 16) || 0x18181b;
 
-    // Outer subtle border / drop shadow representation
-    this.artboardBg.roundRect(0, 0, w, h, 8);
-    this.artboardBg.fill({ color: colorNum });
-    this.artboardBg.stroke({ color: 0x3f3f46, width: 2 }); // Zinc-700 border
+    if (this.options.isHeadless) {
+      // Full flush frame without outer border or rounded corners in export mode
+      this.artboardBg.rect(0, 0, w, h);
+      this.artboardBg.fill({ color: colorNum });
 
-    // Mask setup
-    this.artboardMask.clear();
-    this.artboardMask.roundRect(0, 0, w, h, 8);
-    this.artboardMask.fill({ color: 0xffffff });
+      this.artboardMask.clear();
+      this.artboardMask.rect(0, 0, w, h);
+      this.artboardMask.fill({ color: 0xffffff });
+    } else {
+      // Outer subtle border / drop shadow representation in editor
+      this.artboardBg.roundRect(0, 0, w, h, 8);
+      this.artboardBg.fill({ color: colorNum });
+      this.artboardBg.stroke({ color: 0x3f3f46, width: 2 }); // Zinc-700 border
+
+      // Mask setup
+      this.artboardMask.clear();
+      this.artboardMask.roundRect(0, 0, w, h, 8);
+      this.artboardMask.fill({ color: 0xffffff });
+    }
   }
 
   public setTransparentBackground(transparent: boolean): void {
@@ -273,23 +295,28 @@ export class PixiStage {
       lastClickTime = now;
     });
 
-    if (layer.type === "text" || layer.type === "chunk") {
+    if (layer.type === "text" || layer.type === "chunk" || (layer as any).type === "counter") {
       const textObj = this.createTextObject(layer);
       container.addChild(textObj);
       (container as any).__textChild = textObj;
-    } else if (layer.type === "shape") {
+    } else if (layer.type === "shape" || (layer as any).type === "line" || (layer as any).type === "polygon") {
       const shapeObj = new Graphics();
       container.addChild(shapeObj);
       (container as any).__shapeChild = shapeObj;
-      this.drawShape(shapeObj, layer);
-    } else if (layer.type === "group") {
+      this.drawShape(shapeObj, layer as any);
+    } else if (layer.type === "group" || (layer as any).type === "frame") {
       const bgGraphics = new Graphics();
       const childrenContainer = new Container();
       container.addChild(bgGraphics);
       container.addChild(childrenContainer);
       (container as any).__bgGraphics = bgGraphics;
       (container as any).__childrenContainer = childrenContainer;
-      this.drawGroupBackground(bgGraphics, layer);
+      this.drawGroupBackground(bgGraphics, layer as any);
+    } else if ((layer as any).type === "icon") {
+      const iconGraphics = new Graphics();
+      container.addChild(iconGraphics);
+      (container as any).__iconChild = iconGraphics;
+      this.drawIcon(iconGraphics, layer);
     }
 
     this.updateDisplayObject(container, layer);
@@ -306,6 +333,13 @@ export class PixiStage {
     container.alpha = s.opacity ?? 1;
     container.visible = !layer.hidden;
 
+    // Cache base transform attributes for seek animation offset calculation
+    (container as any).__baseX = s.x || 0;
+    (container as any).__baseY = s.y || 0;
+    (container as any).__baseScaleX = s.scaleX ?? 1;
+    (container as any).__baseScaleY = s.scaleY ?? 1;
+    (container as any).__baseRotation = ((s.rotation || 0) * Math.PI) / 180;
+
     // Filters
     if (s.filterBlur && s.filterBlur > 0) {
       container.filters = [new BlurFilter({ strength: s.filterBlur })];
@@ -314,12 +348,14 @@ export class PixiStage {
     }
 
     // Update child content
-    if ((layer.type === "text" || layer.type === "chunk") && (container as any).__textChild) {
+    if ((layer.type === "text" || layer.type === "chunk" || (layer as any).type === "counter") && (container as any).__textChild) {
       this.updateTextObject((container as any).__textChild, layer);
-    } else if (layer.type === "shape" && (container as any).__shapeChild) {
-      this.drawShape((container as any).__shapeChild, layer);
-    } else if (layer.type === "group" && (container as any).__bgGraphics) {
-      this.drawGroupBackground((container as any).__bgGraphics, layer);
+    } else if ((layer.type === "shape" || (layer as any).type === "line" || (layer as any).type === "polygon") && (container as any).__shapeChild) {
+      this.drawShape((container as any).__shapeChild, layer as any);
+    } else if ((layer.type === "group" || (layer as any).type === "frame") && (container as any).__bgGraphics) {
+      this.drawGroupBackground((container as any).__bgGraphics, layer as any);
+    } else if ((layer as any).type === "icon" && (container as any).__iconChild) {
+      this.drawIcon((container as any).__iconChild, layer);
     }
   }
 
@@ -360,7 +396,7 @@ export class PixiStage {
     text.style.wordWrapWidth = s.wordWrapWidth || 600;
   }
 
-  private drawShape(g: Graphics, layer: ShapeLayer) {
+  private drawShape(g: Graphics, layer: ShapeLayer | any) {
     g.clear();
     const s = layer.style;
     const w = typeof s.width === "number" ? s.width : 200;
@@ -368,20 +404,58 @@ export class PixiStage {
     const fillHex = s.backgroundColor || "#3b82f6";
     const fillColor = parseInt(fillHex.replace("#", ""), 16) || 0x3b82f6;
 
-    if (layer.shapeType === "circle" || layer.shapeType === "ellipse") {
+    if (layer.vertices && Array.isArray(layer.vertices) && layer.vertices.length > 1) {
+      const pts = layer.vertices;
+      g.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) {
+        g.lineTo(pts[i].x, pts[i].y);
+      }
+      if (layer.closed) {
+        g.closePath();
+      }
+    } else if (layer.shapeType === "circle" || layer.shapeType === "ellipse") {
       g.ellipse(w / 2, h / 2, w / 2, h / 2);
     } else if (layer.shapeType === "star") {
       const points = layer.points || 5;
       const outerR = Math.min(w, h) / 2;
       const innerR = outerR * (layer.innerRadiusRatio || 0.382);
       g.star(w / 2, h / 2, points, outerR, innerR, 0);
-    } else if (layer.shapeType === "triangle" || layer.shapeType === "polygon") {
+    } else if (layer.shapeType === "triangle" || layer.shapeType === "polygon" || layer.type === "polygon") {
       const sides = layer.shapeType === "triangle" ? 3 : (layer.sides || 5);
       const radius = Math.min(w, h) / 2;
       g.regularPoly(w / 2, h / 2, radius, sides, -Math.PI / 2);
-    } else if (layer.shapeType === "line" || layer.shapeType === "arrow") {
-      g.moveTo(0, h / 2);
-      g.lineTo(w, h / 2);
+    } else if (layer.type === "line" || layer.shapeType === "line" || layer.shapeType === "arrow") {
+      const x1 = layer.x1 ?? 0;
+      const y1 = layer.y1 ?? (h / 2);
+      const x2 = layer.x2 ?? w;
+      const y2 = layer.y2 ?? (h / 2);
+      g.moveTo(x1, y1);
+      g.lineTo(x2, y2);
+
+      const hasArrowEnd = layer.shapeType === "arrow" || layer.arrowEnd === "arrow" || layer.arrowEnd === true;
+      const hasArrowStart = layer.arrowStart === "arrow" || layer.arrowStart === true;
+      const arrowLen = Math.max(10, (s.borderWidth || 3) * 3);
+
+      if (hasArrowEnd) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const angle = Math.atan2(dy, dx);
+        const a1 = angle - Math.PI / 6;
+        const a2 = angle + Math.PI / 6;
+        g.moveTo(x2 - arrowLen * Math.cos(a1), y2 - arrowLen * Math.sin(a1));
+        g.lineTo(x2, y2);
+        g.lineTo(x2 - arrowLen * Math.cos(a2), y2 - arrowLen * Math.sin(a2));
+      }
+      if (hasArrowStart) {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const angle = Math.atan2(dy, dx);
+        const a1 = angle - Math.PI / 6;
+        const a2 = angle + Math.PI / 6;
+        g.moveTo(x1 + arrowLen * Math.cos(a1), y1 + arrowLen * Math.sin(a1));
+        g.lineTo(x1, y1);
+        g.lineTo(x1 + arrowLen * Math.cos(a2), y1 + arrowLen * Math.sin(a2));
+      }
     } else {
       if (Array.isArray(s.borderRadius)) {
         const [tl, tr, br, bl] = s.borderRadius;
@@ -401,7 +475,7 @@ export class PixiStage {
       }
     }
 
-    const isLine = layer.shapeType === "line" || layer.shapeType === "arrow";
+    const isLine = layer.type === "line" || layer.shapeType === "line" || layer.shapeType === "arrow";
     const hasFill = Boolean(s.backgroundColor && s.backgroundColor !== "transparent" && s.backgroundColor !== "none");
 
     if (!isLine && hasFill) {
@@ -417,6 +491,22 @@ export class PixiStage {
       const strokeColor = parseInt(s.borderColor.replace("#", ""), 16) || 0xffffff;
       g.stroke({ color: strokeColor, width: s.borderWidth });
     }
+  }
+
+  private drawIcon(g: Graphics, layer: any) {
+    g.clear();
+    const s = layer.style;
+    const w = typeof s.width === "number" ? s.width : 48;
+    const h = typeof s.height === "number" ? s.height : 48;
+    const strokeHex = (s.color as string) || (s.borderColor as string) || "#ffffff";
+    const strokeColor = parseInt(strokeHex.replace("#", ""), 16) || 0xffffff;
+    const strokeWidth = layer.strokeWidth || s.borderWidth || 2;
+
+    // Render crisp geometric vector icon mark
+    g.roundRect(4, 4, w - 8, h - 8, 8);
+    g.stroke({ color: strokeColor, width: strokeWidth });
+    g.circle(w / 2, h / 2, Math.max(3, (w - 16) / 4));
+    g.stroke({ color: strokeColor, width: strokeWidth });
   }
 
   private drawGroupBackground(g: Graphics, layer: GroupLayer) {
@@ -478,28 +568,86 @@ export class PixiStage {
     if (!this.isReady || !screen) return;
     const computedStyles = evaluateSceneAtTime(screen.layers, time);
 
+    const layerMap = new Map<string, Layer>();
+    const collectLayers = (layers: Layer[]) => {
+      for (const l of layers) {
+        layerMap.set(l.id, l);
+        if (l.children) collectLayers(l.children);
+      }
+    };
+    collectLayers(screen.layers);
+
     for (const [id, dobj] of this.layerDisplayObjects.entries()) {
       const style = computedStyles[id];
+      const layer = layerMap.get(id);
+
       if (style) {
         if (style.opacity !== undefined) {
           dobj.alpha = Number(style.opacity);
         }
+
+        const baseX = (dobj as any).__baseX ?? dobj.x;
+        const baseY = (dobj as any).__baseY ?? dobj.y;
+        const baseScaleX = (dobj as any).__baseScaleX ?? 1;
+        const baseScaleY = (dobj as any).__baseScaleY ?? 1;
+        const baseRotation = (dobj as any).__baseRotation ?? 0;
+
+        let tx = 0;
+        let ty = 0;
+        let sx = 1;
+        let sy = 1;
+        let rotDeg = 0;
+
         if (style.transform) {
-          const scaleMatch = style.transform.match(/scale\(([^)]+)\)/);
-          if (scaleMatch) {
-            const s = parseFloat(scaleMatch[1]);
-            if (!isNaN(s)) {
-              dobj.scale.set(s);
+          // translate3d(x px, y px, z px)
+          const t3d = style.transform.match(/translate3d\(([-0-9.]+)px,\s*([-0-9.]+)px/);
+          if (t3d) {
+            tx = parseFloat(t3d[1]) || 0;
+            ty = parseFloat(t3d[2]) || 0;
+          } else {
+            const t2d = style.transform.match(/translate\(([-0-9.]+)px,\s*([-0-9.]+)px\)/);
+            if (t2d) {
+              tx = parseFloat(t2d[1]) || 0;
+              ty = parseFloat(t2d[2]) || 0;
+            } else {
+              const txMatch = style.transform.match(/translateX\(([-0-9.]+)px\)/);
+              if (txMatch) tx = parseFloat(txMatch[1]) || 0;
+              const tyMatch = style.transform.match(/translateY\(([-0-9.]+)px\)/);
+              if (tyMatch) ty = parseFloat(tyMatch[1]) || 0;
             }
           }
-          const rotMatch = style.transform.match(/rotate\(([^)]+)deg\)/);
-          if (rotMatch) {
-            const deg = parseFloat(rotMatch[1]);
-            if (!isNaN(deg)) {
-              dobj.rotation = (deg * Math.PI) / 180;
+
+          // scale(sx, sy) or scale(s)
+          const s2d = style.transform.match(/scale\(([-0-9.]+),\s*([-0-9.]+)\)/);
+          if (s2d) {
+            sx = parseFloat(s2d[1]) || 1;
+            sy = parseFloat(s2d[2]) || 1;
+          } else {
+            const s1d = style.transform.match(/scale\(([-0-9.]+)\)/);
+            if (s1d) {
+              const val = parseFloat(s1d[1]);
+              if (!isNaN(val)) {
+                sx = val;
+                sy = val;
+              }
             }
+          }
+
+          // rotate(deg)
+          const rotMatch = style.transform.match(/rotate\(([-0-9.]+)deg\)/);
+          if (rotMatch) {
+            rotDeg = parseFloat(rotMatch[1]) || 0;
           }
         }
+
+        const leftPos = style.left !== undefined ? parseFloat(String(style.left)) : baseX;
+        const topPos = style.top !== undefined ? parseFloat(String(style.top)) : baseY;
+
+        dobj.x = (isNaN(leftPos) ? baseX : leftPos) + tx;
+        dobj.y = (isNaN(topPos) ? baseY : topPos) + ty;
+        dobj.scale.set(baseScaleX * sx, baseScaleY * sy);
+        dobj.rotation = baseRotation + (rotDeg * Math.PI) / 180;
+
         if (style.filter) {
           const blurMatch = style.filter.match(/blur\(([^)]+)px\)/);
           if (blurMatch) {
@@ -509,6 +657,14 @@ export class PixiStage {
             } else {
               dobj.filters = [];
             }
+          }
+        }
+
+        // Update kinetic counter text if present
+        if (layer?.type === "counter" && (dobj as any).__textChild) {
+          const val = (layer as any).renderedValue || (layer as any).content;
+          if (val !== undefined) {
+            (dobj as any).__textChild.text = String(val);
           }
         }
       }

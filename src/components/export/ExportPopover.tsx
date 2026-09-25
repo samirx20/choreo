@@ -17,7 +17,7 @@ import { useProjectStore } from "@/store/useProjectStore";
 import { getActivePixiStage } from "@/engine/pixi/pixiRegistry";
 import { videoExporter, VideoExportProgress } from "@/engine/export/videoExporter";
 import { HeadlessRenderStage } from "@/engine/export/HeadlessRenderStage";
-import { sanitizeProjectFileName } from "@/services/fileAdapter";
+import { sanitizeProjectFileName, isTauriEnvironment } from "@/services/fileAdapter";
 import {
   Popover,
   PopoverTrigger,
@@ -111,11 +111,43 @@ export const ExportPopover: React.FC = () => {
   if (exportHeight % 2 !== 0) exportHeight += 1;
 
   const handleExport = async () => {
+    const isTransparent = backgroundMode === "transparent";
+    const baseName = sanitizeProjectFileName(doc.name || "video");
+    const scopeLabel = scopeMode === "all" ? "full" : "scene";
+    const bgLabel = isTransparent ? "alpha" : "";
+    const ext = format === "gif" ? "gif" : format === "mp4" ? "mp4" : "webm";
+    const fileName = `${baseName}_${scopeLabel}${bgLabel ? `_${bgLabel}` : ""}.${ext}`;
+
+    let targetSavePath: string | undefined;
+    if (isTauriEnvironment()) {
+      try {
+        const { save } = await import("@tauri-apps/plugin-dialog");
+        const filterName =
+          format === "gif"
+            ? "GIF Animation (*.gif)"
+            : format === "mp4"
+            ? "MP4 Video (*.mp4)"
+            : "WebM Video (*.webm)";
+
+        const selected = await save({
+          defaultPath: fileName,
+          filters: [{ name: filterName, extensions: [ext] }],
+        });
+
+        if (!selected) {
+          // User cancelled native file save dialog
+          return;
+        }
+        targetSavePath = selected;
+      } catch (dialogErr) {
+        console.warn("Could not open Tauri save dialog:", dialogErr);
+      }
+    }
+
     setIsExporting(true);
     setIsComplete(false);
     setProgress(null);
 
-    const isTransparent = backgroundMode === "transparent";
     const screensToExport = scopeMode === "all" ? doc.screens : [activeScreen];
 
     let stage = getActivePixiStage();
@@ -143,24 +175,21 @@ export const ExportPopover: React.FC = () => {
         scale,
         transparent: isTransparent,
         includeAudio: includeAudio && format !== "gif",
+        outputPath: targetSavePath,
         onProgress: (p) => setProgress(p),
       });
 
-      // Generate download file
-      const baseName = sanitizeProjectFileName(doc.name || "video");
-      const scopeLabel = scopeMode === "all" ? "full" : "scene";
-      const bgLabel = isTransparent ? "alpha" : "";
-      const ext = format === "gif" ? "gif" : format === "mp4" ? "mp4" : "webm";
-      const fileName = `${baseName}_${scopeLabel}${bgLabel ? `_${bgLabel}` : ""}.${ext}`;
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      // If already written directly to disk via Tauri FFmpeg / fs, skip synthetic browser download
+      if (!targetSavePath && !(blob as any)?.filePath) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
 
       setIsComplete(true);
       setTimeout(() => {

@@ -2810,9 +2810,38 @@ The engine provides first-class, motion-first reactive primitives for each eleme
        - Whole-line dragging (`handle === "move"`) checks both $P_1$ and $P_2$ against screen snap targets with a generous 24px catchment threshold.
        - `LineRenderer.tsx` and `TransformBox.tsx` consistently default vector lines to `pivotX: 0, pivotY: 0.5`, eliminating rotational jump artifacts.
 * **Verification**:
-  - 8 automated unit tests in [`src/test/endpoint_snapping.test.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/test/endpoint_snapping.test.ts) (straight line endpoints, rotated lines, polygon vertices, nested group offsets, target exclusion, threshold snapping, and closest target selection).
-  - All 58 test suites (605 tests) pass cleanly (`npm test`).
-  - Production build (`npm run build`) compiles with 0 errors in 18.60s.
+
+---
+
+### Decision 122: Native FFmpeg Video Export Streaming Pipeline & Headless 1:1 Rendering
+* **Context & Motivation**:
+  - In desktop builds, video export previously failed or produced empty/corrupted 0-byte outputs because `exportTauriFFmpeg` was an empty stub returning `new Blob([])`.
+  - Furthermore, `PixiStage` was adding 100px padding and scaling down the artboard by 10% during headless renders, and was ignoring `translate3d(x,y,z)` and `translate(x,y)` in `seek()`, causing motion paths to remain static.
+* **The Solution**:
+  1. **Tauri Native FFmpeg IPC Commands ([`src-tauri/src/lib.rs`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src-tauri/src/lib.rs))**:
+     - `resolve_ffmpeg_cmd()` locates `ffmpeg.exe` next to the application binary or across system `PATH` using Windows `CREATE_NO_WINDOW (0x08000000)`.
+     - `check_ffmpeg_available()` verifies the availability of the host or bundled FFmpeg binary.
+     - `start_ffmpeg_export(output_path, fps, format, is_transparent, audio_path)` spawns FFmpeg in stdin image pipe mode (`-f image2pipe -vcodec mjpeg` for MP4/H.264 or `-vcodec png` for VP9 WebM alpha). If an audio file is present, mixes audio using `-c:a aac -b:a 192k -shortest`.
+     - `write_ffmpeg_frame(frame_data)` pipes raw JPEG/PNG frame buffers directly to FFmpeg `stdin`.
+     - `finish_ffmpeg_export()` closes stdin, awaits process exit code, and returns the final video path.
+     - `cancel_ffmpeg_export()` kills the active process and deletes incomplete artifacts.
+  2. **Headless 1:1 Artboard Mode ([`src/engine/pixi/PixiStage.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/engine/pixi/PixiStage.ts) & [`src/engine/export/HeadlessRenderStage.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/engine/export/HeadlessRenderStage.ts))**:
+     - Added `isHeadless?: boolean` to `PixiStageOptions`.
+     - When `isHeadless` is true, attaches `artboardContainer` directly to `app.stage` at `(0, 0)` with `resolution: 1` and `preserveDrawingBuffer: true`, bypassing viewport zoom/pan margins and decorative borders.
+  3. **Deterministic Motion & Layer Type Evaluation ([`src/engine/pixi/PixiStage.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/engine/pixi/PixiStage.ts))**:
+     - In `seek()`: parses `translate3d(x, y, z)`, `translate(x, y)`, `translateX(x)`, `translateY(y)`, `scale(sx, sy)`, `rotate(deg)`, `style.left`, and `style.top`, maintaining full spatial fidelity.
+     - Supports kinetic counter layers (`counter`), icon layers (`icon`), frame containers (`frame`), line layers with directional arrowheads (`arrowStart`, `arrowEnd`), and connected vertices (`layer.vertices`).
+  4. **Frontend Streaming Pipeline & Fallback ([`src/engine/export/videoExporter.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/engine/export/videoExporter.ts))**:
+     - `exportTauriFFmpeg()` queries `check_ffmpeg_available`. If FFmpeg is unavailable, it seamlessly falls back to `exportBrowserMediaStream`.
+     - Extracts canvas frames as JPEG/PNG blobs, streaming bytes to Tauri IPC without exceeding buffer memory.
+  5. **Native Desktop Save File Picker ([`src/components/export/ExportPopover.tsx`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/components/export/ExportPopover.tsx))**:
+     - In desktop mode, prompts for destination via `@tauri-apps/plugin-dialog` `save()`.
+     - Exports video directly to the chosen path, skipping redundant browser blob download clicks.
+* **Verification**:
+  - Unit tests in [`src/test/multi_scene_export_and_popover.test.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/test/multi_scene_export_and_popover.test.ts) testing native FFmpeg streaming, fallback handling, and format selection.
+  - All 58 test suites (607 tests) pass cleanly.
+  - `npm run build` and `npm run desktop:build` package successfully to MSI and NSIS installers.
+
 
 
 

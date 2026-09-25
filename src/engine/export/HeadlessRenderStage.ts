@@ -29,6 +29,7 @@ export class HeadlessRenderStage {
       artboardWidth: width,
       artboardHeight: height,
       backgroundColor: settings.backgroundColor || "#18181b",
+      isHeadless: true,
     });
 
     await this.stage.init();

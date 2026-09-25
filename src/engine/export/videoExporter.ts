@@ -21,6 +21,7 @@ export interface VideoExportOptions {
   audioTrack?: AudioTrack | null;
   audioTracks?: AudioTrack[];
   includeAudio?: boolean;
+  outputPath?: string;
   onProgress?: (progress: VideoExportProgress) => void;
 }
 
@@ -81,21 +82,50 @@ export class VideoExporter {
     }
 
     try {
+      const isTauri =
+        typeof window !== "undefined" &&
+        (Boolean((window as any).__TAURI_INTERNALS__) ||
+          Boolean((window as any).__TAURI__) ||
+          window.location.protocol === "tauri:" ||
+          window.location.hostname === "tauri.localhost");
+
       // 1. GIF Animated Image Export
       if (options.format === "gif") {
-        return await this.exportBrowserGif(options, timeline, totalFrames, fps);
+        const gifBlob = await this.exportBrowserGif(options, timeline, totalFrames, fps);
+        if (isTauri && options.outputPath) {
+          try {
+            const { writeFile } = await import("@tauri-apps/plugin-fs");
+            const buf = await gifBlob.arrayBuffer();
+            await writeFile(options.outputPath, new Uint8Array(buf));
+            (gifBlob as any).filePath = options.outputPath;
+          } catch (writeErr) {
+            console.warn("Failed to write GIF directly to outputPath in Tauri:", writeErr);
+          }
+        }
+        return gifBlob;
       }
 
-      // 2. Tauri Native FFmpeg Export
-      const isTauri =
-        typeof window !== "undefined" && Boolean((window as any).__TAURI_INTERNALS__);
-
+      // 2. Tauri Native FFmpeg Export or Fallback
+      let resultBlob: Blob;
       if (isTauri) {
-        return await this.exportTauriFFmpeg(options, timeline, totalFrames, fps);
+        resultBlob = await this.exportTauriFFmpeg(options, timeline, totalFrames, fps);
       } else {
         // 3. Browser MediaStream Video (MP4 / WebM with Audio Muxing)
-        return await this.exportBrowserMediaStream(options, timeline, totalFrames, fps);
+        resultBlob = await this.exportBrowserMediaStream(options, timeline, totalFrames, fps);
       }
+
+      if (isTauri && options.outputPath && !(resultBlob as any).filePath && resultBlob.size > 0) {
+        try {
+          const { writeFile } = await import("@tauri-apps/plugin-fs");
+          const buf = await resultBlob.arrayBuffer();
+          await writeFile(options.outputPath, new Uint8Array(buf));
+          (resultBlob as any).filePath = options.outputPath;
+        } catch (e) {
+          console.warn("Failed writing fallback media stream to target path:", e);
+        }
+      }
+
+      return resultBlob;
     } finally {
       this.isExporting = false;
       // Always restore solid background after export finishes or cancels
@@ -115,11 +145,78 @@ export class VideoExporter {
     const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     let currentScreenId: string | null = null;
 
+    let invoke: any = null;
+    let isFfmpegAvailable = false;
     try {
-      console.log(`[FFmpeg Pipeline] Multi-scene render: ${totalFrames} frames @ ${fps}fps`);
+      const core = await import("@tauri-apps/api/core");
+      invoke = core.invoke;
+      isFfmpegAvailable = await invoke("check_ffmpeg_available");
+    } catch (e) {
+      console.warn("[FFmpeg Pipeline] Could not query Tauri FFmpeg status:", e);
+      isFfmpegAvailable = false;
+    }
+
+    if (!isFfmpegAvailable || !invoke) {
+      console.warn(
+        "[FFmpeg Pipeline] FFmpeg binary not found on system. Seamlessly falling back to browser MediaStream pipeline."
+      );
+      return await this.exportBrowserMediaStream(options, timeline, totalFrames, fps);
+    }
+
+    // Determine target output path
+    let outputPath = options.outputPath;
+    if (!outputPath) {
+      try {
+        const { tempDir, join } = await import("@tauri-apps/api/path");
+        const tDir = await tempDir();
+        const ext = options.transparent || options.format === "webm" ? "webm" : "mp4";
+        outputPath = await join(tDir, `motion_export_${Date.now()}.${ext}`);
+      } catch (e) {
+        outputPath = `motion_export_${Date.now()}.${options.transparent ? "webm" : "mp4"}`;
+      }
+    }
+
+    // Determine audio path if local path is available
+    let audioPath: string | null = null;
+    if (options.includeAudio !== false) {
+      const allTracks: AudioTrack[] = [];
+      if (options.audioTracks && options.audioTracks.length > 0) allTracks.push(...options.audioTracks);
+      if (options.audioTrack) allTracks.push(options.audioTrack);
+      for (const item of timeline) {
+        if (item.screen.audioTracks) allTracks.push(...item.screen.audioTracks);
+      }
+      const firstValid = allTracks.find(
+        (t) => t.src && !t.src.startsWith("data:") && !t.src.startsWith("blob:")
+      );
+      if (firstValid) {
+        audioPath = firstValid.src;
+      }
+    }
+
+    try {
+      console.log(
+        `[FFmpeg Pipeline] Starting native FFmpeg export -> ${outputPath} (${totalFrames} frames @ ${fps}fps)`
+      );
+
+      await invoke("start_ffmpeg_export", {
+        outputPath,
+        fps,
+        format: options.transparent ? "webm" : options.format || "mp4",
+        isTransparent: Boolean(options.transparent),
+        audioPath,
+      });
+
+      const canvas = pixiStage?.app?.canvas as HTMLCanvasElement;
+      const isTransparent = Boolean(options.transparent);
+      const mimeType = isTransparent ? "image/png" : "image/jpeg";
+      const quality = isTransparent ? undefined : 0.95;
 
       for (let frame = 0; frame < totalFrames; frame++) {
-        if (this.cancelRequested) break;
+        if (this.cancelRequested) {
+          console.log("[FFmpeg Pipeline] Export cancelled by user.");
+          await invoke("cancel_ffmpeg_export").catch(() => {});
+          return new Blob([], { type: isTransparent ? "video/webm" : "video/mp4" });
+        }
 
         const globalTime = frame / fps;
         const activeItem =
@@ -136,6 +233,30 @@ export class VideoExporter {
         pixiStage?.seek?.(localTime, activeItem.screen);
         pixiStage?.app?.renderer?.render(pixiStage.app.stage);
 
+        // Extract and stream frame bytes
+        if (canvas && typeof canvas.toBlob === "function") {
+          const frameBytes = await new Promise<Uint8Array | null>((resolve) => {
+            canvas.toBlob(
+              async (blob) => {
+                if (!blob) {
+                  resolve(null);
+                  return;
+                }
+                const buffer = await blob.arrayBuffer();
+                resolve(new Uint8Array(buffer));
+              },
+              mimeType,
+              quality
+            );
+          });
+
+          if (frameBytes && frameBytes.length > 0) {
+            await invoke("write_ffmpeg_frame", {
+              frameData: Array.from(frameBytes),
+            });
+          }
+        }
+
         const now = typeof performance !== "undefined" ? performance.now() : Date.now();
         const elapsedSec = (now - startTime) / 1000;
         const avgPerFrame = elapsedSec / (frame + 1);
@@ -148,11 +269,19 @@ export class VideoExporter {
           percent: Math.round(((frame + 1) / totalFrames) * 100),
           etaSeconds,
         });
+
+        await new Promise((r) => setTimeout(r, 0));
       }
 
-      return new Blob([], { type: options.transparent ? "video/webm" : "video/mp4" });
+      const finalPath = await invoke("finish_ffmpeg_export");
+      console.log(`[FFmpeg Pipeline] Successfully finished export to: ${finalPath}`);
+
+      const resultBlob = new Blob([], { type: isTransparent ? "video/webm" : "video/mp4" });
+      (resultBlob as any).filePath = finalPath || outputPath;
+      return resultBlob;
     } catch (err) {
-      console.error("Tauri FFmpeg export error:", err);
+      console.error("[FFmpeg Pipeline] Tauri FFmpeg export error:", err);
+      await invoke("cancel_ffmpeg_export").catch(() => {});
       throw err;
     }
   }
