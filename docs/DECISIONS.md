@@ -2522,6 +2522,26 @@ The engine provides first-class, motion-first reactive primitives for each eleme
     - NSIS: `src-tauri/target/release/bundle/nsis/Motion Studio_0.1.0_x64-setup.exe`
     - Executable: `src-tauri/target/release/app.exe`
 
+---
+
+### Decision 111: Native Windows OS Chrome (`decorations: true`) & Unified Studio App Bar
+* **Context & Motivation**:
+  - On Windows 10/11 with dual-GPU architectures (AMD Radeon APU + NVIDIA GeForce RTX dGPU), borderless/frameless windows (`decorations: false`) can cause Windows Desktop Window Manager (DWM) to fail to map the window surface onto the display, leaving the process running in the background with zero visible desktop HWND.
+  - In addition, running synchronous IPC queries inside `.setup()` blocked the event loop thread before startup.
+* **The Solution**:
+  1. **Native OS Chrome (`decorations: true`)**:
+     - Configured `"decorations": true` in `src-tauri/tauri.conf.json`. Windows DWM composites the top-level window natively with full OS authority, taskbar integration, Aero Snap, and Windows 11 Snap Layouts on maximize hover.
+  2. **Lean Rust Setup & Lifecycle Event Monitoring**:
+     - Removed blocking synchronous calls from `.setup()` to let the Tao event loop start cleanly without `FailedToReceiveMessage` deadlocks.
+     - Added `on_window_event` in `src-tauri/src/lib.rs` to log window creation, resize, move, and focus events directly to terminal.
+  3. **Streamlined Studio App Bar**:
+     - Retained the top in-app studio bar in `DesktopTitleBar.tsx` containing the Motion Studio branding, active `.mtn` project breadcrumb, MCP toggle switch, and 3-client Agent Setup guide on the left.
+     - Removed redundant HTML caption buttons now that the OS native caption bar handles minimize, maximize, and close natively with 100% reliability.
+* **Verification**:
+  - `npm run build` succeeds cleanly in 14.59s.
+  - `cargo check --manifest-path src-tauri/Cargo.toml` finishes in 7.10s with 0 errors.
+  - All Vitest test suites pass.
+
 
 
 
