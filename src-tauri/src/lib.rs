@@ -1,3 +1,60 @@
+use std::sync::{Arc, Mutex};
+use std::process::Child;
+
+struct McpServerState(Arc<Mutex<Option<Child>>>);
+
+#[tauri::command]
+fn start_mcp_server(state: tauri::State<McpServerState>, port: u16) -> Result<String, String> {
+  let mut lock = state.0.lock().map_err(|e| e.to_string())?;
+  if let Some(mut existing) = lock.take() {
+    let _ = existing.kill();
+  }
+
+  let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
+  let script_path = if cwd.join("mcp.js").exists() {
+    cwd.join("mcp.js")
+  } else if cwd.join("..").join("mcp.js").exists() {
+    cwd.join("..").join("mcp.js")
+  } else {
+    std::path::PathBuf::from("mcp.js")
+  };
+
+  let child = std::process::Command::new("node")
+    .arg(script_path)
+    .arg("--port")
+    .arg(port.to_string())
+    .spawn()
+    .map_err(|e| format!("Failed to spawn node mcp.js: {}", e))?;
+
+  *lock = Some(child);
+  Ok(format!("MCP Server running on port {}", port))
+}
+
+#[tauri::command]
+fn stop_mcp_server(state: tauri::State<McpServerState>) -> Result<(), String> {
+  let mut lock = state.0.lock().map_err(|e| e.to_string())?;
+  if let Some(mut child) = lock.take() {
+    let _ = child.kill();
+  }
+  Ok(())
+}
+
+#[tauri::command]
+fn is_mcp_server_running(state: tauri::State<McpServerState>) -> Result<bool, String> {
+  let mut lock = state.0.lock().map_err(|e| e.to_string())?;
+  if let Some(ref mut child) = *lock {
+    match child.try_wait() {
+      Ok(None) => Ok(true),
+      _ => {
+        *lock = None;
+        Ok(false)
+      }
+    }
+  } else {
+    Ok(false)
+  }
+}
+
 #[tauri::command]
 fn minimize_window(window: tauri::Window) -> Result<(), String> {
   window.minimize().map_err(|e| e.to_string())
@@ -33,7 +90,10 @@ fn log_msg(msg: &str) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   log_msg("run() started");
+  let mcp_state = McpServerState(Arc::new(Mutex::new(None)));
+
   tauri::Builder::default()
+    .manage(mcp_state)
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     .setup(|app| {
@@ -50,12 +110,12 @@ pub fn run() {
       }
       Ok(())
     })
-    .on_window_event(|window, event| {
+    .on_window_event(|_window, event| {
       match event {
         tauri::WindowEvent::Resized(size) => {
           log_msg(&format!("Window resized: {:?}", size));
         }
-        tauri::WindowEvent::CloseRequested { api, .. } => {
+        tauri::WindowEvent::CloseRequested { .. } => {
           log_msg("Window close requested");
         }
         tauri::WindowEvent::Destroyed => {
@@ -67,7 +127,10 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       minimize_window,
       toggle_maximize_window,
-      close_window
+      close_window,
+      start_mcp_server,
+      stop_mcp_server,
+      is_mcp_server_running
     ])
     .build(tauri::generate_context!())
     .expect("error while building tauri application")

@@ -22,6 +22,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useProjectRegistryStore } from "@/store/useProjectRegistryStore";
 import { ExportPopover } from "@/components/export/ExportPopover";
+import { McpDropdown } from "@/components/layout/McpDropdown";
+import { WindowControls } from "@/components/layout/WindowControls";
 
 interface TopNavBarProps {
   onToggleZenMode?: () => void;
@@ -97,14 +99,17 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   };
 
   return (
-    <header className="h-12 w-full bg-card border-b border-border px-3 flex items-center justify-between z-30 relative select-none shrink-0 text-card-foreground">
-      {/* Left: Back button & File Dropdown Menu */}
-      <div className="flex items-center gap-2">
+    <header
+      data-tauri-drag-region
+      className="h-12 w-full bg-card border-b border-border pl-3 pr-1 flex items-center justify-between z-30 relative select-none shrink-0 text-card-foreground"
+    >
+      {/* Left: Back button, File Dropdown Menu & MCP Dropdown */}
+      <div data-tauri-drag-region className="flex items-center gap-2">
         {/* Back Arrow */}
         <button
           type="button"
           onClick={handleBack}
-          className="h-8 w-8 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className="h-8 w-8 rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
           title="Back to Projects"
         >
           <ArrowLeft className="h-4 w-4" />
@@ -222,6 +227,11 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+
+        <div className="h-4 w-px bg-border/60 mx-1" />
+
+        {/* Interactive MCP Dropdown */}
+        <McpDropdown />
       </div>
 
       {/* Center: Design vs Animate Mode Switcher */}
@@ -291,6 +301,9 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
         {/* Downward-Expanding Export Popover Card */}
         <ExportPopover />
+
+        {/* Native Window Controls on the far right */}
+        <WindowControls />
       </div>
     </header>
   );

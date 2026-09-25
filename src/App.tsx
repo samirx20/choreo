@@ -3,7 +3,6 @@ import { useProjectStore, isMotionMode } from "@/store/useProjectStore";
 import { useProjectRegistryStore } from "@/store/useProjectRegistryStore";
 import { ProjectsWorkspace } from "@/components/workspace/ProjectsWorkspace";
 import { TopNavBar } from "@/components/layout/TopNavBar";
-import { DesktopTitleBar } from "@/components/layout/DesktopTitleBar";
 import { LeftSidebar } from "@/components/sidebar/LeftSidebar";
 import { CanvasViewport } from "@/components/canvas/CanvasViewport";
 import { RightInspectorPanel } from "@/components/inspector/RightInspectorPanel";
@@ -202,9 +201,6 @@ const App: React.FC = () => {
 
   return (
     <div className="h-screen w-screen overflow-hidden relative select-none flex flex-col bg-background text-foreground">
-      {/* 0. Native Desktop Window Title Bar with MCP Switch & Agent Setup */}
-      {!isZenMode && <DesktopTitleBar />}
-
       {/* 1. Projects Management Workspace (Dashboard / Home View) */}
       {currentView === "workspace" ? (
         <div className="flex-1 min-h-0 overflow-hidden">

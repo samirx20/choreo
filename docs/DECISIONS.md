@@ -2565,6 +2565,39 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - Vite dev server running and serving `http://127.0.0.1:5173/` with HTTP 200.
   - Vitest: 55/55 test files pass (586/586 tests).
 
+---
+
+### Decision 113: Unified Single-Row Header, Frameless Window Chrome, & Interactive MCP Dropdown
+* **Context & Motivation**:
+  - The previous layout suffered from header clutter and vertical visual waste:
+    1. Triple repetition of "Motion Studio" stacked in three layers (OS native window title bar, in-app `DesktopTitleBar`, and `ProjectsWorkspace` internal header).
+    2. Maximizing the window squished the vertical height of editor layers and canvases due to multi-bar overhead.
+    3. The MCP server toggle and Agent setup instructions were fixed in a wide static bar rather than an ergonomic, compact dropdown with configurable port input and start/stop controls.
+* **The Solution**:
+  1. **Frameless Clean Window Geometry (`decorations: false`)**:
+     - Configured `"decorations": false` in `src-tauri/tauri.conf.json`.
+     - Eliminated `DesktopTitleBar.tsx` entirely.
+     - Implemented `WindowControls.tsx` with standard Windows 11 minimize, maximize/restore, and close buttons integrated directly into the right edge of the top navigation bar.
+     - Added `data-tauri-drag-region` to draggable empty header zones, supporting native drag-to-move, double-click to maximize, and smooth full-height expansion without vertical squishing.
+  2. **Zero Brand Repetition & Single Unified Header (48px)**:
+     - Unified both workspace views (`ProjectsWorkspace.tsx` and `TopNavBar.tsx`) into a single 48px header.
+     - "Motion Studio" brand mark appears strictly once per view on the left, paired with the active document name or workspace logo.
+  3. **Interactive MCP Dropdown (`McpDropdown.tsx`)**:
+     - Created a compact header dropdown button displaying a live status indicator (green pulsing when running, gray when stopped, amber when starting).
+     - Inside the dropdown popover:
+       - Configurable Port input (default: `8765`, validated number input).
+       - One-click Start Server / Stop Server toggle button.
+       - Live SSE (`http://localhost:<port>/sse`) and HTTP JSON-RPC endpoint display with copy-to-clipboard.
+       - Dynamic agent configuration tabs (Claude Desktop `claude_desktop_config.json`, Cursor `.cursor/mcp.json`, and direct Agent prompt) with dynamic port injection.
+  4. **Dual Transport MCP Server (`mcp.js`) & Native Rust Lifecycle**:
+     - Enhanced `mcp.js` to accept `--port <number>` via standard Node `http` module, exposing SSE streams (`GET /sse`) and JSON-RPC endpoints (`POST /mcp`) in addition to stdio.
+     - Tauri backend (`src-tauri/src/lib.rs`) manages child process lifecycle via `start_mcp_server`, `stop_mcp_server`, and `is_mcp_server_running`.
+* **Verification**:
+  - `npm run build` succeeds cleanly in 10.93s.
+  - Vitest: 55/55 test files pass (586/586 tests).
+  - Dev server and window verified running on physical display (`hwnd: Ok(HWND(0x1a0a44))` at `pos: (213, 46)`, size `1511x943`).
+
+
 
 
 

@@ -373,7 +373,75 @@ function handleToolCall(name, args) {
   }
 }
 
-// JSON-RPC 2.0 stdio loop
+function processRpcMessage(msg) {
+  const { id, method, params } = msg;
+
+  if (method === "initialize") {
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        protocolVersion: "2024-11-05",
+        serverInfo: {
+          name: "motion-studio",
+          version: "0.1.0",
+        },
+        capabilities: {
+          tools: {},
+        },
+      },
+    };
+  }
+
+  if (method === "notifications/initialized") {
+    return null;
+  }
+
+  if (method === "tools/list") {
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        tools: TOOLS,
+      },
+    };
+  }
+
+  if (method === "tools/call") {
+    const toolName = params?.name;
+    const toolArgs = params?.arguments || {};
+    const result = handleToolCall(toolName, toolArgs);
+
+    return {
+      jsonrpc: "2.0",
+      id,
+      result: {
+        content: [
+          {
+            type: "text",
+            text: result.text,
+          },
+        ],
+      },
+    };
+  }
+
+  if (method === "ping") {
+    return { jsonrpc: "2.0", id, result: {} };
+  }
+
+  if (id !== undefined) {
+    return {
+      jsonrpc: "2.0",
+      id,
+      error: { code: -32601, message: `Method "${method}" not found` },
+    };
+  }
+
+  return null;
+}
+
+// 1. JSON-RPC 2.0 stdio loop
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -386,79 +454,71 @@ rl.on("line", (line) => {
 
   try {
     const msg = JSON.parse(trimmed);
-    const { id, method, params } = msg;
-
-    if (method === "initialize") {
-      const response = {
-        jsonrpc: "2.0",
-        id,
-        result: {
-          protocolVersion: "2024-11-05",
-          serverInfo: {
-            name: "motion-studio",
-            version: "0.1.0",
-          },
-          capabilities: {
-            tools: {},
-          },
-        },
-      };
+    const response = processRpcMessage(msg);
+    if (response) {
       process.stdout.write(JSON.stringify(response) + "\n");
-      return;
-    }
-
-    if (method === "notifications/initialized") {
-      return;
-    }
-
-    if (method === "tools/list") {
-      const response = {
-        jsonrpc: "2.0",
-        id,
-        result: {
-          tools: TOOLS,
-        },
-      };
-      process.stdout.write(JSON.stringify(response) + "\n");
-      return;
-    }
-
-    if (method === "tools/call") {
-      const toolName = params?.name;
-      const toolArgs = params?.arguments || {};
-      const result = handleToolCall(toolName, toolArgs);
-
-      const response = {
-        jsonrpc: "2.0",
-        id,
-        result: {
-          content: [
-            {
-              type: "text",
-              text: result.text,
-            },
-          ],
-        },
-      };
-      process.stdout.write(JSON.stringify(response) + "\n");
-      return;
-    }
-
-    if (method === "ping") {
-      process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id, result: {} }) + "\n");
-      return;
-    }
-
-    if (id !== undefined) {
-      process.stdout.write(
-        JSON.stringify({
-          jsonrpc: "2.0",
-          id,
-          error: { code: -32601, message: `Method "${method}" not found` },
-        }) + "\n"
-      );
     }
   } catch (err) {
     process.stderr.write(`[MCP Error]: ${err.message}\n`);
   }
 });
+
+// 2. HTTP/SSE Server if --port is passed
+const portArgIndex = process.argv.indexOf("--port");
+const portArg = portArgIndex !== -1 ? parseInt(process.argv[portArgIndex + 1], 10) : null;
+
+if (portArg && !isNaN(portArg)) {
+  import("http").then(({ default: http }) => {
+    const server = http.createServer((req, res) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+      if (req.method === "OPTIONS") {
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+
+      if (req.method === "GET" && (req.url === "/health" || req.url === "/")) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ status: "running", name: "motion-studio", port: portArg, tools: TOOLS.length }));
+        return;
+      }
+
+      if (req.method === "GET" && req.url === "/sse") {
+        res.writeHead(200, {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive",
+        });
+        res.write(":connected\n\nevent: endpoint\ndata: /mcp\n\n");
+        return;
+      }
+
+      if (req.method === "POST" && (req.url === "/mcp" || req.url === "/message")) {
+        let body = "";
+        req.on("data", (chunk) => { body += chunk; });
+        req.on("end", () => {
+          try {
+            const parsed = JSON.parse(body);
+            const response = processRpcMessage(parsed);
+            res.writeHead(200, { "Content-Type": "application/json" });
+            res.end(response ? JSON.stringify(response) : JSON.stringify({ jsonrpc: "2.0", id: parsed.id, result: {} }));
+          } catch (e) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ jsonrpc: "2.0", error: { code: -32700, message: "Parse error" } }));
+          }
+        });
+        return;
+      }
+
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "Not found" }));
+    });
+
+    server.listen(portArg, "0.0.0.0", () => {
+      process.stderr.write(`[MCP Server] Running on http://127.0.0.1:${portArg} (SSE: /sse, RPC: /mcp)\n`);
+    });
+  });
+}

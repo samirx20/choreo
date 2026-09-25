@@ -19,6 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { McpDropdown } from "@/components/layout/McpDropdown";
+import { WindowControls } from "@/components/layout/WindowControls";
 
 export const ProjectsWorkspace: React.FC = () => {
   const {
@@ -132,33 +134,43 @@ export const ProjectsWorkspace: React.FC = () => {
           </div>
         </div>
       )}
-      {/* 1. Workspace Top Bar */}
-      <header className="h-14 w-full bg-card border-b border-border px-6 flex items-center justify-between z-30 shrink-0 text-card-foreground">
-        {/* Left: Brand Mark */}
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-sm">
-            <Film className="w-4 h-4" />
+      {/* 1. Workspace Top Bar (Single Unified Native-Like Header) */}
+      <header
+        data-tauri-drag-region
+        className="h-12 w-full bg-card border-b border-border pl-4 pr-1 flex items-center justify-between z-30 shrink-0 text-card-foreground select-none"
+      >
+        {/* Left: Brand Mark + Version + MCP Dropdown */}
+        <div data-tauri-drag-region className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
+              <Film className="w-3.5 h-3.5" />
+            </div>
+            <span className="font-semibold text-xs tracking-tight text-foreground">
+              Motion Studio
+            </span>
+            <span className="text-[10px] font-mono text-muted-foreground">v1.0</span>
           </div>
-          <span className="font-semibold text-sm tracking-tight text-foreground">
-            Motion Studio
-          </span>
-          <span className="text-[11px] font-mono text-muted-foreground ml-1">v1.0</span>
+
+          <div className="h-4 w-px bg-border/60 mx-1" />
+
+          {/* Interactive MCP Dropdown */}
+          <McpDropdown />
         </div>
 
         {/* Center: Search Bar */}
-        <div className="relative w-80">
+        <div className="relative w-80 mx-4">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search projects..."
-            className="h-8 w-full pl-8 pr-3 text-xs bg-muted border border-border focus:border-ring rounded-md outline-none text-foreground placeholder:text-muted-foreground transition-colors"
+            className="h-7 w-full pl-8 pr-3 text-xs bg-muted/60 border border-border focus:border-ring rounded-md outline-none text-foreground placeholder:text-muted-foreground transition-colors"
           />
         </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2">
+        {/* Right: Actions + Window Controls */}
+        <div className="flex items-center gap-2 shrink-0">
           {/* Hidden file input for import */}
           <input
             ref={fileInputRef}
@@ -171,7 +183,7 @@ export const ProjectsWorkspace: React.FC = () => {
           <button
             type="button"
             onClick={handleImportClick}
-            className="h-8 px-3 rounded text-xs font-medium text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 border border-border flex items-center gap-1.5 transition-colors"
+            className="h-7 px-2.5 rounded text-xs font-medium text-muted-foreground hover:text-foreground bg-muted hover:bg-muted/80 border border-border flex items-center gap-1.5 transition-colors cursor-pointer"
             title="Import project file (.mtn)"
           >
             <Upload className="w-3.5 h-3.5 text-muted-foreground" />
@@ -190,11 +202,14 @@ export const ProjectsWorkspace: React.FC = () => {
                 template: "blank",
               })
             }
-            className="h-8 px-3.5 rounded text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 flex items-center gap-1.5 shadow-xs transition-colors"
+            className="h-7 px-3 rounded text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/90 flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Project</span>
           </button>
+
+          {/* Native Window Controls on the far right */}
+          <WindowControls />
         </div>
       </header>
 
