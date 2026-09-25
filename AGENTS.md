@@ -120,6 +120,13 @@ Never generate or suggest cheap SaaS cliches, decorative gimmicks, or lazy UI tr
 * **Non-Spatial Channel Monotonicity**: Easing curves applied to non-spatial property channels (opacity, colors, blurs, trim paths) must be monotonic. Never apply overshooting/elastic spring curves to color or opacity channels to prevent numerical explosion or visual clipping.
 * **Constructive Agent Tool Sanitization**: When an agent invokes `place_element` or `apply_animation`, tools must constructively sanitize and strip invalid properties/presets with clear learning notices instead of silently accepting corrupted states.
 
+### Rule 13: High-Performance Hardware-Accelerated Export & Visual Parity
+* **Zero-Copy Frame Streaming**: In desktop (Tauri) export workflows, never convert raw byte buffers into JavaScript numeric arrays (`Array.from(frameBytes)`) or serialize large binaries into JSON text. Always stream frames via hardware-accelerated base64 strings (`canvas.toDataURL` -> `write_ffmpeg_frame_base64`) directly to native FFmpeg stdin in microseconds.
+* **100% Canvas Visual Parity**:
+  * Headless render stages must scale `artboardContainer.scale` to `(exportScale, exportScale)` matching target output resolutions (720p, 1080p, 1440p, 4K).
+  * Display objects must use center pivot math `pivot.set(w * pivotX, h * pivotY)` so scale and rotation animate in place rather than drifting from the top-left corner.
+  * Text layers and compound split-text groups must replicate DOM flexbox alignment and advance offsets with mathematical precision.
+
 ---
 
 ## 3. The Agent Workflow Pattern

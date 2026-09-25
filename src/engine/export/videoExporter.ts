@@ -233,27 +233,33 @@ export class VideoExporter {
         pixiStage?.seek?.(localTime, activeItem.screen);
         pixiStage?.app?.renderer?.render(pixiStage.app.stage);
 
-        // Extract and stream frame bytes
-        if (canvas && typeof canvas.toBlob === "function") {
-          const frameBytes = await new Promise<Uint8Array | null>((resolve) => {
-            canvas.toBlob(
-              async (blob) => {
-                if (!blob) {
-                  resolve(null);
-                  return;
-                }
-                const buffer = await blob.arrayBuffer();
-                resolve(new Uint8Array(buffer));
-              },
-              mimeType,
-              quality
-            );
-          });
+        // Extract and stream frame bytes with zero-copy base64 hardware acceleration
+        if (canvas) {
+          if (typeof canvas.toDataURL === "function") {
+            const dataUrl = canvas.toDataURL(mimeType, quality);
+            const commaIdx = dataUrl.indexOf(",");
+            const base64Data = commaIdx !== -1 ? dataUrl.slice(commaIdx + 1) : dataUrl;
 
-          if (frameBytes && frameBytes.length > 0) {
-            await invoke("write_ffmpeg_frame", {
-              frameData: Array.from(frameBytes),
+            try {
+              await invoke("write_ffmpeg_frame_base64", {
+                frameBase64: base64Data,
+              });
+            } catch {
+              const binStr = atob(base64Data);
+              const len = binStr.length;
+              const bytes = new Uint8Array(len);
+              for (let i = 0; i < len; i++) bytes[i] = binStr.charCodeAt(i);
+              await invoke("write_ffmpeg_frame", { frameData: Array.from(bytes) });
+            }
+          } else if (typeof canvas.toBlob === "function") {
+            const blob = await new Promise<Blob | null>((resolve) => {
+              canvas.toBlob(resolve, mimeType, quality);
             });
+            if (blob) {
+              const arrayBuffer = await blob.arrayBuffer();
+              const frameBytes = Array.from(new Uint8Array(arrayBuffer));
+              await invoke("write_ffmpeg_frame", { frameData: frameBytes });
+            }
           }
         }
 

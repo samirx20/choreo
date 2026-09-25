@@ -6,13 +6,25 @@ import { Screen, ProjectSettings } from "@/types/scene";
  * Dynamically instantiates an offscreen PixiJS stage for headless background video
  * rendering, offline frame exports, and environments where the main canvas is unmounted.
  */
+export interface HeadlessRenderStageOptions {
+  baseWidth?: number;
+  baseHeight?: number;
+  scale?: number;
+}
+
 export class HeadlessRenderStage {
   private stage: PixiStage | null = null;
   private canvas: HTMLCanvasElement | null = null;
 
-  public async init(settings: ProjectSettings): Promise<PixiStage> {
+  public async init(
+    settings: ProjectSettings,
+    opts?: HeadlessRenderStageOptions
+  ): Promise<PixiStage> {
     const width = settings.width || 1920;
     const height = settings.height || 1080;
+    const artboardWidth = opts?.baseWidth || width;
+    const artboardHeight = opts?.baseHeight || height;
+    const scale = opts?.scale ?? (artboardWidth > 0 ? width / artboardWidth : 1);
 
     if (typeof document !== "undefined") {
       this.canvas = document.createElement("canvas");
@@ -26,8 +38,9 @@ export class HeadlessRenderStage {
       canvas: this.canvas!,
       width,
       height,
-      artboardWidth: width,
-      artboardHeight: height,
+      artboardWidth,
+      artboardHeight,
+      scale,
       backgroundColor: settings.backgroundColor || "#18181b",
       isHeadless: true,
     });

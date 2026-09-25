@@ -205,6 +205,25 @@ fn write_ffmpeg_frame(
 }
 
 #[tauri::command]
+fn write_ffmpeg_frame_base64(
+  state: tauri::State<FfmpegExportState>,
+  frame_base64: String,
+) -> Result<(), String> {
+  use base64::Engine;
+  let bytes = base64::engine::general_purpose::STANDARD
+    .decode(&frame_base64)
+    .map_err(|e| format!("Base64 decode error: {}", e))?;
+
+  let mut lock = state.0.lock().map_err(|e| e.to_string())?;
+  if let Some(ref mut session) = *lock {
+    session.stdin.write_all(&bytes).map_err(|e| format!("Failed writing frame to FFmpeg stdin: {}", e))?;
+    Ok(())
+  } else {
+    Err("No active FFmpeg export session".to_string())
+  }
+}
+
+#[tauri::command]
 fn finish_ffmpeg_export(
   state: tauri::State<FfmpegExportState>,
 ) -> Result<String, String> {
@@ -415,6 +434,7 @@ pub fn run() {
       check_ffmpeg_available,
       start_ffmpeg_export,
       write_ffmpeg_frame,
+      write_ffmpeg_frame_base64,
       finish_ffmpeg_export,
       cancel_ffmpeg_export
     ])

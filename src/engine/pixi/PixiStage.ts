@@ -1,7 +1,7 @@
-import { Application, Container, Graphics, HTMLText, Text, TextStyle, BlurFilter, Rectangle } from "pixi.js";
+import { Application, Container, Graphics, HTMLText, Text, TextStyle, BlurFilter, Rectangle, Sprite } from "pixi.js";
 import { Viewport } from "pixi-viewport";
 import { Layer, Screen, GroupLayer, TextLayer, ShapeLayer, ImageLayer } from "@/types/scene";
-import { evaluateSceneAtTime } from "@/engine/evaluator";
+import { evaluateSceneAtTime, evaluateCounterValue } from "@/engine/evaluator";
 
 export interface PixiStageOptions {
   canvas: HTMLCanvasElement;
@@ -9,6 +9,7 @@ export interface PixiStageOptions {
   height: number;
   artboardWidth: number;
   artboardHeight: number;
+  scale?: number;
   backgroundColor?: string;
   isHeadless?: boolean;
   onLayerSelect?: (layerId: string, isShift: boolean) => void;
@@ -58,6 +59,8 @@ export class PixiStage {
       this.app.stage.addChild(this.artboardContainer);
       this.artboardContainer.x = 0;
       this.artboardContainer.y = 0;
+      const exportScale = this.options.scale ?? 1;
+      this.artboardContainer.scale.set(exportScale, exportScale);
     } else {
       // Create Interactive Viewport
       this.viewport = new Viewport({
@@ -210,8 +213,8 @@ export class PixiStage {
       // Dynamically update artboard background to matching scene fill
       const screenBg = screen.backgroundColor || this.options.backgroundColor || "#18181b";
       this.updateArtboardBackground(
-        this.options.artboardWidth,
-        this.options.artboardHeight,
+        screen.width || this.options.artboardWidth,
+        screen.height || this.options.artboardHeight,
         screenBg
       );
     }
@@ -260,6 +263,35 @@ export class PixiStage {
       // If group, recursively render children
       if (layer.type === "group" && layer.children) {
         const groupContainer = (dobj as any).__childrenContainer || dobj;
+        const layoutObj = layer.layout;
+        const isFlex = (layoutObj && typeof layoutObj === "object" && layoutObj.display === "flex") ||
+          (layer as any).layout === "flex" ||
+          (layer as any).compoundType === "split-text";
+        const isRow = ((layoutObj && typeof layoutObj === "object" && layoutObj.flexDirection) || (layer as any).flexDirection || "row") === "row";
+        const gap = (layoutObj && typeof layoutObj === "object" && typeof layoutObj.gap === "number")
+          ? layoutObj.gap
+          : typeof (layer as any).gap === "number"
+            ? (layer as any).gap
+            : (layer as any).compoundType === "split-text" ? 0 : 8;
+
+        if (isFlex) {
+          let offset = 0;
+          for (let c = 0; c < layer.children.length; c++) {
+            const child = layer.children[c];
+            const childW = typeof child.style?.width === "number" ? child.style.width : 50;
+            const childH = typeof child.style?.height === "number" ? child.style.height : 30;
+            if (isRow) {
+              child.style.x = offset;
+              child.style.y = 0;
+              offset += childW + gap;
+            } else {
+              child.style.x = 0;
+              child.style.y = offset;
+              offset += childH + gap;
+            }
+          }
+        }
+
         this.renderLayerList(layer.children, groupContainer);
 
         // Mask Group Support
@@ -317,6 +349,18 @@ export class PixiStage {
       container.addChild(iconGraphics);
       (container as any).__iconChild = iconGraphics;
       this.drawIcon(iconGraphics, layer);
+    } else if (layer.type === "image" && (layer as any).src) {
+      try {
+        const sprite = Sprite.from((layer as any).src);
+        const w = typeof layer.style.width === "number" ? layer.style.width : 200;
+        const h = typeof layer.style.height === "number" ? layer.style.height : 200;
+        sprite.width = w;
+        sprite.height = h;
+        container.addChild(sprite);
+        (container as any).__imageChild = sprite;
+      } catch (e) {
+        console.warn("Could not load image sprite in PixiStage:", e);
+      }
     }
 
     this.updateDisplayObject(container, layer);
@@ -325,13 +369,15 @@ export class PixiStage {
 
   private updateDisplayObject(container: Container, layer: Layer) {
     const s = layer.style;
-    container.x = s.x || 0;
-    container.y = s.y || 0;
-    container.scale.x = s.scaleX ?? 1;
-    container.scale.y = s.scaleY ?? 1;
-    container.rotation = ((s.rotation || 0) * Math.PI) / 180;
-    container.alpha = s.opacity ?? 1;
-    container.visible = !layer.hidden;
+    const w = typeof s.width === "number" ? s.width : ((container as any).__baseW || 0);
+    const h = typeof s.height === "number" ? s.height : ((container as any).__baseH || 0);
+    const pivotX = s.pivotX ?? 0.5;
+    const pivotY = s.pivotY ?? 0.5;
+
+    (container as any).__baseW = w;
+    (container as any).__baseH = h;
+    (container as any).__pivotX = pivotX;
+    (container as any).__pivotY = pivotY;
 
     // Cache base transform attributes for seek animation offset calculation
     (container as any).__baseX = s.x || 0;
@@ -339,6 +385,15 @@ export class PixiStage {
     (container as any).__baseScaleX = s.scaleX ?? 1;
     (container as any).__baseScaleY = s.scaleY ?? 1;
     (container as any).__baseRotation = ((s.rotation || 0) * Math.PI) / 180;
+
+    container.pivot.set(w * pivotX, h * pivotY);
+    container.x = (s.x || 0) + w * pivotX;
+    container.y = (s.y || 0) + h * pivotY;
+    container.scale.x = s.scaleX ?? 1;
+    container.scale.y = s.scaleY ?? 1;
+    container.rotation = ((s.rotation || 0) * Math.PI) / 180;
+    container.alpha = s.opacity ?? 1;
+    container.visible = !layer.hidden;
 
     // Filters
     if (s.filterBlur && s.filterBlur > 0) {
@@ -359,18 +414,42 @@ export class PixiStage {
     }
   }
 
+  private positionTextObject(text: Text, layer: TextLayer | any) {
+    const s = layer.style;
+    const w = typeof s.width === "number" ? s.width : text.width;
+    const h = typeof s.height === "number" ? s.height : text.height;
+
+    const textAlign = s.textAlign || "center";
+    if (textAlign === "left") {
+      text.x = 0;
+    } else if (textAlign === "right") {
+      text.x = Math.max(0, w - text.width);
+    } else {
+      text.x = Math.max(0, (w - text.width) / 2);
+    }
+
+    const verticalAlign = s.verticalAlign || "center";
+    if (verticalAlign === "top") {
+      text.y = 0;
+    } else if (verticalAlign === "bottom") {
+      text.y = Math.max(0, h - text.height);
+    } else {
+      text.y = Math.max(0, (h - text.height) / 2);
+    }
+  }
+
   private createTextObject(layer: TextLayer | any): Text {
     const s = layer.style;
     const colorNum = parseInt((s.color || "#ffffff").replace("#", ""), 16) || 0xffffff;
 
     const style = new TextStyle({
-      fontFamily: s.fontFamily || "Inter",
+      fontFamily: s.fontFamily || "Inter, -apple-system, sans-serif",
       fontSize: s.fontSize || 32,
       fontWeight: (s.fontWeight as any) || "normal",
       fill: colorNum,
-      align: s.textAlign || "left",
-      wordWrap: s.wordWrap ?? false,
-      wordWrapWidth: s.wordWrapWidth || 600,
+      align: (s.textAlign as any) || "center",
+      wordWrap: s.wordWrap ?? (s.boxMode === "area" || s.textSizing === "fixed" || s.textSizing === "auto-height"),
+      wordWrapWidth: s.width || 600,
       lineHeight: s.lineHeight ? s.lineHeight * (s.fontSize || 32) : undefined,
     });
 
@@ -379,6 +458,7 @@ export class PixiStage {
       style,
     });
 
+    this.positionTextObject(text, layer);
     return text;
   }
 
@@ -387,13 +467,15 @@ export class PixiStage {
     const colorNum = parseInt((s.color || "#ffffff").replace("#", ""), 16) || 0xffffff;
 
     text.text = layer.content || "";
-    text.style.fontFamily = s.fontFamily || "Inter";
+    text.style.fontFamily = s.fontFamily || "Inter, -apple-system, sans-serif";
     text.style.fontSize = s.fontSize || 32;
     text.style.fontWeight = (s.fontWeight as any) || "normal";
     text.style.fill = colorNum;
-    text.style.align = s.textAlign || "left";
-    text.style.wordWrap = s.wordWrap ?? false;
-    text.style.wordWrapWidth = s.wordWrapWidth || 600;
+    text.style.align = (s.textAlign as any) || "center";
+    text.style.wordWrap = s.wordWrap ?? (s.boxMode === "area" || s.textSizing === "fixed" || s.textSizing === "auto-height");
+    text.style.wordWrapWidth = s.width || 600;
+
+    this.positionTextObject(text, layer);
   }
 
   private drawShape(g: Graphics, layer: ShapeLayer | any) {
@@ -640,11 +722,73 @@ export class PixiStage {
           }
         }
 
+        const wVal = (dobj as any).__baseW || (typeof layer?.style.width === "number" ? layer.style.width : 0);
+        const hVal = (dobj as any).__baseH || (typeof layer?.style.height === "number" ? layer.style.height : 0);
+        const pivotX = (dobj as any).__pivotX ?? 0.5;
+        const pivotY = (dobj as any).__pivotY ?? 0.5;
+
+        // Dynamic width/height resize during seek
+        const targetW = style.width !== undefined ? parseFloat(String(style.width)) : wVal;
+        const targetH = style.height !== undefined ? parseFloat(String(style.height)) : hVal;
+        if (!isNaN(targetW) && !isNaN(targetH) && (targetW !== (dobj as any).__lastW || targetH !== (dobj as any).__lastH)) {
+          (dobj as any).__lastW = targetW;
+          (dobj as any).__lastH = targetH;
+          if ((dobj as any).__shapeChild) {
+            const shapeLayer = { ...layer, style: { ...layer?.style, width: targetW, height: targetH } };
+            this.drawShape((dobj as any).__shapeChild, shapeLayer as any);
+          } else if ((dobj as any).__bgGraphics) {
+            const groupLayer = { ...layer, style: { ...layer?.style, width: targetW, height: targetH } };
+            this.drawGroupBackground((dobj as any).__bgGraphics, groupLayer as any);
+          }
+        }
+
+        // Clip-path reveals (e.g. maskReveal, lineReveal, drawOn)
+        if (style.clipPath) {
+          const insetMatch = String(style.clipPath).match(/inset\(([-0-9.]+)%?\s+([-0-9.]+)%?\s+([-0-9.]+)%?\s+([-0-9.]+)%?\)/);
+          if (insetMatch) {
+            const topPct = parseFloat(insetMatch[1]) / 100;
+            const rightPct = parseFloat(insetMatch[2]) / 100;
+            const bottomPct = parseFloat(insetMatch[3]) / 100;
+            const leftPct = parseFloat(insetMatch[4]) / 100;
+
+            let clipMask = (dobj as any).__clipMask;
+            if (!clipMask) {
+              clipMask = new Graphics();
+              (dobj as any).__clipMask = clipMask;
+              dobj.addChild(clipMask);
+              dobj.mask = clipMask;
+            }
+            clipMask.clear();
+            const curW = (dobj as any).__lastW || targetW;
+            const curH = (dobj as any).__lastH || targetH;
+            const cx = curW * leftPct;
+            const cy = curH * topPct;
+            const cw = Math.max(0, curW * (1 - leftPct - rightPct));
+            const ch = Math.max(0, curH * (1 - topPct - bottomPct));
+            clipMask.rect(cx, cy, cw, ch);
+            clipMask.fill({ color: 0xffffff });
+          }
+        } else if ((dobj as any).__clipMask) {
+          dobj.mask = null;
+          (dobj as any).__clipMask.destroy();
+          (dobj as any).__clipMask = null;
+        }
+
+        // Rolling Counter evaluation
+        if ((layer as any)?.type === "counter" && (dobj as any).__textChild) {
+          const val = evaluateCounterValue(layer as any, time);
+          (dobj as any).__textChild.text = String(val);
+          this.positionTextObject((dobj as any).__textChild, layer);
+        }
+
         const leftPos = style.left !== undefined ? parseFloat(String(style.left)) : baseX;
         const topPos = style.top !== undefined ? parseFloat(String(style.top)) : baseY;
+        const curW = (dobj as any).__lastW || targetW;
+        const curH = (dobj as any).__lastH || targetH;
 
-        dobj.x = (isNaN(leftPos) ? baseX : leftPos) + tx;
-        dobj.y = (isNaN(topPos) ? baseY : topPos) + ty;
+        dobj.pivot.set(curW * pivotX, curH * pivotY);
+        dobj.x = (isNaN(leftPos) ? baseX : leftPos) + tx + curW * pivotX;
+        dobj.y = (isNaN(topPos) ? baseY : topPos) + ty + curH * pivotY;
         dobj.scale.set(baseScaleX * sx, baseScaleY * sy);
         dobj.rotation = baseRotation + (rotDeg * Math.PI) / 180;
 

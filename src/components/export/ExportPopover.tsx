@@ -100,8 +100,9 @@ export const ExportPopover: React.FC = () => {
 
   const selectedResOption =
     RESOLUTION_OPTIONS.find((r) => r.id === resolution) || RESOLUTION_OPTIONS[2];
-  const baseWidth = doc.settings.width || 1920;
-  const baseHeight = doc.settings.height || 1080;
+  const targetScreen = activeScreen;
+  const baseWidth = (scopeMode === "current" ? targetScreen?.width : undefined) || doc.settings.width || 1920;
+  const baseHeight = (scopeMode === "current" ? targetScreen?.height : undefined) || doc.settings.height || 1080;
   const baseDim = Math.min(baseWidth, baseHeight);
   const scale = baseDim > 0 ? selectedResOption.targetP / baseDim : selectedResOption.targetP / 1080;
 
@@ -150,17 +151,19 @@ export const ExportPopover: React.FC = () => {
 
     const screensToExport = scopeMode === "all" ? doc.screens : [activeScreen];
 
-    let stage = getActivePixiStage();
-    let headlessStage: HeadlessRenderStage | null = null;
-
-    if (!stage) {
-      headlessStage = new HeadlessRenderStage();
-      stage = await headlessStage.init({
+    const headlessStage = new HeadlessRenderStage();
+    const stage = await headlessStage.init(
+      {
         ...doc.settings,
         width: exportWidth,
         height: exportHeight,
-      });
-    }
+      },
+      {
+        baseWidth,
+        baseHeight,
+        scale,
+      }
+    );
 
     try {
       const blob = await videoExporter.exportVideo({

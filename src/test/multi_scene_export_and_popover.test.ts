@@ -350,6 +350,61 @@ describe("Multi-Scene Sequence Stitching & Transparent Alpha Video Export", () =
       vi.doUnmock("@tauri-apps/api/core");
     });
 
+    it("streams frames using fast write_ffmpeg_frame_base64 when canvas.toDataURL is available", async () => {
+      const invokeMock = vi.fn(async (cmd: string) => {
+        if (cmd === "check_ffmpeg_available") return true;
+        if (cmd === "start_ffmpeg_export") return true;
+        if (cmd === "write_ffmpeg_frame_base64") return true;
+        if (cmd === "finish_ffmpeg_export") return "C:\\Users\\Sam\\Videos\\test_fast_export.mp4";
+        return null;
+      });
+
+      vi.doMock("@tauri-apps/api/core", () => ({
+        invoke: invokeMock,
+      }));
+
+      (window as any).__TAURI_INTERNALS__ = {};
+
+      const mockStage = {
+        app: {
+          canvas: {
+            toDataURL: vi.fn(() => "data:image/jpeg;base64,/9j/4AAQSkZJRg=="),
+          },
+          stage: {},
+          renderer: {
+            render: vi.fn(),
+          },
+        },
+        renderScreen: vi.fn(),
+        seek: vi.fn(),
+      } as any;
+
+      const result = await videoExporter.exportVideo({
+        pixiStage: mockStage,
+        screen: scene1,
+        settings: mockSettings,
+        format: "mp4",
+        fps: 5,
+        outputPath: "C:\\Users\\Sam\\Videos\\test_fast_export.mp4",
+      });
+
+      expect(invokeMock).toHaveBeenCalledWith("check_ffmpeg_available");
+      expect(invokeMock).toHaveBeenCalledWith("start_ffmpeg_export", expect.objectContaining({
+        outputPath: "C:\\Users\\Sam\\Videos\\test_fast_export.mp4",
+        fps: 5,
+        format: "mp4",
+        isTransparent: false,
+      }));
+      expect(invokeMock).toHaveBeenCalledWith("write_ffmpeg_frame_base64", {
+        frameBase64: "/9j/4AAQSkZJRg==",
+      });
+      expect(invokeMock).toHaveBeenCalledWith("finish_ffmpeg_export");
+      expect((result as any).filePath).toBe("C:\\Users\\Sam\\Videos\\test_fast_export.mp4");
+
+      delete (window as any).__TAURI_INTERNALS__;
+      vi.doUnmock("@tauri-apps/api/core");
+    });
+
     it("falls back cleanly to browser MediaStream export when FFmpeg is unavailable in Tauri", async () => {
       const invokeMock = vi.fn(async (cmd: string) => {
         if (cmd === "check_ffmpeg_available") return false;
