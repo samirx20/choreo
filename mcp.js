@@ -772,47 +772,6 @@ const TOOLS = [
     },
   },
   {
-    name: "link_elements",
-    description: "Establishes a reactive layout binding: 'hug' (card frame dynamically wraps text/counter), 'reflow' (sibling elements maintain continuous gap), 'pin' (pins element to anchor), 'connect' (dynamic arrow/line connecting elements), 'match' (match dimension), or 'lag' (physical inertia follower).",
-    inputSchema: {
-      type: "object",
-      properties: {
-        file: { type: "string", description: "Path to .mtn project file" },
-        driverId: { type: "string", description: "Leading/driver element ID" },
-        drivenId: { type: "string", description: "Following/driven element ID" },
-        mode: {
-          type: "string",
-          enum: ["hug", "reflow", "pin", "connect", "match", "lag"],
-          description: "Reactive binding mode",
-        },
-        padding: { type: "number", description: "Padding for 'hug' mode (default: 24)" },
-        gap: { type: "number", description: "Gap distance in px for 'reflow' mode (default: 16)" },
-        axis: { type: "string", enum: ["x", "y"], description: "Reflow axis (default: 'x')" },
-        anchor: {
-          type: "string",
-          enum: ["top-left", "top-center", "top-right", "center-left", "center", "center-right", "bottom-left", "bottom-center", "bottom-right"],
-          description: "Anchor point for 'pin' mode",
-        },
-        curve: { type: "string", enum: ["straight", "bezier", "orthogonal"], description: "Connector line curve style" },
-        lagSeconds: { type: "number", description: "Lag delay for 'lag' follower mode" },
-      },
-      required: ["driverId", "drivenId", "mode"],
-    },
-  },
-  {
-    name: "unlink_elements",
-    description: "Removes reactive layout bindings from an element.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        file: { type: "string", description: "Path to .mtn project file" },
-        layerId: { type: "string", description: "Target layer ID to clear bindings from" },
-        driverId: { type: "string", description: "Optional specific driver ID to detach" },
-      },
-      required: ["layerId"],
-    },
-  },
-  {
     name: "split_text",
     description: "Semantically decomposes a text headline into independent kinetic words, characters, or lines with 0.0px visual shift invariance for Apple-grade kinetic reveals.",
     inputSchema: {
@@ -2504,58 +2463,6 @@ function handleToolCall(name, args) {
       };
     }
 
-    case "link_elements": {
-      const driverRes = findLayerInDoc(doc, args.driverId);
-      const drivenRes = findLayerInDoc(doc, args.drivenId);
-      if (!driverRes || !drivenRes) {
-        return { text: `Error: driverId "${args.driverId}" or drivenId "${args.drivenId}" not found.` };
-      }
-      const driverLayer = driverRes.layer;
-      const drivenLayer = drivenRes.layer;
-
-      if (!drivenLayer.bindings) drivenLayer.bindings = [];
-      drivenLayer.bindings = drivenLayer.bindings.filter((b) => b.driverLayerId !== args.driverId);
-
-      const bindingId = "bind_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6);
-      drivenLayer.bindings.push({
-        id: bindingId,
-        driverLayerId: args.driverId,
-        targetLayerId: args.drivenId,
-        driverProp: args.mode === "hug" ? "width" : args.mode === "reflow" ? "x" : "progress",
-        drivenProp: args.mode === "hug" ? "width" : args.mode === "reflow" ? "x" : "progress",
-        mode: args.mode,
-        padding: args.padding ?? 24,
-        reflowGap: args.gap ?? 16,
-        reflowAxis: (args.axis === "y" || args.axis === "vertical") ? "vertical" : "horizontal",
-        targetAnchor: args.anchor || "center",
-        lineCurve: args.curve || "straight",
-        lagSeconds: args.lagSeconds ?? 0.08,
-      });
-
-      writeMtnFile(resolvedPath, pkg);
-      return {
-        text: `Linked driven element "${drivenLayer.name}" to driver "${driverLayer.name}" with reactive mode "${args.mode}" (binding id: ${bindingId}).`,
-      };
-    }
-
-    case "unlink_elements": {
-      const res = findLayerInDoc(doc, args.layerId);
-      if (!res) {
-        return { text: `Error: Layer "${args.layerId}" not found.` };
-      }
-      const targetLayer = res.layer;
-
-      if (args.driverId && targetLayer.bindings) {
-        targetLayer.bindings = targetLayer.bindings.filter((b) => b.driverLayerId !== args.driverId);
-      } else {
-        targetLayer.bindings = [];
-      }
-
-      writeMtnFile(resolvedPath, pkg);
-      return {
-        text: `Cleared reactive layout bindings from layer "${targetLayer.name}" (id: ${args.layerId}).`,
-      };
-    }
 
     case "split_text": {
       const res = findLayerInDoc(doc, args.layerId);

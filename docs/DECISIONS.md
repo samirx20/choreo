@@ -3061,3 +3061,31 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 * **Verification**:
   - Created end-to-end integration test suite `src/test/agent_gui_parity_e2e.test.ts` (4 comprehensive tests covering multi-clip placement, sequential action chaining, recursive child manipulation, horizontal distribution, and full storyboard state telemetry).
   - All 59 test suites (605 tests) pass cleanly (`npx vitest run`).
+
+---
+
+### Decision 130: Eradication of Retired Relational Linking Tools from MCP Engine & Agent Schemas
+
+* **Context & Motivation**:
+  - In Decision 83, experimental relational auto-layout linking (`Hug Bounds`, `Reflow Stack`, dynamic element wiring) was retired from the GUI and inspector in favor of deterministic motion graphics primitives (Magic Move, standard grouping, and Keynote/After Effects-style choreography).
+  - However, phantom agent tools (`link_elements`, `unlink_elements`), schema types, and agent prompt instructions remained in `mcp.js`, `src/tools/linkElements.ts`, and `AGENTS.md`.
+  - This violated the core tenet of Motion Studio: strict 1:1 parity between what a human can do via GUI and what an agent can do via MCP. Agents should never be instructed to use discarded, phantom abstractions that have no visual manifestation or inspector counterpart in the studio.
+
+* **Architectural Actions Taken**:
+  1. **Purged Linking Tools from MCP (`mcp.js`)**:
+     - Removed `link_elements` and `unlink_elements` tool definitions from the `TOOLS` registry.
+     - Removed `case "link_elements":` and `case "unlink_elements":` handlers from `handleToolCall`.
+     - Deleted `link_elements.json` and `unlink_elements.json` from `C:\Users\Sam\.gemini\antigravity\mcp\motion-studio/`.
+  2. **Removed Dead Agent Schemas & Code**:
+     - Deleted `src/tools/linkElements.ts`.
+     - Removed `LinkModeSchema`, `ConstraintAnchorSchema`, `LinkElementsInputSchema`, `LinkElementsInput`, `UnlinkElementsInputSchema`, and `UnlinkElementsInput` from `src/types/agentTools.ts`.
+     - Deleted obsolete test suite `src/test/universal_relational_linking.test.ts`.
+  3. **Documentation & Prompt Synchronization**:
+     - Updated `C:\Users\Sam\.gemini\antigravity\mcp\motion-studio\instructions.md`: removed Section 4 (`link_elements`) and updated Recipe 3 to standard grouping and modular grid alignment.
+     - Updated `AGENTS.md` Rule 7: focused strictly on Deterministic Motion Primitives & Universal Zero-Shift Splitting (`split_text`, `split_shape`, `split_line`, `separate_stroke_fill`, `join_lines_into_shape`, `apply_boolean_operation`).
+
+* **Verification**:
+  - Full test suite: All 58 test files and 595 tests pass with 100% success rate (`npx vitest run`).
+  - Production build: `tsc -b && vite build` completes cleanly with 0 errors in 9.83s.
+  - Zero dead code or phantom schemas remain.
+

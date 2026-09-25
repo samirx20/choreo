@@ -294,57 +294,6 @@ export const DirectorPlanSchema = z.object({
 
 export type DirectorPlan = z.infer<typeof DirectorPlanSchema>;
 
-export const LinkModeSchema = z.enum([
-  "pin",
-  "hug",
-  "reflow",
-  "match",
-  "remap",
-  "lag",
-  "track-word",
-  "leader-line",
-  "connect",
-]);
-
-export const ConstraintAnchorSchema = z.enum([
-  "top-left",
-  "top-center",
-  "top-right",
-  "middle-left",
-  "center",
-  "middle-right",
-  "bottom-left",
-  "bottom-center",
-  "bottom-right",
-]);
-
-export const LinkElementsInputSchema = z.object({
-  sceneId: z.string().optional(),
-  driverId: z.string(),
-  drivenId: z.string(),
-  mode: LinkModeSchema.default("hug"),
-  padding: z.union([z.tuple([z.number(), z.number()]), z.tuple([z.number(), z.number(), z.number(), z.number()])]).optional(),
-  driverAnchor: ConstraintAnchorSchema.optional(),
-  targetAnchor: ConstraintAnchorSchema.optional(),
-  offset2D: z.tuple([z.number(), z.number()]).optional(),
-  reflowAxis: z.enum(["horizontal", "vertical"]).optional(),
-  reflowGap: z.number().optional(),
-  reflowAlignment: z.enum(["start", "center", "end"]).optional(),
-  expansionPhysics: z.enum(["instant", "spring", "smooth"]).optional(),
-  stiffness: z.number().optional(),
-  damping: z.number().optional(),
-  lagSeconds: z.number().optional(),
-});
-
-export type LinkElementsInput = z.input<typeof LinkElementsInputSchema>;
-
-export const UnlinkElementsInputSchema = z.object({
-  sceneId: z.string().optional(),
-  layerId: z.string(),
-  bindingId: z.string().optional(),
-});
-
-export type UnlinkElementsInput = z.input<typeof UnlinkElementsInputSchema>;
 
 // Tool Result Envelope
 export interface ToolResult<T = unknown> {

@@ -65,19 +65,16 @@ src/
 * Every schema exposed to agents or stored in state must have an accompanying **Zod schema** and derived TypeScript type.
 * Avoid `any` types. If dynamic properties are necessary, use strict discriminated unions or typed records with validation.
 
-### Rule 7: Motion-First Reactive Primitives & Zero-Shift Splitting
-* Never force AI agents to calculate transient frame-by-frame coordinates for expanding cards, following cursors, or leader lines.
-* Use first-class relational bindings and reactive layout primitives:
-  * **Reactive Container Hugging (`mode: 'hug'`)**: Background cards dynamically expand to hug typing text or rolling counters with spring buffering.
-  * **Universal Element Splitting (0.0000px Visual Shift Invariance)**:
-    * Shape contour decomposition: Rounded rectangles split into dual continuous bezier arc paths (NW $\to$ SE and SE $\to$ NW) with dual-origin draw-on.
-    * Stroke & Fill separation: Instant stroke draw-on paired with delayed fill fade-in.
-    * Typography semantic splitting: Words, lines, and custom selections with exact whitespace advance calculation.
-    * Line & Arrow detachment: Collinear ratio splitting and independent arrowhead tip stamping.
-    * Container detaching: Absolute coordinate preservation un-nesting.
-  * **Word Morphing (`configure_word_morph`)**: Rotating keyword highlights with continuous spring reflow of trailing suffixes.
-  * **Dynamic Reflow Gap (`mode: 'reflow'`)**: Sibling elements maintain exact continuous axis gap ($G\text{px}$) with spring momentum when lead elements resize or animate.
-  * **Connected Leader Lines & Pins (`mode: 'connect' | 'pin'`)**: Dynamic links tracking moving elements with physical inertia lag and 9-point anchor alignment.
+### Rule 7: Deterministic Motion Primitives & Universal Zero-Shift Splitting
+* Never force AI agents to calculate transient frame-by-frame coordinates for kinetic reveals or decomposed paths.
+* Motion Studio maintains predictable, deterministic choreography across scenes and beats using analytical spring physics and Magic Move, rather than unpredictable web-browser-style auto-layout stretching (Decision 83).
+* **Universal Element Splitting (0.0000px Visual Shift Invariance)**:
+  * **Shape contour decomposition (`split_shape`)**: Rounded rectangles and circles split into dual continuous bezier arc paths (NW $\to$ SE and SE $\to$ NW) with dual-origin draw-on.
+  * **Stroke & Fill separation (`separate_stroke_fill`)**: Instant stroke draw-on paired with delayed fill fade-in in a synchronized compound group.
+  * **Typography semantic splitting (`split_text`)**: Words, characters, and lines split with exact font kerning and whitespace advance preservation ($0.0000\text{px}$ shift).
+  * **Line & Arrow detachment (`split_line`)**: Collinear ratio splitting and independent arrowhead tip stamping.
+  * **Line joining (`join_lines_into_shape`)**: Chains connected line segments into closed polygons with $C^1$ Bezier corner fillets.
+  * **Boolean operations (`apply_boolean_operation`)**: Union, subtract, intersect, and exclude combining vector shapes.
 
 ### Rule 8: Impeccable Craft Floor & Banned Anti-Patterns
 Never generate or suggest cheap SaaS cliches, decorative gimmicks, or lazy UI tropes:
