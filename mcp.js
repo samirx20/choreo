@@ -1401,7 +1401,7 @@ function handleToolCall(name, args) {
         (args.style?.fontSize && args.style.fontSize >= 44) ||
         (!args.style?.fontSize && args.content && args.content.length > 15)
       );
-      if (isHeadline && gridObj.colSpan < 8) {
+      if (!args.bounds && isHeadline && gridObj.colSpan < 8) {
         const oldSpan = gridObj.colSpan;
         gridObj.colSpan = Math.min(gridCols, Math.max(10, gridCols - 2));
         gridObj.col = Math.max(0, Math.floor((gridCols - gridObj.colSpan) / 2));
