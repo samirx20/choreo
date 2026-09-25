@@ -156,6 +156,9 @@ export interface ProjectStoreState {
   separateStrokeAndFill: (layerId: string) => void;
   splitLineAtPoint: (layerId: string, ratio?: number) => void;
   detachArrowhead: (layerId: string) => void;
+  joinLinesToShape: (lineIds: string[], defaultRadius?: number) => string | null;
+  updateVertexRadius: (layerId: string, vertexIndex: number, radius: number) => void;
+  setAllVerticesRadius: (layerId: string, radius: number) => void;
   mergeChunkWithPrevious: (chunkId: string) => void;
   mergeChunkWithNext: (chunkId: string) => void;
 

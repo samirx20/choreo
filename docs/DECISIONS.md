@@ -2739,6 +2739,44 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 586 vitest unit and integration tests pass.
   - Production build (`npm run build`) compiles cleanly in 18.81s.
 
+---
+
+### Decision 86: Connected Lines to Vector Shape Conversion & Independent Per-Vertex Corner Radius Smoothing
+* **Context & Motivation**:
+  - Motion graphics designers and AI agents often construct custom geometry using straight line segments (e.g., 4 or 5 connected lines forming a polygon, diamond, or custom enclosure).
+  - Users requested the ability to automatically convert these connected lines into a unified closed vector polygon shape (`ShapeLayer`) without using the manual Pen tool.
+  - Crucially, users needed **independent per-vertex corner radius controls**—allowing one vertex to stay razor-sharp ($r = 0$, e.g. for speech bubble pointers, arrow tails, or teardrops) while rounding other corners with smooth quadratic Bézier fillets, completely avoiding shape inversion or overlap.
+* **The Solution**:
+  1. **Analytical Line Joiner & Graph Chaining Engine (`src/engine/vector/lineJoiner.ts`)**:
+     - `getLineEndpoints(layer)`: Computes world-space canvas endpoints from line layers, incorporating `style.x`, `y`, `width`, `height`, `rotation`, and `pivot`.
+     - `chainLineSegments(segments, snapTolerance)`: Graphs segments head-to-tail with orientation flipping and endpoint snapping tolerance (default 12px), discovering closed loops or continuous polylines.
+     - `buildFilletPath(vertices, closed)`: Fillet solver utilizing quadratic Bézier curves (`Q`) with **smart edge clamping** ($t_i^{out} + t_{i+1}^{in} \le L$). When adjacent fillets would collide or invert on an edge of length $L$, their trim offsets are proportionally scaled down, preventing self-intersection or visual clipping.
+     - `normalizeVerticesAndPath(canvasVertices, closed)`: Normalizes vertices and generated SVG path to local origin `(0, 0)` with width/height bounds, ensuring subsequent canvas transforms (translation, rotation) operate cleanly without vertex coordinate drift.
+  2. **Data Model (`src/types/layers.ts` & `src/types/scene.ts`)**:
+     - Extended `ShapeLayer` with:
+       - `vertices?: Array<{ x: number; y: number; radius?: number }>`: Local polygon vertex coordinates with independent radius overrides.
+       - `closed?: boolean`: Flag indicating whether the polygon is a closed contour or open polyline.
+  3. **Zustand Store Actions (`src/store/slices/layerSlice.ts` & `src/store/types.ts`)**:
+     - `joinLinesToShape(lineIds, defaultRadius)`: Chains lines into a unified `ShapeLayer` (`shapeType: "path"`), removes source line layers from the active screen, sets selection to the new shape, and commits history.
+     - `updateVertexRadius(layerId, vertexIndex, radius)`: Adjusts an individual vertex's radius independently and recalculates the SVG path `d`.
+     - `setAllVerticesRadius(layerId, radius)`: Modifies radius uniformly across all vertices simultaneously.
+  4. **Studio User Interface**:
+     - **`MultiSelectionCard.tsx`**: When 2+ lines are selected, displays the **"Connected Lines / Join Lines into Shape"** action button.
+     - **`SpecializedLayerCard.tsx`**: When selecting a joined polygon shape (`vertices.length >= 3`), displays the **Corner Smoothing** card featuring:
+       - Global scrubbable **Corner Radius** input.
+       - **Independent Vertices** toggle switch.
+       - Expandable per-vertex inputs (`Corner 1`, `Corner 2`, etc.) with real-time numeric scrubbing.
+  5. **MCP Agent Tool Parity (`mcp.js`) & Schema Sync**:
+     - Added `join_lines_into_shape` tool to `mcp.js` (bringing the total suite to **42 tools**).
+     - Supports `lineIds`, `cornerRadius`, `cornerRadii: number[]` for per-vertex specifications, `fillColor`, and `name`.
+     - Generated and synced all 42 schemas to `C:\Users\Sam\.gemini\antigravity\mcp\motion-studio\`.
+     - Updated `instructions.md` with full tool parameters and documentation.
+* **Verification**:
+  - 9 automated unit tests in `src/test/lineJoiner.test.ts` (fillet geometry, edge clamping, diamond chaining, per-vertex radii).
+  - 2 integration tests in `src/test/line_joiner_store.test.ts` (store mutation, line removal, individual vertex radius updates).
+  - All 57 test files (597 tests) pass cleanly (`npm test`).
+  - Production build (`npm run build`) passes with 0 errors.
+
 
 
 

@@ -377,6 +377,8 @@ export interface ShapeLayer extends BaseLayer {
   trimOffset?: number;
   strokeDashArray?: number[];
   strokeDashOffset?: number;
+  vertices?: Array<{ x: number; y: number; radius?: number }>;
+  closed?: boolean;
 }
 
 export interface ImageLayer extends BaseLayer {

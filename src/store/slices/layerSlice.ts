@@ -27,6 +27,13 @@ import {
 } from "@/engine/lineSplitter";
 import { parseSvgString } from "@/engine/svg/svgParser";
 import { flattenBooleanGroup } from "@/engine/vector/booleanOperations";
+import {
+  chainLineSegments,
+  getLineEndpoints,
+  normalizeVerticesAndPath,
+  buildFilletPath,
+  PolygonVertex,
+} from "@/engine/vector/lineJoiner";
 
 export type LayerSlice = Pick<
   ProjectStoreState,
@@ -59,6 +66,9 @@ export type LayerSlice = Pick<
   | "separateStrokeAndFill"
   | "splitLineAtPoint"
   | "detachArrowhead"
+  | "joinLinesToShape"
+  | "updateVertexRadius"
+  | "setAllVerticesRadius"
   | "mergeChunkWithPrevious"
   | "mergeChunkWithNext"
   | "addLayerBinding"
@@ -1664,5 +1674,148 @@ export const createLayerSlice = (
       selectedLayerIds: [splitGroup.id],
       splitModeState: null,
     });
+  },
+
+  joinLinesToShape: (lineIds, defaultRadius = 0) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return null;
+
+    const layers = lineIds
+      .map((id) => findLayerInTree(activeScreen.layers, id))
+      .filter((l): l is Layer => l !== null);
+
+    if (layers.length < 2) return null;
+
+    // Extract endpoints for all lines
+    const segments = layers.map((l) => getLineEndpoints(l));
+
+    // Chain segments together
+    const { vertices: canvasVertices, closed } = chainLineSegments(segments, 35);
+    if (canvasVertices.length < 2) return null;
+
+    // Apply default radius
+    if (defaultRadius > 0) {
+      canvasVertices.forEach((v) => {
+        v.radius = defaultRadius;
+      });
+    }
+
+    // Normalize to local coordinates
+    const { localVertices, d, bounds } = normalizeVerticesAndPath(canvasVertices, closed);
+
+    // Inherit appearance from first line
+    const firstStyle = layers[0].style || {};
+    const strokeColor = firstStyle.borderColor || (layers[0] as any).strokeColor || "#3b82f6";
+    const strokeWidth = typeof firstStyle.borderWidth === "number" && firstStyle.borderWidth > 0
+      ? firstStyle.borderWidth
+      : 2;
+
+    const newShapeId = `shape_poly_${Date.now()}`;
+    const newShape: ShapeLayer = {
+      id: newShapeId,
+      name: `Joined Shape (${localVertices.length} Vertices)`,
+      type: "shape",
+      shapeType: "path",
+      d,
+      viewBox: `0 0 ${bounds.width} ${bounds.height}`,
+      strokeCap: "round",
+      strokeJoin: "round",
+      vertices: localVertices,
+      closed,
+      style: {
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+        rotation: 0,
+        opacity: 1,
+        borderWidth: strokeWidth,
+        borderColor: strokeColor,
+        backgroundColor: closed ? "#3b82f633" : "transparent",
+      },
+    };
+
+    // Remove old lines and insert new shape
+    const lineIdSet = new Set(lineIds);
+    const filteredLayers = activeScreen.layers.filter((l) => !lineIdSet.has(l.id));
+
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: [...filteredLayers, newShape] } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc, {
+      selectedLayerIds: [newShapeId],
+    });
+
+    return newShapeId;
+  },
+
+  updateVertexRadius: (layerId, vertexIndex, radius) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    const targetLayer = findLayerInTree(activeScreen.layers, layerId);
+    if (!targetLayer || targetLayer.type !== "shape") return;
+
+    const shape = targetLayer as ShapeLayer;
+    if (!shape.vertices || vertexIndex < 0 || vertexIndex >= shape.vertices.length) return;
+
+    const nextVertices = shape.vertices.map((v, i) =>
+      i === vertexIndex ? { ...v, radius: Math.max(0, radius) } : v
+    );
+
+    const { d } = buildFilletPath(nextVertices, shape.closed !== false);
+
+    const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, (layer) => ({
+      ...layer,
+      vertices: nextVertices,
+      d,
+    }));
+
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc);
+  },
+
+  setAllVerticesRadius: (layerId, radius) => {
+    const { document: doc, activeScreenId } = get();
+    const activeScreen = doc.screens.find((s) => s.id === activeScreenId);
+    if (!activeScreen) return;
+
+    const targetLayer = findLayerInTree(activeScreen.layers, layerId);
+    if (!targetLayer || targetLayer.type !== "shape") return;
+
+    const shape = targetLayer as ShapeLayer;
+    if (!shape.vertices) return;
+
+    const clampedRadius = Math.max(0, radius);
+    const nextVertices = shape.vertices.map((v) => ({ ...v, radius: clampedRadius }));
+
+    const { d } = buildFilletPath(nextVertices, shape.closed !== false);
+
+    const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, (layer) => ({
+      ...layer,
+      vertices: nextVertices,
+      d,
+    }));
+
+    const nextDoc: SceneDocument = {
+      ...doc,
+      screens: doc.screens.map((s) =>
+        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
+      ),
+    };
+
+    commitDoc(set, nextDoc);
   },
 });

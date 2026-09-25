@@ -28,8 +28,9 @@ interface SpecializedLayerCardProps {
 export const SpecializedLayerCard: React.FC<SpecializedLayerCardProps> = ({
   selectedLayer,
 }) => {
-  const { updateLayer, updateLayerStyle } = useProjectStore();
+  const { updateLayer, updateLayerStyle, updateVertexRadius, setAllVerticesRadius } = useProjectStore();
   const [isInspectorIconPickerOpen, setIsInspectorIconPickerOpen] = useState(false);
+  const [showIndependentCorners, setShowIndependentCorners] = useState(false);
   const style = selectedLayer.style;
 
   const isLine =
@@ -42,8 +43,93 @@ export const SpecializedLayerCard: React.FC<SpecializedLayerCardProps> = ({
     (selectedLayer.type === "shape" &&
       (selectedLayer.shapeType === "polygon" || selectedLayer.shapeType === "triangle"));
 
+  const hasPolygonVertices =
+    selectedLayer.type === "shape" &&
+    Array.isArray((selectedLayer as any).vertices) &&
+    (selectedLayer as any).vertices.length >= 3;
+
+  const vertices = hasPolygonVertices
+    ? ((selectedLayer as any).vertices as Array<{ x: number; y: number; radius?: number }>)
+    : [];
+  const allRadiiSame = vertices.length > 0 && vertices.every((v) => (v.radius ?? 0) === (vertices[0]?.radius ?? 0));
+  const commonRadius = allRadiiSame && vertices.length > 0 ? (vertices[0]?.radius ?? 0) : 0;
+
   return (
     <>
+      {/* Joined Polygon Vertices & Corner Smoothing Section */}
+      {hasPolygonVertices && (
+        <div className="pt-3 border-t border-border space-y-3" data-testid="vertex-fillet-card">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              Corner Smoothing
+            </span>
+            <span className="text-[10px] text-muted-foreground font-mono">
+              {vertices.length} Vertices
+            </span>
+          </div>
+
+          {/* Global Radius */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Corner Radius</span>
+            <div className="w-36 flex items-center justify-end gap-2">
+              <ScrubbableInput
+                value={commonRadius}
+                step={1}
+                min={0}
+                max={200}
+                onChange={(val) => setAllVerticesRadius(selectedLayer.id, Math.round(val))}
+                className="w-16"
+              />
+              <button
+                type="button"
+                onClick={() => setShowIndependentCorners(!showIndependentCorners)}
+                className={cn(
+                  "p-1 rounded text-xs transition-colors cursor-pointer",
+                  showIndependentCorners
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+                title="Toggle Independent Corner Radii"
+              >
+                <Layers className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Independent Corner List */}
+          {showIndependentCorners && (
+            <div className="space-y-1.5 pt-1 border-t border-border/40">
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block">
+                Independent Vertices
+              </span>
+              <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                {vertices.map((v, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between py-1 px-1.5 rounded hover:bg-muted/40 transition-colors text-xs"
+                  >
+                    <span className="text-muted-foreground font-mono text-[11px]">
+                      Corner {idx + 1}
+                    </span>
+                    <ScrubbableInput
+                      value={v.radius ?? 0}
+                      step={1}
+                      min={0}
+                      max={200}
+                      onChange={(val) =>
+                        updateVertexRadius(selectedLayer.id, idx, Math.round(val))
+                      }
+                      className="w-16"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Mask Group Section */}
       {selectedLayer.type === "group" && (selectedLayer as any).isMaskGroup && (
         <div className="pt-3 border-t border-border space-y-3">

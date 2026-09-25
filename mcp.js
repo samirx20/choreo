@@ -936,6 +936,34 @@ const TOOLS = [
     },
   },
   {
+    name: "join_lines_into_shape",
+    description: "Chains multiple connected lines into a unified closed polygon shape with independent per-vertex corner radius smoothing.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        sceneId: { type: "string", description: "Scene containing the lines" },
+        lineIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Array of line layer IDs to chain together (minimum 2 lines)",
+        },
+        cornerRadius: {
+          type: "number",
+          description: "Global corner radius in pixels applied to all vertices (default: 0)",
+        },
+        cornerRadii: {
+          type: "array",
+          items: { type: "number" },
+          description: "Optional array of independent corner radii per vertex (matching vertex chain order)",
+        },
+        fillColor: { type: "string", description: "Background fill color or hex for the enclosed shape (e.g. '#3b82f633')" },
+        name: { type: "string", description: "Optional name for the joined shape" },
+      },
+      required: ["sceneId", "lineIds"],
+    },
+  },
+  {
     name: "lint_storyboard",
     description: "Validates a .mtn project file against black frames, text descender overflows, and aesthetic guidelines.",
     inputSchema: {
@@ -2632,6 +2660,196 @@ function handleToolCall(name, args) {
       writeMtnFile(resolvedPath, pkg);
       return {
         text: `Separated stroke and fill for layer "${orig.name}" into compound group "${group.name}" (id: ${group.id}) with 0.0000px layout shift.`,
+      };
+    }
+
+    case "join_lines_into_shape": {
+      const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
+      if (!targetScreen) {
+        return { text: `Error: Scene "${args.sceneId}" not found.` };
+      }
+      const lineIds = args.lineIds || [];
+      const lines = lineIds
+        .map((id) => targetScreen.layers.find((l) => l.id === id))
+        .filter(Boolean);
+
+      if (lines.length < 2) {
+        return { text: `Error: join_lines_into_shape requires at least 2 lines found in scene "${args.sceneId}".` };
+      }
+
+      // Convert lines to segments
+      const segments = lines.map((l) => {
+        if (l.x1 !== undefined && l.y1 !== undefined && l.x2 !== undefined && l.y2 !== undefined) {
+          return { id: l.id, x1: l.x1, y1: l.y1, x2: l.x2, y2: l.y2 };
+        }
+        const s = l.style || {};
+        const x = s.x || 0;
+        const y = s.y || 0;
+        const w = typeof s.width === "number" ? s.width : 100;
+        const h = typeof s.height === "number" ? s.height : 2;
+        const rot = ((s.rotation || 0) * Math.PI) / 180;
+        const cx = x + w / 2;
+        const cy = y + h / 2;
+        const lx1 = x;
+        const ly1 = y + h / 2;
+        const lx2 = x + w;
+        const ly2 = y + h / 2;
+        if (rot === 0) return { id: l.id, x1: lx1, y1: ly1, x2: lx2, y2: ly2 };
+        return {
+          id: l.id,
+          x1: Math.round(cx + (lx1 - cx) * Math.cos(rot) - (ly1 - cy) * Math.sin(rot)),
+          y1: Math.round(cy + (lx1 - cx) * Math.sin(rot) + (ly1 - cy) * Math.cos(rot)),
+          x2: Math.round(cx + (lx2 - cx) * Math.cos(rot) - (ly2 - cy) * Math.sin(rot)),
+          y2: Math.round(cy + (lx2 - cx) * Math.sin(rot) + (ly2 - cy) * Math.cos(rot)),
+        };
+      });
+
+      // Chain segments
+      const distSq = (x1, y1, x2, y2) => (x1 - x2) ** 2 + (y1 - y2) ** 2;
+      const pool = [...segments];
+      const first = pool.shift();
+      const pts = [{ x: first.x1, y: first.y1 }, { x: first.x2, y: first.y2 }];
+      const tolSq = 35 * 35;
+
+      while (pool.length > 0) {
+        const tail = pts[pts.length - 1];
+        let bestIdx = -1;
+        let bestDist = Infinity;
+        let flip = false;
+        for (let i = 0; i < pool.length; i++) {
+          const seg = pool[i];
+          const d1 = distSq(tail.x, tail.y, seg.x1, seg.y1);
+          const d2 = distSq(tail.x, tail.y, seg.x2, seg.y2);
+          if (d1 < bestDist) { bestDist = d1; bestIdx = i; flip = false; }
+          if (d2 < bestDist) { bestDist = d2; bestIdx = i; flip = true; }
+        }
+        if (bestIdx !== -1) {
+          const chosen = pool.splice(bestIdx, 1)[0];
+          pts.push(flip ? { x: chosen.x1, y: chosen.y1 } : { x: chosen.x2, y: chosen.y2 });
+        } else {
+          break;
+        }
+      }
+
+      const isClosed = distSq(pts[0].x, pts[0].y, pts[pts.length - 1].x, pts[pts.length - 1].y) <= tolSq;
+      const finalPts = isClosed && pts.length > 2 ? pts.slice(0, -1) : pts;
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const p of finalPts) {
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
+      }
+      const width = Math.max(1, maxX - minX);
+      const height = Math.max(1, maxY - minY);
+
+      // Per-vertex radii
+      const vertices = finalPts.map((p, i) => {
+        let r = args.cornerRadius || 0;
+        if (args.cornerRadii && args.cornerRadii[i] !== undefined) {
+          r = args.cornerRadii[i];
+        }
+        return {
+          x: Math.round((p.x - minX) * 100) / 100,
+          y: Math.round((p.y - minY) * 100) / 100,
+          radius: Math.max(0, r),
+        };
+      });
+
+      // Fillet path generation
+      const n = vertices.length;
+      const trimsOut = new Array(n).fill(0);
+      const trimsIn = new Array(n).fill(0);
+      const uVecs = new Array(n);
+      const wVecs = new Array(n);
+      const edgeLens = new Array(n).fill(0);
+
+      for (let i = 0; i < n; i++) {
+        const cur = vertices[i];
+        const prev = vertices[(i - 1 + n) % n];
+        const next = vertices[(i + 1) % n];
+        const ux = prev.x - cur.x, uy = prev.y - cur.y, uLen = Math.hypot(ux, uy);
+        const wx = next.x - cur.x, wy = next.y - cur.y, wLen = Math.hypot(wx, wy);
+        edgeLens[i] = wLen;
+        if (uLen === 0 || wLen === 0) {
+          uVecs[i] = { x: 0, y: 0 }; wVecs[i] = { x: 0, y: 0 };
+          continue;
+        }
+        const uHat = { x: ux / uLen, y: uy / uLen };
+        const wHat = { x: wx / wLen, y: wy / wLen };
+        uVecs[i] = uHat; wVecs[i] = wHat;
+        const r = cur.radius || 0;
+        if (r <= 0) continue;
+        const dot = Math.max(-0.9999, Math.min(0.9999, uHat.x * wHat.x + uHat.y * wHat.y));
+        const halfAngle = Math.acos(dot) / 2;
+        const t = Math.tan(halfAngle) > 0.001 ? r / Math.tan(halfAngle) : 0;
+        trimsIn[i] = t; trimsOut[i] = t;
+      }
+
+      for (let i = 0; i < n; i++) {
+        const nextIdx = (i + 1) % n;
+        const el = edgeLens[i];
+        if (el > 0 && trimsOut[i] + trimsIn[nextIdx] > el) {
+          const sc = el / (trimsOut[i] + trimsIn[nextIdx]);
+          trimsOut[i] *= sc;
+          trimsIn[nextIdx] *= sc;
+        }
+      }
+
+      let d = `M ${(vertices[0].x + wVecs[0].x * trimsOut[0]).toFixed(2)} ${(vertices[0].y + wVecs[0].y * trimsOut[0]).toFixed(2)}`;
+      for (let i = 1; i <= n; i++) {
+        const curIdx = i % n;
+        const cur = vertices[curIdx];
+        const tIn = trimsIn[curIdx];
+        const tOut = trimsOut[curIdx];
+        const pInX = cur.x + uVecs[curIdx].x * tIn;
+        const pInY = cur.y + uVecs[curIdx].y * tIn;
+        const pOutX = cur.x + wVecs[curIdx].x * tOut;
+        const pOutY = cur.y + wVecs[curIdx].y * tOut;
+        if (tIn > 0.01 && tOut > 0.01) {
+          d += ` L ${pInX.toFixed(2)} ${pInY.toFixed(2)} Q ${cur.x.toFixed(2)} ${cur.y.toFixed(2)} ${pOutX.toFixed(2)} ${pOutY.toFixed(2)}`;
+        } else {
+          d += ` L ${cur.x.toFixed(2)} ${cur.y.toFixed(2)}`;
+        }
+      }
+      d += " Z";
+
+      const firstStyle = lines[0].style || {};
+      const strokeColor = firstStyle.borderColor || lines[0].strokeColor || "#3b82f6";
+      const strokeWidth = firstStyle.borderWidth || 2;
+      const newShapeId = "shape_" + Math.random().toString(36).slice(2, 8);
+      const newShape = {
+        id: newShapeId,
+        name: args.name || `Joined Shape (${vertices.length} Vertices)`,
+        type: "shape",
+        shapeType: "path",
+        d,
+        viewBox: `0 0 ${width} ${height}`,
+        strokeCap: "round",
+        strokeJoin: "round",
+        vertices,
+        closed: true,
+        style: {
+          x: Math.round(minX),
+          y: Math.round(minY),
+          width: Math.round(width),
+          height: Math.round(height),
+          rotation: 0,
+          opacity: 1,
+          borderWidth: strokeWidth,
+          borderColor: strokeColor,
+          backgroundColor: args.fillColor || "#3b82f633",
+        },
+      };
+
+      const lineIdSet = new Set(lineIds);
+      targetScreen.layers = targetScreen.layers.filter((l) => !lineIdSet.has(l.id));
+      targetScreen.layers.push(newShape);
+      writeMtnFile(resolvedPath, pkg);
+
+      return {
+        text: `Joined ${lines.length} lines into polygon shape "${newShape.name}" (id: ${newShapeId}) with ${vertices.length} vertices and per-vertex corner smoothing at [${newShape.style.x}, ${newShape.style.y}, ${width}x${height}].`,
       };
     }
 

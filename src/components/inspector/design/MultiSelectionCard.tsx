@@ -1,4 +1,3 @@
-import React from "react";
 import {
   CircleDashed,
   Combine,
@@ -8,8 +7,10 @@ import {
   Layers,
   Folder,
   FolderOpen,
+  Sparkles,
+  Shapes,
 } from "lucide-react";
-import { Layer } from "@/types/scene";
+import { Layer, ShapeLayer } from "@/types/scene";
 import { useProjectStore } from "@/store/useProjectStore";
 
 interface MultiSelectionCardProps {
@@ -26,6 +27,7 @@ export const MultiSelectionCard: React.FC<MultiSelectionCardProps> = ({
     flattenSelection,
     groupSelection,
     ungroup,
+    joinLinesToShape,
   } = useProjectStore();
 
   const maskGroup = selectedLayers.find(
@@ -35,8 +37,38 @@ export const MultiSelectionCard: React.FC<MultiSelectionCardProps> = ({
     (l) => l.type === "group" && !(l as any).isMaskGroup
   );
 
+  const lineLayers = selectedLayers.filter(
+    (l) => l.type === "line" || (l.type === "shape" && (l as ShapeLayer).shapeType === "line")
+  );
+
   return (
     <div className="border-t border-border divide-y divide-border/50" data-testid="multi-selection-card">
+      {/* 0. JOIN LINES INTO SHAPE */}
+      {lineLayers.length >= 2 && (
+        <div className="py-2.5 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Shapes className="h-3.5 w-3.5 text-primary" />
+              Connected Lines
+            </span>
+            <span className="text-[10px] text-muted-foreground font-mono">{lineLayers.length} Segments</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => joinLinesToShape(lineLayers.map((l) => l.id))}
+            className="w-full h-8 px-2.5 flex items-center justify-between bg-primary/10 hover:bg-primary/20 text-primary text-xs font-medium rounded border border-primary/30 transition-colors cursor-pointer"
+            title="Chain connected lines into a unified polygon shape with per-vertex corner smoothing"
+          >
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>Join Lines into Shape</span>
+            </div>
+            <span className="text-[10px] font-mono opacity-80">Convert</span>
+          </button>
+        </div>
+      )}
+
       {/* 1. BOOLEAN OPERATIONS */}
       <div className="py-2.5 space-y-2">
         <div className="flex items-center justify-between">

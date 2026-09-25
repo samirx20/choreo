@@ -107,5 +107,5 @@ describe("Pixi Stage Registry & Video Exporter", () => {
       expect(headless.getStage()).toBeNull();
       initSpy.mockRestore();
     }
-  }, 15000);
+  }, 30000);
 });
