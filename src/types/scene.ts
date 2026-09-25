@@ -102,72 +102,7 @@ export interface Screen {
   audioTracks?: AudioTrack[];
 }
 
-export type UiMode = 'design' | 'motion' | '3d' | 'editor' | 'animate';
-
-export interface ThreeDCamera {
-  id: string;
-  fov: number;
-  near: number;
-  far: number;
-  position: [number, number, number];
-  target: [number, number, number];
-}
-
-export interface ThreeDModel {
-  id: string;
-  name: string;
-  assetUrl?: string;
-  modelType?: any;
-  position: [number, number, number];
-  rotation: [number, number, number];
-  scale: [number, number, number];
-  screenSlot?: {
-    sourceType: any;
-    sourceId: string;
-    emissiveIntensity?: number;
-  };
-}
-
-export interface ThreeDShot {
-  id: string;
-  name: string;
-  duration: number;
-  camera: ThreeDCamera;
-  models: ThreeDModel[];
-}
-
-export interface TimelineClip {
-  id: string;
-  trackId: string;
-  type: 'motion_shot' | 'three_d_shot' | 'video' | 'audio' | 'caption';
-  sourceId: string;
-  name: string;
-  start: number;
-  duration: number;
-  sourceIn: number;
-  sourceOut: number;
-  playbackRate: number;
-  volume?: number;
-  opacity?: number;
-}
-
-export interface TimelineTrack {
-  id: string;
-  name: string;
-  kind: 'video' | 'audio';
-  index: number;
-  muted?: boolean;
-  solo?: boolean;
-  locked?: boolean;
-  volume?: number;
-  clips: TimelineClip[];
-}
-
-export interface EditorSequence {
-  fps: number;
-  masterDuration: number;
-  tracks: TimelineTrack[];
-}
+export type UiMode = 'design' | 'motion' | 'animate';
 
 export type SafeZonePreset = 'broadcast' | 'tiktok' | 'reels' | 'shorts' | 'none';
 
@@ -210,9 +145,6 @@ export interface SceneDocument {
   settings: ProjectSettings;
   screens: Screen[];
   audioTracks?: AudioTrack[];
-  shots?: any[];
-  threeDShots?: ThreeDShot[];
-  editor?: EditorSequence;
   storyboard?: StoryboardScene;
 }
 

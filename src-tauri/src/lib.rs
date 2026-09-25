@@ -492,7 +492,7 @@ pub fn run() {
             }
           }
         }
-        tauri::RunEvent::WindowEvent { label, event, .. } => {
+        tauri::RunEvent::WindowEvent { label: _, event: _, .. } => {
           // Window event
         }
         _ => {}

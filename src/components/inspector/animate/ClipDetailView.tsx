@@ -1876,247 +1876,131 @@ export const ClipDetailView: React.FC<ClipDetailViewProps> = ({
       </div>
 
       {/* Target Element Picker Screen (same UI window as AnimationCatalogSheet 'select-morph-target') */}
-      {isChangingTarget &&
-        (typeof document !== "undefined" && document.getElementById("right-inspector-panel")
-          ? createPortal(
-              <div
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="absolute inset-0 z-40 bg-card flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
-              >
-                {/* Header */}
-                <div className="h-12 px-3 border-b border-border flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsChangingTarget(false)}
-                      className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                      title="Back"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                    </button>
-                    <span className="text-sm font-semibold text-foreground">
-                      Morph Into...
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsChangingTarget(false)}
-                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                    title="Close"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-
-                {/* Content */}
-                <div className="p-3 flex-1 flex flex-col min-h-0 overflow-y-auto">
-                  <div className="text-[11px] text-muted-foreground pb-2">
-                    Select the destination element to transform into:
-                  </div>
-
-                  {candidateLayers.length > 5 && (
-                    <input
-                      type="text"
-                      placeholder="Search elements..."
-                      value={targetSearch}
-                      onChange={(e) => setTargetSearch(e.target.value)}
-                      className="mb-2 px-2.5 py-1.5 text-xs bg-muted border border-border rounded-md outline-none focus:border-foreground text-foreground placeholder:text-muted-foreground"
-                    />
-                  )}
-
-                  {filteredCandidateLayers.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border mt-2">
-                      {candidateLayers.length === 0
-                        ? "No other elements found in this scene."
-                        : "No matching elements found."}
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      {filteredCandidateLayers.map((layer) => {
-                        const Icon = getLayerIcon(layer);
-                        const isCurrent = layer.id === targetLayerId;
-                        const layerTitle =
-                          layer.name ||
-                          (layer.type === "text" && (layer as any).text
-                            ? (layer as any).text.slice(0, 20)
-                            : layer.type.charAt(0).toUpperCase() + layer.type.slice(1));
-                        return (
-                          <button
-                            key={layer.id}
-                            type="button"
-                            onClick={() => {
-                              if (sourceLayerId && layer.id !== targetLayerId) {
-                                relinkMorphTarget(sourceLayerId, targetLayerId || "", layer.id);
-                              }
-                              setIsChangingTarget(false);
-                            }}
-                            className={cn(
-                              "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all text-left cursor-pointer group",
-                              isCurrent
-                                ? "border-zinc-900 dark:border-zinc-100 bg-muted"
-                                : "border-border hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-muted/50"
-                            )}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div
-                                className={cn(
-                                  "w-7 h-7 rounded-md flex items-center justify-center transition-colors shrink-0",
-                                  isCurrent
-                                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                                    : "bg-muted text-muted-foreground group-hover:text-foreground"
-                                )}
-                              >
-                                <Icon className="w-4 h-4" />
-                              </div>
-                              <div className="min-w-0">
-                                <div className="text-xs font-semibold text-foreground truncate">
-                                  {layerTitle}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground capitalize truncate">
-                                  {layer.type}
-                                </div>
-                              </div>
-                            </div>
-                            {isCurrent ? (
-                              <span className="text-[11px] font-semibold text-foreground flex items-center gap-1">
-                                <Check className="w-3.5 h-3.5" />
-                                Current
-                              </span>
-                            ) : (
-                              <div className="text-[10px] font-semibold text-muted-foreground group-hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity pr-1">
-                                Select →
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>,
-              document.getElementById("right-inspector-panel")!
-            )
-          : (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="absolute inset-0 z-40 bg-card flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
-              >
-                {/* Header */}
-                <div className="h-12 px-3 border-b border-border flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsChangingTarget(false)}
-                      className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                      title="Back"
-                    >
-                      <ArrowLeft className="h-4 w-4" />
-                    </button>
-                    <span className="text-sm font-semibold text-foreground">
-                      Morph Into...
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsChangingTarget(false)}
-                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                    title="Close"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-
-                {/* Content */}
-                <div className="p-3 flex-1 flex flex-col min-h-0 overflow-y-auto">
-                  <div className="text-[11px] text-muted-foreground pb-2">
-                    Select the destination element to transform into:
-                  </div>
-
-                  {candidateLayers.length > 5 && (
-                    <input
-                      type="text"
-                      placeholder="Search elements..."
-                      value={targetSearch}
-                      onChange={(e) => setTargetSearch(e.target.value)}
-                      className="mb-2 px-2.5 py-1.5 text-xs bg-muted border border-border rounded-md outline-none focus:border-foreground text-foreground placeholder:text-muted-foreground"
-                    />
-                  )}
-
-                  {filteredCandidateLayers.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border mt-2">
-                      {candidateLayers.length === 0
-                        ? "No other elements found in this scene."
-                        : "No matching elements found."}
-                    </div>
-                  ) : (
-                    <div className="space-y-1">
-                      {filteredCandidateLayers.map((layer) => {
-                        const Icon = getLayerIcon(layer);
-                        const isCurrent = layer.id === targetLayerId;
-                        const layerTitle =
-                          layer.name ||
-                          (layer.type === "text" && (layer as any).text
-                            ? (layer as any).text.slice(0, 20)
-                            : layer.type.charAt(0).toUpperCase() + layer.type.slice(1));
-                        return (
-                          <button
-                            key={layer.id}
-                            type="button"
-                            onClick={() => {
-                              if (sourceLayerId && layer.id !== targetLayerId) {
-                                relinkMorphTarget(sourceLayerId, targetLayerId || "", layer.id);
-                              }
-                              setIsChangingTarget(false);
-                            }}
-                            className={cn(
-                              "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all text-left cursor-pointer group",
-                              isCurrent
-                                ? "border-zinc-900 dark:border-zinc-100 bg-muted"
-                                : "border-border hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-muted/50"
-                            )}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div
-                                className={cn(
-                                  "w-7 h-7 rounded-md flex items-center justify-center transition-colors shrink-0",
-                                  isCurrent
-                                    ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                                    : "bg-muted text-muted-foreground group-hover:text-foreground"
-                                )}
-                              >
-                                <Icon className="w-4 h-4" />
-                              </div>
-                              <div className="min-w-0">
-                                <div className="text-xs font-semibold text-foreground truncate">
-                                  {layerTitle}
-                                </div>
-                                <div className="text-[10px] text-muted-foreground capitalize truncate">
-                                  {layer.type}
-                                </div>
-                              </div>
-                            </div>
-                            {isCurrent ? (
-                              <span className="text-[11px] font-semibold text-foreground flex items-center gap-1">
-                                <Check className="w-3.5 h-3.5" />
-                                Current
-                              </span>
-                            ) : (
-                              <div className="text-[10px] font-semibold text-muted-foreground group-hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity pr-1">
-                                Select →
-                              </div>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+      {isChangingTarget && (() => {
+        const pickerModal = (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="absolute inset-0 z-40 bg-card flex flex-col select-none text-foreground shadow-xl overflow-hidden animate-in fade-in slide-in-from-right-2 duration-150"
+          >
+            {/* Header */}
+            <div className="h-12 px-3 border-b border-border flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsChangingTarget(false)}
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                  title="Back"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+                <span className="text-sm font-semibold text-foreground">
+                  Morph Into...
+                </span>
               </div>
-            ))}
+
+              <button
+                type="button"
+                onClick={() => setIsChangingTarget(false)}
+                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-3 flex-1 flex flex-col min-h-0 overflow-y-auto">
+              <div className="text-[11px] text-muted-foreground pb-2">
+                Select the destination element to transform into:
+              </div>
+
+              {candidateLayers.length > 5 && (
+                <input
+                  type="text"
+                  placeholder="Search elements..."
+                  value={targetSearch}
+                  onChange={(e) => setTargetSearch(e.target.value)}
+                  className="mb-2 px-2.5 py-1.5 text-xs bg-muted border border-border rounded-md outline-none focus:border-foreground text-foreground placeholder:text-muted-foreground"
+                />
+              )}
+
+              {filteredCandidateLayers.length === 0 ? (
+                <div className="p-6 text-center text-xs text-muted-foreground bg-muted/20 rounded-xl border border-dashed border-border mt-2">
+                  {candidateLayers.length === 0
+                    ? "No other elements found in this scene."
+                    : "No matching elements found."}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {filteredCandidateLayers.map((layer) => {
+                    const Icon = getLayerIcon(layer);
+                    const isCurrent = layer.id === targetLayerId;
+                    const layerTitle =
+                      layer.name ||
+                      (layer.type === "text" && (layer as any).text
+                        ? (layer as any).text.slice(0, 20)
+                        : layer.type.charAt(0).toUpperCase() + layer.type.slice(1));
+                    return (
+                      <button
+                        key={layer.id}
+                        type="button"
+                        onClick={() => {
+                          if (sourceLayerId && layer.id !== targetLayerId) {
+                            relinkMorphTarget(sourceLayerId, targetLayerId || "", layer.id);
+                          }
+                          setIsChangingTarget(false);
+                        }}
+                        className={cn(
+                          "w-full flex items-center justify-between p-2.5 rounded-lg border transition-all text-left cursor-pointer group",
+                          isCurrent
+                            ? "border-zinc-900 dark:border-zinc-100 bg-muted"
+                            : "border-border hover:border-zinc-400 dark:hover:border-zinc-600 hover:bg-muted/50"
+                        )}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className={cn(
+                              "w-7 h-7 rounded-md flex items-center justify-center transition-colors shrink-0",
+                              isCurrent
+                                ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+                                : "bg-muted text-muted-foreground group-hover:text-foreground"
+                            )}
+                          >
+                            <Icon className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-xs font-semibold text-foreground truncate">
+                              {layerTitle}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground capitalize truncate">
+                              {layer.type}
+                            </div>
+                          </div>
+                        </div>
+                        {isCurrent ? (
+                          <span className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                            <Check className="w-3.5 h-3.5" />
+                            Current
+                          </span>
+                        ) : (
+                          <div className="text-[10px] font-semibold text-muted-foreground group-hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity pr-1">
+                            Select →
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+        const portalTarget =
+          typeof document !== "undefined" ? document.getElementById("right-inspector-panel") : null;
+        return portalTarget ? createPortal(pickerModal, portalTarget) : pickerModal;
+      })()}
     </div>
   );
 };

@@ -50,8 +50,6 @@ export function generateContactSheet(doc: SceneDocument): StoryboardContactSheet
         if (textLayer.content && (textLayer.style?.fontSize ?? 0) >= 32) {
           headlines.push(`"${textLayer.content.slice(0, 40)}${textLayer.content.length > 40 ? "…" : ""}"`);
         }
-      } else if (layer.type === "mockup3d" || (layer.type as string) === "mockup-3d") {
-        keyElements.push(`3D Mockup (${layer.name})`);
       } else if (layer.type === "icon") {
         keyElements.push(`Icon (${layer.name})`);
       } else if (layer.type === "counter") {
@@ -67,9 +65,7 @@ export function generateContactSheet(doc: SceneDocument): StoryboardContactSheet
       }
     });
 
-    const cameraFraming = screen.layers.some((l) => l.type === "mockup3d" || (l.type as string) === "mockup-3d")
-      ? "Telephoto 35mm 3D Stage"
-      : "2D Modular Grid Stage";
+    const cameraFraming = "2D Modular Grid Stage";
 
     return {
       sceneId: screen.id,

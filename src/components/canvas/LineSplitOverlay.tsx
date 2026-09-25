@@ -1,7 +1,8 @@
 import React, { useRef, useCallback } from "react";
 import { LineLayer } from "@/types/scene";
-import { useProjectStore, findParentGroupInTree } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/useProjectStore";
 import { Scissors, X, Check, ArrowRight } from "lucide-react";
+import { getParentWorldOffset } from "./canvasUtils";
 
 interface LineSplitOverlayProps {
   layer: LineLayer;
@@ -10,22 +11,6 @@ interface LineSplitOverlayProps {
   effectiveScale: number;
   screenOffset?: { x: number; y: number };
 }
-
-const getParentWorldOffset = (targetId: string): { x: number; y: number } => {
-  let curX = 0;
-  let curY = 0;
-  const activeLayers =
-    useProjectStore.getState().document.screens.find(
-      (s) => s.id === useProjectStore.getState().activeScreenId
-    )?.layers || [];
-  let currentParent = findParentGroupInTree(activeLayers, targetId);
-  while (currentParent) {
-    curX += currentParent.style.x || 0;
-    curY += currentParent.style.y || 0;
-    currentParent = findParentGroupInTree(activeLayers, currentParent.id);
-  }
-  return { x: curX, y: curY };
-};
 
 export const LineSplitOverlay: React.FC<LineSplitOverlayProps> = ({
   layer,

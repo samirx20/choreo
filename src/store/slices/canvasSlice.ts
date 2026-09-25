@@ -20,8 +20,6 @@ export type CanvasSlice = Pick<
   | "setTool"
   | "setUiMode"
   | "sendScreenToMotion"
-  | "sendTo3D"
-  | "sendToEditor"
   | "setTheme"
   | "toggleTheme"
   | "startTransaction"
@@ -281,13 +279,5 @@ export const createCanvasSlice = (
       selectedLayerIds: artboardLayers[0] ? [artboardLayers[0].id] : [],
       isPlaying: false,
     });
-  },
-
-  sendTo3D: () => {
-    set({ uiMode: "3d" });
-  },
-
-  sendToEditor: () => {
-    set({ uiMode: "editor" });
   },
 });

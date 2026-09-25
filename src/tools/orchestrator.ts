@@ -53,8 +53,6 @@ export function generateDirectorPlan(
   if (overrides?.aspectRatio) aspectRatio = overrides.aspectRatio;
 
   // 3. Determine Subject & Staging
-  const isPhone = query.includes("iphone") || query.includes("phone") || query.includes("mobile") || query.includes("ios");
-  const isLaptop = query.includes("macbook") || query.includes("laptop") || query.includes("desktop") || query.includes("web");
   const isCounter = query.includes("metric") || query.includes("counter") || query.includes("revenue") || query.includes("growth") || query.includes("stat");
 
   const title = prompt.length > 50 ? `${prompt.slice(0, 47)}…` : prompt;
@@ -66,7 +64,7 @@ export function generateDirectorPlan(
       duration: 3.0,
       mood,
       narrativeGoal: "Grab immediate attention with bold, metric-aligned typographic reveal.",
-      headline: isPhone ? "iPhone 16 Pro" : isLaptop ? "Next-Gen Studio" : "Introducing Motion Studio",
+      headline: "Introducing Motion Studio",
       subheadline: "Crafted for effortless speed.",
       cameraPreset: "overview",
       transition: "snappy",
@@ -77,14 +75,10 @@ export function generateDirectorPlan(
       mood,
       narrativeGoal: "Showcase the hero product staging or kinetic visualization.",
       headline: isCounter ? "$125,000 / mo" : "Precision in Every Frame",
-      featuredElement: isPhone
-        ? { type: "mockup-3d", description: "iPhone 16 Pro Natural Titanium", mockupType: "iphone-16-pro" }
-        : isLaptop
-        ? { type: "mockup-3d", description: "MacBook Pro Space Black", mockupType: "macbook-pro" }
-        : isCounter
+      featuredElement: isCounter
         ? { type: "counter", description: "Kinetic Rolling Revenue Metric" }
         : { type: "icon", description: "Sparkles Accent", iconName: "Sparkles" },
-      cameraPreset: isPhone || isLaptop ? "telephoto" : "overview",
+      cameraPreset: "overview",
       transition: "smooth",
     },
     {
@@ -232,33 +226,10 @@ export function executeChoreographer(
       notices.push(...subResult.notices);
     }
 
-    // Step 4: place_element for Featured Visual (3D mockup, kinetic counter, icon)
+    // Step 4: place_element for Featured Visual (kinetic counter, icon)
     if (beat.featuredElement) {
       const feat = beat.featuredElement;
-      if (feat.type === "mockup-3d") {
-        const mockupResult = placeElement(
-          {
-            sceneId,
-            name: feat.description,
-            type: "mockup-3d",
-            mockupType: feat.mockupType || "iphone-16-pro",
-            grid: {
-              col: 3,
-              row: 4,
-              colSpan: plan.aspectRatio === "9:16" ? 5 : 10,
-              rowSpan: 4,
-            },
-            enter: {
-              preset: "scale",
-              duration: 0.8,
-              delay: 0.15,
-              easing: "snappy",
-            },
-          },
-          targetStore
-        );
-        notices.push(...mockupResult.notices);
-      } else if (feat.type === "counter") {
+      if (feat.type === "counter") {
         const counterResult = placeElement(
           {
             sceneId,

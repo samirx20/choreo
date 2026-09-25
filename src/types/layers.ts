@@ -405,32 +405,7 @@ export interface VideoLayer extends BaseLayer {
   volume: number;
 }
 
-export type MockupModelType = 'iphone' | 'macbook' | 'card' | 'badge' | 'custom';
-export type CameraPresetType = 'custom' | 'orbit360' | 'isometric' | 'dollyIn' | 'hover' | 'cardFlip';
-export type ScreenSourceType = 'screen' | 'video' | 'image' | 'color';
 
-export interface Mockup3DLayer extends BaseLayer {
-  type: 'mockup3d';
-  modelType: MockupModelType;
-  modelUrl?: string;
-  deviceFinish?: string;
-  position3D: [number, number, number];
-  rotation3D: [number, number, number];
-  scale3D?: [number, number, number];
-  cameraPreset?: CameraPresetType;
-  cameraFov: number;
-  cameraPosition: [number, number, number];
-  cameraTarget: [number, number, number];
-  specularSweep?: boolean;
-  zElevate?: number;
-  explode?: number;
-  screenSlot?: {
-    sourceType: ScreenSourceType;
-    sourceId: string;
-    fitMode?: 'cover' | 'contain' | 'stretch';
-    emissiveIntensity?: number;
-  };
-}
 
 export interface LineLayer extends BaseLayer {
   type: 'line';
@@ -474,5 +449,4 @@ export type Layer =
   | PolygonLayer
   | ImageLayer
   | VideoLayer
-  | Mockup3DLayer
   | IconLayer;

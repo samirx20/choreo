@@ -6,7 +6,10 @@ import {
   findParentGroupInTree,
   insertLayerRelativeInTree,
   isContainerLayer,
+  setScreenLayersInDoc,
+  computeLayersBoundingBox,
 } from "../helpers/treeHelpers";
+import { propagateCompoundStyleChildren } from "../utils/compoundStyleUtils";
 import { commitDoc } from "../historyManager";
 import { splitLayerAtPlayhead } from "@/engine/video/razorSplit";
 import {
@@ -136,70 +139,12 @@ export const createLayerSlice = (
               ...updates,
             } as Layer;
 
-            if (
-              layer.isCompound &&
-              (layer.type === "group" || layer.type === "frame") &&
-              Array.isArray((layer as any).children)
-            ) {
-              const styleUpdates = updates.style;
-              if (styleUpdates) {
-                const compoundType = (layer as any).compoundType;
-                const nextChildren = (layer as any).children.map((child: Layer) => {
-                  if (compoundType === "split-shape") {
-                    if (child.id.startsWith("fill_") || (child as any).shapeType !== "path") {
-                      return {
-                        ...child,
-                        style: {
-                          ...child.style,
-                          ...(styleUpdates.backgroundColor !== undefined
-                            ? { backgroundColor: styleUpdates.backgroundColor }
-                            : {}),
-                          ...(styleUpdates.opacity !== undefined ? { opacity: styleUpdates.opacity } : {}),
-                        },
-                      };
-                    }
-                    if ((child as any).shapeType === "path") {
-                      return {
-                        ...child,
-                        style: {
-                          ...child.style,
-                          ...(styleUpdates.borderWidth !== undefined
-                            ? { borderWidth: styleUpdates.borderWidth }
-                            : {}),
-                          ...(styleUpdates.borderColor !== undefined
-                            ? { borderColor: styleUpdates.borderColor }
-                            : {}),
-                          ...(styleUpdates.opacity !== undefined ? { opacity: styleUpdates.opacity } : {}),
-                        },
-                      };
-                    }
-                  } else if (compoundType === "split-text") {
-                    return {
-                      ...child,
-                      style: {
-                        ...child.style,
-                        ...(styleUpdates.color !== undefined ? { color: styleUpdates.color } : {}),
-                        ...(styleUpdates.fontSize !== undefined ? { fontSize: styleUpdates.fontSize } : {}),
-                        ...(styleUpdates.fontFamily !== undefined ? { fontFamily: styleUpdates.fontFamily } : {}),
-                        ...(styleUpdates.fontWeight !== undefined ? { fontWeight: styleUpdates.fontWeight } : {}),
-                        ...(styleUpdates.letterSpacing !== undefined ? { letterSpacing: styleUpdates.letterSpacing } : {}),
-                      },
-                    };
-                  } else if (compoundType === "split-line") {
-                    return {
-                      ...child,
-                      style: {
-                        ...child.style,
-                        ...(styleUpdates.borderWidth !== undefined ? { borderWidth: styleUpdates.borderWidth } : {}),
-                        ...(styleUpdates.borderColor !== undefined ? { borderColor: styleUpdates.borderColor } : {}),
-                      },
-                    };
-                  }
-                  return child;
-                });
+            if (updates.style) {
+              const updatedChildren = propagateCompoundStyleChildren(layer, updates.style);
+              if (updatedChildren) {
                 nextLayer = {
                   ...nextLayer,
-                  children: nextChildren,
+                  children: updatedChildren,
                 } as Layer;
               }
             }
@@ -243,12 +188,7 @@ export const createLayerSlice = (
     cloned.style.x = (cloned.style.x || 0) + 30;
     cloned.style.y = (cloned.style.y || 0) + 30;
 
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: [...s.layers, cloned] } : s
-      ),
-    };
+    const nextDoc = setScreenLayersInDoc(doc, activeScreenId, [...activeScreen.layers, cloned]);
     commitDoc(set, nextDoc, {
       selectedLayerIds: [newId],
     });
@@ -280,12 +220,7 @@ export const createLayerSlice = (
       nextLayers = [...activeScreen.layers, cloned];
     }
 
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-      ),
-    };
+    const nextDoc = setScreenLayersInDoc(doc, activeScreenId, nextLayers);
     commitDoc(set, nextDoc, {
       selectedLayerIds: [newId],
     });
@@ -313,12 +248,7 @@ export const createLayerSlice = (
       }
     );
 
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: withLayerInGroup } : s
-      ),
-    };
+    const nextDoc = setScreenLayersInDoc(doc, activeScreenId, withLayerInGroup);
     commitDoc(set, nextDoc);
   },
 
@@ -344,12 +274,7 @@ export const createLayerSlice = (
       l.id === groupId ? childrenToHoist : [l]
     );
 
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-      ),
-    };
+    const nextDoc = setScreenLayersInDoc(doc, activeScreenId, nextLayers);
     commitDoc(set, nextDoc, {
       selectedLayerIds: childrenToHoist.map((c) => c.id),
     });
@@ -575,27 +500,7 @@ export const createLayerSlice = (
 
     if (selectedLayers.length === 0) return;
 
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    selectedLayers.forEach((l) => {
-      const el = typeof document !== "undefined" ? document.getElementById(`layer-${l.id}`) : null;
-      const x = l.style.x || 0;
-      const y = l.style.y || 0;
-      const w = typeof l.style.width === "number" ? l.style.width : (el && el.offsetWidth > 0 ? el.offsetWidth : 200);
-      const h = typeof l.style.height === "number" ? l.style.height : (el && el.offsetHeight > 0 ? el.offsetHeight : 60);
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x + w);
-      maxY = Math.max(maxY, y + h);
-    });
-
-    if (!isFinite(minX)) minX = 100;
-    if (!isFinite(minY)) minY = 100;
-    if (!isFinite(maxX)) maxX = 500;
-    if (!isFinite(maxY)) maxY = 300;
+    const bounds = computeLayersBoundingBox(selectedLayers);
 
     const newGroupId = `group_${Date.now()}`;
     const newGroup: GroupLayer = {
@@ -612,10 +517,10 @@ export const createLayerSlice = (
       autoLink: false,
       staggerDelay: 0.15,
       style: {
-        x: Math.round(minX),
-        y: Math.round(minY),
-        width: Math.max(Math.round(maxX - minX), 10),
-        height: Math.max(Math.round(maxY - minY), 10),
+        x: Math.round(bounds.minX),
+        y: Math.round(bounds.minY),
+        width: bounds.width,
+        height: bounds.height,
         rotation: 0,
         opacity: 1,
       },
@@ -623,8 +528,8 @@ export const createLayerSlice = (
         ...l,
         style: {
           ...l.style,
-          x: Math.round((l.style.x || 0) - minX),
-          y: Math.round((l.style.y || 0) - minY),
+          x: Math.round((l.style.x || 0) - bounds.minX),
+          y: Math.round((l.style.y || 0) - bounds.minY),
         },
       })),
     };
@@ -667,27 +572,7 @@ export const createLayerSlice = (
     }
     if (selectedLayers.length < 2) return;
 
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    selectedLayers.forEach((l) => {
-      const el = typeof document !== "undefined" ? document.getElementById(`layer-${l.id}`) : null;
-      const x = l.style.x || 0;
-      const y = l.style.y || 0;
-      const w = typeof l.style.width === "number" ? l.style.width : (el && el.offsetWidth > 0 ? el.offsetWidth : 200);
-      const h = typeof l.style.height === "number" ? l.style.height : (el && el.offsetHeight > 0 ? el.offsetHeight : 60);
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x + w);
-      maxY = Math.max(maxY, y + h);
-    });
-
-    if (!isFinite(minX)) minX = 100;
-    if (!isFinite(minY)) minY = 100;
-    if (!isFinite(maxX)) maxX = 500;
-    if (!isFinite(maxY)) maxY = 300;
+    const bounds = computeLayersBoundingBox(selectedLayers);
 
     const newGroupId = `mask_group_${Date.now()}`;
     // Bottom-most selected layer (index 0) becomes the mask stencil
@@ -696,8 +581,8 @@ export const createLayerSlice = (
       isMask: idx === 0,
       style: {
         ...l.style,
-        x: Math.round((l.style.x || 0) - minX),
-        y: Math.round((l.style.y || 0) - minY),
+        x: Math.round((l.style.x || 0) - bounds.minX),
+        y: Math.round((l.style.y || 0) - bounds.minY),
       },
     }));
 
@@ -716,10 +601,10 @@ export const createLayerSlice = (
       autoFit: false,
       autoLink: false,
       style: {
-        x: Math.round(minX),
-        y: Math.round(minY),
-        width: Math.max(Math.round(maxX - minX), 10),
-        height: Math.max(Math.round(maxY - minY), 10),
+        x: Math.round(bounds.minX),
+        y: Math.round(bounds.minY),
+        width: bounds.width,
+        height: bounds.height,
         rotation: 0,
         opacity: 1,
       },
@@ -904,12 +789,7 @@ export const createLayerSlice = (
     const rootLayer = parsed.root;
     const nextLayers = [...activeScreen.layers, rootLayer];
 
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-      ),
-    };
+    const nextDoc = setScreenLayersInDoc(doc, activeScreenId, nextLayers);
 
     commitDoc(set, nextDoc, {
       selectedLayerIds: [rootLayer.id],
@@ -935,12 +815,7 @@ export const createLayerSlice = (
           name: `${operation.charAt(0).toUpperCase() + operation.slice(1)} Group`,
         };
         const nextLayers = mutateLayerInTree(activeScreen.layers, existing.id, () => updated);
-        const nextDoc: SceneDocument = {
-          ...doc,
-          screens: doc.screens.map((s) =>
-            s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-          ),
-        };
+        const nextDoc = setScreenLayersInDoc(doc, activeScreenId, nextLayers);
         commitDoc(set, nextDoc, { selectedLayerIds: [updated.id] });
         return;
       }
@@ -954,31 +829,14 @@ export const createLayerSlice = (
       .filter((l): l is Layer => l !== null);
     if (selectedLayers.length < 2) return;
 
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    for (const l of selectedLayers) {
-      const lx = typeof l.style.x === "number" ? l.style.x : 0;
-      const ly = typeof l.style.y === "number" ? l.style.y : 0;
-      const lw = typeof l.style.width === "number" ? l.style.width : 100;
-      const lh = typeof l.style.height === "number" ? l.style.height : 100;
-      minX = Math.min(minX, lx);
-      minY = Math.min(minY, ly);
-      maxX = Math.max(maxX, lx + lw);
-      maxY = Math.max(maxY, ly + lh);
-    }
-
-    const width = Math.max(1, maxX - minX);
-    const height = Math.max(1, maxY - minY);
+    const bounds = computeLayersBoundingBox(selectedLayers);
 
     const children = selectedLayers.map((l) => ({
       ...l,
       style: {
         ...l.style,
-        x: (typeof l.style.x === "number" ? l.style.x : 0) - minX,
-        y: (typeof l.style.y === "number" ? l.style.y : 0) - minY,
+        x: (typeof l.style.x === "number" ? l.style.x : 0) - bounds.minX,
+        y: (typeof l.style.y === "number" ? l.style.y : 0) - bounds.minY,
       },
     }));
 
@@ -990,10 +848,10 @@ export const createLayerSlice = (
       booleanOperation: operation,
       children,
       style: {
-        x: minX,
-        y: minY,
-        width,
-        height,
+        x: bounds.minX,
+        y: bounds.minY,
+        width: bounds.width,
+        height: bounds.height,
         rotation: 0,
         opacity: 1,
       },
@@ -1042,12 +900,7 @@ export const createLayerSlice = (
     if (!flattened) return;
 
     const nextLayers = mutateLayerInTree(activeScreen.layers, targetId, () => flattened!);
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-      ),
-    };
+    const nextDoc = setScreenLayersInDoc(doc, activeScreenId, nextLayers);
 
     commitDoc(set, nextDoc, {
       selectedLayerIds: [flattened.id],
@@ -1212,12 +1065,7 @@ export const createLayerSlice = (
     const group = splitLinesEngine(targetLayer as any);
 
     const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, () => group);
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-      ),
-    };
+    const nextDoc = setScreenLayersInDoc(doc, activeScreenId, nextLayers);
 
     commitDoc(set, nextDoc, {
       selectedLayerIds: group.children.map((c) => c.id),
@@ -1239,12 +1087,7 @@ export const createLayerSlice = (
     const splitResult = isCirc ? splitCircleContour(shape) : splitRoundedRectContour(shape);
 
     const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, () => splitResult.group);
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-      ),
-    };
+    const nextDoc = setScreenLayersInDoc(doc, activeScreenId, nextLayers);
 
     commitDoc(set, nextDoc, {
       selectedLayerIds: splitResult.subLayers.map((s) => s.id),
@@ -1262,12 +1105,7 @@ export const createLayerSlice = (
     const splitResult = separateStrokeFillEngine(targetLayer as ShapeLayer);
 
     const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, () => splitResult.group);
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-      ),
-    };
+    const nextDoc = setScreenLayersInDoc(doc, activeScreenId, nextLayers);
 
     commitDoc(set, nextDoc, {
       selectedLayerIds: [splitResult.subLayers[1].id],
@@ -1285,12 +1123,7 @@ export const createLayerSlice = (
     const splitResult = splitLineAtRatio(targetLayer, ratio);
 
     const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, () => splitResult.group);
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-      ),
-    };
+    const nextDoc = setScreenLayersInDoc(doc, activeScreenId, nextLayers);
 
     commitDoc(set, nextDoc, {
       selectedLayerIds: splitResult.segments.map((s) => s.id),
@@ -1308,12 +1141,7 @@ export const createLayerSlice = (
     const splitResult = detachArrowheadEngine(targetLayer);
 
     const nextLayers = mutateLayerInTree(activeScreen.layers, layerId, () => splitResult.group);
-    const nextDoc: SceneDocument = {
-      ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === activeScreenId ? { ...s, layers: nextLayers } : s
-      ),
-    };
+    const nextDoc = setScreenLayersInDoc(doc, activeScreenId, nextLayers);
 
     commitDoc(set, nextDoc, {
       selectedLayerIds: [splitResult.segments[1].id],

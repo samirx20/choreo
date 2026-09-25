@@ -1,8 +1,9 @@
 import React from "react";
 import { ShapeLayer } from "@/types/scene";
-import { useProjectStore, findParentGroupInTree } from "@/store/useProjectStore";
+import { useProjectStore } from "@/store/useProjectStore";
 import { getShapeEdges } from "@/engine/shapeGeometry";
 import { Scissors, X, Check } from "lucide-react";
+import { getParentWorldOffset } from "./canvasUtils";
 
 interface ShapeSplitOverlayProps {
   layer: ShapeLayer;
@@ -11,22 +12,6 @@ interface ShapeSplitOverlayProps {
   effectiveScale: number;
   screenOffset?: { x: number; y: number };
 }
-
-const getParentWorldOffset = (targetId: string): { x: number; y: number } => {
-  let curX = 0;
-  let curY = 0;
-  const activeLayers =
-    useProjectStore.getState().document.screens.find(
-      (s) => s.id === useProjectStore.getState().activeScreenId
-    )?.layers || [];
-  let currentParent = findParentGroupInTree(activeLayers, targetId);
-  while (currentParent) {
-    curX += currentParent.style.x || 0;
-    curY += currentParent.style.y || 0;
-    currentParent = findParentGroupInTree(activeLayers, currentParent.id);
-  }
-  return { x: curX, y: curY };
-};
 
 export const ShapeSplitOverlay: React.FC<ShapeSplitOverlayProps> = ({
   layer,

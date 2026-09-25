@@ -12,22 +12,7 @@ import {
 } from "@/engine/canvas/endpointSnapper";
 import { getLineEndpoints } from "@/engine/vector/lineJoiner";
 import { EndpointSnapIndicator } from "./EndpointSnapIndicator";
-
-const getParentWorldOffset = (targetId: string): { x: number; y: number } => {
-  let curX = 0;
-  let curY = 0;
-  const activeLayers =
-    useProjectStore.getState().document.screens.find(
-      (s) => s.id === useProjectStore.getState().activeScreenId
-    )?.layers || [];
-  let currentParent = findParentGroupInTree(activeLayers, targetId);
-  while (currentParent) {
-    curX += currentParent.style.x || 0;
-    curY += currentParent.style.y || 0;
-    currentParent = findParentGroupInTree(activeLayers, currentParent.id);
-  }
-  return { x: curX, y: curY };
-};
+import { getParentWorldOffset } from "./canvasUtils";
 
 interface TransformBoxProps {
   layer: Layer;

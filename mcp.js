@@ -287,62 +287,13 @@ const TOOLS = [
         name: { type: "string", description: "Element name" },
         type: {
           type: "string",
-          enum: ["text", "shape", "icon", "counter", "line", "image", "frame", "video", "polygon", "mockup3d"],
-          description: "Layer type (text, shape, icon, counter, line, image, frame, video, polygon, mockup3d)",
+          enum: ["text", "shape", "icon", "counter", "line", "image", "frame", "video", "polygon"],
+          description: "Layer type (text, shape, icon, counter, line, image, frame, video, polygon)",
         },
         shapeType: {
           type: "string",
           enum: ["rectangle", "circle", "ellipse", "triangle", "star", "polygon", "line", "arrow", "path"],
           description: "Specific shape geometry type",
-        },
-        modelType: {
-          type: "string",
-          enum: ["iphone", "macbook", "card", "badge", "custom"],
-          description: "3D hardware device model for type 'mockup3d' (e.g. 'iphone', 'macbook', 'card')",
-        },
-        cameraPreset: {
-          type: "string",
-          enum: ["orbit360", "isometric", "dollyIn", "hover", "cardFlip", "custom"],
-          description: "3D camera motion preset for 'mockup3d' (e.g. 'orbit360', 'isometric', 'dollyIn', 'hover')",
-        },
-        position3D: {
-          type: "array",
-          items: { type: "number" },
-          description: "3D coordinates [x, y, z] for 'mockup3d'",
-        },
-        rotation3D: {
-          type: "array",
-          items: { type: "number" },
-          description: "3D Euler rotation [pitch, yaw, roll] in degrees for 'mockup3d'",
-        },
-        scale3D: {
-          type: "array",
-          items: { type: "number" },
-          description: "3D scale [sx, sy, sz] for 'mockup3d'",
-        },
-        cameraFov: {
-          type: "number",
-          description: "3D camera field of view in degrees (default: 35 for telephoto look)",
-        },
-        cameraPosition: {
-          type: "array",
-          items: { type: "number" },
-          description: "3D camera position [x, y, z]",
-        },
-        cameraTarget: {
-          type: "array",
-          items: { type: "number" },
-          description: "3D camera look-at target [x, y, z]",
-        },
-        screenSlot: {
-          type: "object",
-          properties: {
-            sourceType: { type: "string", enum: ["screen", "video", "image", "color"] },
-            sourceId: { type: "string", description: "Target 2D scene ID to project onto device screen" },
-            fitMode: { type: "string", enum: ["cover", "contain", "stretch"] },
-            emissiveIntensity: { type: "number", description: "OLED display brightness (default: 1.0)" },
-          },
-          description: "Dynamic screen texture projection mapping 2D scenes onto the 3D device display",
         },
         content: { type: "string", description: "Text content, icon name (e.g. 'Sparkles'), or image/video URL" },
         iconName: { type: "string", description: "Lucide vector icon name (e.g. 'Sparkles', 'Check', 'ArrowRight', 'Shield')" },
@@ -454,55 +405,6 @@ const TOOLS = [
         iconName: { type: "string", description: "Updated Lucide icon name" },
         src: { type: "string", description: "Updated image or video source URL" },
         shapeType: { type: "string", enum: ["rectangle", "circle", "ellipse", "triangle", "star", "polygon", "line", "arrow", "path"] },
-        modelType: {
-          type: "string",
-          enum: ["iphone", "macbook", "card", "badge", "custom"],
-          description: "3D hardware device model (for mockup3d layers)",
-        },
-        cameraPreset: {
-          type: "string",
-          enum: ["orbit360", "isometric", "dollyIn", "hover", "cardFlip", "custom"],
-          description: "3D camera motion preset",
-        },
-        position3D: {
-          type: "array",
-          items: { type: "number" },
-          description: "3D position [x, y, z]",
-        },
-        rotation3D: {
-          type: "array",
-          items: { type: "number" },
-          description: "3D Euler rotation [pitch, yaw, roll] in degrees",
-        },
-        scale3D: {
-          type: "array",
-          items: { type: "number" },
-          description: "3D scale [sx, sy, sz]",
-        },
-        cameraFov: {
-          type: "number",
-          description: "3D camera field of view in degrees",
-        },
-        cameraPosition: {
-          type: "array",
-          items: { type: "number" },
-          description: "3D camera position [x, y, z]",
-        },
-        cameraTarget: {
-          type: "array",
-          items: { type: "number" },
-          description: "3D camera look-at target [x, y, z]",
-        },
-        screenSlot: {
-          type: "object",
-          properties: {
-            sourceType: { type: "string", enum: ["screen", "video", "image", "color"] },
-            sourceId: { type: "string", description: "Target 2D scene ID to project onto device screen" },
-            fitMode: { type: "string", enum: ["cover", "contain", "stretch"] },
-            emissiveIntensity: { type: "number", description: "OLED display brightness" },
-          },
-          description: "Screen projection mapping 2D scenes onto 3D device display",
-        },
         grid: {
           type: "object",
           properties: {
@@ -1494,19 +1396,6 @@ function handleToolCall(name, args) {
       if (args.locked !== undefined) newLayer.locked = args.locked;
       if (args.visible !== undefined) newLayer.visible = args.visible;
       if (args.zIndex !== undefined) newLayer.zIndex = args.zIndex;
-
-      if (args.type === "mockup3d" || args.type === "mockup-3d") {
-        newLayer.type = "mockup3d";
-        newLayer.modelType = args.modelType || "iphone";
-        newLayer.cameraPreset = args.cameraPreset || "orbit360";
-        newLayer.position3D = args.position3D || [0, 0, 0];
-        newLayer.rotation3D = args.rotation3D || [0, 0, 0];
-        newLayer.scale3D = args.scale3D || [1, 1, 1];
-        newLayer.cameraFov = args.cameraFov || 35;
-        newLayer.cameraPosition = args.cameraPosition || [0, 0, 5];
-        newLayer.cameraTarget = args.cameraTarget || [0, 0, 0];
-        if (args.screenSlot) newLayer.screenSlot = args.screenSlot;
-      }
 
       if (args.enter) {
         let enterEasing = args.enter.easing || "snappy";
@@ -3900,3 +3789,4 @@ if (portArg && !isNaN(portArg)) {
   });
 }
 
+export { TOOLS };

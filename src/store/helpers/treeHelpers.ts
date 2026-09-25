@@ -1,4 +1,4 @@
-import { Layer, GroupLayer, FrameLayer, ShapeLayer } from "@/types/scene";
+import { Layer, GroupLayer, FrameLayer, ShapeLayer, SceneDocument } from "@/types/scene";
 
 /**
  * Checks whether a layer is structurally capable of acting as a parent container.
@@ -167,3 +167,56 @@ export function isLayerOnArtboard(
     ly + lh > 0
   );
 }
+
+/**
+ * Returns an updated SceneDocument with the targeted screen's layers replaced.
+ */
+export function setScreenLayersInDoc(
+  doc: SceneDocument,
+  screenId: string,
+  nextLayers: Layer[]
+): SceneDocument {
+  return {
+    ...doc,
+    screens: doc.screens.map((s) => (s.id === screenId ? { ...s, layers: nextLayers } : s)),
+  };
+}
+
+/**
+ * Calculates the bounding box enclosing a list of layers, falling back
+ * to DOM measurements if layer dimensions are unset.
+ */
+export function computeLayersBoundingBox(layers: Layer[]) {
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  layers.forEach((l) => {
+    const el = typeof document !== "undefined" ? document.getElementById(`layer-${l.id}`) : null;
+    const x = l.style.x || 0;
+    const y = l.style.y || 0;
+    const w = typeof l.style.width === "number" ? l.style.width : (el && el.offsetWidth > 0 ? el.offsetWidth : 200);
+    const h = typeof l.style.height === "number" ? l.style.height : (el && el.offsetHeight > 0 ? el.offsetHeight : 60);
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + w);
+    maxY = Math.max(maxY, y + h);
+  });
+
+  if (!isFinite(minX)) minX = 100;
+  if (!isFinite(minY)) minY = 100;
+  if (!isFinite(maxX)) maxX = 500;
+  if (!isFinite(maxY)) maxY = 300;
+
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: Math.max(Math.round(maxX - minX), 10),
+    height: Math.max(Math.round(maxY - minY), 10),
+  };
+}
+
+

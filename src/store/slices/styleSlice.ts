@@ -1,6 +1,7 @@
 import { ProjectStoreState } from "../types";
 import { SceneDocument, Layer } from "@/types/scene";
 import { findLayerInTree, mutateLayerInTree } from "../helpers/treeHelpers";
+import { propagateCompoundStyleChildren } from "../utils/compoundStyleUtils";
 import { commitDoc } from "../historyManager";
 
 export type StyleSlice = Pick<
@@ -25,76 +26,12 @@ export const createStyleSlice = (
           ...screen,
           layers: mutateLayerInTree(screen.layers, layerId, (layer) => {
             const nextStyle = { ...layer.style, ...styleUpdates };
-            if (
-              layer.isCompound &&
-              (layer.type === "group" || layer.type === "frame") &&
-              Array.isArray((layer as any).children)
-            ) {
-              const compoundType = (layer as any).compoundType;
-              const nextChildren = (layer as any).children.map((child: Layer) => {
-                if (compoundType === "split-shape") {
-                  if (child.id.startsWith("fill_") || (child as any).shapeType !== "path") {
-                    return {
-                      ...child,
-                      style: {
-                        ...child.style,
-                        ...(styleUpdates.backgroundColor !== undefined
-                          ? { backgroundColor: styleUpdates.backgroundColor }
-                          : {}),
-                        ...(styleUpdates.opacity !== undefined ? { opacity: styleUpdates.opacity } : {}),
-                      },
-                    };
-                  }
-                  if ((child as any).shapeType === "path") {
-                    return {
-                      ...child,
-                      style: {
-                        ...child.style,
-                        ...(styleUpdates.borderWidth !== undefined
-                          ? { borderWidth: styleUpdates.borderWidth }
-                          : {}),
-                        ...(styleUpdates.borderColor !== undefined
-                          ? { borderColor: styleUpdates.borderColor }
-                          : {}),
-                        ...(styleUpdates.opacity !== undefined ? { opacity: styleUpdates.opacity } : {}),
-                      },
-                    };
-                  }
-                } else if (compoundType === "split-text") {
-                  return {
-                    ...child,
-                    style: {
-                      ...child.style,
-                      ...(styleUpdates.color !== undefined ? { color: styleUpdates.color } : {}),
-                      ...(styleUpdates.fontSize !== undefined ? { fontSize: styleUpdates.fontSize } : {}),
-                      ...(styleUpdates.fontFamily !== undefined ? { fontFamily: styleUpdates.fontFamily } : {}),
-                      ...(styleUpdates.fontWeight !== undefined ? { fontWeight: styleUpdates.fontWeight } : {}),
-                      ...(styleUpdates.letterSpacing !== undefined ? { letterSpacing: styleUpdates.letterSpacing } : {}),
-                    },
-                  };
-                } else if (compoundType === "split-line") {
-                  return {
-                    ...child,
-                    style: {
-                      ...child.style,
-                      ...(styleUpdates.borderWidth !== undefined ? { borderWidth: styleUpdates.borderWidth } : {}),
-                      ...(styleUpdates.borderColor !== undefined ? { borderColor: styleUpdates.borderColor } : {}),
-                    },
-                  };
-                }
-                return child;
-              });
-
-              return {
-                ...layer,
-                style: nextStyle,
-                children: nextChildren,
-              } as Layer;
-            }
+            const updatedChildren = propagateCompoundStyleChildren(layer, styleUpdates);
 
             return {
               ...layer,
               style: nextStyle,
+              ...(updatedChildren ? { children: updatedChildren } : {}),
             } as Layer;
           }),
         };

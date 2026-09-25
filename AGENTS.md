@@ -8,7 +8,7 @@ This document establishes the mandatory engineering standards, architectural rul
 
 ## 1. Core Mission & Philosophy
 
-* **Target Output**: Apple Keynote & Google Material 3 showcase-grade motion graphics (fluid spring physics, metric-aligned typographic reveals, cinematic telephoto 3D camera staging, and optical depth).
+* **Target Output**: Apple Keynote & Google Material 3 showcase-grade motion graphics (fluid spring physics, metric-aligned typographic reveals, and optical depth).
 * **Target Author**: AI agents. The engine is an **Aesthetic Compiler and Guardian**: it guarantees spatial validity, physical momentum, and narrative timing by construction, leaving the agent to specify creative and structural intent.
 * **Mental Model**: **State-Based Storyboards with Magic Move on a Modular Video Grid**, operated via **Step-by-Step Tool Calling**.
 
@@ -27,7 +27,7 @@ This document establishes the mandatory engineering standards, architectural rul
 * **Config & Token Driven**:
   * Spring profiles must live in modular token registries (e.g., `src/engine/easings.ts` or design token definitions).
   * Grid definitions must derive from aspect ratios (e.g., 16:9 $\to$ 16x9, 9:16 $\to$ 9x16).
-  * Device models, materials, and camera presets must be cleanly registered in asset registries.
+  * Motion profiles and design presets must be cleanly registered in asset registries.
 * **Dynamic Sizing**: Elements must use the modular grid bounds and auto-fit math rather than hardcoded width/height pixels.
 * **Checkbox Single-Property Design**: Visual properties must follow the single-property checkbox model (`fillColor`, `strokeWeight`, `shadowBlur`), avoiding Figma-style array stacks (`fills: []`). This guarantees 1:1 unambiguous animation targeting for AI agents.
 
@@ -41,7 +41,6 @@ src/
 │   ├── physics/        # Analytical 2nd-order harmonic oscillator spring solvers
 │   ├── storyboard/     # Beat solver & Magic Move interpolation engine
 │   ├── pixi/           # 2D Canvas vector, shape, and text rendering
-│   ├── three/          # 3D stage, PBR materials, telephoto camera, & FBO projection
 │   ├── export/         # WebCodecs / FFmpeg frame-accurate video exporters
 │   └── perception/     # AST pre-flight linter & contact sheet generator
 ├── tools/              # AI Agent Tool Calling API (create_beat, place_element, etc.)
@@ -135,7 +134,7 @@ When building or choreographing a motion graphic, agents follow the **Two-Stage 
 
 ```
 [Stage 1: Director]
-  └─► Proposes narrative beat sheet, copy, theme, and 3D device staging.
+  └─► Proposes narrative beat sheet, copy, theme, and scene staging.
 
 [Stage 2: Choreographer]
   └─► Step 1: create_beat({ id, duration, transition, camera })

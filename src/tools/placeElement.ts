@@ -4,7 +4,6 @@ import {
   TextLayer,
   ShapeLayer,
   IconLayer,
-  Mockup3DLayer,
   CounterLayer,
   FrameLayer,
   LineLayer,
@@ -138,25 +137,6 @@ export function placeElement(
         },
       };
       createdLayer = iconLayer;
-      break;
-    }
-
-    case "mockup-3d":
-    case "mockup3d": {
-      const mockupLayer: Mockup3DLayer = {
-        id: layerId,
-        name: input.name,
-        type: "mockup3d",
-        modelType: (input.mockupType?.includes("macbook") ? "macbook" : "iphone") as any,
-        position3D: [0, 0, 0],
-        rotation3D: [0, 0, 0],
-        cameraFov: 35,
-        cameraPosition: [0, 0, 5],
-        cameraTarget: [0, 0, 0],
-        grid: resolvedGrid,
-        style: baseStyle,
-      };
-      createdLayer = mockupLayer;
       break;
     }
 

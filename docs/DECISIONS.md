@@ -2994,6 +2994,42 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 60 test suites (616 tests) pass cleanly (`npm test`).
   - Production build and Tauri installers successfully compiled and verified (`npm run desktop:build`).
 
+---
+
+### Decision 128: Elimination of Discarded 3D Engine & Legacy Multi-Studio Concepts, Dead File Pruning, and Redundancy Reduction via Fallow
+
+* **Context & Motivation**:
+  - The user clarified that Motion Studio is strictly a 2D motion graphics and kinetic design instrument (cards, text, shapes, lines, arrows, images, videos, kinetic typography, Magic Move, spring physics).
+  - Experimental 3D device mockups (`mockup3d`, Three.js canvas projection, telephoto presets) and discarded multi-studio NLE pipeline concepts (`DESIGN • MOTION • 3D • EDITOR`, `TimelineClip`, `TimelineTrack`, `ThreeDShot`, `EditorSequence`) were confusing AI agents and cluttering schemas.
+  - Codebase analysis via `npx fallow` identified dead files, duplicate code blocks (over 10% duplication), and unneeded dependencies (`three`, `@types/three`).
+* **The Solution**:
+  1. **Purged Discarded 3D Engine & Dependencies**:
+     - Deleted `src/engine/three/` (`index.ts`, `ThreeRendererPool.ts`, `ScreenTextureProjector.ts`, `ThreeCameraPresets.ts`, `ThreeStage.ts`).
+     - Removed `three` and `@types/three` dependencies from `package.json`.
+     - Removed `mockup3d` and `mockup-3d` layer types from schemas (`src/types/layers.ts`, `src/types/agentTools.ts`, `mcp.js`, tool schemas).
+     - Removed 3D mockup templates (`comp_iphone_mockup`, `comp_macbook_mockup`) from `componentTemplates.ts`.
+  2. **Eradicated Legacy Multi-Studio Types**:
+     - Cleaned `UiMode = 'design' | 'motion' | 'animate'` in `src/types/scene.ts`.
+     - Removed `ThreeDCamera`, `ThreeDModel`, `ThreeDShot`, `TimelineClip`, `TimelineTrack`, `EditorSequence` interfaces.
+     - Removed `sendTo3D` and `sendToEditor` actions from `src/store/types.ts` and `src/store/slices/canvasSlice.ts`.
+  3. **Zero Dead Files (`fallow dead-code`)**:
+     - Deleted obsolete test files (`src/test/three_mockups.test.ts`, `src/test/multi_studio_pipeline.test.ts`).
+     - Deleted dead tools (`src/tools/index.ts`, `src/tools/lintStoryboardTool.ts`).
+     - `npx fallow dead-code` confirms **0 unused files** remain.
+  4. **Duplication Reduction & Shared Abstractions (`fallow dupes`)**:
+     - **`SceneHeaderCard.tsx`**: Extracted shared scene header component used by both `SceneSettingsCard.tsx` and `SceneAnimationsView.tsx`, eliminating 74 lines of duplicate code.
+     - **`ClipDetailView.tsx`**: Unified duplicated 117-line portal modal tree into a single component with conditional DOM portal mounting.
+     - **`compoundStyleUtils.ts`**: Extracted `propagateCompoundStyleChildren` to deduplicate compound group style propagation between `layerSlice.ts` and `styleSlice.ts`.
+     - **`canvasUtils.ts`**: Extracted `getParentWorldOffset` used identically across `LineSplitOverlay.tsx`, `ShapeSplitOverlay.tsx`, and `TransformBox.tsx`.
+     - **`treeHelpers.ts`**: Added `setScreenLayersInDoc` and `computeLayersBoundingBox` helpers, eliminating dozens of repetitive bounding-box calculation loops and document mapping blocks across `layerSlice.ts`.
+     - Total duplication dropped from 4,945 lines (10.1%) to 3,910 lines (8.1%).
+* **Verification**:
+  - Full test suite: 58 test files and 601 unit/integration tests pass with 100% success rate (`npm test`).
+  - Production build: `tsc -b && vite build` completes in 10s with 0 errors.
+  - Rust backend: `cargo check` passes with 0 errors and 0 warnings.
+  - Repackaged desktop installers (`npm run desktop:build`).
+
+
 
 
 

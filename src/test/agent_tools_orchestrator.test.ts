@@ -152,13 +152,12 @@ describe("Milestone 4: Agent Tools, Modular Grid, Linter & Orchestrator", () => 
       expect(counterRes.success).toBe(true);
       expect(counterRes.data?.layer.type).toBe("counter");
 
-      const mockupRes = placeElement({
-        name: "Phone 3D",
-        type: "mockup-3d",
-        mockupType: "iphone-16-pro",
+      const lineRes = placeElement({
+        name: "Divider",
+        type: "line",
       });
-      expect(mockupRes.success).toBe(true);
-      expect(mockupRes.data?.layer.type).toBe("mockup3d");
+      expect(lineRes.success).toBe(true);
+      expect(lineRes.data?.layer.type).toBe("line");
 
       const iconRes = placeElement({
         name: "Star Icon",
@@ -347,7 +346,7 @@ describe("Milestone 4: Agent Tools, Modular Grid, Linter & Orchestrator", () => 
     it("generates structured contact sheet summary of all beats", () => {
       createScene({ name: "Hook", duration: 3.0 });
       placeElement({ name: "Hero Headline", type: "text", content: "World-Class Motion" });
-      placeElement({ name: "Device", type: "mockup-3d" });
+      placeElement({ name: "Counter Metric", type: "counter" });
 
       const doc = useProjectStore.getState().document;
       const contactSheet = generateContactSheet(doc);

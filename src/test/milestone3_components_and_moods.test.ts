@@ -5,7 +5,6 @@ import {
   CounterLayer,
   FrameLayer,
   GroupLayer,
-  Mockup3DLayer,
 } from "@/types/scene";
 import { evaluateCounterValue } from "@/engine/evaluator";
 
@@ -156,46 +155,6 @@ describe("Milestone 3: Component Library & Aesthetic Profiles", () => {
       const viewport = browserWindow.children.find((c) => c.type === "frame") as FrameLayer;
       expect(viewport).toBeDefined();
       expect(viewport.clipContent).toBe(true);
-    });
-
-    it("validates 3D Device Mockup contracts for iPhone and MacBook", () => {
-      const iphone: Mockup3DLayer = {
-        id: "mockup_iphone",
-        name: "iPhone 16 Pro",
-        type: "mockup3d",
-        modelType: "iphone",
-        deviceFinish: "natural-titanium",
-        position3D: [0, 0, 0],
-        rotation3D: [0, -0.2, 0],
-        cameraPreset: "orbit360",
-        cameraFov: 32,
-        cameraPosition: [0, 0, 5],
-        cameraTarget: [0, 0, 0],
-        style: { x: 0, y: 0, width: 500, height: 700, rotation: 0, opacity: 1 },
-      };
-
-      expect(iphone.type).toBe("mockup3d");
-      expect(iphone.modelType).toBe("iphone");
-      expect(iphone.cameraPreset).toBe("orbit360");
-
-      const macbook: Mockup3DLayer = {
-        id: "mockup_macbook",
-        name: "MacBook Pro",
-        type: "mockup3d",
-        modelType: "macbook",
-        deviceFinish: "space-black",
-        position3D: [0, -0.2, 0],
-        rotation3D: [0.15, 0.35, 0],
-        cameraPreset: "isometric",
-        cameraFov: 35,
-        cameraPosition: [0, 0.5, 4.5],
-        cameraTarget: [0, 0, 0],
-        style: { x: 0, y: 0, width: 700, height: 500, rotation: 0, opacity: 1 },
-      };
-
-      expect(macbook.type).toBe("mockup3d");
-      expect(macbook.modelType).toBe("macbook");
-      expect(macbook.cameraPreset).toBe("isometric");
     });
   });
 });

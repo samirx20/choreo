@@ -101,9 +101,6 @@ export const LayerIcon: React.FC<LayerIconProps> = ({ layer, className = "h-3.5 
     case "video":
       return <Film className={className} />;
 
-    case "mockup3d":
-      return <Box className={className} />;
-
     case "icon": {
       const iconName = (layer as any).iconName;
       const IconComp = (icons as Record<string, React.FC<any>>)[iconName] || Smile;

@@ -1,10 +1,5 @@
-import React, { useState } from "react";
+import React from "react";
 import {
-  Type,
-  Square,
-  Circle,
-  Folder,
-  Image as ImageIcon,
   Sparkles,
   Repeat,
   ArrowUpRight,
@@ -12,19 +7,10 @@ import {
   Trash2,
   Copy,
   ArrowRight,
-  MoreHorizontal,
-  Pencil,
 } from "lucide-react";
 import { Layer, AnimationClip, getLayerClips } from "@/types/scene";
 import { useProjectStore } from "@/store/useProjectStore";
-import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { LayerHeaderCard } from "@/components/inspector/design/LayerHeaderCard";
 import { useContextMenuStore } from "@/store/useContextMenuStore";
 import { buildSidebarCardMenu } from "@/components/contextmenu/contextMenuBuilders";
 
@@ -39,33 +25,7 @@ export const LayerAnimationsView: React.FC<LayerAnimationsViewProps> = ({
     setSelectedClips,
     removeAnimationClip,
     openAnimationCatalog,
-    updateLayer,
-    removeLayer,
-    duplicateLayer,
   } = useProjectStore();
-
-  const [isEditingLayerName, setIsEditingLayerName] = useState(false);
-  const [layerNameInput, setLayerNameInput] = useState(selectedLayer.name);
-
-  const getLayerIcon = (layer: Layer) => {
-    switch (layer.type) {
-      case "text":
-      case "chunk":
-        return <Type className="h-3.5 w-3.5 text-foreground" />;
-      case "group":
-        return <Folder className="h-3.5 w-3.5 text-foreground" />;
-      case "shape":
-        return layer.shapeType === "circle" ? (
-          <Circle className="h-3.5 w-3.5 text-foreground" />
-        ) : (
-          <Square className="h-3.5 w-3.5 text-foreground" />
-        );
-      case "image":
-        return <ImageIcon className="h-3.5 w-3.5 text-foreground" />;
-      default:
-        return <Square className="h-3.5 w-3.5 text-foreground" />;
-    }
-  };
 
   const getClipTypeBadge = (type: string) => {
     switch (type) {
@@ -99,88 +59,7 @@ export const LayerAnimationsView: React.FC<LayerAnimationsViewProps> = ({
 
   return (
     <div className="p-4 space-y-4 text-foreground relative select-none">
-      {/* Layer Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-border">
-        <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-          {getLayerIcon(selectedLayer)}
-          {isEditingLayerName ? (
-            <Input
-              type="text"
-              value={layerNameInput}
-              onChange={(e) => setLayerNameInput(e.target.value)}
-              onBlur={() => {
-                if (layerNameInput.trim()) {
-                  updateLayer(selectedLayer.id, { name: layerNameInput.trim() });
-                } else {
-                  setLayerNameInput(selectedLayer.name);
-                }
-                setIsEditingLayerName(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  if (layerNameInput.trim()) {
-                    updateLayer(selectedLayer.id, { name: layerNameInput.trim() });
-                  }
-                  setIsEditingLayerName(false);
-                } else if (e.key === "Escape") {
-                  setLayerNameInput(selectedLayer.name);
-                  setIsEditingLayerName(false);
-                }
-              }}
-              autoFocus
-              className="h-6 px-1.5 text-xs font-semibold text-foreground bg-card border border-primary rounded outline-none w-full"
-            />
-          ) : (
-            <span
-              onDoubleClick={() => {
-                setLayerNameInput(selectedLayer.name);
-                setIsEditingLayerName(true);
-              }}
-              className="text-xs font-semibold truncate cursor-text hover:text-primary transition-colors"
-              title="Double-click to rename layer"
-            >
-              {selectedLayer.name}
-            </span>
-          )}
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition-colors"
-              title="Layer options"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 bg-popover border-border text-xs">
-            <DropdownMenuItem
-              onClick={() => {
-                setLayerNameInput(selectedLayer.name);
-                setIsEditingLayerName(true);
-              }}
-              className="gap-2 cursor-pointer"
-            >
-              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Rename Layer</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => duplicateLayer(selectedLayer.id)}
-              className="gap-2 cursor-pointer"
-            >
-              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Duplicate Layer</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => removeLayer(selectedLayer.id)}
-              className="gap-2 text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              <span>Delete Layer</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <LayerHeaderCard selectedLayer={selectedLayer} selectedLayers={[selectedLayer]} />
 
       {/* Primary 'New Animation' Button */}
       <button

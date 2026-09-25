@@ -62,8 +62,6 @@ export const LayerTypeSchema = z.enum([
   "shape",
   "icon",
   "image",
-  "mockup-3d",
-  "mockup3d",
   "counter",
   "frame",
   "line",
@@ -123,7 +121,6 @@ export const PlaceElementInputSchema = z.object({
     .optional(),
   content: z.string().optional(),
   iconName: z.string().optional(),
-  mockupType: z.enum(["iphone-16-pro", "macbook-pro", "ipad-pro"]).optional(),
   counterConfig: z
     .object({
       startValue: z.number().default(0),
@@ -225,7 +222,6 @@ export const DirectorBeatPlanSchema = z.object({
       type: LayerTypeSchema,
       description: z.string(),
       iconName: z.string().optional(),
-      mockupType: z.enum(["iphone-16-pro", "macbook-pro", "ipad-pro"]).optional(),
     })
     .optional(),
   cameraPreset: z.enum(["overview", "macro", "hero-low", "telephoto"]).optional(),

@@ -196,10 +196,8 @@ export interface ProjectStoreState {
   updateLayerBinding: (layerId: string, bindingId: string, patch: Partial<ElementLinkBinding>) => void;
   removeLayerBinding: (layerId: string, bindingId: string) => void;
 
-  // Razor Split & Multi-Studio Handoff
+  // Video Layer Split
   razorSplitLayer: (layerId: string, time?: number) => RazorSplitResult;
-  sendTo3D: () => void;
-  sendToEditor: () => void;
 
   // Project Management & Persistence
   loadDocument: (doc: SceneDocument) => void;
