@@ -255,6 +255,56 @@ const TOOLS = [
     },
   },
   {
+    name: "reorder_scenes",
+    description: "Reorders the scenes in the project timeline matching a specified array of scene IDs.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        sceneIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Array of scene IDs in the desired playback sequence",
+        },
+      },
+      required: ["sceneIds"],
+    },
+  },
+  {
+    name: "duplicate_element",
+    description: "Clones an existing element with an optional grid offset, or into another scene.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        layerId: { type: "string", description: "Target layer ID to duplicate" },
+        newId: { type: "string", description: "Optional new ID for the duplicate" },
+        name: { type: "string", description: "Optional new name" },
+        offsetCol: { type: "number", description: "Grid column offset (default: 0)" },
+        offsetRow: { type: "number", description: "Grid row offset (default: 1)" },
+        targetSceneId: { type: "string", description: "Optional target scene ID (default: same scene)" },
+      },
+      required: ["layerId"],
+    },
+  },
+  {
+    name: "reorder_element",
+    description: "Changes the z-order / stacking of an element within its scene.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        layerId: { type: "string", description: "Target layer ID" },
+        action: {
+          type: "string",
+          enum: ["bringToFront", "sendToBack", "bringForward", "sendBackward"],
+          description: "Z-order adjustment action",
+        },
+      },
+      required: ["layerId", "action"],
+    },
+  },
+  {
     name: "apply_animation",
     description: "Applies a transition clip to an existing element in a .mtn project file.",
     inputSchema: {
@@ -262,7 +312,7 @@ const TOOLS = [
       properties: {
         file: { type: "string", description: "Path to .mtn project file" },
         layerId: { type: "string", description: "Target layer ID" },
-        preset: { type: "string", enum: ["pop", "drawOn", "fade", "scale", "slide", "rotate", "wipe", "blur"] },
+        preset: { type: "string", enum: ["pop", "drawOn", "fade", "scale", "slide", "rotate", "wipe", "blur", "boil"] },
         duration: { type: "number", description: "Duration in seconds" },
         easing: { type: "string", enum: ["snappy", "smooth", "bouncy", "linear"] },
         type: { type: "string", enum: ["in", "action", "out"], description: "Animation role" },
@@ -271,8 +321,95 @@ const TOOLS = [
     },
   },
   {
+    name: "remove_animation",
+    description: "Removes an animation clip or clears all animations from a layer.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        layerId: { type: "string", description: "Target layer ID" },
+        clipId: { type: "string", description: "Optional clip ID. If omitted, removes all animation clips on the layer." },
+      },
+      required: ["layerId"],
+    },
+  },
+  {
+    name: "stagger_elements",
+    description: "Choreographs a sequential staggered entrance across multiple elements (e.g. 5 feature cards or list items entering sequentially).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        layerIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Array of layer IDs in order of entrance",
+        },
+        preset: {
+          type: "string",
+          enum: ["pop", "fade", "slide", "wipe", "scale", "drawOn"],
+          description: "Entrance preset (default: 'pop')",
+        },
+        duration: { type: "number", description: "Duration of each element's animation in seconds (default: 0.6)" },
+        delayStep: { type: "number", description: "Time offset between each element in seconds (default: 0.1)" },
+        easing: { type: "string", enum: ["snappy", "smooth", "bouncy", "linear"], description: "Easing profile" },
+      },
+      required: ["layerIds"],
+    },
+  },
+  {
+    name: "link_elements",
+    description: "Establishes a reactive layout binding between two elements: 'hug' (container card dynamically hugs text/counter with padding), 'reflow' (sibling elements maintain continuous axis gap as lead element expands), 'pin' (pins element to anchor of another), or 'connect' (dynamic arrow/line connecting two moving elements).",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        driverId: { type: "string", description: "Leading/driver element ID" },
+        drivenId: { type: "string", description: "Following/driven element ID" },
+        mode: {
+          type: "string",
+          enum: ["hug", "reflow", "pin", "connect"],
+          description: "Reactive binding mode",
+        },
+        padding: { type: "number", description: "Padding for 'hug' mode (default: 24)" },
+        gap: { type: "number", description: "Gap distance in px for 'reflow' mode (default: 16)" },
+        anchor: {
+          type: "string",
+          enum: ["top-left", "top-center", "top-right", "center-left", "center", "center-right", "bottom-left", "bottom-center", "bottom-right"],
+          description: "Anchor point for 'pin' mode",
+        },
+      },
+      required: ["driverId", "drivenId", "mode"],
+    },
+  },
+  {
+    name: "split_text",
+    description: "Semantically decomposes a text headline into independent kinetic words, characters, or lines with 0.0px visual shift invariance for Apple-grade kinetic reveals.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        layerId: { type: "string", description: "Target text layer ID to split" },
+        splitBy: { type: "string", enum: ["word", "character", "line"], description: "Split unit (default: 'word')" },
+        staggerDelay: { type: "number", description: "Stagger delay between split chunks in seconds (default: 0.05)" },
+        preset: { type: "string", enum: ["slide", "fade", "pop"], description: "Entrance animation preset" },
+      },
+      required: ["layerId"],
+    },
+  },
+  {
     name: "get_storyboard_state",
     description: "Inspects the current scenes, layers, hierarchy, and contact sheet of a .mtn project file.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+      },
+    },
+  },
+  {
+    name: "get_contact_sheet",
+    description: "Generates an executive visual contact sheet of the storyboard, detailing narrative pacing, time windows, key headlines, active elements, and transitions across all scenes.",
     inputSchema: {
       type: "object",
       properties: {
@@ -537,6 +674,108 @@ function handleToolCall(name, args) {
       };
     }
 
+    case "reorder_scenes": {
+      if (!Array.isArray(args.sceneIds) || args.sceneIds.length === 0) {
+        return { text: "Error: sceneIds must be a non-empty array of scene IDs." };
+      }
+      const reordered = [];
+      for (const id of args.sceneIds) {
+        const found = doc.screens.find((s) => s.id === id);
+        if (found) reordered.push(found);
+      }
+      for (const s of doc.screens) {
+        if (!reordered.some((r) => r.id === s.id)) {
+          reordered.push(s);
+        }
+      }
+      doc.screens = reordered;
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Reordered scenes in ${path.basename(resolvedPath)}. Order: ${doc.screens.map((s) => s.name).join(" -> ")}.`,
+      };
+    }
+
+    case "duplicate_element": {
+      let sourceLayer = null;
+      let sourceScreen = null;
+      for (const sc of doc.screens) {
+        const found = sc.layers.find((l) => l.id === args.layerId);
+        if (found) {
+          sourceLayer = found;
+          sourceScreen = sc;
+          break;
+        }
+      }
+      if (!sourceLayer) {
+        return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
+      }
+
+      const targetScreen = args.targetSceneId
+        ? doc.screens.find((s) => s.id === args.targetSceneId) || sourceScreen
+        : sourceScreen;
+
+      const clone = JSON.parse(JSON.stringify(sourceLayer));
+      clone.id = args.newId || ("layer_" + Math.random().toString(36).slice(2, 8));
+      clone.name = args.name || `${sourceLayer.name} (Copy)`;
+
+      if (clone.grid) {
+        const is9x16 = doc.settings.height > doc.settings.width;
+        const gridCols = is9x16 ? 9 : 16;
+        const gridRows = is9x16 ? 16 : 9;
+        const cellWidth = doc.settings.width / gridCols;
+        const cellHeight = doc.settings.height / gridRows;
+
+        const offCol = args.offsetCol ?? 0;
+        const offRow = args.offsetRow ?? 1;
+        clone.grid.col = Math.max(0, Math.min(gridCols - clone.grid.colSpan, clone.grid.col + offCol));
+        clone.grid.row = Math.max(0, Math.min(gridRows - clone.grid.rowSpan, clone.grid.row + offRow));
+        clone.style.x = Math.round(clone.grid.col * cellWidth);
+        clone.style.y = Math.round(clone.grid.row * cellHeight);
+      }
+
+      targetScreen.layers.push(clone);
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Duplicated layer "${sourceLayer.name}" to "${clone.name}" (id: ${clone.id}) in scene "${targetScreen.name}".`,
+      };
+    }
+
+    case "reorder_element": {
+      let foundIndex = -1;
+      let targetScreen = null;
+      for (const sc of doc.screens) {
+        const idx = sc.layers.findIndex((l) => l.id === args.layerId);
+        if (idx !== -1) {
+          foundIndex = idx;
+          targetScreen = sc;
+          break;
+        }
+      }
+      if (!targetScreen || foundIndex === -1) {
+        return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
+      }
+
+      const layer = targetScreen.layers.splice(foundIndex, 1)[0];
+      switch (args.action) {
+        case "bringToFront":
+          targetScreen.layers.push(layer);
+          break;
+        case "sendToBack":
+          targetScreen.layers.unshift(layer);
+          break;
+        case "bringForward":
+          targetScreen.layers.splice(Math.min(targetScreen.layers.length, foundIndex + 1), 0, layer);
+          break;
+        case "sendBackward":
+          targetScreen.layers.splice(Math.max(0, foundIndex - 1), 0, layer);
+          break;
+      }
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Reordered layer "${layer.name}" (${args.action}) in scene "${targetScreen.name}".`,
+      };
+    }
+
     case "apply_animation": {
       let foundLayer = null;
       let targetScreen = null;
@@ -576,6 +815,226 @@ function handleToolCall(name, args) {
       return {
         text: `Applied "${args.preset}" (${args.type || "in"}, ${args.duration}s, easing: ${args.easing || "snappy"}) to layer "${foundLayer.name}" in scene "${targetScreen.name}".`,
       };
+    }
+
+    case "remove_animation": {
+      let foundLayer = null;
+      for (const sc of doc.screens) {
+        const found = sc.layers.find((l) => l.id === args.layerId);
+        if (found) {
+          foundLayer = found;
+          break;
+        }
+      }
+      if (!foundLayer) {
+        return { text: `Error: Layer "${args.layerId}" not found in any scene.` };
+      }
+
+      if (args.clipId && foundLayer.animation?.clips) {
+        foundLayer.animation.clips = foundLayer.animation.clips.filter((c) => c.id !== args.clipId);
+      } else {
+        foundLayer.animation = { clips: [] };
+      }
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Removed animation from layer "${foundLayer.name}" (id: ${args.layerId}).`,
+      };
+    }
+
+    case "stagger_elements": {
+      const delay = args.delayStep || 0.1;
+      const preset = args.preset || "pop";
+      const dur = args.duration || 0.6;
+      const easing = args.easing || "snappy";
+      let staggeredCount = 0;
+
+      args.layerIds.forEach((id, idx) => {
+        for (const sc of doc.screens) {
+          const found = sc.layers.find((l) => l.id === id);
+          if (found) {
+            if (!found.animation) found.animation = { clips: [] };
+            if (!found.animation.clips) found.animation.clips = [];
+            const clipId = "clip_" + Math.random().toString(36).slice(2, 8);
+            found.animation.clips.push({
+              id: clipId,
+              name: `${preset} in`,
+              type: "in",
+              preset,
+              start: Math.round(idx * delay * 100) / 100,
+              duration: dur,
+              easing,
+            });
+            staggeredCount++;
+            break;
+          }
+        }
+      });
+
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Staggered entrance animations across ${staggeredCount} elements with ${delay}s step delay.`,
+      };
+    }
+
+    case "link_elements": {
+      let driverLayer = null;
+      let drivenLayer = null;
+      for (const sc of doc.screens) {
+        if (!driverLayer) driverLayer = sc.layers.find((l) => l.id === args.driverId);
+        if (!drivenLayer) drivenLayer = sc.layers.find((l) => l.id === args.drivenId);
+      }
+      if (!driverLayer || !drivenLayer) {
+        return { text: `Error: driverId "${args.driverId}" or drivenId "${args.drivenId}" not found.` };
+      }
+
+      if (!drivenLayer.bindings) drivenLayer.bindings = [];
+      drivenLayer.bindings = drivenLayer.bindings.filter((b) => b.driverLayerId !== args.driverId);
+
+      drivenLayer.bindings.push({
+        driverLayerId: args.driverId,
+        mode: args.mode,
+        padding: args.padding ?? 24,
+        gap: args.gap ?? 16,
+        anchor: args.anchor || "center",
+      });
+
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Linked driven element "${drivenLayer.name}" to driver "${driverLayer.name}" with reactive mode "${args.mode}".`,
+      };
+    }
+
+    case "split_text": {
+      let textLayer = null;
+      let targetScreen = null;
+      for (const sc of doc.screens) {
+        const found = sc.layers.find((l) => l.id === args.layerId);
+        if (found && found.type === "text") {
+          textLayer = found;
+          targetScreen = sc;
+          break;
+        }
+      }
+      if (!textLayer) {
+        return { text: `Error: Text layer "${args.layerId}" not found.` };
+      }
+
+      const content = textLayer.content || textLayer.name || "";
+      const splitBy = args.splitBy || "word";
+      const staggerDelay = args.staggerDelay || 0.05;
+      const preset = args.preset || "slide";
+
+      const units = splitBy === "character"
+        ? content.split("")
+        : splitBy === "line"
+        ? content.split("\n")
+        : content.split(" ");
+
+      const totalLen = content.length || 1;
+      const layerWidth = textLayer.style.width || 400;
+      const layerHeight = textLayer.style.height || 60;
+      const startX = textLayer.style.x;
+      const startY = textLayer.style.y;
+
+      let currentX = startX;
+      const chunks = [];
+
+      units.forEach((unit, idx) => {
+        const unitWidth = Math.max(10, Math.round((unit.length / totalLen) * layerWidth));
+        const chunkLayer = {
+          id: `${textLayer.id}_split_${idx}`,
+          name: `${textLayer.name} [${unit}]`,
+          type: "text",
+          content: unit,
+          style: {
+            ...textLayer.style,
+            x: currentX,
+            y: startY,
+            width: unitWidth,
+            height: layerHeight,
+          },
+          animation: {
+            clips: [
+              {
+                id: "clip_" + Math.random().toString(36).slice(2, 8),
+                name: `${preset} in`,
+                type: "in",
+                preset,
+                start: Math.round(idx * staggerDelay * 100) / 100,
+                duration: 0.5,
+                easing: "snappy",
+              },
+            ],
+          },
+        };
+        chunks.push(chunkLayer);
+        currentX += unitWidth + 8;
+      });
+
+      const origIdx = targetScreen.layers.findIndex((l) => l.id === args.layerId);
+      if (origIdx !== -1) {
+        targetScreen.layers.splice(origIdx, 1, ...chunks);
+      } else {
+        targetScreen.layers.push(...chunks);
+      }
+
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Semantically split text "${content}" into ${chunks.length} ${splitBy} layers with ${staggerDelay}s kinetic stagger.`,
+      };
+    }
+
+    case "get_contact_sheet": {
+      let currentTime = 0;
+      const beats = doc.screens.map((sc, index) => {
+        const duration = sc.duration || 3.0;
+        const timeWindow = [
+          Math.round(currentTime * 100) / 100,
+          Math.round((currentTime + duration) * 100) / 100,
+        ];
+        currentTime += duration;
+
+        const headlines = [];
+        const elements = [];
+        const transitions = [];
+
+        sc.layers.forEach((l) => {
+          if (l.type === "text" && l.content) {
+            headlines.push(`"${l.content.slice(0, 40)}"`);
+          } else {
+            elements.push(`${l.type}: ${l.name}`);
+          }
+          if (l.animation?.clips) {
+            l.animation.clips.forEach((c) => {
+              transitions.push(`${l.name} -> ${c.preset} (${c.type}, ${c.duration}s)`);
+            });
+          }
+        });
+
+        return {
+          sceneId: sc.id,
+          index,
+          name: sc.name,
+          duration,
+          timeWindow,
+          mood: sc.mood || "product-showcase",
+          layerCount: sc.layers.length,
+          headlines: headlines.slice(0, 3),
+          keyElements: elements.slice(0, 6),
+          transitions: transitions.slice(0, 4),
+        };
+      });
+
+      const contactSheet = {
+        projectTitle: doc.name,
+        totalDuration: Math.round(currentTime * 100) / 100,
+        resolution: `${doc.settings.width}x${doc.settings.height}`,
+        fps: doc.settings.fps,
+        beatCount: beats.length,
+        beats,
+      };
+
+      return { text: JSON.stringify(contactSheet, null, 2) };
     }
 
     case "get_storyboard_state": {
