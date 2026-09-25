@@ -24,6 +24,7 @@ export interface LineSegment {
  */
 export function getLineEndpoints(layer: any): LineSegment {
   if (
+    layer.style === undefined &&
     layer.x1 !== undefined &&
     layer.y1 !== undefined &&
     layer.x2 !== undefined &&
@@ -44,7 +45,7 @@ export function getLineEndpoints(layer: any): LineSegment {
   const w = typeof s.width === "number" ? s.width : 100;
   const h = typeof s.height === "number" ? s.height : 2;
   const rot = ((s.rotation || 0) * Math.PI) / 180;
-  const pivotX = s.pivotX !== undefined ? s.pivotX : 0.5;
+  const pivotX = s.pivotX !== undefined ? s.pivotX : 0;
   const pivotY = s.pivotY !== undefined ? s.pivotY : 0.5;
   const cx = x + w * pivotX;
   const cy = y + h * pivotY;

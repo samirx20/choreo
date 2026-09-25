@@ -151,7 +151,7 @@ export function createLayerForTool(
         width,
         height,
         rotation,
-        pivotX: customBounds ? 0 : 0.5,
+        pivotX: 0,
         pivotY: 0.5,
         opacity: 1,
         backgroundColor: THEME_TOKENS.accent.primary,

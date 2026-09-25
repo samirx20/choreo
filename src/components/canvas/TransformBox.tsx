@@ -10,6 +10,7 @@ import {
   findNearestSnapTarget,
   EndpointSnapResult,
 } from "@/engine/canvas/endpointSnapper";
+import { getLineEndpoints } from "@/engine/vector/lineJoiner";
 import { EndpointSnapIndicator } from "./EndpointSnapIndicator";
 
 const getParentWorldOffset = (targetId: string): { x: number; y: number } => {
@@ -73,6 +74,7 @@ interface DragSession {
   targetLayerId: string;
   initialLayers: { id: string; x: number; y: number; width: number; height: number }[];
   initialRadius: number | [number, number, number, number];
+  initialLineEndpoints?: { x1: number; y1: number; x2: number; y2: number } | null;
 }
 
 const HANDLE_CONFIG: Record<
@@ -284,6 +286,8 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
     const anchorWorldX = centerX + (anchorOffsetX * cos - anchorOffsetY * sin);
     const anchorWorldY = centerY + (anchorOffsetX * sin + anchorOffsetY * cos);
 
+    const initialLineEndpoints = !isMulti && isVectorLine(layer) ? getLineEndpoints(layer) : null;
+
     sessionRef.current = {
       handle,
       startX: mouseCanvas.x,
@@ -300,6 +304,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
       targetLayerId,
       initialLayers,
       initialRadius: layer.style.borderRadius ?? 0,
+      initialLineEndpoints,
     };
   };
 
@@ -344,27 +349,32 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         let finalSnapY = snap.y;
 
         // If dragging a line, check if its endpoints snap magnetically to nearby targets
-        if (!isMulti && isVectorLine(layer)) {
+        if (!isMulti && isVectorLine(layer) && session.initialLineEndpoints) {
           const activeScreen = useProjectStore.getState().document.screens.find(
             (s) => s.id === useProjectStore.getState().activeScreenId
           );
           const snapTargets = activeScreen ? collectScreenSnapTargets(activeScreen.layers, session.targetLayerId) : [];
-          const rotRad = ((session.initialRotation || 0) * Math.PI) / 180;
-          const curW = session.initialWidth;
-          const curH = session.initialHeight;
-          const p1 = { x: finalSnapX, y: finalSnapY + curH / 2 };
-          const p2 = { x: finalSnapX + curW * Math.cos(rotRad), y: finalSnapY + curH / 2 + curW * Math.sin(rotRad) };
+          const deltaX = finalSnapX - session.initialX;
+          const deltaY = finalSnapY - session.initialY;
+          const curP1 = {
+            x: session.initialLineEndpoints.x1 + deltaX,
+            y: session.initialLineEndpoints.y1 + deltaY,
+          };
+          const curP2 = {
+            x: session.initialLineEndpoints.x2 + deltaX,
+            y: session.initialLineEndpoints.y2 + deltaY,
+          };
 
-          const snap1 = findNearestSnapTarget(p1, snapTargets, 14);
-          const snap2 = !snap1 ? findNearestSnapTarget(p2, snapTargets, 14) : null;
+          const snap1 = findNearestSnapTarget(curP1, snapTargets, 24);
+          const snap2 = !snap1 ? findNearestSnapTarget(curP2, snapTargets, 24) : null;
           if (snap1) {
             setEndpointSnap(snap1);
-            finalSnapX += snap1.x - p1.x;
-            finalSnapY += snap1.y - p1.y;
+            finalSnapX += snap1.x - curP1.x;
+            finalSnapY += snap1.y - curP1.y;
           } else if (snap2) {
             setEndpointSnap(snap2);
-            finalSnapX += snap2.x - p2.x;
-            finalSnapY += snap2.y - p2.y;
+            finalSnapX += snap2.x - curP2.x;
+            finalSnapY += snap2.y - curP2.y;
           } else {
             setEndpointSnap(null);
           }
@@ -413,14 +423,14 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
           (s) => s.id === useProjectStore.getState().activeScreenId
         );
         const snapTargets = activeScreen ? collectScreenSnapTargets(activeScreen.layers, session.targetLayerId) : [];
-        const snap = findNearestSnapTarget({ x: mouseCanvas.x, y: mouseCanvas.y }, snapTargets, 18);
+        const snap = findNearestSnapTarget({ x: mouseCanvas.x, y: mouseCanvas.y }, snapTargets, 24);
         setEndpointSnap(snap);
 
         const targetX = snap ? snap.x : mouseCanvas.x;
         const targetY = snap ? snap.y : mouseCanvas.y;
 
-        const originX = session.initialX;
-        const originY = session.initialY + session.initialHeight / 2;
+        const originX = session.initialLineEndpoints ? session.initialLineEndpoints.x1 : session.initialX;
+        const originY = session.initialLineEndpoints ? session.initialLineEndpoints.y1 : (session.initialY + session.initialHeight / 2);
         const dx = targetX - originX;
         const dy = targetY - originY;
         const rawLength = Math.max(10, Math.hypot(dx, dy));
@@ -432,9 +442,14 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
           deg = ((deg % 360) + 360) % 360;
         }
 
+        const parentOffset = getParentWorldOffset(session.targetLayerId);
         updateLayerStyle(session.targetLayerId, {
+          x: Math.round(originX - parentOffset.x),
+          y: Math.round(originY - session.initialHeight / 2 - parentOffset.y),
           width: Math.round(rawLength),
           rotation: Math.round(deg),
+          pivotX: 0,
+          pivotY: 0.5,
         });
       } else if (session.handle === "endpoint-start") {
         // Direct vector endpoint dragging for line start with fixed end and magnetic snapping
@@ -442,15 +457,14 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
           (s) => s.id === useProjectStore.getState().activeScreenId
         );
         const snapTargets = activeScreen ? collectScreenSnapTargets(activeScreen.layers, session.targetLayerId) : [];
-        const snap = findNearestSnapTarget({ x: mouseCanvas.x, y: mouseCanvas.y }, snapTargets, 18);
+        const snap = findNearestSnapTarget({ x: mouseCanvas.x, y: mouseCanvas.y }, snapTargets, 24);
         setEndpointSnap(snap);
 
         const targetX = snap ? snap.x : mouseCanvas.x;
         const targetY = snap ? snap.y : mouseCanvas.y;
 
-        const initRad = (session.initialRotation * Math.PI) / 180;
-        const p2X = session.initialX + session.initialWidth * Math.cos(initRad);
-        const p2Y = session.initialY + session.initialHeight / 2 + session.initialWidth * Math.sin(initRad);
+        const p2X = session.initialLineEndpoints ? session.initialLineEndpoints.x2 : (session.initialX + session.initialWidth);
+        const p2Y = session.initialLineEndpoints ? session.initialLineEndpoints.y2 : (session.initialY + session.initialHeight / 2);
 
         const dx = p2X - targetX;
         const dy = p2Y - targetY;
@@ -469,6 +483,8 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
           y: Math.round(targetY - session.initialHeight / 2 - parentOffset.y),
           width: Math.round(rawLength),
           rotation: Math.round(deg),
+          pivotX: 0,
+          pivotY: 0.5,
         });
       } else if (session.handle === "star-inner-radius") {
         const rad = (session.initialRotation * Math.PI) / 180;
@@ -624,8 +640,10 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
     getCanvasPoint,
   ]);
 
-  const pivotOriginX = isMulti ? "center" : `${(layer.style.pivotX ?? 0.5) * 100}%`;
-  const pivotOriginY = isMulti ? "center" : `${(layer.style.pivotY ?? 0.5) * 100}%`;
+  const defaultPivotX = !isMulti && isVectorLine(layer) ? 0 : 0.5;
+  const defaultPivotY = 0.5;
+  const pivotOriginX = isMulti ? "center" : `${(layer.style.pivotX ?? defaultPivotX) * 100}%`;
+  const pivotOriginY = isMulti ? "center" : `${(layer.style.pivotY ?? defaultPivotY) * 100}%`;
 
   const renderX = visualX + (screenOffset?.x ?? 0);
   const renderY = visualY + (screenOffset?.y ?? 0);
@@ -669,12 +687,12 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
         </div>
       )}
 
-      {/* Pivot / Anchor Point Indicator */}
-      {!isMulti && !isLocked && (
+      {/* Pivot / Anchor Point Indicator (Hidden on lines to avoid duplicate pin clutter) */}
+      {!isMulti && !isLocked && !isVectorLine(layer) && (
         <div
           style={{
-            left: `${(layer.style.pivotX ?? 0.5) * 100}%`,
-            top: `${(layer.style.pivotY ?? 0.5) * 100}%`,
+            left: `${(layer.style.pivotX ?? defaultPivotX) * 100}%`,
+            top: `${(layer.style.pivotY ?? defaultPivotY) * 100}%`,
           }}
           className="absolute -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-zinc-900 dark:border-zinc-100 flex items-center justify-center pointer-events-none z-30 shadow-xs"
           title="Anchor / Pivot Point"

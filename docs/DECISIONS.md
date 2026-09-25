@@ -2797,17 +2797,22 @@ The engine provides first-class, motion-first reactive primitives for each eleme
      - **CAD Crosshairs**: Fine hairline horizontal and vertical guides for pixel-perfect visual alignment.
      - **Center Snap Dot**: High-contrast anchor dot positioned directly at the target coordinate.
      - **Live Snap Badge**: Compact floating badge (`Snap: Line Endpoint` / `Snap: Corner`) with emerald status indicator.
-  3. **Multi-Interaction Canvas Integration**:
-     - **TransformBox Endpoint Dragging ([`src/components/canvas/TransformBox.tsx`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/components/canvas/TransformBox.tsx))**:
-       - Dragging `endpoint-end` ($P_2$) or `endpoint-start` ($P_1$) searches nearby snap targets, snaps the dragged point, displays the expanding reticle, and updates layer width/rotation/position to match the target.
-       - Moving a whole line (`handle === "move"`) checks both $P_1$ and $P_2$, magnetically locking either endpoint to nearby targets.
-     - **Canvas Drawing Tool ([`src/components/canvas/CanvasViewport.tsx`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/components/canvas/CanvasViewport.tsx))**:
-       - Hovering with Line or Arrow tool activates `lineHoverSnap`, displaying the expanding reticle so clicking down starts the line exactly at the snapped endpoint.
-       - Dragging the line end activates `lineDragSnap`, magnetically locking the preview and final created layer coordinates to the target endpoint.
+  3. **Multi-Interaction Canvas Integration & Zero-Interference Tool Independence**:
+     - **Tool Independence & Creation Guard ([`src/components/canvas/CanvasViewport.tsx`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/components/canvas/CanvasViewport.tsx))**:
+       - Guarded `TransformBox` rendering with `activeTool === "select"`. When any creation tool (Line, Arrow, Rectangle, etc.) is active, existing selection boxes and handles are unmounted, preventing handles from intercepting creation clicks.
+       - Snapping on click: `handleMouseDown` verifies `findNearestSnapTarget` with a 24px catchment radius immediately upon click down, guaranteeing instant magnetic snapping even on fast pointer clicks.
+     - **High-Signal Minimal Reticle ([`src/components/canvas/EndpointSnapIndicator.tsx`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/components/canvas/EndpointSnapIndicator.tsx))**:
+       - Replaced text pill labels and crosshairs with a minimal, focused expanding magnetic catchment ring and solid center snap vertex dot right at the target anchor coordinate.
+     - **World-Space Endpoint Dragging & Invariant Rotation ([`src/components/canvas/TransformBox.tsx`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/components/canvas/TransformBox.tsx))**:
+       - Stored `initialLineEndpoints` in `DragSession` derived from `getLineEndpoints(layer)`.
+       - Dragging `endpoint-end` ($P_2$) keeps $P_1$ rigidly invariant at its world position, rotating and sizing about `pivotX: 0, pivotY: 0.5`.
+       - Dragging `endpoint-start` ($P_1$) keeps $P_2$ rigidly invariant at its world position, updating start position, width, and rotation towards the snapped target.
+       - Whole-line dragging (`handle === "move"`) checks both $P_1$ and $P_2$ against screen snap targets with a generous 24px catchment threshold.
+       - `LineRenderer.tsx` and `TransformBox.tsx` consistently default vector lines to `pivotX: 0, pivotY: 0.5`, eliminating rotational jump artifacts.
 * **Verification**:
   - 8 automated unit tests in [`src/test/endpoint_snapping.test.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/test/endpoint_snapping.test.ts) (straight line endpoints, rotated lines, polygon vertices, nested group offsets, target exclusion, threshold snapping, and closest target selection).
   - All 58 test suites (605 tests) pass cleanly (`npm test`).
-  - Production build (`npm run build`) compiles with 0 errors in 18.23s.
+  - Production build (`npm run build`) compiles with 0 errors in 18.60s.
 
 
 

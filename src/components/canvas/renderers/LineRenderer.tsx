@@ -20,6 +20,8 @@ export const LineRenderer: React.FC<LineRendererProps> = ({
 }) => {
   const baseCss = layerStyleToCss(
     {
+      pivotX: layer.style.pivotX ?? 0,
+      pivotY: layer.style.pivotY ?? 0.5,
       ...layer.style,
       backgroundColor: "transparent",
       borderWidth: 0,

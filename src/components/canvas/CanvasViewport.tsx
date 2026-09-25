@@ -390,7 +390,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         (drawingCreationRef.current.tool === "line" || drawingCreationRef.current.tool === "arrow")
       ) {
         const snapTargets = collectScreenSnapTargets(activeScreen.layers);
-        const snap = findNearestSnapTarget({ x: canvasX, y: canvasY }, snapTargets, 18);
+        const snap = findNearestSnapTarget({ x: canvasX, y: canvasY }, snapTargets, 24);
         setLineDragSnap(snap);
         if (snap) {
           finalCanvasX = snap.x;
@@ -751,10 +751,19 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         e.preventDefault();
         let startX = canvasX;
         let startY = canvasY;
-        if ((activeTool === "line" || activeTool === "arrow") && lineHoverSnap) {
-          startX = lineHoverSnap.x;
-          startY = lineHoverSnap.y;
-          setLineHoverSnap(null);
+        if (activeTool === "line" || activeTool === "arrow") {
+          if (lineHoverSnap) {
+            startX = lineHoverSnap.x;
+            startY = lineHoverSnap.y;
+            setLineHoverSnap(null);
+          } else {
+            const snapTargets = collectScreenSnapTargets(hitScreen.layers);
+            const snap = findNearestSnapTarget({ x: canvasX, y: canvasY }, snapTargets, 24);
+            if (snap) {
+              startX = snap.x;
+              startY = snap.y;
+            }
+          }
         }
         const startCreation = {
           tool: activeTool,
@@ -803,7 +812,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         const cx = (e.clientX - screenRect.left) / domScale;
         const cy = (e.clientY - screenRect.top) / domScale;
         const snapTargets = collectScreenSnapTargets(activeScreen.layers);
-        const snap = findNearestSnapTarget({ x: cx, y: cy }, snapTargets, 18);
+        const snap = findNearestSnapTarget({ x: cx, y: cy }, snapTargets, 24);
         setLineHoverSnap(snap);
       }
     } else if (lineHoverSnap) {
@@ -1366,8 +1375,8 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           />
         )}
 
-        {/* Interactive Transform Bounding Box (hidden during Split Mode) */}
-        {!splitModeState && selectedRootLayer && (
+        {/* Interactive Transform Bounding Box (hidden during Split Mode and creation tools) */}
+        {!splitModeState && activeTool === "select" && selectedRootLayer && (
           <TransformBox
             layer={selectedRootLayer}
             canvasWidth={activeScreen.width ?? doc.settings.width}
