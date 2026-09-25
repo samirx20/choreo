@@ -2620,42 +2620,51 @@ The engine provides first-class, motion-first reactive primitives for each eleme
 
 ---
 
-### Decision 115: Complete Creative & Engineering MCP Tool Suite
+### Decision 116: Complete Motion Studio MCP Engine — 100% Tool Coverage & 2D Motion Graphics Purity
 * **Context & Motivation**:
-  - The previous MCP server only had creation tools (`create_scene`, `place_element`), leaving agents unable to update, reorder, delete, or link elements.
-  - Furthermore, advanced engine capabilities (AGENTS.md Rule 7 Reactive Primitives, text semantic splitting with 0.0px shift, stagger choreographies, and perception contact sheets) were unavailable to external agents.
-  - Mentions of 3D were purged, matching Motion Studio's 2D vector, typography, shape, and kinetic animation identity.
-* **The Solution**:
-  1. **Full CRUD Project & Scene Management**:
-     - `create_project`: Aspect ratios `16:9`, `9:16`, `1:1`, `4:5`, customizable FPS and background colors.
-     - `update_project`: Change project name, frame rate, or canvas color.
-     - `create_scene`: Add scenes with custom duration, mood, and explicit `id`.
-     - `update_scene`: Modify duration, name, or aesthetic mood profile.
-     - `delete_scene`: Remove scenes with last-scene safeguard.
-     - `reorder_scenes`: Reorder playback sequence across the entire timeline.
-  2. **Full Visual Element Manipulation**:
-     - `place_element`: Supports `text`, `shape`, `icon`, `counter`, `line`, `image`, `frame` on aspect-ratio grids with auto-fit math and explicit `id` for continuous **Magic Move** morphs.
-     - `update_element`: Dynamically update text copy, icon names, image URLs, grid coordinates, and visual styles (fonts, colors, borders, shadows, opacity).
-     - `delete_element`: Delete layers cleanly.
-     - `duplicate_element`: Clone elements with grid/pixel offsets or copy into other scenes.
-     - `reorder_element`: Manipulate layer z-index (`bringToFront`, `sendToBack`, `bringForward`, `sendBackward`).
-  3. **Choreography, Physics & Reactive Superpowers**:
+  - The Motion Studio MCP tool suite must empower connected AI agents to perform every action possible in the application—and advanced programmatic superpowers (0.0px text splitting, reactive relational hugging and reflow, perception contact sheets) that exceed manual GUI choreography.
+  - Purged all premature 3D references: Motion Studio is strictly a 2D motion graphics engine (typography, kinetic shapes, counters, icons, frames, spring physics, and video export).
+  - Setup prompts must remain direct, concise, and informative without conversational fluff or lectures.
+* **Complete Tool Suite Implemented (23 Tools)**:
+  1. **Project Operations**:
+     - `create_project`: Initializes `.mtn` projects with custom dimensions (16:9, 9:16, 1:1, 4:5), FPS, and background color.
+     - `update_project`: Modifies project name, frame rate, or canvas color.
+     - `list_projects`: Discovers and reports all `.mtn` files with resolutions, FPS, durations, and scene counts.
+  2. **Scene & Sequence Operations**:
+     - `create_scene`: Creates scenes with duration, mood, background color, stepFps quantization, and transitions.
+     - `update_scene`: Modifies scene duration, mood, background color, stepFps, and transitions.
+     - `delete_scene`: Removes scenes with single-scene protection.
+     - `reorder_scenes`: Reorders the entire timeline sequence by array of scene IDs.
+  3. **Visual Element & Layer Operations**:
+     - `place_element`: Supports text, shape, icon (Lucide vectors), kinetic counters (start/end value, prefix, suffix, decimals, odometer/smooth/stepped modes), line/arrow (arrowhead tips, caps), image (src URL/path), and frames on aspect-ratio grids with auto-fit math and explicit IDs for Magic Move.
+     - `update_element`: Updates content, counter parameters, icons, images, arrows, grid layout, and visual styles.
+     - `delete_element`: Deletes layers cleanly.
+     - `duplicate_element`: Clones layers with grid offsets or targets another scene.
+     - `reorder_element`: Controls z-order (`bringToFront`, `sendToBack`, `bringForward`, `sendBackward`).
+     - `group_elements`: Groups multiple layers into a container group layer.
+     - `ungroup_elements`: Unpacks group container back into independent scene layers.
+  4. **Choreography & Kinetic Primitives**:
      - `apply_animation`: Multi-role transitions (`in`, `action`, `out`), presets (`pop`, `drawOn`, `fade`, `scale`, `slide`, `rotate`, `wipe`, `blur`, `boil`), and spring curves.
-     - `remove_animation`: Strip specific clips or clear layer animations.
-     - `stagger_elements`: Automated multi-layer entrance delay step choreography.
-     - `link_elements`: Rule 7 reactive primitives:
-       - `'hug'`: Dynamic card frame expansion wrapping text/counters with padding.
-       - `'reflow'`: Continuous axis gap maintenance ($G\text{px}$) as lead elements resize.
+     - `remove_animation`: Clears specific clips or all animations from a layer.
+     - `stagger_elements`: Automated multi-element entrance delay steps with spring momentum.
+  5. **Reactive Layout Bindings (AGENTS.md Rule 7)**:
+     - `link_elements`: Reactive bindings for dynamic layout:
+       - `'hug'`: Background card dynamically expands to wrap text/counters with padding.
+       - `'reflow'`: Sibling elements maintain continuous axis gap as lead element resizes.
        - `'pin'`: 9-point anchor pinning with offsets.
-       - `'connect'`: Physical leader lines tracking moving elements.
-     - `split_text`: 0.0000px shift-invariant kinetic typography decomposition (words, characters, lines) with staggered reveals.
-  4. **Perception Engine & Quality Gates**:
+       - `'connect'`: Physical leader lines dynamically tracking moving targets.
+  6. **Kinetic Typography**:
+     - `split_text`: 0.0000px shift-invariant kinetic typography decomposition into words, characters, or lines with staggered reveals.
+  7. **Audio Scoring**:
+     - `set_audio_track`: Attaches background audio tracks or SFX to individual scenes or project-wide with volume and loop controls.
+  8. **Perception & Quality Gates**:
      - `get_storyboard_state`: Comprehensive scene, layer, and duration summary.
-     - `get_contact_sheet`: Structured beat snapshots, time windows, and headline reveals.
+     - `get_contact_sheet`: Executive visual contact sheet with narrative pacing, time windows, and headline reveals.
      - `lint_storyboard`: Pre-flight AST quality checks (black frames, text overflows, anti-patterns).
 * **Verification**:
-  - `npm run build` passes in 10.52s.
-  - Vitest: 55/55 test files pass (586/586 tests).
+  - `node -c mcp.js` passes with 0 syntax errors.
+  - `npm run build` succeeds cleanly in 9.79s.
+  - Vitest test suite: 55/55 test files pass (586/586 tests).
 
 
 

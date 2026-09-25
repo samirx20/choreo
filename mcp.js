@@ -128,6 +128,16 @@ const TOOLS = [
     },
   },
   {
+    name: "list_projects",
+    description: "Lists all .mtn project files in a given directory with resolutions, durations, and scene counts.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        directory: { type: "string", description: "Directory to search (default: current directory '.')" },
+      },
+    },
+  },
+  {
     name: "create_scene",
     description: "Creates a new scene/beat in a .mtn project file with specified duration and mood.",
     inputSchema: {
@@ -142,13 +152,22 @@ const TOOLS = [
           enum: ["product-showcase", "paper-collage", "kinetic-editorial", "analog-retro"],
           description: "Aesthetic mood profile",
         },
+        backgroundColor: { type: "string", description: "Scene background color hex" },
+        stepFps: { type: "number", description: "Frame rate quantization: 60, 24, 12, 8, or 6 fps" },
+        transition: {
+          type: "object",
+          properties: {
+            type: { type: "string", enum: ["cut", "fade", "slideLeft", "slideRight", "slideUp", "slideDown", "magicMove"] },
+            duration: { type: "number", description: "Transition duration in seconds" },
+          },
+        },
       },
       required: ["name", "duration"],
     },
   },
   {
     name: "update_scene",
-    description: "Updates an existing scene's name, duration, or aesthetic mood.",
+    description: "Updates an existing scene's name, duration, background color, stepFps, or aesthetic mood.",
     inputSchema: {
       type: "object",
       properties: {
@@ -160,6 +179,15 @@ const TOOLS = [
           type: "string",
           enum: ["product-showcase", "paper-collage", "kinetic-editorial", "analog-retro"],
           description: "Aesthetic mood profile",
+        },
+        backgroundColor: { type: "string", description: "Scene background color hex" },
+        stepFps: { type: "number", description: "Frame rate quantization: 60, 24, 12, 8, or 6 fps" },
+        transition: {
+          type: "object",
+          properties: {
+            type: { type: "string", enum: ["cut", "fade", "slideLeft", "slideRight", "slideUp", "slideDown", "magicMove"] },
+            duration: { type: "number", description: "Transition duration in seconds" },
+          },
         },
       },
       required: ["sceneId"],
@@ -189,6 +217,21 @@ const TOOLS = [
         name: { type: "string", description: "Element name" },
         type: { type: "string", enum: ["text", "shape", "icon", "counter", "line", "image", "frame"], description: "Layer type" },
         content: { type: "string", description: "Text content, icon name (e.g. 'Sparkles'), or image URL" },
+        counter: {
+          type: "object",
+          properties: {
+            startValue: { type: "number", description: "Starting number" },
+            endValue: { type: "number", description: "Ending number" },
+            prefix: { type: "string", description: "Prefix e.g. '$'" },
+            suffix: { type: "string", description: "Suffix e.g. '%' or 'k'" },
+            decimals: { type: "number", description: "Decimal places (default 0)" },
+            counterMode: { type: "string", enum: ["odometer", "smooth", "stepped"] },
+          },
+        },
+        iconName: { type: "string", description: "Lucide icon name (e.g. 'Sparkles', 'Check', 'ArrowRight')" },
+        src: { type: "string", description: "Image source URL or local path for image layers" },
+        arrowStart: { type: "boolean", description: "Arrowhead at line start" },
+        arrowEnd: { type: "boolean", description: "Arrowhead at line end" },
         grid: {
           type: "object",
           properties: {
@@ -201,7 +244,7 @@ const TOOLS = [
         },
         style: {
           type: "object",
-          description: "Visual styles (fontSize, color, backgroundColor, borderRadius, borderWidth, borderColor, opacity)",
+          description: "Visual styles (fontSize, color, backgroundColor, borderRadius, borderWidth, borderColor, opacity, shadowBlur, shadowColor)",
         },
         enter: {
           type: "object",
@@ -217,7 +260,7 @@ const TOOLS = [
   },
   {
     name: "update_element",
-    description: "Modifies an existing element's content, position on the grid, or visual styles.",
+    description: "Modifies an existing element's content, position on the grid, counter settings, or visual styles.",
     inputSchema: {
       type: "object",
       properties: {
@@ -225,6 +268,17 @@ const TOOLS = [
         layerId: { type: "string", description: "Target layer ID to modify" },
         name: { type: "string", description: "Updated layer name" },
         content: { type: "string", description: "Updated text content, icon name, or image URL" },
+        counter: {
+          type: "object",
+          properties: {
+            startValue: { type: "number" },
+            endValue: { type: "number" },
+            prefix: { type: "string" },
+            suffix: { type: "string" },
+            decimals: { type: "number" },
+            counterMode: { type: "string", enum: ["odometer", "smooth", "stepped"] },
+          },
+        },
         grid: {
           type: "object",
           properties: {
@@ -252,6 +306,52 @@ const TOOLS = [
         layerId: { type: "string", description: "Target layer ID to delete" },
       },
       required: ["layerId"],
+    },
+  },
+  {
+    name: "group_elements",
+    description: "Groups multiple elements in a scene into a container frame/group.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        sceneId: { type: "string", description: "Target scene ID" },
+        layerIds: {
+          type: "array",
+          items: { type: "string" },
+          description: "Array of layer IDs to group together",
+        },
+        name: { type: "string", description: "Group/Frame name (default: 'Group')" },
+      },
+      required: ["sceneId", "layerIds"],
+    },
+  },
+  {
+    name: "ungroup_elements",
+    description: "Ungroups a container group/frame, restoring its child layers back to the scene root.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        groupId: { type: "string", description: "Target group/frame layer ID to ungroup" },
+      },
+      required: ["groupId"],
+    },
+  },
+  {
+    name: "set_audio_track",
+    description: "Attaches a background audio track or sound effect to a scene or the entire project.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Path to .mtn project file" },
+        sceneId: { type: "string", description: "Optional scene ID (if omitted, applies to the first scene)" },
+        src: { type: "string", description: "Audio file URL or local file path" },
+        name: { type: "string", description: "Track name or label" },
+        volume: { type: "number", description: "Volume level from 0.0 to 1.0 (default: 1.0)" },
+        loop: { type: "boolean", description: "Whether to loop audio playback" },
+      },
+      required: ["src"],
     },
   },
   {
@@ -430,6 +530,37 @@ const TOOLS = [
 ];
 
 function handleToolCall(name, args) {
+  if (name === "list_projects") {
+    const dir = path.resolve(process.cwd(), args.directory || ".");
+    try {
+      if (!fs.existsSync(dir)) {
+        return { text: `Directory not found: ${dir}` };
+      }
+      const files = fs.readdirSync(dir).filter((f) => f.endsWith(".mtn"));
+      const projects = files.map((file) => {
+        const fullPath = path.join(dir, file);
+        try {
+          const raw = JSON.parse(fs.readFileSync(fullPath, "utf-8"));
+          const doc = raw.document || raw;
+          const meta = raw.metadata || {};
+          return {
+            file,
+            name: meta.name || doc.name || path.basename(file, ".mtn"),
+            resolution: `${doc.settings?.width || 1920}x${doc.settings?.height || 1080}`,
+            fps: doc.settings?.fps || 60,
+            duration: `${doc.settings?.duration || 0}s`,
+            sceneCount: doc.screens?.length || 0,
+          };
+        } catch {
+          return { file, error: "Invalid .mtn JSON" };
+        }
+      });
+      return { text: JSON.stringify({ directory: dir, projects }, null, 2) };
+    } catch (err) {
+      return { text: `Error reading directory: ${err.message}` };
+    }
+  }
+
   const filePath = args.file || "project.mtn";
   const { data: pkg, path: resolvedPath } = readMtnFile(filePath);
   const doc = pkg.document;
@@ -513,6 +644,9 @@ function handleToolCall(name, args) {
         mood: args.mood || "product-showcase",
         layers: [],
       };
+      if (args.backgroundColor) newScene.backgroundColor = args.backgroundColor;
+      if (args.stepFps) newScene.stepFps = args.stepFps;
+      if (args.transition) newScene.transition = args.transition;
       doc.screens.push(newScene);
       doc.settings.duration = doc.screens.reduce((s, sc) => s + (sc.duration || 0), 0);
       writeMtnFile(resolvedPath, pkg);
@@ -529,6 +663,9 @@ function handleToolCall(name, args) {
       if (args.name) targetScreen.name = args.name;
       if (args.duration) targetScreen.duration = args.duration;
       if (args.mood) targetScreen.mood = args.mood;
+      if (args.backgroundColor !== undefined) targetScreen.backgroundColor = args.backgroundColor;
+      if (args.stepFps !== undefined) targetScreen.stepFps = args.stepFps;
+      if (args.transition !== undefined) targetScreen.transition = args.transition;
       doc.settings.duration = doc.screens.reduce((s, sc) => s + (sc.duration || 0), 0);
       writeMtnFile(resolvedPath, pkg);
       return {
@@ -587,6 +724,19 @@ function handleToolCall(name, args) {
         },
       };
 
+      if (args.counter) {
+        newLayer.startValue = args.counter.startValue ?? 0;
+        newLayer.endValue = args.counter.endValue ?? 100;
+        if (args.counter.prefix) newLayer.prefix = args.counter.prefix;
+        if (args.counter.suffix) newLayer.suffix = args.counter.suffix;
+        if (args.counter.decimals !== undefined) newLayer.decimals = args.counter.decimals;
+        if (args.counter.counterMode) newLayer.counterMode = args.counter.counterMode;
+      }
+      if (args.iconName) newLayer.iconName = args.iconName;
+      if (args.src) newLayer.src = args.src;
+      if (args.arrowStart !== undefined) newLayer.arrowStart = args.arrowStart;
+      if (args.arrowEnd !== undefined) newLayer.arrowEnd = args.arrowEnd;
+
       if (args.enter) {
         newLayer.animation = {
           clips: [
@@ -626,6 +776,18 @@ function handleToolCall(name, args) {
       }
       if (args.name) foundLayer.name = args.name;
       if (args.content !== undefined) foundLayer.content = args.content;
+      if (args.counter) {
+        if (args.counter.startValue !== undefined) foundLayer.startValue = args.counter.startValue;
+        if (args.counter.endValue !== undefined) foundLayer.endValue = args.counter.endValue;
+        if (args.counter.prefix !== undefined) foundLayer.prefix = args.counter.prefix;
+        if (args.counter.suffix !== undefined) foundLayer.suffix = args.counter.suffix;
+        if (args.counter.decimals !== undefined) foundLayer.decimals = args.counter.decimals;
+        if (args.counter.counterMode !== undefined) foundLayer.counterMode = args.counter.counterMode;
+      }
+      if (args.iconName !== undefined) foundLayer.iconName = args.iconName;
+      if (args.src !== undefined) foundLayer.src = args.src;
+      if (args.arrowStart !== undefined) foundLayer.arrowStart = args.arrowStart;
+      if (args.arrowEnd !== undefined) foundLayer.arrowEnd = args.arrowEnd;
       if (args.grid) {
         const is9x16 = doc.settings.height > doc.settings.width;
         const gridCols = is9x16 ? 9 : 16;
@@ -672,6 +834,111 @@ function handleToolCall(name, args) {
       return {
         text: `Deleted layer "${removed.name}" (id: ${args.layerId}) from scene "${targetScreen.name}".`,
       };
+    }
+
+    case "group_elements": {
+      const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
+      if (!targetScreen) {
+        return { text: `Error: Scene "${args.sceneId}" not found in ${path.basename(resolvedPath)}.` };
+      }
+      const layerIds = args.layerIds || [];
+      const layersToGroup = [];
+      const remainingLayers = [];
+
+      for (const l of targetScreen.layers) {
+        if (layerIds.includes(l.id)) {
+          layersToGroup.push(l);
+        } else {
+          remainingLayers.push(l);
+        }
+      }
+
+      if (layersToGroup.length === 0) {
+        return { text: `Error: None of the specified layers found in scene "${args.sceneId}".` };
+      }
+
+      const groupId = "group_" + Math.random().toString(36).slice(2, 8);
+      const minX = Math.min(...layersToGroup.map((l) => l.style?.x || 0));
+      const minY = Math.min(...layersToGroup.map((l) => l.style?.y || 0));
+      const maxX = Math.max(...layersToGroup.map((l) => (l.style?.x || 0) + (l.style?.width || 0)));
+      const maxY = Math.max(...layersToGroup.map((l) => (l.style?.y || 0) + (l.style?.height || 0)));
+
+      const groupLayer = {
+        id: groupId,
+        name: args.name || "Group",
+        type: "group",
+        children: layersToGroup,
+        style: {
+          x: minX,
+          y: minY,
+          width: Math.max(1, maxX - minX),
+          height: Math.max(1, maxY - minY),
+          opacity: 1,
+          rotation: 0,
+        },
+      };
+
+      targetScreen.layers = [...remainingLayers, groupLayer];
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Grouped ${layersToGroup.length} elements into "${groupLayer.name}" (id: ${groupId}) in scene "${targetScreen.name}".`,
+      };
+    }
+
+    case "ungroup_elements": {
+      let targetScreen = null;
+      let groupIndex = -1;
+      for (const sc of doc.screens) {
+        const idx = sc.layers.findIndex((l) => l.id === args.groupId && (l.type === "group" || l.type === "frame"));
+        if (idx !== -1) {
+          groupIndex = idx;
+          targetScreen = sc;
+          break;
+        }
+      }
+
+      if (!targetScreen || groupIndex === -1) {
+        return { text: `Error: Group layer "${args.groupId}" not found in any scene.` };
+      }
+
+      const groupLayer = targetScreen.layers[groupIndex];
+      const children = groupLayer.children || [];
+      targetScreen.layers.splice(groupIndex, 1, ...children);
+      writeMtnFile(resolvedPath, pkg);
+      return {
+        text: `Ungrouped "${groupLayer.name}" (id: ${args.groupId}) into ${children.length} elements in scene "${targetScreen.name}".`,
+      };
+    }
+
+    case "set_audio_track": {
+      const audio = {
+        src: args.src,
+        name: args.name || path.basename(args.src),
+        volume: args.volume !== undefined ? args.volume : 1.0,
+        loop: args.loop !== undefined ? args.loop : false,
+      };
+
+      if (args.sceneId) {
+        const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
+        if (!targetScreen) {
+          return { text: `Error: Scene "${args.sceneId}" not found in ${path.basename(resolvedPath)}.` };
+        }
+        targetScreen.audioTrack = audio;
+        writeMtnFile(resolvedPath, pkg);
+        return {
+          text: `Attached audio track "${audio.name}" to scene "${targetScreen.name}".`,
+        };
+      } else {
+        if (!doc.settings) doc.settings = {};
+        doc.settings.audioTrack = audio;
+        if (doc.screens.length > 0 && !doc.screens[0].audioTrack) {
+          doc.screens[0].audioTrack = audio;
+        }
+        writeMtnFile(resolvedPath, pkg);
+        return {
+          text: `Set project audio track to "${audio.name}" (volume: ${audio.volume}, loop: ${audio.loop}) in ${path.basename(resolvedPath)}.`,
+        };
+      }
     }
 
     case "reorder_scenes": {
