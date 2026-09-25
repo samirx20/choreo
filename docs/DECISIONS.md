@@ -2777,6 +2777,38 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 57 test files (597 tests) pass cleanly (`npm test`).
   - Production build (`npm run build`) passes with 0 errors.
 
+---
+
+### Decision 87: Magnetic Line Endpoint Snapping & Expanding Visual Reticle Guide
+* **Context & Motivation**:
+  - When users or animators draw or adjust line segments intended to connect (e.g. chaining 4–5 lines into a custom closed polygon or attaching a leader line to an endpoint), matching endpoints manually by eye is imprecise, error-prone, and frustrating.
+  - Users explicitly requested magnetic endpoint alignment and visual feedback: as a cursor or line endpoint approaches an existing line's endpoint, a visual guide must expand at that target point, auto-snapping the coordinates when close and locking them upon release with 0.0000px error.
+* **The Solution**:
+  1. **Analytical Endpoint Snapper Engine ([`src/engine/canvas/endpointSnapper.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/engine/canvas/endpointSnapper.ts))**:
+     - `collectScreenSnapTargets(layers, excludeLayerId)`: Gathers magnetic snap targets across the active screen:
+       - Line & Arrow endpoints ($P_1$ and $P_2$), accounting for position, length, rotation, and pivot.
+       - Polygon shape vertices (`vertices` array) with local-to-world transform.
+       - Recursively traverses group hierarchies with inherited parent offsets.
+       - Excludes the layer actively being transformed to prevent self-snapping.
+     - `findNearestSnapTarget(pos, targets, threshold)`: Evaluates Euclidean distance to candidates and returns the closest target within threshold ($18\text{px}$) with exact snapped coordinates.
+  2. **Expanding Visual Guide & Reticle ([`src/components/canvas/EndpointSnapIndicator.tsx`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/components/canvas/EndpointSnapIndicator.tsx))**:
+     - **Expanding Ripple / Ping Ring**: Animated CSS ping ripple expanding radially to signal magnetic capture.
+     - **Magnetic Catchment Ring**: Glowing primary-accent ring with subtle blur glow framing the target catchment area.
+     - **CAD Crosshairs**: Fine hairline horizontal and vertical guides for pixel-perfect visual alignment.
+     - **Center Snap Dot**: High-contrast anchor dot positioned directly at the target coordinate.
+     - **Live Snap Badge**: Compact floating badge (`Snap: Line Endpoint` / `Snap: Corner`) with emerald status indicator.
+  3. **Multi-Interaction Canvas Integration**:
+     - **TransformBox Endpoint Dragging ([`src/components/canvas/TransformBox.tsx`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/components/canvas/TransformBox.tsx))**:
+       - Dragging `endpoint-end` ($P_2$) or `endpoint-start` ($P_1$) searches nearby snap targets, snaps the dragged point, displays the expanding reticle, and updates layer width/rotation/position to match the target.
+       - Moving a whole line (`handle === "move"`) checks both $P_1$ and $P_2$, magnetically locking either endpoint to nearby targets.
+     - **Canvas Drawing Tool ([`src/components/canvas/CanvasViewport.tsx`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/components/canvas/CanvasViewport.tsx))**:
+       - Hovering with Line or Arrow tool activates `lineHoverSnap`, displaying the expanding reticle so clicking down starts the line exactly at the snapped endpoint.
+       - Dragging the line end activates `lineDragSnap`, magnetically locking the preview and final created layer coordinates to the target endpoint.
+* **Verification**:
+  - 8 automated unit tests in [`src/test/endpoint_snapping.test.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/test/endpoint_snapping.test.ts) (straight line endpoints, rotated lines, polygon vertices, nested group offsets, target exclusion, threshold snapping, and closest target selection).
+  - All 58 test suites (605 tests) pass cleanly (`npm test`).
+  - Production build (`npm run build`) compiles with 0 errors in 18.23s.
+
 
 
 

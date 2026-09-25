@@ -20,6 +20,12 @@ import { LineSplitOverlay } from "./LineSplitOverlay";
 import { SnapGuide } from "./snapping";
 import { DistanceOverlay } from "./DistanceOverlay";
 import { BindingConnectionOverlay } from "./BindingConnectionOverlay";
+import {
+  collectScreenSnapTargets,
+  findNearestSnapTarget,
+  EndpointSnapResult,
+} from "@/engine/canvas/endpointSnapper";
+import { EndpointSnapIndicator } from "./EndpointSnapIndicator";
 import { useContextMenuStore } from "@/store/useContextMenuStore";
 import {
   buildCanvasElementMenu,
@@ -84,6 +90,8 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
   const [isPanning, setIsPanning] = useState(false);
   const [spacePressed, setSpacePressed] = useState(false);
   const [guides, setGuides] = useState<SnapGuide[]>([]);
+  const [lineHoverSnap, setLineHoverSnap] = useState<EndpointSnapResult | null>(null);
+  const [lineDragSnap, setLineDragSnap] = useState<EndpointSnapResult | null>(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
 
   const isAnimate = isMotionMode(uiMode);
@@ -374,11 +382,27 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       const canvasX = (e.clientX - screenRect.left) / domScale;
       const canvasY = (e.clientY - screenRect.top) / domScale;
 
+      let finalCanvasX = canvasX;
+      let finalCanvasY = canvasY;
+
+      if (
+        drawingCreationRef.current &&
+        (drawingCreationRef.current.tool === "line" || drawingCreationRef.current.tool === "arrow")
+      ) {
+        const snapTargets = collectScreenSnapTargets(activeScreen.layers);
+        const snap = findNearestSnapTarget({ x: canvasX, y: canvasY }, snapTargets, 18);
+        setLineDragSnap(snap);
+        if (snap) {
+          finalCanvasX = snap.x;
+          finalCanvasY = snap.y;
+        }
+      }
+
       if (drawingCreationRef.current) {
         drawingCreationRef.current = {
           ...drawingCreationRef.current,
-          currentX: canvasX,
-          currentY: canvasY,
+          currentX: finalCanvasX,
+          currentY: finalCanvasY,
           isShift: e.shiftKey,
           isAlt: e.altKey,
         };
@@ -386,8 +410,8 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           prev
             ? {
                 ...prev,
-                currentX: canvasX,
-                currentY: canvasY,
+                currentX: finalCanvasX,
+                currentY: finalCanvasY,
                 isShift: e.shiftKey,
                 isAlt: e.altKey,
               }
@@ -413,6 +437,8 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       if (draw) {
         drawingCreationRef.current = null;
         setDrawingCreation(null);
+        setLineDragSnap(null);
+        setLineHoverSnap(null);
 
         const screenEl = document.getElementById(`screen-${activeScreen.id}`);
         const screenRect = screenEl?.getBoundingClientRect();
@@ -421,13 +447,13 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
             ? screenRect.width / doc.settings.width
             : effectiveScale;
 
-        const currentX = screenRect ? (e.clientX - screenRect.left) / domScale : draw.currentX;
-        const currentY = screenRect ? (e.clientY - screenRect.top) / domScale : draw.currentY;
+        const isLineLike = draw.tool === "line" || draw.tool === "arrow";
+        const currentX = isLineLike ? draw.currentX : (screenRect ? (e.clientX - screenRect.left) / domScale : draw.currentX);
+        const currentY = isLineLike ? draw.currentY : (screenRect ? (e.clientY - screenRect.top) / domScale : draw.currentY);
 
         const deltaX = currentX - draw.startX;
         const deltaY = currentY - draw.startY;
         const isDrag = Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5;
-        const isLineLike = draw.tool === "line" || draw.tool === "arrow";
 
         let createdLayer: Layer | null = null;
 
@@ -444,14 +470,14 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
           let dx = deltaX;
           let dy = deltaY;
           let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-          if (draw.isShift || e.shiftKey) {
+          if ((draw.isShift || e.shiftKey) && !lineDragSnap) {
             angle = Math.round(angle / 45) * 45;
             const rad = angle * (Math.PI / 180);
             const dist = Math.hypot(dx, dy);
             dx = Math.cos(rad) * dist;
             dy = Math.sin(rad) * dist;
           }
-          const length = Math.max(20, Math.round(Math.hypot(dx, dy)));
+          const length = Math.max(10, Math.round(Math.hypot(dx, dy)));
 
           createdLayer = createLayerForTool(
             draw.tool,
@@ -723,13 +749,20 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
 
       if (isCreationTool) {
         e.preventDefault();
+        let startX = canvasX;
+        let startY = canvasY;
+        if ((activeTool === "line" || activeTool === "arrow") && lineHoverSnap) {
+          startX = lineHoverSnap.x;
+          startY = lineHoverSnap.y;
+          setLineHoverSnap(null);
+        }
         const startCreation = {
           tool: activeTool,
           screenId: hitScreen.id,
-          startX: canvasX,
-          startY: canvasY,
-          currentX: canvasX,
-          currentY: canvasY,
+          startX,
+          startY,
+          currentX: startX,
+          currentY: startY,
           isShift: e.shiftKey,
           isAlt: e.altKey,
         };
@@ -759,6 +792,24 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
         y: e.clientY - dragStartRef.current.y,
       });
     }
+
+    // Magnetic Endpoint Snapping guide for Line / Arrow creation tool hover
+    if ((activeTool === "line" || activeTool === "arrow") && !drawingCreation) {
+      const screenEl = document.getElementById(`screen-${activeScreen.id}`);
+      if (screenEl) {
+        const screenRect = screenEl.getBoundingClientRect();
+        const screenWidth = activeScreen.width ?? doc.settings.width;
+        const domScale = screenRect.width > 0 ? screenRect.width / screenWidth : effectiveScale;
+        const cx = (e.clientX - screenRect.left) / domScale;
+        const cy = (e.clientY - screenRect.top) / domScale;
+        const snapTargets = collectScreenSnapTargets(activeScreen.layers);
+        const snap = findNearestSnapTarget({ x: cx, y: cy }, snapTargets, 18);
+        setLineHoverSnap(snap);
+      }
+    } else if (lineHoverSnap) {
+      setLineHoverSnap(null);
+    }
+
     if (altPressed) {
       const el = (e.target as HTMLElement).closest("[id^='layer-']");
       if (el) {
@@ -901,7 +952,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     let dx = drawingCreation.currentX - drawingCreation.startX;
     let dy = drawingCreation.currentY - drawingCreation.startY;
     let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    if (drawingCreation.isShift) {
+    if (drawingCreation.isShift && !lineDragSnap) {
       angle = Math.round(angle / 45) * 45;
       const rad = angle * (Math.PI / 180);
       const dist = Math.hypot(dx, dy);
@@ -915,7 +966,7 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
       length,
       angle,
     };
-  }, [drawingCreation, isLineLikeCreation]);
+  }, [drawingCreation, isLineLikeCreation, lineDragSnap]);
 
   return (
     <main
@@ -1331,6 +1382,20 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
               x: activeScreenX,
               y: activeScreenY,
             }}
+          />
+        )}
+
+        {/* Magnetic Line/Arrow Endpoint Snapping Guide & Expanding Reticle */}
+        {lineDragSnap && (
+          <EndpointSnapIndicator
+            snap={lineDragSnap}
+            screenOffset={{ x: activeScreenX, y: activeScreenY }}
+          />
+        )}
+        {!lineDragSnap && lineHoverSnap && !drawingCreation && (
+          <EndpointSnapIndicator
+            snap={lineHoverSnap}
+            screenOffset={{ x: activeScreenX, y: activeScreenY }}
           />
         )}
       </div>

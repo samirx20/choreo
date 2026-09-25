@@ -5,6 +5,12 @@ import { useProjectStore, findParentGroupInTree } from "@/store/useProjectStore"
 import { calculateSnapping, SnapGuide } from "./snapping";
 import { isVectorLine } from "@/utils/layerCapabilities";
 import { cn } from "@/lib/utils";
+import {
+  collectScreenSnapTargets,
+  findNearestSnapTarget,
+  EndpointSnapResult,
+} from "@/engine/canvas/endpointSnapper";
+import { EndpointSnapIndicator } from "./EndpointSnapIndicator";
 
 const getParentWorldOffset = (targetId: string): { x: number; y: number } => {
   let curX = 0;
@@ -129,6 +135,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
   const isLocked = !isMulti && Boolean(layer.locked || parentGroup?.locked);
   const isEditing = editingLayerId === layer.id;
   const [activeHandle, setActiveHandle] = useState<HandleType | null>(null);
+  const [endpointSnap, setEndpointSnap] = useState<EndpointSnapResult | null>(null);
 
   const parentOffset = getParentWorldOffset(layer.id);
   const domEl = typeof document !== "undefined" ? document.getElementById(`layer-${layer.id}`) : null;
@@ -333,9 +340,39 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
 
         onGuidesChange(snap.guides);
 
+        let finalSnapX = snap.x;
+        let finalSnapY = snap.y;
+
+        // If dragging a line, check if its endpoints snap magnetically to nearby targets
+        if (!isMulti && isVectorLine(layer)) {
+          const activeScreen = useProjectStore.getState().document.screens.find(
+            (s) => s.id === useProjectStore.getState().activeScreenId
+          );
+          const snapTargets = activeScreen ? collectScreenSnapTargets(activeScreen.layers, session.targetLayerId) : [];
+          const rotRad = ((session.initialRotation || 0) * Math.PI) / 180;
+          const curW = session.initialWidth;
+          const curH = session.initialHeight;
+          const p1 = { x: finalSnapX, y: finalSnapY + curH / 2 };
+          const p2 = { x: finalSnapX + curW * Math.cos(rotRad), y: finalSnapY + curH / 2 + curW * Math.sin(rotRad) };
+
+          const snap1 = findNearestSnapTarget(p1, snapTargets, 14);
+          const snap2 = !snap1 ? findNearestSnapTarget(p2, snapTargets, 14) : null;
+          if (snap1) {
+            setEndpointSnap(snap1);
+            finalSnapX += snap1.x - p1.x;
+            finalSnapY += snap1.y - p1.y;
+          } else if (snap2) {
+            setEndpointSnap(snap2);
+            finalSnapX += snap2.x - p2.x;
+            finalSnapY += snap2.y - p2.y;
+          } else {
+            setEndpointSnap(null);
+          }
+        }
+
         if (isMulti && session.initialLayers.length > 0) {
-          const snappedDeltaX = snap.x - session.initialX;
-          const snappedDeltaY = snap.y - session.initialY;
+          const snappedDeltaX = finalSnapX - session.initialX;
+          const snappedDeltaY = finalSnapY - session.initialY;
           for (const item of session.initialLayers) {
             updateLayerStyle(item.id, {
               x: Math.round(item.x + snappedDeltaX),
@@ -347,8 +384,8 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
 
         const parentOffset = getParentWorldOffset(session.targetLayerId);
         updateLayerStyle(session.targetLayerId, {
-          x: Math.round(snap.x - parentOffset.x),
-          y: Math.round(snap.y - parentOffset.y),
+          x: Math.round(finalSnapX - parentOffset.x),
+          y: Math.round(finalSnapY - parentOffset.y),
         });
       } else if (session.handle === "rotate") {
         const centerX = session.initialX + session.initialWidth / 2;
@@ -371,16 +408,26 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
 
         updateLayerStyle(session.targetLayerId, { rotation: Math.round(deg) });
       } else if (session.handle === "endpoint-end") {
-        // Direct vector endpoint dragging for line end
+        // Direct vector endpoint dragging for line end with magnetic snapping
+        const activeScreen = useProjectStore.getState().document.screens.find(
+          (s) => s.id === useProjectStore.getState().activeScreenId
+        );
+        const snapTargets = activeScreen ? collectScreenSnapTargets(activeScreen.layers, session.targetLayerId) : [];
+        const snap = findNearestSnapTarget({ x: mouseCanvas.x, y: mouseCanvas.y }, snapTargets, 18);
+        setEndpointSnap(snap);
+
+        const targetX = snap ? snap.x : mouseCanvas.x;
+        const targetY = snap ? snap.y : mouseCanvas.y;
+
         const originX = session.initialX;
         const originY = session.initialY + session.initialHeight / 2;
-        const dx = mouseCanvas.x - originX;
-        const dy = mouseCanvas.y - originY;
+        const dx = targetX - originX;
+        const dy = targetY - originY;
         const rawLength = Math.max(10, Math.hypot(dx, dy));
         let deg = (Math.atan2(dy, dx) * 180) / Math.PI;
         deg = ((deg % 360) + 360) % 360;
 
-        if (e.shiftKey) {
+        if (e.shiftKey && !snap) {
           deg = Math.round(deg / 15) * 15;
           deg = ((deg % 360) + 360) % 360;
         }
@@ -390,26 +437,36 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
           rotation: Math.round(deg),
         });
       } else if (session.handle === "endpoint-start") {
-        // Direct vector endpoint dragging for line start with fixed end
+        // Direct vector endpoint dragging for line start with fixed end and magnetic snapping
+        const activeScreen = useProjectStore.getState().document.screens.find(
+          (s) => s.id === useProjectStore.getState().activeScreenId
+        );
+        const snapTargets = activeScreen ? collectScreenSnapTargets(activeScreen.layers, session.targetLayerId) : [];
+        const snap = findNearestSnapTarget({ x: mouseCanvas.x, y: mouseCanvas.y }, snapTargets, 18);
+        setEndpointSnap(snap);
+
+        const targetX = snap ? snap.x : mouseCanvas.x;
+        const targetY = snap ? snap.y : mouseCanvas.y;
+
         const initRad = (session.initialRotation * Math.PI) / 180;
         const p2X = session.initialX + session.initialWidth * Math.cos(initRad);
         const p2Y = session.initialY + session.initialHeight / 2 + session.initialWidth * Math.sin(initRad);
 
-        const dx = p2X - mouseCanvas.x;
-        const dy = p2Y - mouseCanvas.y;
+        const dx = p2X - targetX;
+        const dy = p2Y - targetY;
         const rawLength = Math.max(10, Math.hypot(dx, dy));
         let deg = (Math.atan2(dy, dx) * 180) / Math.PI;
         deg = ((deg % 360) + 360) % 360;
 
-        if (e.shiftKey) {
+        if (e.shiftKey && !snap) {
           deg = Math.round(deg / 15) * 15;
           deg = ((deg % 360) + 360) % 360;
         }
 
         const parentOffset = getParentWorldOffset(session.targetLayerId);
         updateLayerStyle(session.targetLayerId, {
-          x: Math.round(mouseCanvas.x - parentOffset.x),
-          y: Math.round(mouseCanvas.y - session.initialHeight / 2 - parentOffset.y),
+          x: Math.round(targetX - parentOffset.x),
+          y: Math.round(targetY - session.initialHeight / 2 - parentOffset.y),
           width: Math.round(rawLength),
           rotation: Math.round(deg),
         });
@@ -535,6 +592,7 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
 
     const onPointerUp = () => {
       setActiveHandle(null);
+      setEndpointSnap(null);
       sessionRef.current = null;
       onGuidesChange([]);
       commitTransaction();
@@ -584,7 +642,8 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
   const starHandleY = starOffsetY + (50 + 45 * starRatio * Math.sin(starAngle)) * starScale;
 
   return (
-    <div
+    <>
+      <div
       style={{
         position: "absolute",
         left: `${renderX}px`,
@@ -832,5 +891,12 @@ export const TransformBox: React.FC<TransformBoxProps> = ({
           : `${Math.round(visualW)} × ${Math.round(visualH)}${isLocked ? " (Locked)" : rotation ? ` (${rotation}°)` : ""}`}
       </div>
     </div>
-  );
+    {endpointSnap && (
+      <EndpointSnapIndicator
+        snap={endpointSnap}
+        screenOffset={screenOffset || { x: 0, y: 0 }}
+      />
+    )}
+  </>
+);
 };
