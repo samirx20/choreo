@@ -2708,6 +2708,38 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - `npm test`: 55/55 test suites pass (586/586 tests).
   - `npm run build`: Production build passes in 9.42s with 0 errors.
 
+---
+
+### Decision 85: Complete 41-Tool MCP Suite — Full GUI & Engine Parity for AI Agents
+* **The Problem**:
+  - To enable external AI agents (via MCP) to perform *everything* achievable in the graphical user interface plus programmatic superpowers, the tool suite required:
+    1. Scene duplication with automatic recursive ID remapping.
+    2. Scene reordering matching timeline sequence arrays.
+    3. Spatial alignment and distribution (`left`, `center`, `right`, `top`, `middle`, `bottom`, `distribute-horizontal`, `distribute-vertical`) relative to selection bounds or canvas dimensions.
+    4. Stroke & Fill decomposition (`separate_stroke_fill`) for simultaneous stroke draw-on and delayed fill fade-in with 0.0000px layout shift.
+    5. In-place animation clip fine-tuning (`update_animation_clip`) for timing, presets, easings, loops, and spring physics.
+    6. Autonomous visual inspection (`render_frame`) generating exact vector SVG frame snapshots of any scene at timestamp $t$ without requiring a browser or canvas runtime.
+    7. Layer property completion (`locked`, `visible`, `fit`, `zIndex`).
+* **The Solution**:
+  - Implemented all 41 tools in `mcp.js`:
+    - **Projects (7)**: `create_project`, `update_project`, `duplicate_project`, `rename_project`, `delete_project`, `list_projects`, `set_palette`.
+    - **Scenes & Timeline (5)**: `create_scene`, `update_scene`, `duplicate_scene`, `delete_scene`, `reorder_scenes`.
+    - **Layers & Geometry (8)**: `place_element`, `update_element`, `delete_element`, `duplicate_element`, `reorder_element`, `group_elements`, `ungroup_elements`, `align_elements`.
+    - **Vectors & Masking (6)**: `create_mask_group`, `apply_boolean_operation`, `import_svg`, `split_shape`, `split_line`, `separate_stroke_fill`.
+    - **Templates (1)**: `insert_template`.
+    - **Motion & Choreography (4)**: `apply_animation` (53+ presets), `update_animation_clip`, `remove_animation`, `stagger_elements` (spatial centroid & linear).
+    - **Reactive Layout Bindings (2)**: `link_elements`, `unlink_elements`.
+    - **Kinetic Typography (1)**: `split_text`.
+    - **Audio (2)**: `set_audio_track`, `remove_audio_track`.
+    - **Perception & Export (5)**: `export_project`, `get_storyboard_state`, `get_contact_sheet`, `render_frame`, `lint_storyboard`.
+  - All 41 tool schemas and instructions synchronized to `C:\Users\Sam\.gemini\antigravity\mcp\motion-studio\`.
+* **Verification**:
+  - `node -c mcp.js` passes with 0 syntax errors.
+  - Parity check confirms all 41 tools have matching case handlers.
+  - All 586 vitest unit and integration tests pass.
+  - Production build (`npm run build`) compiles cleanly in 18.81s.
+
+
 
 
 
