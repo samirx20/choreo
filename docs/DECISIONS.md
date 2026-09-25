@@ -2597,6 +2597,28 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - Vitest: 55/55 test files pass (586/586 tests).
   - Dev server and window verified running on physical display (`hwnd: Ok(HWND(0x1a0a44))` at `pos: (213, 46)`, size `1511x943`).
 
+---
+
+### Decision 114: Minimalist MCP Popover & Omnipresent Workspace Theme Toggle
+* **Context & Motivation**:
+  - The previous MCP popover contained visual noise (large multi-tab configuration panels, full pre-formatted prompt texts, redundant subheadings, and code snippets) that violated the Rule 9 Minimalist Precision Tool Principle.
+  - Furthermore, the Dark/Light mode theme switcher was available only inside the Studio Editor (`TopNavBar.tsx`), leaving the top-level Projects Workspace without a theme toggle.
+* **The Solution**:
+  1. **Minimalist, High-Signal MCP Popover (`McpDropdown.tsx`)**:
+     - Stripped out all explanatory subheadings, multi-tab previews, and raw JSON text blocks.
+     - Reduced popover width to a clean, compact `w-72` (288px).
+     - Retained strictly the essential controls:
+       - Header with "MCP Server" and live status badge ("Active" / "Stopped").
+       - Port input (compact `w-24`) with inline "Start Server" / "Stop Server" action button.
+       - A single, prominent **"Copy Agent Setup Prompt"** button that directly writes the agent instructions to the clipboard without rendering text clutter on screen.
+  2. **Workspace Theme Switcher (`ProjectsWorkspace.tsx`)**:
+     - Bound `theme` and `toggleTheme` from `useProjectStore` directly into the unified single-row workspace header.
+     - Positioned next to the "New Project" button before `WindowControls`, matching the visual rhythm and keyboard accessibility of the studio editor.
+* **Verification**:
+  - `npm run build` passes cleanly in 11.00s.
+  - Vitest: 55/55 test files pass (586/586 tests).
+
+
 
 
 

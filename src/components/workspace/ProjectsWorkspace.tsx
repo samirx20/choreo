@@ -9,8 +9,11 @@ import {
   Square,
   LayoutTemplate,
   ArrowUpDown,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useProjectRegistryStore } from "@/store/useProjectRegistryStore";
+import { useProjectStore } from "@/store/useProjectStore";
 import { ProjectCard } from "./ProjectCard";
 import { ProjectSortOption, CreateProjectOptions } from "@/types/project";
 import {
@@ -38,6 +41,9 @@ export const ProjectsWorkspace: React.FC = () => {
     importProject,
     loadProjectFromFileBlob,
   } = useProjectRegistryStore();
+
+  const theme = useProjectStore((s) => s.theme);
+  const toggleTheme = useProjectStore((s) => s.toggleTheme);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -206,6 +212,19 @@ export const ProjectsWorkspace: React.FC = () => {
           >
             <Plus className="w-3.5 h-3.5" />
             <span>New Project</span>
+          </button>
+
+          <div className="h-4 w-px bg-border/60 mx-0.5" />
+
+          {/* Dark / Light Mode Toggle */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            data-testid="theme-toggle-btn"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted rounded flex items-center justify-center transition-colors cursor-pointer"
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
           {/* Native Window Controls on the far right */}
