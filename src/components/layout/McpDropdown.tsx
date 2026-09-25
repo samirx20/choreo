@@ -48,6 +48,16 @@ export const McpDropdown: React.FC<McpDropdownProps> = ({ className }) => {
     setPortInput(val);
   };
 
+  const handlePortBlur = () => {
+    const parsed = parseInt(portInput, 10);
+    if (isNaN(parsed) || parsed < 1024 || parsed > 65535) {
+      setPortInput(String(port));
+    } else {
+      setPort(parsed);
+      setPortInput(String(parsed));
+    }
+  };
+
   const handleStart = async () => {
     const parsed = parseInt(portInput, 10);
     const validPort = !isNaN(parsed) && parsed >= 1024 && parsed <= 65535 ? parsed : 8765;
@@ -117,6 +127,7 @@ Available Tools:
       <PopoverContent
         align="start"
         sideOffset={8}
+        onOpenAutoFocus={(e) => e.preventDefault()}
         className="w-72 p-3 bg-popover border border-border shadow-xl rounded-xl text-popover-foreground z-50 text-xs font-sans"
       >
         <div className="space-y-3">
@@ -163,6 +174,7 @@ Available Tools:
                 type="text"
                 value={portInput}
                 onChange={handlePortChange}
+                onBlur={handlePortBlur}
                 disabled={isRunning || isStarting}
                 placeholder="8765"
                 className={cn(
