@@ -135,6 +135,37 @@ export class VideoExporter {
     }
   }
 
+  private renderTimelineFrame(
+    pixiStage: any,
+    timeline: SceneTimelineItem[],
+    itemIndex: number,
+    localTime: number,
+    state: { currentScreenId: string | null; isTransitioning: boolean }
+  ) {
+    if (!pixiStage) return;
+    const activeItem = timeline[itemIndex];
+    const prevItem = itemIndex > 0 ? timeline[itemIndex - 1] : null;
+    const transition = activeItem.screen.transition;
+    const transitionDuration = transition?.duration ?? (transition?.type && transition.type !== "cut" ? 0.6 : 0);
+
+    // If active scene has a transition from previous scene and we are in the transition window:
+    if (prevItem && transition && transition.type !== "cut" && transitionDuration > 0 && localTime < transitionDuration) {
+      state.isTransitioning = true;
+      state.currentScreenId = null; // force re-render when transition window ends
+      const progress = Math.max(0, Math.min(1, localTime / transitionDuration));
+      pixiStage.renderTransition?.(prevItem.screen, activeItem.screen, progress, transition);
+    } else {
+      // Normal single-scene rendering
+      if (state.currentScreenId !== activeItem.screen.id || state.isTransitioning) {
+        state.currentScreenId = activeItem.screen.id;
+        state.isTransitioning = false;
+        pixiStage.renderScreen?.(activeItem.screen);
+      }
+      pixiStage.seek?.(localTime, activeItem.screen);
+    }
+    pixiStage.app?.renderer?.render?.(pixiStage.app.stage);
+  }
+
   private async exportTauriFFmpeg(
     options: VideoExportOptions,
     timeline: SceneTimelineItem[],
@@ -143,7 +174,7 @@ export class VideoExporter {
   ): Promise<Blob> {
     const { pixiStage, onProgress } = options;
     const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
-    let currentScreenId: string | null = null;
+    const renderState = { currentScreenId: null as string | null, isTransitioning: false };
 
     let invoke: any = null;
     let isFfmpegAvailable = false;
@@ -219,19 +250,12 @@ export class VideoExporter {
         }
 
         const globalTime = frame / fps;
-        const activeItem =
-          timeline.find((t) => globalTime >= t.start && globalTime < t.end) ||
-          timeline[timeline.length - 1];
+        const activeIndex = timeline.findIndex((t) => globalTime >= t.start && globalTime < t.end);
+        const itemIndex = activeIndex !== -1 ? activeIndex : timeline.length - 1;
+        const activeItem = timeline[itemIndex];
         const localTime = Math.max(0, globalTime - activeItem.start);
 
-        // Switch active scene layers on boundary
-        if (activeItem.screen.id !== currentScreenId) {
-          currentScreenId = activeItem.screen.id;
-          pixiStage?.renderScreen?.(activeItem.screen);
-        }
-
-        pixiStage?.seek?.(localTime, activeItem.screen);
-        pixiStage?.app?.renderer?.render(pixiStage.app.stage);
+        this.renderTimelineFrame(pixiStage, timeline, itemIndex, localTime, renderState);
 
         // Extract and stream frame bytes with zero-copy base64 hardware acceleration
         if (canvas) {
@@ -330,24 +354,19 @@ export class VideoExporter {
     }
     const helperCtx = helperCanvas?.getContext("2d");
 
+    const renderState = { currentScreenId: null as string | null, isTransitioning: false };
     let processedCount = 0;
 
     for (let frame = 0; frame < totalFrames; frame += frameStep) {
       if (this.cancelRequested) break;
 
       const globalTime = frame / fps;
-      const activeItem =
-        timeline.find((t) => globalTime >= t.start && globalTime < t.end) ||
-        timeline[timeline.length - 1];
+      const activeIndex = timeline.findIndex((t) => globalTime >= t.start && globalTime < t.end);
+      const itemIndex = activeIndex !== -1 ? activeIndex : timeline.length - 1;
+      const activeItem = timeline[itemIndex];
       const localTime = Math.max(0, globalTime - activeItem.start);
 
-      if (activeItem.screen.id !== currentScreenId) {
-        currentScreenId = activeItem.screen.id;
-        pixiStage?.renderScreen?.(activeItem.screen);
-      }
-
-      pixiStage?.seek?.(localTime, activeItem.screen);
-      pixiStage?.app?.renderer?.render(pixiStage.app.stage);
+      this.renderTimelineFrame(pixiStage, timeline, itemIndex, localTime, renderState);
 
       if (canvas && helperCtx) {
         helperCtx.clearRect(0, 0, targetWidth, targetHeight);
@@ -392,24 +411,19 @@ export class VideoExporter {
     const { pixiStage, onProgress } = options;
     const canvas = pixiStage?.app?.canvas;
     const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
-    let currentScreenId: string | null = null;
+    const renderState = { currentScreenId: null as string | null, isTransitioning: false };
 
     if (!canvas || typeof canvas.captureStream !== "function" || typeof MediaRecorder === "undefined") {
       // Graceful fallback for headless/test environments
       for (let frame = 0; frame < totalFrames; frame++) {
         if (this.cancelRequested) break;
         const globalTime = frame / fps;
-        const activeItem =
-          timeline.find((t) => globalTime >= t.start && globalTime < t.end) ||
-          timeline[timeline.length - 1];
+        const activeIndex = timeline.findIndex((t) => globalTime >= t.start && globalTime < t.end);
+        const itemIndex = activeIndex !== -1 ? activeIndex : timeline.length - 1;
+        const activeItem = timeline[itemIndex];
         const localTime = Math.max(0, globalTime - activeItem.start);
 
-        if (activeItem.screen.id !== currentScreenId) {
-          currentScreenId = activeItem.screen.id;
-          pixiStage?.renderScreen?.(activeItem.screen);
-        }
-
-        pixiStage?.seek?.(localTime, activeItem.screen);
+        this.renderTimelineFrame(pixiStage, timeline, itemIndex, localTime, renderState);
 
         const now = typeof performance !== "undefined" ? performance.now() : Date.now();
         const elapsedSec = (now - startTime) / 1000;
@@ -559,25 +573,19 @@ export class VideoExporter {
       }
     }
 
+    renderState.currentScreenId = null;
+    renderState.isTransitioning = false;
+
     for (let frame = 0; frame < totalFrames; frame++) {
       if (this.cancelRequested) break;
 
       const globalTime = frame / fps;
-      const activeItem =
-        timeline.find((t) => globalTime >= t.start && globalTime < t.end) ||
-        timeline[timeline.length - 1];
+      const activeIndex = timeline.findIndex((t) => globalTime >= t.start && globalTime < t.end);
+      const itemIndex = activeIndex !== -1 ? activeIndex : timeline.length - 1;
+      const activeItem = timeline[itemIndex];
       const localTime = Math.max(0, globalTime - activeItem.start);
 
-      // Boundary scene switch
-      if (activeItem.screen.id !== currentScreenId) {
-        currentScreenId = activeItem.screen.id;
-        pixiStage.renderScreen?.(activeItem.screen);
-      }
-
-      pixiStage.seek(localTime, activeItem.screen);
-
-      // Render frame and request stream capture
-      pixiStage.app.renderer.render(pixiStage.app.stage);
+      this.renderTimelineFrame(pixiStage, timeline, itemIndex, localTime, renderState);
       (stream.getVideoTracks()[0] as any)?.requestFrame?.();
 
       const now = typeof performance !== "undefined" ? performance.now() : Date.now();

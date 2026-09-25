@@ -287,13 +287,62 @@ const TOOLS = [
         name: { type: "string", description: "Element name" },
         type: {
           type: "string",
-          enum: ["text", "shape", "icon", "counter", "line", "image", "frame", "video", "polygon"],
-          description: "Layer type",
+          enum: ["text", "shape", "icon", "counter", "line", "image", "frame", "video", "polygon", "mockup3d"],
+          description: "Layer type (text, shape, icon, counter, line, image, frame, video, polygon, mockup3d)",
         },
         shapeType: {
           type: "string",
           enum: ["rectangle", "circle", "ellipse", "triangle", "star", "polygon", "line", "arrow", "path"],
           description: "Specific shape geometry type",
+        },
+        modelType: {
+          type: "string",
+          enum: ["iphone", "macbook", "card", "badge", "custom"],
+          description: "3D hardware device model for type 'mockup3d' (e.g. 'iphone', 'macbook', 'card')",
+        },
+        cameraPreset: {
+          type: "string",
+          enum: ["orbit360", "isometric", "dollyIn", "hover", "cardFlip", "custom"],
+          description: "3D camera motion preset for 'mockup3d' (e.g. 'orbit360', 'isometric', 'dollyIn', 'hover')",
+        },
+        position3D: {
+          type: "array",
+          items: { type: "number" },
+          description: "3D coordinates [x, y, z] for 'mockup3d'",
+        },
+        rotation3D: {
+          type: "array",
+          items: { type: "number" },
+          description: "3D Euler rotation [pitch, yaw, roll] in degrees for 'mockup3d'",
+        },
+        scale3D: {
+          type: "array",
+          items: { type: "number" },
+          description: "3D scale [sx, sy, sz] for 'mockup3d'",
+        },
+        cameraFov: {
+          type: "number",
+          description: "3D camera field of view in degrees (default: 35 for telephoto look)",
+        },
+        cameraPosition: {
+          type: "array",
+          items: { type: "number" },
+          description: "3D camera position [x, y, z]",
+        },
+        cameraTarget: {
+          type: "array",
+          items: { type: "number" },
+          description: "3D camera look-at target [x, y, z]",
+        },
+        screenSlot: {
+          type: "object",
+          properties: {
+            sourceType: { type: "string", enum: ["screen", "video", "image", "color"] },
+            sourceId: { type: "string", description: "Target 2D scene ID to project onto device screen" },
+            fitMode: { type: "string", enum: ["cover", "contain", "stretch"] },
+            emissiveIntensity: { type: "number", description: "OLED display brightness (default: 1.0)" },
+          },
+          description: "Dynamic screen texture projection mapping 2D scenes onto the 3D device display",
         },
         content: { type: "string", description: "Text content, icon name (e.g. 'Sparkles'), or image/video URL" },
         iconName: { type: "string", description: "Lucide vector icon name (e.g. 'Sparkles', 'Check', 'ArrowRight', 'Shield')" },
@@ -405,6 +454,55 @@ const TOOLS = [
         iconName: { type: "string", description: "Updated Lucide icon name" },
         src: { type: "string", description: "Updated image or video source URL" },
         shapeType: { type: "string", enum: ["rectangle", "circle", "ellipse", "triangle", "star", "polygon", "line", "arrow", "path"] },
+        modelType: {
+          type: "string",
+          enum: ["iphone", "macbook", "card", "badge", "custom"],
+          description: "3D hardware device model (for mockup3d layers)",
+        },
+        cameraPreset: {
+          type: "string",
+          enum: ["orbit360", "isometric", "dollyIn", "hover", "cardFlip", "custom"],
+          description: "3D camera motion preset",
+        },
+        position3D: {
+          type: "array",
+          items: { type: "number" },
+          description: "3D position [x, y, z]",
+        },
+        rotation3D: {
+          type: "array",
+          items: { type: "number" },
+          description: "3D Euler rotation [pitch, yaw, roll] in degrees",
+        },
+        scale3D: {
+          type: "array",
+          items: { type: "number" },
+          description: "3D scale [sx, sy, sz]",
+        },
+        cameraFov: {
+          type: "number",
+          description: "3D camera field of view in degrees",
+        },
+        cameraPosition: {
+          type: "array",
+          items: { type: "number" },
+          description: "3D camera position [x, y, z]",
+        },
+        cameraTarget: {
+          type: "array",
+          items: { type: "number" },
+          description: "3D camera look-at target [x, y, z]",
+        },
+        screenSlot: {
+          type: "object",
+          properties: {
+            sourceType: { type: "string", enum: ["screen", "video", "image", "color"] },
+            sourceId: { type: "string", description: "Target 2D scene ID to project onto device screen" },
+            fitMode: { type: "string", enum: ["cover", "contain", "stretch"] },
+            emissiveIntensity: { type: "number", description: "OLED display brightness" },
+          },
+          description: "Screen projection mapping 2D scenes onto 3D device display",
+        },
         grid: {
           type: "object",
           properties: {
@@ -625,7 +723,7 @@ const TOOLS = [
         layerId: { type: "string", description: "Target layer ID" },
         preset: {
           type: "string",
-          description: "Animation preset (e.g. 'pop', 'baselineRise', 'wordCascade', 'lineReveal', 'typewriter', 'trackingExpansion', 'textShimmer', 'highlightDraw', 'blurFocusPop', 'focusPull', 'glassIris', 'elevationRise', 'cardSettlePop', 'kenBurns', 'arrowShoot', 'dashFlow', 'iconPop', 'stampSettle', 'elasticScalePop', 'drawOn', 'fade', 'scale', 'slide', 'rotate', 'wipe', 'blur', 'boil', 'pulse', 'float', 'breathe', 'bounce', 'wiggle')",
+          description: "Animation preset. Options: 'custom_move' (moves layer by toX/toY delta or position), 'custom_scale' (resizes layer by toScale), 'custom_rotate', 'custom_opacity', 'custom_blur', 'custom_color', 'custom_shadow', 'pop', 'baselineRise', 'wordCascade', 'lineReveal', 'typewriter', 'trackingExpansion', 'textShimmer', 'highlightDraw', 'blurFocusPop', 'focusPull', 'glassIris', 'elevationRise', 'cardSettlePop', 'kenBurns', 'arrowShoot', 'dashFlow', 'iconPop', 'stampSettle', 'elasticScalePop', 'drawOn', 'fade', 'scale', 'slide', 'rotate', 'wipe', 'blur', 'boil', 'pulse', 'float', 'breathe', 'bounce', 'wiggle'",
         },
         duration: { type: "number", description: "Duration in seconds (e.g. 0.6)" },
         start: { type: "number", description: "Start time offset within scene in seconds (default: 0)" },
@@ -633,7 +731,8 @@ const TOOLS = [
         direction: { type: "string", enum: ["up", "down", "left", "right"], description: "Motion direction for directional presets" },
         loop: { type: "boolean", description: "Whether the animation loops continuously" },
         loopCount: { type: "number", description: "Number of loop iterations (omit for infinite)" },
-        type: { type: "string", enum: ["in", "action", "out", "emphasis", "custom"], description: "Animation role (default: 'in')" },
+        type: { type: "string", enum: ["in", "action", "out", "emphasis", "custom"], description: "Animation role. Use 'action' to move/transform an element mid-scene to yield focus to another element! (default: 'in')" },
+        fillMode: { type: "string", enum: ["forwards", "backwards", "both", "none"], description: "Fill mode. Set to 'forwards' so layer retains final transformed state after animation finishes (essential for action moves!). Default is 'forwards' for action clips." },
         easing: {
           type: "string",
           enum: ["snappy", "smooth", "bouncy", "overshoot", "elastic", "bounce", "natural", "slowDown", "accelerate", "heavy", "linear", "spring"],
@@ -646,6 +745,37 @@ const TOOLS = [
             damping: { type: "number", description: "Spring damping c (default: 12)" },
             mass: { type: "number", description: "Spring mass m (default: 1)" },
           },
+        },
+        params: {
+          type: "object",
+          description: "Target property values for custom presets: { toX, toY, fromX, fromY, toScale, fromScale, toRotate, fromRotate, toOpacity, toBlur, toColor, distance, angle }",
+          properties: {
+            toX: { type: "number", description: "Target X translation delta in px" },
+            toY: { type: "number", description: "Target Y translation delta in px (e.g. -200 to move element up)" },
+            fromX: { type: "number", description: "Starting X translation in px" },
+            fromY: { type: "number", description: "Starting Y translation in px" },
+            toScale: { type: "number", description: "Target scale factor (e.g. 0.85 to shrink, 1.2 to enlarge)" },
+            fromScale: { type: "number", description: "Starting scale factor" },
+            toRotate: { type: "number", description: "Target rotation in degrees" },
+            fromRotate: { type: "number", description: "Starting rotation in degrees" },
+            toOpacity: { type: "number", description: "Target opacity (0.0 to 1.0)" },
+            toBlur: { type: "number", description: "Target blur radius in px" },
+            toColor: { type: "string", description: "Target color hex string" },
+            distance: { type: "number", description: "Motion distance in px" },
+          },
+        },
+        from: {
+          type: "object",
+          description: "Explicit starting state: { x, y, scale, rotate, opacity, blur, color }",
+        },
+        splitBy: {
+          type: "string",
+          enum: ["all", "word", "character", "line"],
+          description: "Typographic split unit for kinetic text reveals ('word', 'character', 'line')",
+        },
+        stagger: {
+          type: "number",
+          description: "Stagger delay in seconds between sequential words or characters (e.g. 0.08)",
         },
       },
       required: ["layerId", "preset", "duration"],
@@ -1365,6 +1495,19 @@ function handleToolCall(name, args) {
       if (args.visible !== undefined) newLayer.visible = args.visible;
       if (args.zIndex !== undefined) newLayer.zIndex = args.zIndex;
 
+      if (args.type === "mockup3d" || args.type === "mockup-3d") {
+        newLayer.type = "mockup3d";
+        newLayer.modelType = args.modelType || "iphone";
+        newLayer.cameraPreset = args.cameraPreset || "orbit360";
+        newLayer.position3D = args.position3D || [0, 0, 0];
+        newLayer.rotation3D = args.rotation3D || [0, 0, 0];
+        newLayer.scale3D = args.scale3D || [1, 1, 1];
+        newLayer.cameraFov = args.cameraFov || 35;
+        newLayer.cameraPosition = args.cameraPosition || [0, 0, 5];
+        newLayer.cameraTarget = args.cameraTarget || [0, 0, 0];
+        if (args.screenSlot) newLayer.screenSlot = args.screenSlot;
+      }
+
       if (args.enter) {
         let enterEasing = args.enter.easing || "snappy";
         const isOptical = ["fade", "fadeIn", "fadeOut", "blurIn", "glassIris"].includes(args.enter.preset);
@@ -1438,6 +1581,16 @@ function handleToolCall(name, args) {
       if (args.trimOffset !== undefined) foundLayer.trimOffset = args.trimOffset;
       if (args.clipContent !== undefined) foundLayer.clipContent = args.clipContent;
       if (args.layout !== undefined) foundLayer.layout = { ...foundLayer.layout, ...args.layout };
+
+      if (args.modelType !== undefined) foundLayer.modelType = args.modelType;
+      if (args.cameraPreset !== undefined) foundLayer.cameraPreset = args.cameraPreset;
+      if (args.position3D !== undefined) foundLayer.position3D = args.position3D;
+      if (args.rotation3D !== undefined) foundLayer.rotation3D = args.rotation3D;
+      if (args.scale3D !== undefined) foundLayer.scale3D = args.scale3D;
+      if (args.cameraFov !== undefined) foundLayer.cameraFov = args.cameraFov;
+      if (args.cameraPosition !== undefined) foundLayer.cameraPosition = args.cameraPosition;
+      if (args.cameraTarget !== undefined) foundLayer.cameraTarget = args.cameraTarget;
+      if (args.screenSlot !== undefined) foundLayer.screenSlot = args.screenSlot;
 
       if (args.counter) {
         if (args.counter.startValue !== undefined) foundLayer.startValue = args.counter.startValue;
@@ -2171,6 +2324,11 @@ function handleToolCall(name, args) {
       if (args.scaleAmount !== undefined) newClip.scaleAmount = args.scaleAmount;
       if (args.rotationDegrees !== undefined) newClip.rotationDegrees = args.rotationDegrees;
       if (args.params) newClip.params = args.params;
+      if (args.from) newClip.from = args.from;
+      if (args.fillMode) newClip.fillMode = args.fillMode;
+      else if (newClip.type === "action") newClip.fillMode = "forwards";
+      if (args.properties) newClip.properties = args.properties;
+      if (args.stepFps !== undefined) newClip.stepFps = args.stepFps;
 
       foundLayer.animation.clips.push(newClip);
       writeMtnFile(resolvedPath, pkg);

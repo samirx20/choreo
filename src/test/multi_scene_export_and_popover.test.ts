@@ -443,6 +443,81 @@ describe("Multi-Scene Sequence Stitching & Transparent Alpha Video Export", () =
       delete (window as any).__TAURI_INTERNALS__;
       vi.doUnmock("@tauri-apps/api/core");
     });
+
+    it("executes renderTransition for cross-scene transitions (Magic Move) instead of hard cutting", async () => {
+      const renderTransitionMock = vi.fn();
+      const renderScreenMock = vi.fn();
+      const seekMock = vi.fn();
+
+      const mockStage = {
+        app: {
+          canvas: {
+            toDataURL: vi.fn(() => "data:image/jpeg;base64,/9j/4AAQSkZJRg=="),
+          },
+          stage: {},
+          renderer: {
+            render: vi.fn(),
+          },
+        },
+        renderScreen: renderScreenMock,
+        seek: seekMock,
+        renderTransition: renderTransitionMock,
+      } as any;
+
+      const screenA: Screen = {
+        id: "screen_a",
+        name: "Scene A",
+        duration: 1.0,
+        layers: [
+          {
+            id: "hero_text",
+            name: "Title",
+            type: "text",
+            content: "Hello",
+            style: { x: 500, y: 500, width: 400, height: 100, fontSize: 64, rotation: 0, opacity: 1 },
+          },
+        ],
+      };
+
+      const screenB: Screen = {
+        id: "screen_b",
+        name: "Scene B",
+        duration: 1.0,
+        transition: {
+          type: "magicMove",
+          duration: 0.5,
+          easing: "snappy",
+        },
+        layers: [
+          {
+            id: "hero_text",
+            name: "Title",
+            type: "text",
+            content: "Hello",
+            style: { x: 100, y: 100, width: 400, height: 100, fontSize: 48, rotation: 0, opacity: 1 },
+          },
+        ],
+      };
+
+      await videoExporter.exportVideo({
+        pixiStage: mockStage,
+        screens: [screenA, screenB],
+        settings: mockSettings,
+        format: "mp4",
+        fps: 10,
+      });
+
+      // Total duration 2.0s @ 10fps = 20 frames
+      // screenA: frames 0 to 9
+      // screenB: frames 10 to 19. Transition is 0.5s = 5 frames (10, 11, 12, 13, 14)
+      expect(renderTransitionMock).toHaveBeenCalled();
+      expect(renderTransitionMock).toHaveBeenCalledWith(
+        screenA,
+        screenB,
+        expect.any(Number),
+        expect.objectContaining({ type: "magicMove" })
+      );
+    });
   });
 });
 

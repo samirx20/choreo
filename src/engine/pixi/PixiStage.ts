@@ -1,7 +1,8 @@
 import { Application, Container, Graphics, HTMLText, Text, TextStyle, BlurFilter, Rectangle, Sprite } from "pixi.js";
 import { Viewport } from "pixi-viewport";
-import { Layer, Screen, GroupLayer, TextLayer, ShapeLayer, ImageLayer } from "@/types/scene";
+import { Layer, Screen, GroupLayer, TextLayer, ShapeLayer, ImageLayer, SceneTransition } from "@/types/scene";
 import { evaluateSceneAtTime, evaluateCounterValue } from "@/engine/evaluator";
+import { getEasing } from "@/engine/easings";
 
 export interface PixiStageOptions {
   canvas: HTMLCanvasElement;
@@ -817,6 +818,267 @@ export class PixiStage {
     if (this.app.renderer) {
       this.app.renderer.render(this.app.stage);
     }
+  }
+
+  public renderTransition(
+    fromScreen: Screen,
+    toScreen: Screen,
+    rawProgress: number,
+    transition: SceneTransition
+  ): void {
+    if (!this.isReady || !fromScreen || !toScreen) return;
+
+    const easeType = transition?.easing || (transition?.type === "magicMove" ? "snappy" : "smooth");
+    const easeFn = getEasing(easeType);
+    const p = easeFn(Math.max(0, Math.min(1, rawProgress)));
+
+    // 1. Dynamic background transition
+    if (!this.isTransparent) {
+      this.artboardBg.visible = true;
+      const fromBg = fromScreen.backgroundColor || this.options.backgroundColor || "#18181b";
+      const toBg = toScreen.backgroundColor || this.options.backgroundColor || "#18181b";
+      const currentBg = this.lerpColorHex(fromBg, toBg, p);
+      this.updateArtboardBackground(
+        toScreen.width || this.options.artboardWidth,
+        toScreen.height || this.options.artboardHeight,
+        currentBg
+      );
+    }
+
+    // 2. Evaluate boundary states
+    const fromStyles = evaluateSceneAtTime(fromScreen.layers, fromScreen.duration || 5.0);
+    const toStyles = evaluateSceneAtTime(toScreen.layers, 0);
+
+    const fromLayerMap = new Map<string, Layer>();
+    const collectFrom = (layers: Layer[]) => {
+      for (const l of layers) {
+        fromLayerMap.set(l.id, l);
+        if (l.children) collectFrom(l.children);
+      }
+    };
+    collectFrom(fromScreen.layers);
+
+    const toLayerMap = new Map<string, Layer>();
+    const collectTo = (layers: Layer[]) => {
+      for (const l of layers) {
+        toLayerMap.set(l.id, l);
+        if (l.children) collectTo(l.children);
+      }
+    };
+    collectTo(toScreen.layers);
+
+    // Ensure all layers from both scenes exist in layerDisplayObjects
+    for (const [id, layer] of fromLayerMap.entries()) {
+      if (!this.layerDisplayObjects.has(id)) {
+        const dobj = this.createDisplayObject(layer);
+        this.layerDisplayObjects.set(id, dobj);
+        this.layersContainer.addChild(dobj);
+      }
+    }
+    for (const [id, layer] of toLayerMap.entries()) {
+      if (!this.layerDisplayObjects.has(id)) {
+        const dobj = this.createDisplayObject(layer);
+        this.layerDisplayObjects.set(id, dobj);
+        this.layersContainer.addChild(dobj);
+      }
+    }
+
+    const artboardW = toScreen.width || this.options.artboardWidth || 1920;
+    const artboardH = toScreen.height || this.options.artboardHeight || 1080;
+    const transType = transition?.type || "magicMove";
+
+    const parseTranslate = (transformStr?: string): { tx: number; ty: number; sx: number; sy: number; rotDeg: number } => {
+      let tx = 0, ty = 0, sx = 1, sy = 1, rotDeg = 0;
+      if (!transformStr) return { tx, ty, sx, sy, rotDeg };
+
+      const t3d = transformStr.match(/translate3d\(([-0-9.]+)px,\s*([-0-9.]+)px/);
+      if (t3d) {
+        tx = parseFloat(t3d[1]) || 0;
+        ty = parseFloat(t3d[2]) || 0;
+      } else {
+        const t2d = transformStr.match(/translate\(([-0-9.]+)px,\s*([-0-9.]+)px\)/);
+        if (t2d) {
+          tx = parseFloat(t2d[1]) || 0;
+          ty = parseFloat(t2d[2]) || 0;
+        }
+      }
+
+      const s2d = transformStr.match(/scale\(([-0-9.]+)(?:,\s*([-0-9.]+))?\)/);
+      if (s2d) {
+        sx = parseFloat(s2d[1]) || 1;
+        sy = s2d[2] !== undefined ? parseFloat(s2d[2]) || 1 : sx;
+      }
+
+      const rotMatch = transformStr.match(/rotate\(([-0-9.]+)deg\)/);
+      if (rotMatch) {
+        rotDeg = parseFloat(rotMatch[1]) || 0;
+      }
+
+      return { tx, ty, sx, sy, rotDeg };
+    };
+
+    // 3. Update each display object
+    const allIds = new Set([...fromLayerMap.keys(), ...toLayerMap.keys()]);
+
+    for (const id of allIds) {
+      const dobj = this.layerDisplayObjects.get(id);
+      if (!dobj) continue;
+
+      const fromLayer = fromLayerMap.get(id);
+      const toLayer = toLayerMap.get(id);
+
+      if (fromLayer && toLayer) {
+        // MAGIC MOVE: Element exists in both scenes!
+        const fromStyle = fromStyles[id];
+        const toStyle = toStyles[id];
+
+        const fromT = parseTranslate(fromStyle?.transform);
+        const toT = parseTranslate(toStyle?.transform);
+
+        const fromBaseX = (fromLayer.style.x ?? 0);
+        const fromBaseY = (fromLayer.style.y ?? 0);
+        const toBaseX = (toLayer.style.x ?? 0);
+        const toBaseY = (toLayer.style.y ?? 0);
+
+        const fromX = fromBaseX + fromT.tx;
+        const fromY = fromBaseY + fromT.ty;
+        const toX = toBaseX + toT.tx;
+        const toY = toBaseY + toT.ty;
+
+        const fromW = typeof fromLayer.style.width === "number" ? fromLayer.style.width : 100;
+        const toW = typeof toLayer.style.width === "number" ? toLayer.style.width : 100;
+        const fromH = typeof fromLayer.style.height === "number" ? fromLayer.style.height : 100;
+        const toH = typeof toLayer.style.height === "number" ? toLayer.style.height : 100;
+
+        const fromAlpha = fromStyle?.opacity !== undefined ? Number(fromStyle.opacity) : (fromLayer.style.opacity ?? 1);
+        const toAlpha = toStyle?.opacity !== undefined ? Number(toStyle.opacity) : (toLayer.style.opacity ?? 1);
+
+        const curX = fromX + (toX - fromX) * p;
+        const curY = fromY + (toY - fromY) * p;
+        const curW = fromW + (toW - fromW) * p;
+        const curH = fromH + (toH - fromH) * p;
+        const curAlpha = fromAlpha + (toAlpha - fromAlpha) * p;
+        const curScaleX = fromT.sx + (toT.sx - fromT.sx) * p;
+        const curScaleY = fromT.sy + (toT.sy - fromT.sy) * p;
+        const curRot = fromT.rotDeg + (toT.rotDeg - fromT.rotDeg) * p;
+
+        const pivotX = (dobj as any).__pivotX ?? 0.5;
+        const pivotY = (dobj as any).__pivotY ?? 0.5;
+        dobj.pivot.set(curW * pivotX, curH * pivotY);
+        dobj.x = curX + curW * pivotX;
+        dobj.y = curY + curH * pivotY;
+        dobj.scale.set(curScaleX, curScaleY);
+        dobj.rotation = (curRot * Math.PI) / 180;
+        dobj.alpha = Math.max(0, Math.min(1, curAlpha));
+
+        if (toLayer.type === "text" || fromLayer.type === "text") {
+          const fromFs = fromLayer.style.fontSize || 32;
+          const toFs = toLayer.style.fontSize || 32;
+          const curFs = Math.round(fromFs + (toFs - fromFs) * p);
+          if ((dobj as any).style) {
+            (dobj as any).style.fontSize = curFs;
+          }
+        }
+      } else if (fromLayer && !toLayer) {
+        // Outgoing element only in fromScreen
+        const fromStyle = fromStyles[id];
+        const fromT = parseTranslate(fromStyle?.transform);
+        const fromX = (fromLayer.style.x ?? 0) + fromT.tx;
+        const fromY = (fromLayer.style.y ?? 0) + fromT.ty;
+        const fromW = typeof fromLayer.style.width === "number" ? fromLayer.style.width : 100;
+        const fromH = typeof fromLayer.style.height === "number" ? fromLayer.style.height : 100;
+        const fromAlpha = fromStyle?.opacity !== undefined ? Number(fromStyle.opacity) : (fromLayer.style.opacity ?? 1);
+
+        const pivotX = (dobj as any).__pivotX ?? 0.5;
+        const pivotY = (dobj as any).__pivotY ?? 0.5;
+        dobj.pivot.set(fromW * pivotX, fromH * pivotY);
+
+        if (transType === "slideLeft") {
+          dobj.x = fromX - artboardW * p + fromW * pivotX;
+          dobj.y = fromY + fromH * pivotY;
+          dobj.alpha = fromAlpha;
+        } else if (transType === "slideRight") {
+          dobj.x = fromX + artboardW * p + fromW * pivotX;
+          dobj.y = fromY + fromH * pivotY;
+          dobj.alpha = fromAlpha;
+        } else if (transType === "slideUp") {
+          dobj.x = fromX + fromW * pivotX;
+          dobj.y = fromY - artboardH * p + fromH * pivotY;
+          dobj.alpha = fromAlpha;
+        } else if (transType === "slideDown") {
+          dobj.x = fromX + fromW * pivotX;
+          dobj.y = fromY + artboardH * p + fromH * pivotY;
+          dobj.alpha = fromAlpha;
+        } else {
+          dobj.x = fromX + fromW * pivotX;
+          dobj.y = fromY + fromH * pivotY;
+          dobj.alpha = Math.max(0, fromAlpha * (1 - p));
+        }
+      } else if (toLayer && !fromLayer) {
+        // Incoming element only in toScreen
+        const toStyle = toStyles[id];
+        const toT = parseTranslate(toStyle?.transform);
+        const toX = (toLayer.style.x ?? 0) + toT.tx;
+        const toY = (toLayer.style.y ?? 0) + toT.ty;
+        const toW = typeof toLayer.style.width === "number" ? toLayer.style.width : 100;
+        const toH = typeof toLayer.style.height === "number" ? toLayer.style.height : 100;
+        const toAlpha = toStyle?.opacity !== undefined ? Number(toStyle.opacity) : (toLayer.style.opacity ?? 1);
+
+        const pivotX = (dobj as any).__pivotX ?? 0.5;
+        const pivotY = (dobj as any).__pivotY ?? 0.5;
+        dobj.pivot.set(toW * pivotX, toH * pivotY);
+
+        if (transType === "slideLeft") {
+          dobj.x = toX + artboardW * (1 - p) + toW * pivotX;
+          dobj.y = toY + toH * pivotY;
+          dobj.alpha = toAlpha;
+        } else if (transType === "slideRight") {
+          dobj.x = toX - artboardW * (1 - p) + toW * pivotX;
+          dobj.y = toY + toH * pivotY;
+          dobj.alpha = toAlpha;
+        } else if (transType === "slideUp") {
+          dobj.x = toX + toW * pivotX;
+          dobj.y = toY + artboardH * (1 - p) + toH * pivotY;
+          dobj.alpha = toAlpha;
+        } else if (transType === "slideDown") {
+          dobj.x = toX + toW * pivotX;
+          dobj.y = toY - artboardH * (1 - p) + toH * pivotY;
+          dobj.alpha = toAlpha;
+        } else {
+          dobj.x = toX + toW * pivotX;
+          dobj.y = toY + toH * pivotY;
+          dobj.alpha = Math.max(0, toAlpha * p);
+        }
+      }
+    }
+
+    if (this.app.renderer) {
+      this.app.renderer.render(this.app.stage);
+    }
+  }
+
+  private lerpColorHex(hexA: string, hexB: string, t: number): string {
+    const parse = (h: string) => {
+      const clean = h.replace("#", "");
+      if (clean.length === 3) {
+        return [
+          parseInt(clean[0] + clean[0], 16),
+          parseInt(clean[1] + clean[1], 16),
+          parseInt(clean[2] + clean[2], 16),
+        ];
+      }
+      return [
+        parseInt(clean.slice(0, 2), 16) || 0,
+        parseInt(clean.slice(2, 4), 16) || 0,
+        parseInt(clean.slice(4, 6), 16) || 0,
+      ];
+    };
+    const cA = parse(hexA);
+    const cB = parse(hexB);
+    const r = Math.round(cA[0] + (cB[0] - cA[0]) * t);
+    const g = Math.round(cA[1] + (cB[1] - cA[1]) * t);
+    const b = Math.round(cA[2] + (cB[2] - cA[2]) * t);
+    return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
   }
 
   public resize(w: number, h: number) {
