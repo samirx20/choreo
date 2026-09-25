@@ -96,12 +96,32 @@ function writeMtnFile(filePath, packageData) {
 // Tool Implementations
 const TOOLS = [
   {
+    name: "create_project",
+    description: "Initializes a new Motion Studio .mtn project with specified aspect ratio (16:9, 9:16, 1:1, 4:5), frame rate, and initial scene.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        file: { type: "string", description: "Target .mtn file path (e.g. 'promo.mtn')" },
+        name: { type: "string", description: "Project title" },
+        aspectRatio: {
+          type: "string",
+          enum: ["16:9", "9:16", "1:1", "4:5"],
+          description: "Aspect ratio: '16:9' (landscape 1920x1080), '9:16' (vertical 1080x1920), '1:1' (square 1080x1080), '4:5' (portrait 1080x1350)",
+        },
+        fps: { type: "number", description: "Frame rate (default: 60)" },
+        backgroundColor: { type: "string", description: "Background color (default: '#09090b')" },
+      },
+      required: ["name"],
+    },
+  },
+  {
     name: "create_scene",
     description: "Creates a new scene/beat in a .mtn project file with specified duration and mood.",
     inputSchema: {
       type: "object",
       properties: {
         file: { type: "string", description: "Path to .mtn project file (default: './project.mtn')" },
+        id: { type: "string", description: "Optional scene ID" },
         name: { type: "string", description: "Name of the scene (e.g. 'Intro Hero')" },
         duration: { type: "number", description: "Duration in seconds (e.g. 3.0)" },
         mood: {
@@ -115,12 +135,13 @@ const TOOLS = [
   },
   {
     name: "place_element",
-    description: "Places a text, shape, icon, counter, or line element onto the modular grid with entrance animation.",
+    description: "Places a text, shape, icon, counter, or line element onto the modular grid with entrance animation. Reusing the same ID across scenes triggers continuous Magic Move spatial transitions.",
     inputSchema: {
       type: "object",
       properties: {
         file: { type: "string", description: "Path to .mtn project file" },
         sceneId: { type: "string", description: "Target scene ID" },
+        id: { type: "string", description: "Optional layer ID. Reusing the same ID in subsequent scenes triggers Magic Move morphing." },
         name: { type: "string", description: "Element name" },
         type: { type: "string", enum: ["text", "shape", "icon", "counter", "line", "mockup3d"], description: "Layer type" },
         content: { type: "string", description: "Text content, icon name (e.g. 'Sparkles'), or 3D mockup model" },
@@ -194,8 +215,63 @@ function handleToolCall(name, args) {
   const doc = pkg.document;
 
   switch (name) {
+    case "create_project": {
+      const is9x16 = args.aspectRatio === "9:16";
+      const is1x1 = args.aspectRatio === "1:1";
+      const is4x5 = args.aspectRatio === "4:5";
+      const width = is9x16 ? 1080 : is1x1 ? 1080 : is4x5 ? 1080 : 1920;
+      const height = is9x16 ? 1920 : is1x1 ? 1080 : is4x5 ? 1350 : 1080;
+      const fps = args.fps || 60;
+      const bg = args.backgroundColor || "#09090b";
+
+      const newDoc = {
+        $schema: "https://motion-studio.app/schemas/v1.json",
+        format: "motion-studio",
+        version: 1,
+        generator: "Motion Studio MCP v0.1.0",
+        exportedAt: Date.now(),
+        metadata: {
+          id: "proj_" + Math.random().toString(36).slice(2, 9),
+          name: args.name,
+          width,
+          height,
+          fps,
+          duration: 3.0,
+          screenCount: 1,
+          backgroundColor: bg,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+        document: {
+          version: "1.0",
+          name: args.name,
+          settings: {
+            width,
+            height,
+            fps,
+            duration: 3.0,
+            backgroundColor: bg,
+          },
+          screens: [
+            {
+              id: "scene_1",
+              name: "Scene 1",
+              duration: 3.0,
+              layers: [],
+            },
+          ],
+        },
+      };
+
+      fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
+      fs.writeFileSync(resolvedPath, JSON.stringify(newDoc, null, 2), "utf-8");
+      return {
+        text: `Created project "${args.name}" (${width}x${height} @ ${fps}fps, format: ${args.aspectRatio || "16:9"}) at ${path.basename(resolvedPath)}.`,
+      };
+    }
+
     case "create_scene": {
-      const sceneId = "scene_" + Math.random().toString(36).slice(2, 8);
+      const sceneId = args.id || ("scene_" + Math.random().toString(36).slice(2, 8));
       const newScene = {
         id: sceneId,
         name: args.name,
@@ -217,7 +293,7 @@ function handleToolCall(name, args) {
         return { text: `Error: Scene "${args.sceneId}" not found in ${path.basename(resolvedPath)}.` };
       }
 
-      const layerId = "layer_" + Math.random().toString(36).slice(2, 8);
+      const layerId = args.id || ("layer_" + Math.random().toString(36).slice(2, 8));
       const is9x16 = doc.settings.height > doc.settings.width;
       const gridCols = is9x16 ? 9 : 16;
       const gridRows = is9x16 ? 16 : 9;

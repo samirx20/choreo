@@ -72,16 +72,11 @@ export const McpDropdown: React.FC<McpDropdownProps> = ({ className }) => {
   const handleCopyPrompt = () => {
     const sseUrl = `http://localhost:${port}/sse`;
     const httpUrl = `http://localhost:${port}/mcp`;
-    const promptText = `Connect to Motion Studio via its Model Context Protocol (MCP) server running on port ${port}:
-- SSE URL: ${sseUrl}
-- HTTP RPC: ${httpUrl}
+    const promptText = `There is an MCP server for Motion Studio running on this host at ${sseUrl} (HTTP: ${httpUrl}).
 
-Available Tools:
-- get_storyboard_state({ file })
-- create_scene({ file, name, duration, mood })
-- place_element({ file, sceneId, name, type, grid, enter, style })
-- apply_animation({ file, layerId, preset, duration, easing, type })
-- lint_storyboard({ file })`;
+Motion Studio is a motion graphics application for creating product showcase videos, animated beats, kinetic typography, and 3D device staging.
+
+Connect to this MCP server to access its tools (create_project, create_scene, place_element, apply_animation, get_storyboard_state, lint_storyboard) to create and edit videos.`;
 
     navigator.clipboard.writeText(promptText);
     setCopied(true);
