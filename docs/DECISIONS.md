@@ -2842,6 +2842,34 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 58 test suites (607 tests) pass cleanly.
   - `npm run build` and `npm run desktop:build` package successfully to MSI and NSIS installers.
 
+---
+
+### Decision 123: MCP Splitting Engine Alignment, Kinetic Typography Parity, and Aesthetic Compiler Guardrails
+* **Context & Motivation**:
+  - An external AI agent generated subpar showcase videos because of two fatal flaws:
+    1. `mcp.js` had a crude character-ratio formula on line 2349 for `split_text`, ignoring the mathematical space advance and flex grouping in `textSplitter.ts`. This shattered headlines into misaligned, disconnected boxes that collided and broke kerning.
+    2. The agent was unaware that single text layers natively animate words and characters via `apply_animation` with zero layout shift, because `mcp.js` dropped `splitBy`, `animateBy`, and `stagger` fields when creating animation clips.
+    3. Small LLMs given unconstrained coordinate canvases suffer from coordinate hallucination and default to cheap tropes (sci-fi spinning HUDs, category kickers, cramped headlines).
+* **The Solution**:
+  1. **Kinetic Typography Parity in Single Text Layers**:
+     - Updated `apply_animation` and `place_element` in `mcp.js` to persist `splitBy`, `animateBy`, `stagger`, `staggerDelay`, `distance`, `scaleAmount`, `rotationDegrees`, and `params`.
+     - Calling `apply_animation` with `preset: "wordCascade"` and `splitBy: "word"` activates the native `TextRenderer.tsx` word-by-word reveal with 100% font kerning and 0.0000px visual shift invariance.
+  2. **Mathematically Sound Layer Splitting Handlers in `mcp.js`**:
+     - **`split_text`**: Replaced crude ratio formula with proportional space advance width calculation ($W_{\text{space}} = \text{round}(\text{fontSize} \times 0.27)$) and packaged `ChunkLayer` units into a flex `GroupLayer` (`compoundType: "split-text"`) with zero layout shift. Supports words, characters, lines, and selection ranges.
+     - **`split_shape`**: Supports rectangles, circles (`splitCircleContour`), and polygons, preserves original fill in a dedicated fade layer, and wraps continuous bezier arcs in a compound group.
+     - **`split_line`**: Localizes child coordinates so rotated lines maintain local alignment without horizontal jumping, and fully handles `detachArrowhead: true` (drawing shaft + popping triangle arrowhead marker).
+     - **`separate_stroke_fill`**: Standardized to `compoundType: "split-shape"` to sync with `layerSlice.ts`.
+     - **`join_lines_into_shape`**: Supports open and closed polylines, corner fillets, and per-vertex radii.
+  3. **Aesthetic Guardian & Constructive Compiler**:
+     - In `place_element`: auto-expands cramped headline `colSpan` (< 8 cols) to 10–12 cols to prevent awkward line breaks; strips banned category kickers and eyebrows; strips invalid properties on 1D lines (ontological purity).
+     - Optical monotonicity guard: automatically downgrades bouncy/elastic easings to `smooth` for opacity, blur, and color channels to prevent numerical blowouts.
+  4. **Masterclass MCP Instructions**:
+     - Rewrote `~/.gemini/antigravity/mcp/motion-studio/instructions.md` with the Two-Stage workflow, craft floor rules, single-layer kinetic text guidelines, and canonical recipes for Hero Statement, Hardware Showcase, Metric Bento, and Connected Flow.
+* **Verification**:
+  - Added unit test suite [`src/test/mcp_splitting_and_guardrails.test.ts`](file:///c:/Users/Sam/Documents/CODE/MOTION-STUDIO/src/test/mcp_splitting_and_guardrails.test.ts) covering space advance calculation, shape decomposition, fill preservation, and arrowhead detachment.
+  - All 59 test suites (613 tests) pass cleanly (`npm run test`).
+
+
 
 
 

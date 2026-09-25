@@ -209,6 +209,8 @@ export function splitTextIntoWords(layer: TextLayer): GroupLayer {
     id: `group_words_${Date.now()}`,
     name: `${layer.name} (Split Words)`,
     type: "group",
+    isCompound: true,
+    compoundType: "split-text",
     locked: true,
     layout: {
       display: "flex",

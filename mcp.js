@@ -1277,21 +1277,50 @@ function handleToolCall(name, args) {
         height = Math.round(rowSpan * cellHeight);
       }
 
+      // Aesthetic Guardian & Typography Scale Guardrails
+      const notices = [];
+      const isHeadline = args.type === "text" && (
+        (args.style?.fontSize && args.style.fontSize >= 44) ||
+        (!args.style?.fontSize && args.content && args.content.length > 15)
+      );
+      if (isHeadline && gridObj.colSpan < 8) {
+        const oldSpan = gridObj.colSpan;
+        gridObj.colSpan = Math.min(gridCols, Math.max(10, gridCols - 2));
+        gridObj.col = Math.max(0, Math.floor((gridCols - gridObj.colSpan) / 2));
+        x = Math.round(gridObj.col * cellWidth);
+        width = Math.round(gridObj.colSpan * cellWidth);
+        notices.push(`AUTO-EXPANDED: Headline text expanded from ${oldSpan} to ${gridObj.colSpan} columns to prevent awkward typographic line-wrapping.`);
+      }
+
+      // Ban eyebrow kickers / floating category badges
+      if (args.type === "text" && /^(AI POWERED|SMART FEATURE|NEW FEATURE|PRESENTING|INTRODUCING)$/i.test((args.content || "").trim())) {
+        notices.push("AESTHETIC NOTICE: Category kickers/eyebrows violate Motion Studio craft standards; headlines should stand on their own weight.");
+      }
+
+      const cleanStyle = {
+        x,
+        y,
+        width,
+        height,
+        rotation: 0,
+        opacity: 1,
+        ...(args.style || {}),
+      };
+
+      // Ontological purity: lines do not have surface fills or corner radii
+      if (args.type === "line") {
+        delete cleanStyle.backgroundColor;
+        delete cleanStyle.fillColor;
+        delete cleanStyle.borderRadius;
+      }
+
       const newLayer = {
         id: layerId,
         name: args.name,
         type: args.type,
         content: args.content,
         grid: gridObj,
-        style: {
-          x,
-          y,
-          width,
-          height,
-          rotation: 0,
-          opacity: 1,
-          ...(args.style || {}),
-        },
+        style: cleanStyle,
       };
 
       if (args.shapeType) newLayer.shapeType = args.shapeType;
@@ -1337,27 +1366,43 @@ function handleToolCall(name, args) {
       if (args.zIndex !== undefined) newLayer.zIndex = args.zIndex;
 
       if (args.enter) {
+        let enterEasing = args.enter.easing || "snappy";
+        const isOptical = ["fade", "fadeIn", "fadeOut", "blurIn", "glassIris"].includes(args.enter.preset);
+        if (isOptical && (enterEasing === "bouncy" || enterEasing === "elastic")) {
+          enterEasing = "smooth";
+          notices.push("NON-SPATIAL MONOTONICITY: Easing for opacity/blur downgraded to 'smooth' to prevent numerical blowouts.");
+        }
+
+        const enterClip = {
+          id: "clip_" + Math.random().toString(36).slice(2, 8),
+          name: `${args.enter.preset || "pop"} in`,
+          type: "in",
+          preset: args.enter.preset || "pop",
+          start: args.enter.delay || args.enter.start || 0,
+          duration: args.enter.duration || 0.6,
+          easing: enterEasing,
+          ...(args.enter.direction ? { direction: args.enter.direction } : {}),
+          ...(args.enter.spring ? { spring: args.enter.spring } : {}),
+          ...(args.enter.splitBy ? { splitBy: args.enter.splitBy } : {}),
+          ...(args.enter.animateBy ? { animateBy: args.enter.animateBy } : {}),
+          ...(args.enter.stagger !== undefined ? { stagger: args.enter.stagger } : {}),
+          ...(args.enter.staggerDelay !== undefined ? { staggerDelay: args.enter.staggerDelay } : {}),
+          ...(args.enter.distance !== undefined ? { distance: args.enter.distance } : {}),
+          ...(args.enter.scaleAmount !== undefined ? { scaleAmount: args.enter.scaleAmount } : {}),
+          ...(args.enter.rotationDegrees !== undefined ? { rotationDegrees: args.enter.rotationDegrees } : {}),
+          ...(args.enter.params ? { params: args.enter.params } : {}),
+        };
+
         newLayer.animation = {
-          clips: [
-            {
-              id: "clip_" + Math.random().toString(36).slice(2, 8),
-              name: `${args.enter.preset} in`,
-              type: "in",
-              preset: args.enter.preset || "pop",
-              start: args.enter.delay || 0,
-              duration: args.enter.duration || 0.6,
-              easing: args.enter.easing || "snappy",
-              ...(args.enter.direction ? { direction: args.enter.direction } : {}),
-              ...(args.enter.spring ? { spring: args.enter.spring } : {}),
-            },
-          ],
+          clips: [enterClip],
         };
       }
 
       targetScreen.layers.push(newLayer);
       writeMtnFile(resolvedPath, pkg);
+      const noticeStr = notices.length > 0 ? " [" + notices.join(" | ") + "]" : "";
       return {
-        text: `Placed ${args.type} layer "${args.name}" (id: ${layerId}) in scene "${targetScreen.name}" at [${x}, ${y}, ${width}x${height}].`,
+        text: `Placed ${args.type} layer "${args.name}" (id: ${layerId}) in scene "${targetScreen.name}" at [${x}, ${y}, ${width}x${height}].${noticeStr}`,
       };
     }
 
@@ -2096,6 +2141,14 @@ function handleToolCall(name, args) {
       const clipId = "clip_" + Math.random().toString(36).slice(2, 8);
       const startTime = args.start !== undefined ? args.start : (args.delay || 0);
 
+      let easing = args.easing || "snappy";
+      const isOptical = ["fade", "fadeIn", "fadeOut", "blurIn", "glassIris"].includes(args.preset);
+      let notice = "";
+      if (isOptical && (easing === "bouncy" || easing === "elastic")) {
+        easing = "smooth";
+        notice = " (Notice: Easing downgraded to 'smooth' to preserve optical channel monotonicity)";
+      }
+
       const newClip = {
         id: clipId,
         name: `${args.preset} ${args.type || "in"}`,
@@ -2103,18 +2156,27 @@ function handleToolCall(name, args) {
         preset: args.preset,
         start: startTime,
         duration: args.duration,
-        easing: args.easing || "snappy",
+        easing,
       };
 
       if (args.direction) newClip.direction = args.direction;
       if (args.loop) newClip.loop = args.loop;
       if (args.loopCount !== undefined) newClip.loopCount = args.loopCount;
       if (args.spring) newClip.spring = args.spring;
+      if (args.splitBy) newClip.splitBy = args.splitBy;
+      if (args.animateBy) newClip.animateBy = args.animateBy;
+      if (args.stagger !== undefined) newClip.stagger = args.stagger;
+      if (args.staggerDelay !== undefined) newClip.staggerDelay = args.staggerDelay;
+      if (args.distance !== undefined) newClip.distance = args.distance;
+      if (args.scaleAmount !== undefined) newClip.scaleAmount = args.scaleAmount;
+      if (args.rotationDegrees !== undefined) newClip.rotationDegrees = args.rotationDegrees;
+      if (args.params) newClip.params = args.params;
 
       foundLayer.animation.clips.push(newClip);
       writeMtnFile(resolvedPath, pkg);
+      const splitInfo = (args.splitBy || args.animateBy) ? ` [kinetic split: ${args.splitBy || args.animateBy}, stagger: ${args.stagger ?? args.staggerDelay ?? 0.08}s]` : "";
       return {
-        text: `Applied "${args.preset}" (${newClip.type}, ${args.duration}s, start: ${startTime}s, easing: ${newClip.easing}) to layer "${foundLayer.name}" in scene "${targetScreen.name}".`,
+        text: `Applied "${args.preset}" (${newClip.type}, ${args.duration}s, start: ${startTime}s, easing: ${newClip.easing})${splitInfo} to layer "${foundLayer.name}" in scene "${targetScreen.name}".${notice}`,
       };
     }
 
@@ -2219,22 +2281,43 @@ function handleToolCall(name, args) {
         }
       }
 
+      const getCentroid = (l) => ({
+        cx: (l.style?.x || 0) + (typeof l.style?.width === "number" ? l.style.width / 2 : 50),
+        cy: (l.style?.y || 0) + (typeof l.style?.height === "number" ? l.style.height / 2 : 25),
+      });
+
       if (order === "left-to-right") {
-        matchedLayers.sort((a, b) => (a.style?.x || 0) - (b.style?.x || 0));
+        matchedLayers.sort((a, b) => getCentroid(a).cx - getCentroid(b).cx);
       } else if (order === "right-to-left") {
-        matchedLayers.sort((a, b) => (b.style?.x || 0) - (a.style?.x || 0));
+        matchedLayers.sort((a, b) => getCentroid(b).cx - getCentroid(a).cx);
       } else if (order === "top-to-bottom") {
-        matchedLayers.sort((a, b) => (a.style?.y || 0) - (b.style?.y || 0));
+        matchedLayers.sort((a, b) => getCentroid(a).cy - getCentroid(b).cy);
       } else if (order === "bottom-to-top") {
-        matchedLayers.sort((a, b) => (b.style?.y || 0) - (a.style?.y || 0));
+        matchedLayers.sort((a, b) => getCentroid(b).cy - getCentroid(a).cy);
       } else if (order === "center-out") {
-        const avgX = matchedLayers.reduce((s, l) => s + (l.style?.x || 0), 0) / (matchedLayers.length || 1);
-        matchedLayers.sort((a, b) => Math.abs((a.style?.x || 0) - avgX) - Math.abs((b.style?.x || 0) - avgX));
+        const avgX = matchedLayers.reduce((s, l) => s + getCentroid(l).cx, 0) / (matchedLayers.length || 1);
+        const avgY = matchedLayers.reduce((s, l) => s + getCentroid(l).cy, 0) / (matchedLayers.length || 1);
+        matchedLayers.sort((a, b) => {
+          const distA = Math.hypot(getCentroid(a).cx - avgX, getCentroid(a).cy - avgY);
+          const distB = Math.hypot(getCentroid(b).cx - avgX, getCentroid(b).cy - avgY);
+          return distA - distB;
+        });
+      } else if (order === "edges-in") {
+        const avgX = matchedLayers.reduce((s, l) => s + getCentroid(l).cx, 0) / (matchedLayers.length || 1);
+        const avgY = matchedLayers.reduce((s, l) => s + getCentroid(l).cy, 0) / (matchedLayers.length || 1);
+        matchedLayers.sort((a, b) => {
+          const distA = Math.hypot(getCentroid(a).cx - avgX, getCentroid(a).cy - avgY);
+          const distB = Math.hypot(getCentroid(b).cx - avgX, getCentroid(b).cy - avgY);
+          return distB - distA;
+        });
       }
 
       matchedLayers.forEach((found, idx) => {
         if (!found.animation) found.animation = { clips: [] };
         if (!found.animation.clips) found.animation.clips = [];
+        // Clear previous entrance clips to prevent conflicting stacked animations
+        found.animation.clips = found.animation.clips.filter((c) => c.type !== "in");
+
         const clipId = "clip_" + Math.random().toString(36).slice(2, 8);
         found.animation.clips.push({
           id: clipId,
@@ -2268,20 +2351,25 @@ function handleToolCall(name, args) {
       if (!drivenLayer.bindings) drivenLayer.bindings = [];
       drivenLayer.bindings = drivenLayer.bindings.filter((b) => b.driverLayerId !== args.driverId);
 
+      const bindingId = "bind_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6);
       drivenLayer.bindings.push({
+        id: bindingId,
         driverLayerId: args.driverId,
+        targetLayerId: args.drivenId,
+        driverProp: args.mode === "hug" ? "width" : args.mode === "reflow" ? "x" : "progress",
+        drivenProp: args.mode === "hug" ? "width" : args.mode === "reflow" ? "x" : "progress",
         mode: args.mode,
         padding: args.padding ?? 24,
-        gap: args.gap ?? 16,
-        axis: args.axis || "x",
-        anchor: args.anchor || "center",
-        curve: args.curve || "straight",
+        reflowGap: args.gap ?? 16,
+        reflowAxis: (args.axis === "y" || args.axis === "vertical") ? "vertical" : "horizontal",
+        targetAnchor: args.anchor || "center",
+        lineCurve: args.curve || "straight",
         lagSeconds: args.lagSeconds ?? 0.08,
       });
 
       writeMtnFile(resolvedPath, pkg);
       return {
-        text: `Linked driven element "${drivenLayer.name}" to driver "${driverLayer.name}" with reactive mode "${args.mode}".`,
+        text: `Linked driven element "${drivenLayer.name}" to driver "${driverLayer.name}" with reactive mode "${args.mode}" (binding id: ${bindingId}).`,
       };
     }
 
@@ -2315,7 +2403,7 @@ function handleToolCall(name, args) {
       let targetScreen = null;
       for (const sc of doc.screens) {
         const found = sc.layers.find((l) => l.id === args.layerId);
-        if (found && found.type === "text") {
+        if (found && (found.type === "text" || found.type === "chunk")) {
           textLayer = found;
           targetScreen = sc;
           break;
@@ -2327,66 +2415,170 @@ function handleToolCall(name, args) {
 
       const content = textLayer.content || textLayer.name || "";
       const splitBy = args.splitBy || "word";
-      const staggerDelay = args.staggerDelay || 0.05;
-      const preset = args.preset || "slide";
+      const staggerDelay = args.staggerDelay ?? (splitBy === "character" ? 0.04 : splitBy === "line" ? 0.12 : 0.08);
+      const preset = args.preset || (splitBy === "line" ? "baselineRise" : "pop");
+      const fontSize = typeof textLayer.style?.fontSize === "number" ? textLayer.style.fontSize : 48;
+      const lineHeight = typeof textLayer.style?.lineHeight === "number" ? textLayer.style.lineHeight : 1.2;
+      const spaceWidth = Math.round(fontSize * 0.27 * 100) / 100;
 
-      const units = splitBy === "character"
-        ? content.split("")
-        : splitBy === "line"
-        ? content.split("\n")
-        : content.split(" ");
+      let chunks = [];
+      let layoutConfig = {
+        display: "flex",
+        flexDirection: "row",
+        flexWrap: "wrap",
+        gap: spaceWidth,
+        align: "center",
+        justifyContent: textLayer.style?.textAlign === "left" ? "start" : textLayer.style?.textAlign === "right" ? "end" : "center",
+      };
 
-      const totalLen = content.length || 1;
-      const layerWidth = textLayer.style.width || 400;
-      const layerHeight = textLayer.style.height || 60;
-      const startX = textLayer.style.x;
-      const startY = textLayer.style.y;
-
-      let currentX = startX;
-      const chunks = [];
-
-      units.forEach((unit, idx) => {
-        const unitWidth = Math.max(10, Math.round((unit.length / totalLen) * layerWidth));
-        const chunkLayer = {
-          id: `${textLayer.id}_split_${idx}`,
-          name: `${textLayer.name} [${unit}]`,
-          type: "text",
-          content: unit,
-          style: {
-            ...textLayer.style,
-            x: currentX,
-            y: startY,
-            width: unitWidth,
-            height: layerHeight,
-          },
-          animation: {
-            clips: [
-              {
-                id: "clip_" + Math.random().toString(36).slice(2, 8),
-                name: `${preset} in`,
-                type: "in",
-                preset,
-                start: Math.round(idx * staggerDelay * 100) / 100,
-                duration: 0.5,
-                easing: "snappy",
-              },
-            ],
-          },
+      if (splitBy === "line") {
+        const lines = content.split("\n");
+        const halfLeading = Math.max(0, (fontSize * (lineHeight - 1)) / 2);
+        const lineGap = Math.round(halfLeading * 2) || 8;
+        layoutConfig = {
+          display: "flex",
+          flexDirection: "column",
+          gap: lineGap,
+          align: textLayer.style?.textAlign === "left" ? "start" : textLayer.style?.textAlign === "right" ? "end" : "center",
         };
-        chunks.push(chunkLayer);
-        currentX += unitWidth + 8;
-      });
+        lines.forEach((lineText, idx) => {
+          chunks.push({
+            id: `${textLayer.id}_line_${idx}`,
+            name: `${lineText.slice(0, 20)}...`,
+            type: "chunk",
+            content: lineText,
+            style: {
+              ...textLayer.style,
+              x: 0,
+              y: 0,
+              width: "auto",
+              height: "auto",
+            },
+            animation: {
+              clips: [
+                {
+                  id: "clip_" + Math.random().toString(36).slice(2, 8),
+                  name: `${preset} in`,
+                  type: "in",
+                  preset,
+                  start: Math.round(idx * staggerDelay * 100) / 100,
+                  duration: 0.6,
+                  easing: args.easing || "snappy",
+                },
+              ],
+            },
+          });
+        });
+      } else if (splitBy === "selection" && args.range) {
+        const { start, end } = args.range;
+        const prefix = content.slice(0, start);
+        const selected = content.slice(start, end);
+        const suffix = content.slice(end);
+        layoutConfig.gap = 0;
+        if (prefix) {
+          chunks.push({
+            id: `${textLayer.id}_pre`,
+            name: prefix,
+            type: "chunk",
+            content: prefix,
+            style: { ...textLayer.style, x: 0, y: 0, width: "auto", height: "auto" },
+          });
+        }
+        if (selected) {
+          chunks.push({
+            id: `${textLayer.id}_sel`,
+            name: selected,
+            type: "chunk",
+            content: selected,
+            style: { ...textLayer.style, x: 0, y: 0, width: "auto", height: "auto" },
+            animation: {
+              clips: [
+                {
+                  id: "clip_" + Math.random().toString(36).slice(2, 8),
+                  name: `${preset} in`,
+                  type: "in",
+                  preset,
+                  start: 0,
+                  duration: 0.5,
+                  easing: args.easing || "snappy",
+                },
+              ],
+            },
+          });
+        }
+        if (suffix) {
+          chunks.push({
+            id: `${textLayer.id}_suf`,
+            name: suffix,
+            type: "chunk",
+            content: suffix,
+            style: { ...textLayer.style, x: 0, y: 0, width: "auto", height: "auto" },
+          });
+        }
+      } else {
+        // Words (default) or characters
+        const words = splitBy === "character" ? Array.from(content) : (content.match(/\S+/g) || [content]);
+        words.forEach((unit, idx) => {
+          chunks.push({
+            id: `${textLayer.id}_chunk_${idx}`,
+            name: `${unit}`,
+            type: "chunk",
+            content: unit,
+            style: {
+              ...textLayer.style,
+              x: 0,
+              y: 0,
+              width: "auto",
+              height: "auto",
+            },
+            animation: {
+              clips: [
+                {
+                  id: "clip_" + Math.random().toString(36).slice(2, 8),
+                  name: `${preset} in`,
+                  type: "in",
+                  preset,
+                  start: Math.round(idx * staggerDelay * 100) / 100,
+                  duration: 0.5,
+                  easing: args.easing || "snappy",
+                },
+              ],
+            },
+          });
+        });
+      }
+
+      const compoundGroup = {
+        id: `group_text_${Math.random().toString(36).slice(2, 8)}`,
+        name: `${textLayer.name} (Split ${splitBy})`,
+        type: "group",
+        isCompound: true,
+        compoundType: "split-text",
+        locked: true,
+        autoFit: true,
+        layout: layoutConfig,
+        style: {
+          ...textLayer.style,
+          x: textLayer.style?.x || 0,
+          y: textLayer.style?.y || 0,
+          width: textLayer.style?.width || "auto",
+          height: "auto",
+          backgroundColor: "transparent",
+          borderWidth: 0,
+        },
+        children: chunks,
+      };
 
       const origIdx = targetScreen.layers.findIndex((l) => l.id === args.layerId);
       if (origIdx !== -1) {
-        targetScreen.layers.splice(origIdx, 1, ...chunks);
+        targetScreen.layers.splice(origIdx, 1, compoundGroup);
       } else {
-        targetScreen.layers.push(...chunks);
+        targetScreen.layers.push(compoundGroup);
       }
 
       writeMtnFile(resolvedPath, pkg);
       return {
-        text: `Semantically split text "${content}" into ${chunks.length} ${splitBy} layers with ${staggerDelay}s kinetic stagger.`,
+        text: `Deliberately split text "${content}" into ${chunks.length} kinetic ${splitBy} layers within a flex compound group (gap: ${layoutConfig.gap}px) with 0.0000px visual shift invariance. NOTE: For standard headline reveals, you can keep text unified and use apply_animation({ layerId: "${textLayer.id}", preset: "wordCascade", splitBy: "word" }) without splitting layers.`,
       };
     }
 
@@ -2405,78 +2597,149 @@ function handleToolCall(name, args) {
         return { text: `Error: Shape layer "${args.layerId}" not found.` };
       }
 
-      const w = shapeLayer.style?.width || 200;
-      const h = shapeLayer.style?.height || 200;
+      const w = typeof shapeLayer.style?.width === "number" ? shapeLayer.style.width : 200;
+      const h = typeof shapeLayer.style?.height === "number" ? shapeLayer.style.height : 200;
       const r = typeof shapeLayer.style?.borderRadius === "number" ? shapeLayer.style.borderRadius : 16;
       const effectiveR = Math.min(r, Math.min(w, h) / 2);
+      const isCircle = shapeLayer.shapeType === "circle" || shapeLayer.shapeType === "ellipse";
 
-      const pathA_d = `M ${effectiveR} 0 L ${w - effectiveR} 0 A ${effectiveR} ${effectiveR} 0 0 1 ${w} ${effectiveR} L ${w} ${h - effectiveR} A ${effectiveR} ${effectiveR} 0 0 1 ${w - effectiveR} ${h}`;
-      const pathB_d = `M ${w - effectiveR} ${h} L ${effectiveR} ${h} A ${effectiveR} ${effectiveR} 0 0 1 0 ${h - effectiveR} L 0 ${effectiveR} A ${effectiveR} ${effectiveR} 0 0 1 ${effectiveR} 0`;
+      let pathA_d, pathB_d;
+      if (isCircle) {
+        const rx = w / 2;
+        const ry = h / 2;
+        // Left arc (top to bottom) and Right arc (bottom to top)
+        pathA_d = `M ${rx} 0 A ${rx} ${ry} 0 0 0 ${rx} ${h}`;
+        pathB_d = `M ${rx} ${h} A ${rx} ${ry} 0 0 0 ${rx} 0`;
+      } else {
+        // Rounded rect NW->SE and SE->NW
+        pathA_d = `M ${effectiveR} 0 L ${w - effectiveR} 0 A ${effectiveR} ${effectiveR} 0 0 1 ${w} ${effectiveR} L ${w} ${h - effectiveR} A ${effectiveR} ${effectiveR} 0 0 1 ${w - effectiveR} ${h}`;
+        pathB_d = `M ${w - effectiveR} ${h} L ${effectiveR} ${h} A ${effectiveR} ${effectiveR} 0 0 1 0 ${h - effectiveR} L 0 ${effectiveR} A ${effectiveR} ${effectiveR} 0 0 1 ${effectiveR} 0`;
+      }
 
-      const partA = {
-        id: `${shapeLayer.id}_arc_A`,
-        name: `${shapeLayer.name} (Arc NW->SE)`,
-        type: "shape",
-        shapeType: "path",
-        d: pathA_d,
+      const strokeW = typeof shapeLayer.style?.borderWidth === "number" && shapeLayer.style.borderWidth > 0 ? shapeLayer.style.borderWidth : 2;
+      const strokeC = shapeLayer.style?.borderColor || shapeLayer.style?.color || "#ffffff";
+      const hasFill = shapeLayer.style?.backgroundColor && shapeLayer.style.backgroundColor !== "transparent";
+
+      const children = [];
+
+      // Preserve fill if present
+      if (hasFill) {
+        children.push({
+          id: `${shapeLayer.id}_fill`,
+          name: `${shapeLayer.name} (Fill)`,
+          type: "shape",
+          shapeType: shapeLayer.shapeType || "rectangle",
+          style: {
+            ...shapeLayer.style,
+            x: 0,
+            y: 0,
+            borderWidth: 0,
+            borderColor: "transparent",
+          },
+          animation: {
+            clips: [
+              {
+                id: "clip_" + Math.random().toString(36).slice(2, 8),
+                name: "fade in",
+                type: "in",
+                preset: "fade",
+                start: 0.4,
+                duration: 0.5,
+                easing: "smooth",
+              },
+            ],
+          },
+        });
+      }
+
+      children.push(
+        {
+          id: `${shapeLayer.id}_arc_A`,
+          name: `${shapeLayer.name} (Arc NW->SE)`,
+          type: "shape",
+          shapeType: "path",
+          d: pathA_d,
+          style: {
+            ...shapeLayer.style,
+            x: 0,
+            y: 0,
+            backgroundColor: "transparent",
+            borderWidth: strokeW,
+            borderColor: strokeC,
+          },
+          animation: {
+            clips: [
+              {
+                id: "clip_" + Math.random().toString(36).slice(2, 8),
+                name: "drawOn in",
+                type: "in",
+                preset: "drawOn",
+                start: 0,
+                duration: args.duration || 0.8,
+                easing: args.easing || "snappy",
+              },
+            ],
+          },
+        },
+        {
+          id: `${shapeLayer.id}_arc_B`,
+          name: `${shapeLayer.name} (Arc SE->NW)`,
+          type: "shape",
+          shapeType: "path",
+          d: pathB_d,
+          style: {
+            ...shapeLayer.style,
+            x: 0,
+            y: 0,
+            backgroundColor: "transparent",
+            borderWidth: strokeW,
+            borderColor: strokeC,
+          },
+          animation: {
+            clips: [
+              {
+                id: "clip_" + Math.random().toString(36).slice(2, 8),
+                name: "drawOn in",
+                type: "in",
+                preset: "drawOn",
+                start: 0.08,
+                duration: args.duration || 0.8,
+                easing: args.easing || "snappy",
+              },
+            ],
+          },
+        }
+      );
+
+      const compoundGroup = {
+        id: `group_split_shape_${Math.random().toString(36).slice(2, 8)}`,
+        name: `${shapeLayer.name} (Split Contour)`,
+        type: "group",
+        isCompound: true,
+        compoundType: "split-shape",
+        locked: true,
         style: {
           ...shapeLayer.style,
+          x: shapeLayer.style?.x || 0,
+          y: shapeLayer.style?.y || 0,
+          width: w,
+          height: h,
           backgroundColor: "transparent",
-          borderWidth: shapeLayer.style.borderWidth || 2,
-          borderColor: shapeLayer.style.borderColor || "#ffffff",
+          borderWidth: 0,
         },
-        animation: {
-          clips: [
-            {
-              id: "clip_" + Math.random().toString(36).slice(2, 8),
-              name: "drawOn in",
-              type: "in",
-              preset: "drawOn",
-              start: 0,
-              duration: 0.6,
-              easing: "snappy",
-            },
-          ],
-        },
-      };
-
-      const partB = {
-        id: `${shapeLayer.id}_arc_B`,
-        name: `${shapeLayer.name} (Arc SE->NW)`,
-        type: "shape",
-        shapeType: "path",
-        d: pathB_d,
-        style: {
-          ...shapeLayer.style,
-          backgroundColor: "transparent",
-          borderWidth: shapeLayer.style.borderWidth || 2,
-          borderColor: shapeLayer.style.borderColor || "#ffffff",
-        },
-        animation: {
-          clips: [
-            {
-              id: "clip_" + Math.random().toString(36).slice(2, 8),
-              name: "drawOn in",
-              type: "in",
-              preset: "drawOn",
-              start: 0.08,
-              duration: 0.6,
-              easing: "snappy",
-            },
-          ],
-        },
+        children,
       };
 
       const origIdx = targetScreen.layers.findIndex((l) => l.id === args.layerId);
       if (origIdx !== -1) {
-        targetScreen.layers.splice(origIdx, 1, partA, partB);
+        targetScreen.layers.splice(origIdx, 1, compoundGroup);
       } else {
-        targetScreen.layers.push(partA, partB);
+        targetScreen.layers.push(compoundGroup);
       }
 
       writeMtnFile(resolvedPath, pkg);
       return {
-        text: `Split shape "${shapeLayer.name}" into dual-origin continuous draw-on arcs with 0.0px shift invariance.`,
+        text: `Split shape "${shapeLayer.name}" into dual-origin continuous draw-on arcs in compound group "${compoundGroup.name}" with 0.0000px visual shift invariance.`,
       };
     }
 
@@ -2495,85 +2758,193 @@ function handleToolCall(name, args) {
         return { text: `Error: Line layer "${args.layerId}" not found.` };
       }
 
-      const ratio = Math.max(0.1, Math.min(0.9, args.ratio ?? 0.5));
-      const totalWidth = lineLayer.style?.width || 200;
-      const part1Width = Math.round(totalWidth * ratio);
-      const part2Width = totalWidth - part1Width;
+      const totalWidth = typeof lineLayer.style?.width === "number" ? lineLayer.style.width : 200;
+      const totalHeight = typeof lineLayer.style?.height === "number" ? lineLayer.style.height : 20;
+      const strokeW = typeof lineLayer.style?.borderWidth === "number" ? lineLayer.style.borderWidth : 2;
+      const strokeC = lineLayer.style?.borderColor || lineLayer.style?.color || "#3b82f6";
+      const children = [];
 
-      const part1 = {
-        id: `${lineLayer.id}_part1`,
-        name: `${lineLayer.name} (Start)`,
-        type: "line",
-        arrowStart: lineLayer.arrowStart,
-        arrowEnd: false,
-        style: {
-          ...lineLayer.style,
-          width: part1Width,
-        },
-        animation: {
-          clips: [
-            {
-              id: "clip_" + Math.random().toString(36).slice(2, 8),
-              name: "arrowShoot in",
-              type: "in",
-              preset: "arrowShoot",
-              start: 0,
-              duration: 0.5,
-              easing: "snappy",
-            },
-          ],
-        },
-      };
+      if (args.detachArrowhead) {
+        // Shaft (without arrowhead)
+        children.push({
+          ...JSON.parse(JSON.stringify(lineLayer)),
+          id: `${lineLayer.id}_shaft`,
+          name: `${lineLayer.name} (Shaft)`,
+          type: "line",
+          arrowStart: "none",
+          arrowEnd: "none",
+          style: {
+            ...lineLayer.style,
+            x: 0,
+            y: 0,
+            width: totalWidth,
+            rotation: 0,
+          },
+          animation: {
+            clips: [
+              {
+                id: "clip_" + Math.random().toString(36).slice(2, 8),
+                name: "drawOn in",
+                type: "in",
+                preset: "drawOn",
+                start: 0,
+                duration: args.duration || 0.8,
+                easing: args.easing || "snappy",
+              },
+            ],
+          },
+        });
 
-      const part2 = {
-        id: `${lineLayer.id}_part2`,
-        name: `${lineLayer.name} (End)`,
-        type: "line",
-        arrowStart: false,
-        arrowEnd: lineLayer.arrowEnd,
-        style: {
-          ...lineLayer.style,
-          x: (lineLayer.style.x || 0) + part1Width,
-          width: part2Width,
-        },
-        animation: {
-          clips: [
-            {
-              id: "clip_" + Math.random().toString(36).slice(2, 8),
-              name: "arrowShoot in",
-              type: "in",
-              preset: "arrowShoot",
-              start: 0.25,
-              duration: 0.5,
-              easing: "snappy",
+        // Arrowhead tip marker
+        const headSize = Math.max(12, strokeW * 4);
+        children.push({
+          id: `${lineLayer.id}_head`,
+          name: `${lineLayer.name} (Head)`,
+          type: "shape",
+          shapeType: "triangle",
+          style: {
+            x: Math.max(0, totalWidth - headSize / 2),
+            y: Math.max(0, totalHeight / 2 - headSize / 2),
+            width: headSize,
+            height: headSize,
+            rotation: 90,
+            opacity: 1,
+            backgroundColor: strokeC,
+            borderWidth: 0,
+          },
+          animation: {
+            clips: [
+              {
+                id: "clip_" + Math.random().toString(36).slice(2, 8),
+                name: "pop in",
+                type: "in",
+                preset: "pop",
+                start: 0.6,
+                duration: 0.4,
+                easing: "bouncy",
+              },
+            ],
+          },
+        });
+      } else {
+        // Ratio split
+        const ratio = Math.max(0.05, Math.min(0.95, args.ratio ?? 0.5));
+        const part1Width = Math.round(totalWidth * ratio);
+        const part2Width = totalWidth - part1Width;
+
+        children.push(
+          {
+            ...JSON.parse(JSON.stringify(lineLayer)),
+            id: `${lineLayer.id}_part1`,
+            name: `${lineLayer.name} (Part 1)`,
+            type: "line",
+            arrowStart: lineLayer.arrowStart || "none",
+            arrowEnd: "none",
+            style: {
+              ...lineLayer.style,
+              x: 0,
+              y: 0,
+              width: part1Width,
+              rotation: 0,
             },
-          ],
+            animation: {
+              clips: [
+                {
+                  id: "clip_" + Math.random().toString(36).slice(2, 8),
+                  name: "drawOn in",
+                  type: "in",
+                  preset: "drawOn",
+                  start: 0,
+                  duration: (args.duration || 0.6) * ratio,
+                  easing: args.easing || "snappy",
+                },
+              ],
+            },
+          },
+          {
+            ...JSON.parse(JSON.stringify(lineLayer)),
+            id: `${lineLayer.id}_part2`,
+            name: `${lineLayer.name} (Part 2)`,
+            type: "line",
+            arrowStart: "none",
+            arrowEnd: lineLayer.arrowEnd || "none",
+            style: {
+              ...lineLayer.style,
+              x: part1Width,
+              y: 0,
+              width: part2Width,
+              rotation: 0,
+            },
+            animation: {
+              clips: [
+                {
+                  id: "clip_" + Math.random().toString(36).slice(2, 8),
+                  name: "drawOn in",
+                  type: "in",
+                  preset: "drawOn",
+                  start: Math.round(((args.duration || 0.6) * ratio) * 100) / 100,
+                  duration: (args.duration || 0.6) * (1 - ratio),
+                  easing: args.easing || "snappy",
+                },
+              ],
+            },
+          }
+        );
+      }
+
+      const compoundGroup = {
+        id: `group_line_${Math.random().toString(36).slice(2, 8)}`,
+        name: `${lineLayer.name} (Split Line)`,
+        type: "group",
+        isCompound: true,
+        compoundType: "split-line",
+        locked: true,
+        style: {
+          x: lineLayer.style?.x || 0,
+          y: lineLayer.style?.y || 0,
+          width: totalWidth,
+          height: totalHeight,
+          rotation: lineLayer.style?.rotation || 0,
+          opacity: lineLayer.style?.opacity ?? 1,
+          backgroundColor: "transparent",
+          borderWidth: 0,
         },
+        children,
       };
 
       const origIdx = targetScreen.layers.findIndex((l) => l.id === args.layerId);
       if (origIdx !== -1) {
-        targetScreen.layers.splice(origIdx, 1, part1, part2);
+        targetScreen.layers.splice(origIdx, 1, compoundGroup);
       } else {
-        targetScreen.layers.push(part1, part2);
+        targetScreen.layers.push(compoundGroup);
       }
 
       writeMtnFile(resolvedPath, pkg);
       return {
-        text: `Split line "${lineLayer.name}" at ratio ${ratio} into sequential kinetic vector segments.`,
+        text: `Split line "${lineLayer.name}" inside compound group "${compoundGroup.name}" with 0.0000px visual shift invariance regardless of rotation.`,
       };
     }
 
     case "separate_stroke_fill": {
-      const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
-      if (!targetScreen) {
-        return { text: `Error: Scene "${args.sceneId}" not found.` };
+      let targetScreen = null;
+      let orig = null;
+      if (args.sceneId) {
+        targetScreen = doc.screens.find((s) => s.id === args.sceneId);
+        if (targetScreen) orig = targetScreen.layers.find((l) => l.id === args.layerId);
+      } else {
+        for (const sc of doc.screens) {
+          const found = sc.layers.find((l) => l.id === args.layerId);
+          if (found) {
+            targetScreen = sc;
+            orig = found;
+            break;
+          }
+        }
       }
-      const idx = targetScreen.layers.findIndex((l) => l.id === args.layerId);
-      if (idx === -1) {
-        return { text: `Error: Layer "${args.layerId}" not found in scene "${args.sceneId}".` };
+      if (!targetScreen || !orig) {
+        return { text: `Error: Layer "${args.layerId}" not found.` };
       }
-      const orig = targetScreen.layers[idx];
+
       const width = typeof orig.style?.width === "number" ? orig.style.width : 200;
       const height = typeof orig.style?.height === "number" ? orig.style.height : 150;
       const strokeWidth = typeof orig.style?.borderWidth === "number" && orig.style.borderWidth > 0 ? orig.style.borderWidth : 2;
@@ -2597,8 +2968,8 @@ function handleToolCall(name, args) {
               name: "fade in",
               type: "in",
               preset: "fade",
-              duration: 0.6,
-              start: 0.4,
+              duration: args.fillDuration || 0.6,
+              start: args.fillDelay ?? 0.4,
               easing: "smooth",
             },
           ],
@@ -2629,7 +3000,7 @@ function handleToolCall(name, args) {
               name: "drawOn in",
               type: "in",
               preset: "drawOn",
-              duration: 0.8,
+              duration: args.strokeDuration || 0.8,
               start: 0,
               easing: "snappy",
             },
@@ -2642,7 +3013,7 @@ function handleToolCall(name, args) {
         name: `${orig.name} (Separated)`,
         type: "group",
         isCompound: true,
-        compoundType: "separated-stroke-fill",
+        compoundType: "split-shape",
         style: {
           x: orig.style?.x || 0,
           y: orig.style?.y || 0,
@@ -2656,6 +3027,7 @@ function handleToolCall(name, args) {
         children: [fillLayer, strokeLayer],
       };
 
+      const idx = targetScreen.layers.findIndex((l) => l.id === args.layerId);
       targetScreen.layers.splice(idx, 1, group);
       writeMtnFile(resolvedPath, pkg);
       return {
@@ -2664,17 +3036,27 @@ function handleToolCall(name, args) {
     }
 
     case "join_lines_into_shape": {
-      const targetScreen = doc.screens.find((s) => s.id === args.sceneId);
-      if (!targetScreen) {
-        return { text: `Error: Scene "${args.sceneId}" not found.` };
-      }
       const lineIds = args.lineIds || [];
+      let targetScreen = null;
+      if (args.sceneId) {
+        targetScreen = doc.screens.find((s) => s.id === args.sceneId);
+      } else {
+        for (const sc of doc.screens) {
+          if (lineIds.some((id) => sc.layers.some((l) => l.id === id))) {
+            targetScreen = sc;
+            break;
+          }
+        }
+      }
+      if (!targetScreen) {
+        return { text: `Error: Scene containing specified lines not found.` };
+      }
       const lines = lineIds
         .map((id) => targetScreen.layers.find((l) => l.id === id))
         .filter(Boolean);
 
       if (lines.length < 2) {
-        return { text: `Error: join_lines_into_shape requires at least 2 lines found in scene "${args.sceneId}".` };
+        return { text: `Error: join_lines_into_shape requires at least 2 lines found in scene "${targetScreen.name}".` };
       }
 
       // Convert lines to segments
