@@ -3782,12 +3782,22 @@ function processRpcMessage(msg) {
   return null;
 }
 
+// Process-level error resilience
+process.on("uncaughtException", (err) => {
+  process.stderr.write(`[MCP Uncaught Exception]: ${err?.stack || err?.message || err}\n`);
+});
+process.on("unhandledRejection", (reason) => {
+  process.stderr.write(`[MCP Unhandled Rejection]: ${reason?.stack || reason?.message || reason}\n`);
+});
+
 // 1. JSON-RPC 2.0 stdio loop
+process.stdin.on("error", () => {});
 const rl = readline.createInterface({
   input: process.stdin,
   output: process.stdout,
   terminal: false,
 });
+rl.on("error", () => {});
 
 rl.on("line", (line) => {
   const trimmed = line.trim();

@@ -95,12 +95,36 @@ export const useMcpStore = create<McpState>((set, get) => {
         try {
           const { invoke } = await import("@tauri-apps/api/core");
           await invoke("start_mcp_server", { port: targetPort });
-          set({ status: "running", port: targetPort, isMcpEnabled: true, error: null });
-          if (typeof window !== "undefined" && window.localStorage) {
-            window.localStorage.setItem(STORAGE_KEY_PORT, String(targetPort));
-            window.localStorage.setItem(STORAGE_KEY_ENABLED, "true");
+
+          // Verify server health via HTTP endpoint
+          let isHealthy = false;
+          for (let i = 0; i < 15; i++) {
+            await new Promise((r) => setTimeout(r, 200));
+            try {
+              const res = await fetch(`http://127.0.0.1:${targetPort}/health`, { signal: AbortSignal.timeout(400) });
+              if (res.ok) {
+                isHealthy = true;
+                break;
+              }
+            } catch {}
           }
-          return true;
+
+          if (isHealthy) {
+            set({ status: "running", port: targetPort, isMcpEnabled: true, error: null });
+            if (typeof window !== "undefined" && window.localStorage) {
+              window.localStorage.setItem(STORAGE_KEY_PORT, String(targetPort));
+              window.localStorage.setItem(STORAGE_KEY_ENABLED, "true");
+            }
+            return true;
+          } else {
+            const isAlive = await invoke<boolean>("is_mcp_server_running").catch(() => false);
+            if (!isAlive) {
+              set({ status: "error", error: "MCP server process exited unexpectedly after starting." });
+              return false;
+            }
+            set({ status: "running", port: targetPort, isMcpEnabled: true, error: null });
+            return true;
+          }
         } catch (err: any) {
           const msg = err?.message || String(err);
           set({ status: "error", error: msg });
@@ -165,13 +189,16 @@ export const useMcpStore = create<McpState>((set, get) => {
 
       try {
         const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(800) });
-        const isRunning = res.ok;
-        set({ status: isRunning ? "running" : "stopped", isMcpEnabled: isRunning });
-        return isRunning;
+        if (res.ok) {
+          set({ status: "running", isMcpEnabled: true });
+          return true;
+        }
       } catch {
-        set({ status: "stopped" });
-        return false;
+        // Not reachable
       }
+
+      set({ status: "stopped" });
+      return false;
     },
   };
 });

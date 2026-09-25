@@ -307,21 +307,59 @@ fn start_mcp_server(app: tauri::AppHandle, state: tauri::State<McpServerState>, 
 
   let target_script = script_path.unwrap_or_else(|| std::path::PathBuf::from("mcp.js"));
 
+  // Strip Windows verbatim prefix '\\?\' if present because node.js CJS module loader crashes on verbatim paths with EISDIR
+  let clean_target_script = {
+    let s = target_script.to_string_lossy();
+    if let Some(stripped) = s.strip_prefix(r"\\?\") {
+      std::path::PathBuf::from(stripped)
+    } else {
+      target_script
+    }
+  };
+
   let mut cmd = resolve_node_cmd().ok_or_else(|| {
     "Node.js runtime not found on system. Please ensure Node.js is installed to run the MCP server.".to_string()
   })?;
 
-  cmd.arg(&target_script);
+  cmd.arg(&clean_target_script);
   cmd.arg("--port");
   cmd.arg(port.to_string());
   cmd.stdin(Stdio::null());
   cmd.stdout(Stdio::piped());
   cmd.stderr(Stdio::piped());
 
-  let child = cmd.spawn().map_err(|e| format!("Failed to spawn node {:?}: {}", target_script, e))?;
+  let mut child = cmd.spawn().map_err(|e| format!("Failed to spawn node {:?}: {}", clean_target_script, e))?;
+
+  // Read stdout and stderr in background threads to prevent OS pipe buffer deadlocks
+  if let Some(stdout) = child.stdout.take() {
+    std::thread::spawn(move || {
+      use std::io::{BufRead, BufReader};
+      let reader = BufReader::new(stdout);
+      for line in reader.lines().flatten() {
+        log_msg(&format!("[MCP out] {}", line));
+      }
+    });
+  }
+
+  if let Some(stderr) = child.stderr.take() {
+    std::thread::spawn(move || {
+      use std::io::{BufRead, BufReader};
+      let reader = BufReader::new(stderr);
+      for line in reader.lines().flatten() {
+        log_msg(&format!("[MCP err] {}", line));
+      }
+    });
+  }
+
+  // Verify child didn't crash on immediate launch
+  std::thread::sleep(std::time::Duration::from_millis(150));
+  if let Ok(Some(status)) = child.try_wait() {
+    log_msg(&format!("MCP Server child exited immediately: {:?}", status));
+    return Err(format!("MCP Server process exited immediately with status {:?}", status));
+  }
 
   *lock = Some(child);
-  log_msg(&format!("MCP Server started on port {} with script {:?}", port, target_script));
+  log_msg(&format!("MCP Server started on port {} with script {:?}", port, clean_target_script));
   Ok(format!("MCP Server running on port {}", port))
 }
 

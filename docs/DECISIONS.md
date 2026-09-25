@@ -2964,6 +2964,36 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - All 60 test suites (616 tests) pass cleanly (`npm test`).
   - Production build succeeds with 0 errors in 9.13s (`npm run build`).
 
+---
+
+### Decision 127: Windows Verbatim Path Resolution & Background Pipe Draining for Persistent MCP Execution
+* **The Problem**:
+  1. **Premature Process Termination**: In the packaged desktop app, starting the MCP server resulted in immediate disconnection. The UI showed "Active" for a moment, but as soon as the user opened a project or navigated views, `checkStatus()` reported "MCP: Off".
+  2. **Root Cause 1: Windows Verbatim Path Collision in Node.js CJS Loader**:
+     - `app.path().resource_dir()` on Windows returns canonicalized paths with the verbatim prefix `\\?\` (e.g. `\\?\C:\Users\Sam\AppData\Local\Motion Studio\_up_\mcp.js`).
+     - Passing a `\\?\` path to `node.exe` causes Node's internal CommonJS module loader to crash immediately with `Error: EISDIR: illegal operation on a directory, lstat 'C:'`.
+     - Consequently, `node.exe` crashed ~50ms after launch, leaving the server dead.
+  3. **Root Cause 2: Unbuffered Process Pipe Stalling**:
+     - `src-tauri/src/lib.rs` spawned Node with `cmd.stdout(Stdio::piped())` and `cmd.stderr(Stdio::piped())` without draining them.
+     - On Windows, the anonymous pipe buffer is 4 KB. Any unconsumed `console.log()` or `[MCP]` logging filled the buffer and blocked Node's event loop indefinitely.
+  4. **Root Cause 3: Missing Top-Level Error Guards in `mcp.js`**:
+     - `mcp.js` lacked `uncaughtException` and `unhandledRejection` handlers, causing Node to exit on unexpected socket closures or stream drops.
+* **The Solution**:
+  1. **Windows Verbatim Prefix Stripping (`src-tauri/src/lib.rs`)**:
+     - Added `clean_target_script` stripping `\\?\` prefix if present before passing the script path to `node.exe`, ensuring standard drive-path syntax (`C:\...`).
+  2. **Background Thread Pipe Draining (`src-tauri/src/lib.rs`)**:
+     - Attached dedicated background threads to drain `child.stdout` and `child.stderr` via `BufReader::lines()` and write non-blocking logs to `app.log`.
+     - Added an immediate health check (`std::thread::sleep(150ms)` followed by `child.try_wait()`) to verify process survival before returning success.
+  3. **Process-Level Error Resilience (`mcp.js`)**:
+     - Added top-level `process.on("uncaughtException", ...)` and `process.on("unhandledRejection", ...)` to prevent unhandled errors from terminating the process.
+     - Added `process.stdin.on("error", () => {})` and `rl.on("error", () => {})` to protect against closed stdin pipes.
+  4. **Health Polling & Accurate Status Reporting (`src/store/useMcpStore.ts`)**:
+     - Updated `startServer` to poll `http://127.0.0.1:${port}/health` up to 3 seconds to guarantee server responsiveness before declaring active status.
+* **Verification**:
+  - Direct execution test confirmed Node runs persistently on port 8765 without `EISDIR` crash.
+  - All 60 test suites (616 tests) pass cleanly (`npm test`).
+  - Production build and Tauri installers successfully compiled and verified (`npm run desktop:build`).
+
 
 
 
