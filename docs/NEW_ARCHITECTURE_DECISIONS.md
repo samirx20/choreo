@@ -202,4 +202,74 @@ The AI agent tool suite follows a **Hybrid Batch & Surgical Architecture**:
    * To create subsequent states, the agent calls `duplicate_scene` (preserving all IDs), followed by targeted `update_element` calls that specify *only the modified properties* (position, size, text, or color).
 3. **Result**: Maximum token efficiency, zero context exhaustion, and guaranteed visual continuity across scenes.
 
+---
+
+### D9: User-Authored Component Library (Purge Hardcoded Templates)
+
+* **Date**: September 26, 2026
+* **Status**: Decided
+
+#### 1. Context & The Flaw with Hardcoded Templates
+Previously, `insert_template` stamped rigid, pre-built components (`comp_browser_window`, `comp_terminal_window`).
+* Hardcoded templates lock AI agents into generic SaaS website tropes and undermine aesthetic freedom.
+* Creators and agents had no way to save and reuse their own unique compositions.
+
+#### 2. The Decision
+1. **Purge Built-In Templates**: Completely remove `insert_template` and hardcoded component mockups.
+2. **First-Class Component Library**:
+   * Any Group or composition can be saved as a reusable Component (`save_component({ groupId, name })`).
+   * Components store their complete sub-tree of layers, relative coordinate geometry, styling, and local animation parameters.
+3. **Instantiation**:
+   * In GUI: Drag any saved component from the Components panel directly into any scene.
+   * For AI: `insert_component({ componentName, sceneId, x, y })` stamps a fresh instance with auto-generated unique child IDs.
+
+---
+
+### D10: Unified Targeted Sub-Element Splitting Architecture
+
+* **Date**: September 26, 2026
+* **Status**: Decided
+
+#### 1. Context & The Flaw with Fragmented Split Tools
+Previously, splitting was fragmented into 4 separate tools (`split_text`, `split_shape`, `split_line`, `separate_stroke_fill`).
+* They forced rigid all-or-nothing decomposition (e.g. splitting *all* words or *all* edges).
+* In real design workflows, an author only wants to isolate a specific sub-element to style or animate it independently (e.g. highlight one word in a sentence or separate a stroke from its fill).
+
+#### 2. The Decision
+We replace fragmented split tools with a single **Unified Targeted Split Engine**:
+1. **The Mental Model ("Targeted Extract & Split")**:
+   * The user or agent targets an element and selects a specific sub-part or range.
+   * The engine cleanly separates the element into **two (or more) independent layers**:
+     * Layer A: The extracted target sub-element.
+     * Layer B: The remaining original element.
+   * **Invariance**: Both layers render at their exact current positions with **$0.0000\text{px}$ visual shift**.
+2. **Sub-Element Target Modes**:
+   * **Text**: Select a specific word, substring, or character range (e.g. isolate the word `"surprise"` in `"Hey, I got a surprise for you"` so it can be colored gold or scaled independently while preserving exact kerning and line baseline).
+   * **Shapes**: Select `stroke` vs `fill` (separates into an independent stroke path and fill layer for draw-on + delayed fade-in), or select a specific edge/segment.
+   * **Lines**: Select an arrowhead marker or split along a ratio.
+3. **GUI Workflow**:
+   * Double-clicking an element enters **Split Mode**.
+   * Highlight the word, character, or edge/contour segment $\to$ Click "Split".
+4. **AI Agent Tool Contract**:
+   * Unified tool: `split_element({ layerId, target, range, mode: 'word' | 'range' | 'stroke_fill' | 'edge' })`.
+
+---
+
+### D11: Dedicated External Media & Vector Asset Ingestion
+
+* **Date**: September 26, 2026
+* **Status**: Decided
+
+#### 1. Context
+External media (images, videos, SVGs, audio) and vector icons were previously mixed into generic layer creation or ad-hoc URL strings without proper typing or asset pipeline separation.
+
+#### 2. The Decision
+1. **Dedicated Asset Ingestion (`import_asset`)**:
+   * Clean, unified ingestion for external assets: images (PNG, JPG, WebP), videos (MP4, WebM), audio (MP3, WAV), and SVGs.
+   * SVGs are parsed directly into native vector path/group layers.
+2. **Native Lucide Icon Library**:
+   * Lucide icons are accessible natively by icon name (`iconName: "Sparkles"`, `iconName: "Shield"`).
+   * The engine renders icons directly as clean, scalable vector paths without requiring external HTTP asset loading.
+
+
 
