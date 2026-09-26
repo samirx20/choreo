@@ -271,5 +271,62 @@ External media (images, videos, SVGs, audio) and vector icons were previously mi
    * Lucide icons are accessible natively by icon name (`iconName: "Sparkles"`, `iconName: "Shield"`).
    * The engine renders icons directly as clean, scalable vector paths without requiring external HTTP asset loading.
 
+---
+
+## 2. Revamped Next-Gen Tool Catalog Specification
+
+This section documents the exact inventory of agent tools resulting from Decisions D1–D11, including what is purged, what is consolidated, and what is upgraded.
+
+### A. Deprecated & Purged Tools (Removed)
+1. **`insert_template`**: **PURGED**. Hardcoded SaaS browser/terminal window templates are deleted. Replaced by user/agent-authored component library (`save_component`, `insert_component`).
+2. **`update_animation_clip`**: **PURGED / MERGED**. Redundant duplicate of `apply_animation`.
+3. **`split_text`**: **CONSOLIDATED**. Merged into `split_element`.
+4. **`split_shape`**: **CONSOLIDATED**. Merged into `split_element`.
+5. **`split_line`**: **CONSOLIDATED**. Merged into `split_element`.
+6. **`separate_stroke_fill`**: **CONSOLIDATED**. Merged into `split_element`.
+7. **`lint_storyboard`**: **PURGED**. Reactive AST linter deleted; engine enforces correctness by construction.
+8. **`import_svg`**: **CONSOLIDATED**. Merged into `import_asset`.
+
+---
+
+### B. Upgraded & New Core Tool Inventory
+
+The revamped MCP and studio tool catalog is consolidated into 4 clean functional categories:
+
+#### Group 1: Project & Scene Lifecycle
+* **`create_project({ name, aspectRatio, fps, backgroundColor })`**: Initializes a project package.
+* **`update_project / duplicate_project / rename_project / delete_project / list_projects`**: Standard project disk lifecycle.
+* **`set_palette({ colors })`**: Sets semantic project color palette.
+* **`create_scene({ name, duration, transition, mood, elements: [...] })`**: **[UPGRADED]** Accepts full `elements: Layer[]` batch manifest so initial scenes are created in a single call with background layer at index 0.
+* **`duplicate_scene({ sceneId, newName })`**: Clones a scene with **strictly preserved layer IDs** (enables cross-scene state reconciliation).
+* **`update_scene({ sceneId, duration, transition })`**: Updates scene duration and cascading transition defaults.
+* **`delete_scene / reorder_scenes`**: Timeline management.
+
+#### Group 2: Element Composition & Spatial Layout
+* **`place_element({ sceneId, id, type, anchor, bounds, parentId, style, enter })`**: **[UPGRADED]** Places an element with top-level `anchor: [x, y]`, `parentId` for group nesting, and direct bounds or grid.
+* **`update_element({ layerId, ...changes })`**: **[UPGRADED]** Surgically modifies specific properties in a scene (position, size, text, color, anchor) for state evolution.
+* **`duplicate_element / delete_element / reorder_element`**: Layer management.
+* **`group_elements({ sceneId, layerIds, name })`**: Combines layers into a `GroupLayer` with local `(0, 0)` coordinate space.
+* **`ungroup_elements({ groupId })`**: Restores group children to parent coordinate space.
+* **`align_elements({ sceneId, layerIds, alignment, relativeTo, gap })`**: Precision alignment and distribution with explicit gap spacing.
+
+#### Group 3: Components & Targeted Splitting
+* **`save_component({ groupId, name, category })`**: **[NEW]** Saves a custom group composition to the reusable Component Library.
+* **`insert_component({ componentName, sceneId, x, y })`**: **[NEW]** Instantiates a component into a scene with fresh unique IDs.
+* **`split_element({ layerId, target, range, mode })`**: **[NEW & UNIFIED]** Surgical targeted split (isolating a word in text, separating stroke/fill, splitting shape contours or line segments) with $0.0000\text{px}$ visual shift.
+* **`apply_boolean_operation({ sceneId, layerIds, operation })`**: Vector union, subtract, intersect, exclude.
+* **`join_lines_into_shape({ sceneId, lineIds, cornerRadius })`**: Polygon chaining.
+* **`create_mask_group({ sceneId, layerIds, maskLayerId, invertMask })`**: Stencil and cutout clipping masks.
+
+#### Group 4: Animation & Assets
+* **`apply_animation({ layerId, preset, type, duration, delay, easing, spring, splitBy, stagger })`**: Applies entrance reveals (`in`) or ambient loops (`emphasis`). Cross-scene motion uses state reconciliation instead of procedural delta hacks.
+* **`remove_animation({ layerId, clipId })`**: Clears animation clips.
+* **`stagger_elements({ layerIds, preset, delayStep, order })`**: Cascaded entrance sequencing.
+* **`import_asset({ sceneId, type, src, content })`**: **[NEW & UNIFIED]** Unified ingestion for images, videos, audio tracks, and vector SVGs.
+* **`set_audio_track / remove_audio_track`**: Timeline audio.
+* **`export_project({ format, resolution, transparent, scope })`**: Hardware-accelerated video/GIF export.
+* **`get_storyboard_state / get_contact_sheet / render_frame`**: Telemetry and visual inspection.
+
+
 
 
