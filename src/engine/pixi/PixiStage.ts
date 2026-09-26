@@ -204,15 +204,23 @@ export class PixiStage {
   public renderScreen(screen: Screen) {
     if (!this.isReady) return;
 
-    if (this.isTransparent) {
+    const hasBg = Boolean(
+      (screen.background && screen.background.fill && screen.background.fill !== "transparent") ||
+      (screen.backgroundColor && screen.backgroundColor !== "transparent")
+    );
+
+    if (this.isTransparent || !hasBg) {
       this.artboardBg.visible = false;
       if (this.app?.renderer?.background) {
         this.app.renderer.background.alpha = 0.0;
       }
     } else {
       this.artboardBg.visible = true;
+      if (this.app?.renderer?.background) {
+        this.app.renderer.background.alpha = 1.0;
+      }
       // Dynamically update artboard background to matching scene fill
-      const screenBg = screen.backgroundColor || this.options.backgroundColor || "#18181b";
+      const screenBg = screen.background?.fill || screen.backgroundColor || this.options.backgroundColor || "#18181b";
       this.updateArtboardBackground(
         screen.width || this.options.artboardWidth,
         screen.height || this.options.artboardHeight,
@@ -649,7 +657,48 @@ export class PixiStage {
    */
   public seek(time: number, screen: Screen): void {
     if (!this.isReady || !screen) return;
-    const computedStyles = evaluateSceneAtTime(screen.layers, time);
+
+    const hasBg = Boolean(
+      (screen.background && screen.background.fill && screen.background.fill !== "transparent") ||
+      (screen.backgroundColor && screen.backgroundColor !== "transparent")
+    );
+
+    if (this.isTransparent || !hasBg) {
+      this.artboardBg.visible = false;
+      if (this.app?.renderer?.background) {
+        this.app.renderer.background.alpha = 0.0;
+      }
+    } else {
+      this.artboardBg.visible = true;
+      if (this.app?.renderer?.background) {
+        this.app.renderer.background.alpha = 1.0;
+      }
+    }
+
+    const computedStyles = evaluateSceneAtTime(
+      screen.layers,
+      time,
+      0,
+      screen.stepFps,
+      screen.background
+    );
+
+    if (screen.background && this.artboardBg && this.artboardBg.visible) {
+      const bgStyle = computedStyles[screen.background.id];
+      if (bgStyle) {
+        if (bgStyle.opacity !== undefined) {
+          this.artboardBg.alpha = Number(bgStyle.opacity);
+        }
+        if (bgStyle.background || bgStyle.backgroundColor) {
+          const bgFill = String(bgStyle.background || bgStyle.backgroundColor);
+          this.updateArtboardBackground(
+            screen.width || this.options.artboardWidth,
+            screen.height || this.options.artboardHeight,
+            bgFill
+          );
+        }
+      }
+    }
 
     const layerMap = new Map<string, Layer>();
     const collectLayers = (layers: Layer[]) => {

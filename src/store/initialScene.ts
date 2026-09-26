@@ -1,4 +1,4 @@
-import { SceneDocument } from "@/types/scene";
+import { SceneDocument, DEFAULT_BACKGROUND_STYLE } from "@/types/scene";
 
 export const INITIAL_SCENE: SceneDocument = {
   version: "1.0",
@@ -34,6 +34,14 @@ export const INITIAL_SCENE: SceneDocument = {
       name: "Scene 1",
       duration: 5.0,
       backgroundColor: "#ffffff",
+      background: {
+        id: "bg_screen_1",
+        name: "Background",
+        type: "background",
+        fill: "#ffffff",
+        fillType: "solid",
+        style: { ...DEFAULT_BACKGROUND_STYLE },
+      },
       layers: [],
     },
   ],
@@ -45,11 +53,29 @@ export const STORAGE_THEME_KEY = "motion_studio_theme";
 /**
  * Ensures artboards never overlap. If any screen collides with or overlaps
  * a preceding screen, it is cleanly separated side-by-side with a 120px gap.
+ * Also normalizes legacy backgroundColor to first-class BackgroundLayer.
  */
 export function normalizeScreens(doc: SceneDocument): SceneDocument {
   if (!doc.screens || doc.screens.length === 0) return doc;
   let hasOverlap = false;
-  const screens = [...doc.screens];
+  const screens = doc.screens.map((s, idx) => {
+    let screen = { ...s };
+    if (screen.background === undefined && screen.backgroundColor) {
+      if (screen.backgroundColor === "transparent") {
+        screen.background = null;
+      } else {
+        screen.background = {
+          id: `bg_${screen.id || `screen_${idx + 1}`}`,
+          name: "Background",
+          type: "background",
+          fill: screen.backgroundColor,
+          fillType: screen.backgroundColor.includes("gradient") ? "linear-gradient" : "solid",
+          style: { ...DEFAULT_BACKGROUND_STYLE },
+        };
+      }
+    }
+    return screen;
+  });
 
   // Screen 0 must never be at a negative position
   if (screens[0].x !== undefined && screens[0].x < 0) {
@@ -72,7 +98,7 @@ export function normalizeScreens(doc: SceneDocument): SceneDocument {
       };
     }
   }
-  return hasOverlap ? { ...doc, screens } : doc;
+  return { ...doc, screens };
 }
 
 export function loadInitialScene(): SceneDocument {

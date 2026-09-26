@@ -897,7 +897,8 @@ export const CanvasViewport: React.FC<CanvasViewportProps> = ({
     activeScreen.layers,
     evalTime,
     0,
-    activeScreen.stepFps || doc.settings.stepFps
+    activeScreen.stepFps || doc.settings.stepFps,
+    activeScreen.background
   );
 
   // Playback loop via requestAnimationFrame when isPlaying is true

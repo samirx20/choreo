@@ -21,6 +21,11 @@ export const AnimateInspector: React.FC = () => {
     const activeClipId = selectedClipIds[0];
 
     const findClipAndLayer = (layers: Layer[]): { clip: AnimationClip; layer: Layer } | null => {
+      if (activeScreen.background) {
+        const bgClips = getLayerClips(activeScreen.background as any);
+        const match = bgClips.find((c) => c.id === activeClipId);
+        if (match) return { clip: match, layer: activeScreen.background as any };
+      }
       for (const l of layers) {
         const clips = getLayerClips(l);
         const match = clips.find((c) => c.id === activeClipId);
@@ -46,7 +51,12 @@ export const AnimateInspector: React.FC = () => {
 
   // 2. ELEMENT SELECTED (View 2)
   const selectedLayers = selectedLayerIds
-    .map((id) => findLayerInTree(activeScreen.layers, id))
+    .map((id) => {
+      if (activeScreen.background && activeScreen.background.id === id) {
+        return activeScreen.background as any as Layer;
+      }
+      return findLayerInTree(activeScreen.layers, id);
+    })
     .filter((l): l is Layer => l !== null);
 
   const selectedLayer = selectedLayers[0] || null;

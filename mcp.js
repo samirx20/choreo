@@ -1115,6 +1115,9 @@ function handleToolCall(name, args) {
    */
   function findLayerInDoc(doc, targetId) {
     for (const screen of doc.screens || []) {
+      if (screen.background && screen.background.id === targetId) {
+        return { layer: screen.background, parent: null, index: -1, screen };
+      }
       const res = findLayerInTree(screen.layers || [], targetId);
       if (res) {
         return { ...res, screen };
@@ -1218,7 +1221,43 @@ function handleToolCall(name, args) {
         mood: args.mood || "product-showcase",
         layers: [],
       };
-      if (args.backgroundColor) newScene.backgroundColor = args.backgroundColor;
+      if (args.backgroundColor !== undefined) {
+        if (args.backgroundColor === "transparent") {
+          newScene.background = null;
+          newScene.backgroundColor = "transparent";
+        } else {
+          newScene.background = {
+            id: `bg_${sceneId}`,
+            name: "Background",
+            type: "background",
+            fill: args.backgroundColor,
+            fillType: args.backgroundColor.includes("gradient") ? "linear-gradient" : "solid",
+            style: { opacity: 1 },
+          };
+          newScene.backgroundColor = args.backgroundColor;
+        }
+      } else if (args.background) {
+        newScene.background = {
+          id: `bg_${sceneId}`,
+          name: "Background",
+          type: "background",
+          fill: args.background.fill || "#09090b",
+          fillType: args.background.fillType || (args.background.fill?.includes("gradient") ? "linear-gradient" : "solid"),
+          style: { opacity: args.background.opacity ?? 1 },
+          animation: args.background.enter ? {
+            in: {
+              id: `clip_in_${Date.now()}`,
+              name: "Entrance",
+              type: "in",
+              preset: args.background.enter,
+              start: 0,
+              duration: args.background.duration ?? 0.8,
+              easing: args.background.easing ?? "smooth",
+            },
+          } : undefined,
+        };
+        newScene.backgroundColor = newScene.background.fill;
+      }
       if (args.stepFps) newScene.stepFps = args.stepFps;
       if (args.transition) newScene.transition = args.transition;
       doc.screens.push(newScene);
@@ -1237,7 +1276,40 @@ function handleToolCall(name, args) {
       if (args.name) targetScreen.name = args.name;
       if (args.duration) targetScreen.duration = args.duration;
       if (args.mood) targetScreen.mood = args.mood;
-      if (args.backgroundColor !== undefined) targetScreen.backgroundColor = args.backgroundColor;
+      if (args.backgroundColor !== undefined) {
+        if (args.backgroundColor === "transparent") {
+          targetScreen.background = null;
+          targetScreen.backgroundColor = "transparent";
+        } else {
+          targetScreen.background = {
+            id: targetScreen.background?.id || `bg_${args.sceneId}`,
+            name: "Background",
+            type: "background",
+            fill: args.backgroundColor,
+            fillType: args.backgroundColor.includes("gradient") ? "linear-gradient" : "solid",
+            style: targetScreen.background?.style || { opacity: 1 },
+            animation: targetScreen.background?.animation,
+          };
+          targetScreen.backgroundColor = args.backgroundColor;
+        }
+      }
+      if (args.background !== undefined) {
+        if (args.background === null || args.background === "transparent") {
+          targetScreen.background = null;
+          targetScreen.backgroundColor = "transparent";
+        } else {
+          targetScreen.background = {
+            id: targetScreen.background?.id || `bg_${args.sceneId}`,
+            name: "Background",
+            type: "background",
+            fill: args.background.fill || targetScreen.background?.fill || "#09090b",
+            fillType: args.background.fillType || (args.background.fill?.includes("gradient") ? "linear-gradient" : "solid"),
+            style: { opacity: args.background.opacity ?? 1 },
+            animation: targetScreen.background?.animation,
+          };
+          targetScreen.backgroundColor = targetScreen.background.fill;
+        }
+      }
       if (args.stepFps !== undefined) targetScreen.stepFps = args.stepFps;
       if (args.transition !== undefined) targetScreen.transition = args.transition;
       doc.settings.duration = doc.screens.reduce((s, sc) => s + (sc.duration || 0), 0);
@@ -3491,7 +3563,14 @@ function handleToolCall(name, args) {
           name: sc.name,
           duration: `${sc.duration}s`,
           mood: sc.mood || "product-showcase",
-          backgroundColor: sc.backgroundColor || doc.settings.backgroundColor || "#09090b",
+          background: sc.background ? {
+            id: sc.background.id,
+            fill: sc.background.fill,
+            fillType: sc.background.fillType || "solid",
+            animations: sc.background.animation?.clips || (sc.background.animation?.in ? [sc.background.animation.in] : []),
+          } : null,
+          backgroundColor: sc.background?.fill || sc.backgroundColor || "transparent",
+          isTransparent: !sc.background && (!sc.backgroundColor || sc.backgroundColor === "transparent"),
           transition: sc.transition,
           camera: sc.camera,
           layerCount: countAllLayers(sc.layers),
@@ -3510,7 +3589,6 @@ function handleToolCall(name, args) {
 
       const canvasWidth = doc.settings?.width || 1920;
       const canvasHeight = doc.settings?.height || 1080;
-      const canvasBg = targetScreen.backgroundColor || doc.settings?.backgroundColor || "#09090b";
 
       function escapeXml(str) {
         return String(str).replace(/[<>&'"]/g, (c) => {
@@ -3608,10 +3686,15 @@ function handleToolCall(name, args) {
         return `<rect id="${layer.id}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${radius}" fill="${bg}" stroke="${stroke}" stroke-width="${strokeW}" opacity="${op}" ${transform}/>`;
       }
 
+      const hasBg = targetScreen.background !== null && targetScreen.background?.visible !== false && (targetScreen.background?.fill || targetScreen.backgroundColor);
+      const canvasBg = hasBg ? (targetScreen.background?.fill || targetScreen.backgroundColor) : null;
+
       const layersSvg = targetScreen.layers.map(renderLayerSvg).join("\n  ");
+      const bgRectSvg = (canvasBg && canvasBg !== "transparent")
+        ? `  <rect width="${canvasWidth}" height="${canvasHeight}" fill="${canvasBg}"/>\n`
+        : "";
       const fullSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${canvasWidth} ${canvasHeight}" width="${canvasWidth}" height="${canvasHeight}">
-  <rect width="${canvasWidth}" height="${canvasHeight}" fill="${canvasBg}"/>
-  ${layersSvg}
+${bgRectSvg}  ${layersSvg}
 </svg>`;
 
       if (args.outputPath) {

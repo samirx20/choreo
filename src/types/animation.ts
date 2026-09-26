@@ -70,7 +70,14 @@ export type AnimationPreset =
   | 'wiggle'
   | 'heartbeat'
   | 'morph'
-  | 'morphIn';
+  | 'morphIn'
+  | 'radialExpand'
+  | 'linearWipe'
+  | 'curtainSlide'
+  | 'zoomWash'
+  | 'colorShift'
+  | 'radialCollapse'
+  | 'ambientFlash';
 
 export type MorphStyle =
   | 'stardust'

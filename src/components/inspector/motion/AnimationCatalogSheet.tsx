@@ -153,6 +153,25 @@ export const LINE_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
   { id: "grow", name: "Expand", duration: 0.8, easing: "snappy", type: "in", desc: "Axis extension" },
 ];
 
+export const BACKGROUND_ENTRANCE_PRESETS: AnimationCatalogPreset[] = [
+  { id: "fade", name: "Fade In", duration: 0.8, easing: "smooth", type: "in", desc: "Smooth atmospheric dissolve into view" },
+  { id: "radialExpand", name: "Radial Expand", duration: 0.8, easing: "smooth", type: "in", desc: "Expanding circle iris bloom from focal center", params: { origin: "50% 50%" } },
+  { id: "linearWipe", name: "Linear Wipe", duration: 0.8, easing: "smooth", type: "in", desc: "Clean geometric curtain wipe across stage", params: { direction: "right" } },
+  { id: "curtainSlide", name: "Curtain Slide", duration: 0.8, easing: "snappy", type: "in", desc: "Full-bleed background sheet pushes into view", params: { direction: "up" } },
+  { id: "zoomWash", name: "Zoom Wash", duration: 1.0, easing: "smooth", type: "in", desc: "Subtle 1.08x scale settle and optical fade" },
+];
+
+export const BACKGROUND_ACTION_PRESETS: AnimationCatalogPreset[] = [
+  { id: "colorShift", name: "Color Shift", duration: 0.8, easing: "smooth", type: "action", desc: "Smooth analytical color morph to target hue" },
+  { id: "ambientFlash", name: "Ambient Pulse", duration: 0.6, easing: "smooth", type: "action", desc: "Brief atmospheric brightness pulse to accentuate beat" },
+];
+
+export const BACKGROUND_EXIT_PRESETS: AnimationCatalogPreset[] = [
+  { id: "fade", name: "Fade Out", duration: 0.8, easing: "smooth", type: "out", desc: "Smooth dissolve to transparent canvas" },
+  { id: "radialCollapse", name: "Radial Collapse", duration: 0.8, easing: "smooth", type: "out", desc: "Contracts into focal center point" },
+  { id: "linearWipe", name: "Wipe Out", duration: 0.8, easing: "smooth", type: "out", desc: "Geometric curtain sweep off-screen" },
+];
+
 export const EXIT_PRESETS: AnimationCatalogPreset[] = [
   { id: "morph", name: "Morph into...", duration: 0.8, easing: "smooth", type: "out", desc: "Dematerializes and reconstructs into another element" },
   { id: "fade", name: "Fade Out", duration: 0.8, easing: "smooth", type: "out", desc: "Smooth dissolve to transparent" },
@@ -1022,8 +1041,11 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
 
   const layerType = targetLayer?.type;
   const isLine = targetLayer ? isVectorLine(targetLayer) : layerType === "line";
+  const isBackground = layerType === "background";
   const entrancePresets =
-    layerType === "text" || layerType === "chunk"
+    isBackground
+      ? BACKGROUND_ENTRANCE_PRESETS
+      : layerType === "text" || layerType === "chunk"
       ? TEXT_ENTRANCE_PRESETS
       : layerType === "image" || layerType === "video"
       ? MEDIA_ENTRANCE_PRESETS
@@ -1032,6 +1054,8 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
       : isLine
       ? LINE_ENTRANCE_PRESETS
       : SHAPE_ENTRANCE_PRESETS;
+  const actionPresets = isBackground ? BACKGROUND_ACTION_PRESETS : ACTION_PRESETS;
+  const exitPresets = isBackground ? BACKGROUND_EXIT_PRESETS : EXIT_PRESETS;
 
   const filteredCustomCategories = useMemo(() => {
     return getFilteredCustomCategories(targetLayer);
@@ -1419,7 +1443,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                   <span>Action / Loop</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
-                  {ACTION_PRESETS.map((p) => (
+                  {actionPresets.map((p) => (
                     <AnimationCard
                       key={`action-${p.id}`}
                       preset={p}
@@ -1441,7 +1465,7 @@ export const AnimationCatalogSheet: React.FC<AnimationCatalogSheetProps> = ({
                   <span>Exit (Out)</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
-                  {EXIT_PRESETS.map((p) => (
+                  {exitPresets.map((p) => (
                     <AnimationCard
                       key={`out-${p.id}`}
                       preset={p}

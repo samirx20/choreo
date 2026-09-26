@@ -3089,3 +3089,50 @@ The engine provides first-class, motion-first reactive primitives for each eleme
   - Production build: `tsc -b && vite build` completes cleanly with 0 errors in 9.83s.
   - Zero dead code or phantom schemas remain.
 
+---
+
+### Decision 131: Scene Background as a First-Class Animatable Element (Continuous Motion, Atmospheric Presets & Per-Scene Alpha Transparency)
+
+* **Context & Motivation**:
+  - Motion graphics are fundamentally continuous sequences of visual energy. Previously, scene backgrounds were static CSS string properties (`screen.backgroundColor`). This caused several fundamental limitations:
+    1. **Hard Cut Transitions**: Transitions between scenes with different background colors produced jarring, instantaneous color pops rather than continuous fluid motion.
+    2. **Static Surfaces**: Backgrounds could not participate in the animation timeline. Users and AI agents could not author atmospheric scene reveals such as circular iris expansions, edge wipes, curtain slides, or ambient flashes.
+    3. **Global vs. Per-Scene Transparency**: Exporting video with transparent alpha previously relied on a global modal toggle ("without background"), making it impossible to produce videos where specific scenes are transparent overlays (e.g. lower-thirds or sticker animations) while other scenes feature solid or gradient backgrounds.
+    4. **Ontological Purity (Rule 12)**: Standard element properties (coordinates, border radii, font sizes, box shadows) make no physical sense for an infinite atmospheric surface. Backgrounds required their own dedicated animation vocabulary tailored for full-bleed viewport transitions.
+
+* **The Architectural Solution**:
+  1. **Data Model & Type Contracts (`src/types/layers.ts`, `src/types/scene.ts`)**:
+     - Defined `BackgroundFillType = 'solid' | 'linear-gradient' | 'radial-gradient'`.
+     - Defined `BackgroundLayer extends BaseLayer` (`type: 'background', fill: string, fillType?: BackgroundFillType`).
+     - Added `background?: BackgroundLayer | null;` to `Screen`. Storing the background directly on `screen.background` pins it permanently at the bottom of the stack ($z = -\infty$) below all content layers, preventing layer reordering inversion.
+     - Registered dedicated background presets in `AnimationPreset`: `radialExpand`, `linearWipe`, `curtainSlide`, `zoomWash`, `colorShift`, `radialCollapse`, and `ambientFlash`.
+  2. **Mathematical Evaluation (`src/engine/evaluator.ts`, `src/engine/evaluator/configEvaluator.ts`)**:
+     - Upgraded `evaluateSceneAtTime` to polymorphically accept either `Screen` or `Layer[]`, deterministically evaluating `screen.background` alongside content layers into `result[screen.background.id]`.
+     - Added closed-form evaluation logic for background presets:
+       - `radialExpand`: Circular clip-path bloom `circle(0% -> 150% at 50% 50%)` providing seamless Keynote-tier iris reveals.
+       - `radialCollapse`: Smooth circular exit masking to 0%.
+       - `linearWipe` & `curtainSlide`: Directional inset edge reveals (`inset(0% 100% 0% 0%) -> inset(0% 0% 0% 0%)`) and full-height 3D translation drops.
+       - `zoomWash`: Subtle scale compression (`scale(1.08) -> scale(1.0)`) paired with opacity wash.
+       - `ambientFlash`: Atmospheric luminosity bursts (`brightness(1.40)`).
+  3. **Canvas Viewport & Hardware-Accelerated Export Parity (`src/components/canvas/`, `src/engine/pixi/`)**:
+     - `CanvasViewport` and `ScreenRenderer`: Replaced static CSS backgrounds with an infinite high-DPI transparent checkerboard (`repeating-conic-gradient`), rendering the `BackgroundLayer` as an animated $z=0$ element.
+     - `PixiStage`: In both live playback and headless export stages (WebCodecs and native FFmpeg streaming), `artboardBg.visible` is dynamically toggled and `app.renderer.background.alpha = 0.0` is set whenever `screen.background` is null or invisible, producing native per-scene alpha transparency in exported ProRes 4444 / WebM video.
+  4. **Studio GUI & Inspector Alignment**:
+     - **Outliner (Left Sidebar)**: Renders a dedicated "Background" element row with live color chip, selection highlighting, and visibility toggle under every scene.
+     - **Inspector (Right Panel)**: Selecting the background opens the dedicated Background Inspector with color/gradient controls and opacity slider. Clicking "Animate Background" opens the Animation Catalog with curated background presets.
+     - **Scene Settings Card**: Toggling the scene "Fill" checkbox seamlessly creates or clears `screen.background` while keeping `screen.backgroundColor` synchronized for 100% backward compatibility.
+  5. **Bidirectional Store Synchronization & Legacy Migration (`src/store/`)**:
+     - `normalizeScreens`: Automatically promotes legacy documents with `screen.backgroundColor` into first-class `BackgroundLayer` instances without manual user migration.
+     - `updateScreen`: Setting `backgroundColor: 'transparent'` or `background: null` enters true transparent mode; updating either property automatically synchronizes the other.
+     - `updateLayer` & `removeLayer`: Intercept background layer updates and deletions, seamlessly mutating `screen.background` and updating selection state.
+  6. **AI Agent Tool Parity (`mcp.js`)**:
+     - `findLayerInDoc` resolves `screen.background` so agents can inspect and modify it like any other element.
+     - `create_scene` and `update_scene` accept `background` and `backgroundColor`.
+     - `get_storyboard_state` reports complete background parameters and `isTransparent` status.
+     - `render_frame`: Renders true transparent SVG frames without opaque `<rect>` when scene background is null or transparent.
+
+* **Verification**:
+  - Full automated test suite: 59 test files / 603 tests pass with 100% success rate (`npx vitest run`).
+  - Production build: `npm run build` completes cleanly with 0 errors in 11.14s.
+
+

@@ -78,7 +78,13 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
 
   const width = screen.width ?? settings.width;
   const height = screen.height ?? settings.height;
-  const bg = screen.backgroundColor ?? settings.backgroundColor ?? "#ffffff";
+  const hasBg = Boolean(
+    (screen.background && screen.background.fill && screen.background.fill !== "transparent") ||
+    (screen.backgroundColor && screen.backgroundColor !== "transparent")
+  );
+  const bgFill = screen.background?.fill || screen.backgroundColor;
+  const bgComputedStyle = screen.background ? computedLayerStyles[screen.background.id] : undefined;
+  const isBgSelected = Boolean(screen.background && selectedLayerIds.includes(screen.background.id));
 
   return (
     <div className="relative select-none">
@@ -192,7 +198,9 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
         style={{
           width: `${width}px`,
           height: `${height}px`,
-          background: bg,
+          backgroundImage: "repeating-conic-gradient(rgba(128, 128, 128, 0.08) 0% 25%, transparent 0% 50%)",
+          backgroundSize: "16px 16px",
+          backgroundColor: "transparent",
           position: "relative",
           overflow: "hidden",
           boxShadow: "0 2px 16px rgba(0, 0, 0, 0.06)",
@@ -200,7 +208,7 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
         }}
         onPointerDown={(e) => {
           if (isPanMode) return;
-          if (e.target === e.currentTarget) {
+          if (e.target === e.currentTarget || (e.target as HTMLElement)?.id === screen.background?.id) {
             if (
               typeof document !== "undefined" &&
               document.activeElement &&
@@ -213,12 +221,16 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
             if (typeof window !== "undefined" && window.getSelection) {
               window.getSelection()?.removeAllRanges();
             }
-            onSelectScreen?.(screen.id);
-            onCanvasClick?.();
+            if (screen.background) {
+              onSelectLayer(screen.background.id, e);
+            } else {
+              onSelectScreen?.(screen.id);
+              onCanvasClick?.();
+            }
           }
         }}
         onContextMenu={(e) => {
-          if (e.target === e.currentTarget) {
+          if (e.target === e.currentTarget || (e.target as HTMLElement)?.id === screen.background?.id) {
             e.preventDefault();
             e.stopPropagation();
             onSelectScreen?.(screen.id);
@@ -235,11 +247,28 @@ export const ScreenRenderer: React.FC<ScreenRendererProps> = ({
           }
         }}
         className={`rounded-[2px] transition-all ${
-          isSelected
+          isSelected || isBgSelected
             ? "ring-1.5 ring-foreground shadow-sm"
             : "border border-border hover:border-muted-foreground/60"
         }`}
       >
+        {/* First-Class Background Element Surface */}
+        {hasBg && (
+          <div
+            id={screen.background?.id || `bg-${screen.id}`}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              background: bgFill,
+              pointerEvents: "none",
+              zIndex: 0,
+              ...bgComputedStyle,
+            }}
+          />
+        )}
+
         {screen.layers.map((layer) => (
           <LayerRenderer
             key={layer.id}

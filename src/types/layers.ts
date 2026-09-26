@@ -438,6 +438,23 @@ export interface IconLayer extends BaseLayer {
   strokeWidth?: number;
 }
 
+export type BackgroundFillType = 'solid' | 'linear-gradient' | 'radial-gradient';
+
+export const DEFAULT_BACKGROUND_STYLE: LayerStyle = {
+  x: 0,
+  y: 0,
+  width: 'auto',
+  height: 'auto',
+  rotation: 0,
+  opacity: 1,
+};
+
+export interface BackgroundLayer extends BaseLayer {
+  type: 'background';
+  fill: string;
+  fillType?: BackgroundFillType;
+}
+
 export type Layer =
   | GroupLayer
   | FrameLayer
@@ -449,4 +466,5 @@ export type Layer =
   | PolygonLayer
   | ImageLayer
   | VideoLayer
-  | IconLayer;
+  | IconLayer
+  | BackgroundLayer;

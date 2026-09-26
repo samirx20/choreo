@@ -1,4 +1,4 @@
-import { Layer, GroupLayer, FrameLayer, ShapeLayer, SceneDocument } from "@/types/scene";
+import { Layer, GroupLayer, FrameLayer, ShapeLayer, SceneDocument, Screen } from "@/types/scene";
 
 /**
  * Checks whether a layer is structurally capable of acting as a parent container.
@@ -35,6 +35,25 @@ export function mutateLayerInTree(
   return result;
 }
 
+// Helper: Recursively search and mutate a layer or background in a screen
+export function mutateLayerInScreen(
+  screen: Screen,
+  layerId: string,
+  mutator: (layer: Layer) => Layer | null
+): Screen {
+  if (screen.background && screen.background.id === layerId) {
+    const nextBg = mutator(screen.background as any as Layer);
+    return {
+      ...screen,
+      background: nextBg as any,
+    };
+  }
+  return {
+    ...screen,
+    layers: mutateLayerInTree(screen.layers, layerId, mutator),
+  };
+}
+
 // Helper: Find a layer by ID in a layer tree
 export function findLayerInTree(layers: Layer[], layerId: string): Layer | null {
   for (const layer of layers) {
@@ -45,6 +64,15 @@ export function findLayerInTree(layers: Layer[], layerId: string): Layer | null 
     }
   }
   return null;
+}
+
+// Helper: Find a layer by ID in a screen (including background)
+export function findLayerInScreen(screen?: Screen | null, layerId?: string | null): Layer | null {
+  if (!screen || !layerId) return null;
+  if (screen.background && screen.background.id === layerId) {
+    return screen.background as any as Layer;
+  }
+  return findLayerInTree(screen.layers, layerId);
 }
 
 // Helper: Find parent container of a layer in tree
@@ -154,10 +182,11 @@ export function isLayerOnArtboard(
   screenWidth: number,
   screenHeight: number
 ): boolean {
-  const lx = layer.style.x ?? 0;
-  const ly = layer.style.y ?? 0;
-  const lw = typeof layer.style.width === "number" ? layer.style.width : 100;
-  const lh = typeof layer.style.height === "number" ? layer.style.height : 100;
+  if (layer.type === 'background') return true;
+  const lx = layer.style?.x ?? 0;
+  const ly = layer.style?.y ?? 0;
+  const lw = typeof layer.style?.width === "number" ? layer.style.width : 100;
+  const lh = typeof layer.style?.height === "number" ? layer.style.height : 100;
 
   // Layer intersects artboard rectangle [0, 0, screenWidth, screenHeight]
   return (

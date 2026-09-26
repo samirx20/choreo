@@ -35,11 +35,23 @@ export const RightInspectorPanel: React.FC = () => {
 
   let targetLayer: Layer | null = null;
   if (animationCatalogState.selectedClipId) {
-    targetLayer = findLayerWithClip(activeScreen.layers, animationCatalogState.selectedClipId);
+    if (activeScreen.background && getLayerClips(activeScreen.background as any).some((c) => c.id === animationCatalogState.selectedClipId)) {
+      targetLayer = activeScreen.background as any;
+    } else {
+      targetLayer = findLayerWithClip(activeScreen.layers, animationCatalogState.selectedClipId);
+    }
   } else if (selectedClipIds && selectedClipIds.length > 0) {
-    targetLayer = findLayerWithClip(activeScreen.layers, selectedClipIds[0]);
+    if (activeScreen.background && getLayerClips(activeScreen.background as any).some((c) => c.id === selectedClipIds[0])) {
+      targetLayer = activeScreen.background as any;
+    } else {
+      targetLayer = findLayerWithClip(activeScreen.layers, selectedClipIds[0]);
+    }
   } else if (selectedLayerIds && selectedLayerIds.length > 0) {
-    targetLayer = findLayerInTree(activeScreen.layers, selectedLayerIds[0]);
+    if (activeScreen.background && activeScreen.background.id === selectedLayerIds[0]) {
+      targetLayer = activeScreen.background as any;
+    } else {
+      targetLayer = findLayerInTree(activeScreen.layers, selectedLayerIds[0]);
+    }
   }
 
   const handleApplyPreset = (preset: any) => {

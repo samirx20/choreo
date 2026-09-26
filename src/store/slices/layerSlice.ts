@@ -1,5 +1,5 @@
 import { ProjectStoreState, ShapeEdgeId } from "../types";
-import { SceneDocument, Layer, GroupLayer, FrameLayer, ShapeLayer, LineLayer, BooleanOperationType } from "@/types/scene";
+import { SceneDocument, Layer, GroupLayer, FrameLayer, ShapeLayer, LineLayer, BooleanOperationType, BackgroundLayer } from "@/types/scene";
 import {
   findLayerInTree,
   mutateLayerInTree,
@@ -123,6 +123,19 @@ export const createLayerSlice = (
       ...doc,
       screens: doc.screens.map((screen) => {
         if (screen.id !== activeScreenId) return screen;
+        if (screen.background && screen.background.id === layerId) {
+          const updatedBg: BackgroundLayer = {
+            ...screen.background,
+            ...(updates as Partial<BackgroundLayer>),
+            ...(updates.style ? { style: { ...(screen.background.style || {}), ...updates.style } } : {}),
+            type: "background",
+          };
+          return {
+            ...screen,
+            background: updatedBg,
+            backgroundColor: updatedBg.fill || screen.backgroundColor,
+          };
+        }
         return {
           ...screen,
           layers: mutateLayerInTree(screen.layers, layerId, (layer) => {
@@ -163,6 +176,13 @@ export const createLayerSlice = (
       ...doc,
       screens: doc.screens.map((screen) => {
         if (screen.id !== activeScreenId) return screen;
+        if (screen.background && screen.background.id === layerId) {
+          return {
+            ...screen,
+            background: null,
+            backgroundColor: "transparent",
+          };
+        }
         return {
           ...screen,
           layers: mutateLayerInTree(screen.layers, layerId, () => null),

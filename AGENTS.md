@@ -113,6 +113,7 @@ Never generate or suggest cheap SaaS cliches, decorative gimmicks, or lazy UI tr
   * 1D lines and arrows do not have area fills, font sizes, or border radii.
   * Circles and ellipses have fixed radial geometry and do not expose 4-corner radii inputs.
   * Icons do not have competing outer box borders; text layers do not receive card box strokes unless explicitly wrapped in a card frame.
+  * **Scene Background (`BackgroundLayer`)**: The background is an infinite atmospheric surface pinned at the bottom of the layer stack ($z = -\infty$). It does not receive box-model transforms or font size controls, but rather dedicated full-bleed viewport presets (`radialExpand`, `linearWipe`, `curtainSlide`, `zoomWash`, `colorShift`, `radialCollapse`, `ambientFlash`). When a scene has no background (`background: null`), it renders with true alpha `0.0` transparency.
 * **Non-Spatial Channel Monotonicity**: Easing curves applied to non-spatial property channels (opacity, colors, blurs, trim paths) must be monotonic. Never apply overshooting/elastic spring curves to color or opacity channels to prevent numerical explosion or visual clipping.
 * **Constructive Agent Tool Sanitization**: When an agent invokes `place_element` or `apply_animation`, tools must constructively sanitize and strip invalid properties/presets with clear learning notices instead of silently accepting corrupted states.
 

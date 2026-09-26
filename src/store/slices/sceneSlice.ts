@@ -1,5 +1,5 @@
 import { ProjectStoreState } from "../types";
-import { SceneDocument, Screen, Layer } from "@/types/scene";
+import { SceneDocument, Screen, Layer, DEFAULT_BACKGROUND_STYLE } from "@/types/scene";
 import { history, commitDoc } from "../historyManager";
 import { normalizeScreens, INITIAL_SCENE, STORAGE_DOC_KEY } from "../initialScene";
 
@@ -26,7 +26,10 @@ export const createSceneSlice = (
   document: history.getPresent(),
 
   setDocument: (newDoc) => {
-    commitDoc(set, newDoc);
+    const currentActiveId = get().activeScreenId;
+    const exists = newDoc.screens?.some((s) => s.id === currentActiveId);
+    const newActiveId = exists ? currentActiveId : (newDoc.screens?.[0]?.id ?? "");
+    commitDoc(set, newDoc, { activeScreenId: newActiveId });
   },
 
   setProjectName: (name) => {
@@ -54,12 +57,20 @@ export const createSceneSlice = (
     }, 0);
     const defaultX = rightmostX > 0 ? rightmostX + 120 : 0;
     const lastScreen = doc.screens[doc.screens.length - 1];
-    const inheritedBg = lastScreen?.backgroundColor ?? doc.settings?.backgroundColor ?? "#ffffff";
+    const inheritedBg = lastScreen?.background?.fill ?? lastScreen?.backgroundColor ?? doc.settings?.backgroundColor ?? "#ffffff";
     const newScreen: Screen = {
       id: newId,
       name: `Scene ${doc.screens.length + 1}`,
       duration: 5.0,
       layers: [],
+      background: customScreen?.background ?? (inheritedBg !== "transparent" ? {
+        id: `bg_${newId}`,
+        name: "Background",
+        type: "background",
+        fill: inheritedBg,
+        fillType: inheritedBg.includes("gradient") ? "linear-gradient" : "solid",
+        style: { ...DEFAULT_BACKGROUND_STYLE },
+      } : null),
       backgroundColor: customScreen?.backgroundColor ?? inheritedBg,
       x: customScreen?.x ?? defaultX,
       y: customScreen?.y ?? 0,
@@ -79,9 +90,28 @@ export const createSceneSlice = (
     const doc = get().document;
     const nextDoc: SceneDocument = normalizeScreens({
       ...doc,
-      screens: doc.screens.map((s) =>
-        s.id === screenId ? { ...s, ...updates } : s
-      ),
+      screens: doc.screens.map((s) => {
+        if (s.id !== screenId) return s;
+        const nextScreen = { ...s, ...updates };
+        if (updates.backgroundColor !== undefined && updates.background === undefined) {
+          if (updates.backgroundColor === "transparent") {
+            nextScreen.background = null;
+          } else {
+            nextScreen.background = {
+              id: s.background?.id || `bg_${s.id}`,
+              name: "Background",
+              type: "background",
+              fill: updates.backgroundColor,
+              fillType: updates.backgroundColor.includes("gradient") ? "linear-gradient" : "solid",
+              style: s.background?.style || { ...DEFAULT_BACKGROUND_STYLE },
+              animation: s.background?.animation,
+            };
+          }
+        } else if (updates.background !== undefined && updates.backgroundColor === undefined) {
+          nextScreen.backgroundColor = updates.background ? updates.background.fill : "transparent";
+        }
+        return nextScreen;
+      }),
     });
     commitDoc(set, nextDoc);
   },

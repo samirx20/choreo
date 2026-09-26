@@ -489,9 +489,66 @@ export const LeftSidebar: React.FC = () => {
                     [...screen.layers]
                       .reverse()
                       .map((layer) => renderLayerNode(layer, 1, screen.id))
-                  ) : (
+                  ) : !screen.background ? (
                     <div className="px-8 py-2 text-[11px] text-muted-foreground italic">
                       Empty scene
+                    </div>
+                  ) : null}
+
+                  {/* Background Element Row */}
+                  {screen.background && (
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (activeScreenId !== screen.id) {
+                          selectScreen(screen.id);
+                        }
+                        selectLayer(screen.background!.id, false);
+                      }}
+                      className={cn(
+                        "group flex items-center justify-between h-7 px-3 pl-8 text-xs cursor-pointer transition-colors select-none",
+                        selectedLayerIds.includes(screen.background.id)
+                          ? "bg-primary text-primary-foreground font-medium"
+                          : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                      )}
+                    >
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <div
+                          className="w-3.5 h-3.5 rounded-[2px] border border-border shrink-0 shadow-xs"
+                          style={{
+                            background:
+                              screen.background.fill && screen.background.fill !== "transparent"
+                                ? screen.background.fill
+                                : "repeating-conic-gradient(rgba(128, 128, 128, 0.2) 0% 25%, transparent 0% 50%) 50% / 4px 4px",
+                          }}
+                        />
+                        <span className="truncate text-[11px]">
+                          {screen.background.name || "Background"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const currentHidden = Boolean(screen.background?.hidden);
+                            useProjectStore.getState().updateScreen(screen.id, {
+                              background: {
+                                ...screen.background!,
+                                hidden: !currentHidden,
+                              },
+                            });
+                          }}
+                          className="p-0.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                          title={screen.background.hidden ? "Show background" : "Hide background"}
+                        >
+                          {screen.background.hidden ? (
+                            <EyeOff className="h-3 w-3" />
+                          ) : (
+                            <Eye className="h-3 w-3" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

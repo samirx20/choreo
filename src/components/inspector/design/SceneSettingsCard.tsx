@@ -13,6 +13,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { ColorPicker } from "@/components/ui/color-picker";
+import { DEFAULT_BACKGROUND_STYLE } from "@/types/scene";
 
 export const SceneSettingsCard: React.FC = () => {
   const {
@@ -119,20 +120,34 @@ export const SceneSettingsCard: React.FC = () => {
         </div>
       </div>
 
-      {/* Fill Section (Per-Scene Background Color) */}
+      {/* Fill Section (Per-Scene Background Element) */}
       <div className="pt-3 border-t border-border space-y-2.5">
         <div
           onClick={() => {
             if (hasSceneFill) {
-              updateScreen(activeScreen.id, { backgroundColor: "transparent" });
+              updateScreen(activeScreen.id, {
+                background: null,
+                backgroundColor: "transparent",
+              });
             } else {
               const restoreColor =
-                activeScreen.backgroundColor && activeScreen.backgroundColor !== "transparent"
+                activeScreen.background?.fill ||
+                (activeScreen.backgroundColor && activeScreen.backgroundColor !== "transparent"
                   ? activeScreen.backgroundColor
                   : settings.backgroundColor && settings.backgroundColor !== "transparent"
                   ? settings.backgroundColor
-                  : "#ffffff";
-              updateScreen(activeScreen.id, { backgroundColor: restoreColor });
+                  : "#09090b");
+              updateScreen(activeScreen.id, {
+                background: {
+                  id: activeScreen.background?.id || `bg_${activeScreen.id}`,
+                  name: "Background",
+                  type: "background",
+                  fill: restoreColor,
+                  fillType: restoreColor.includes("gradient") ? "linear-gradient" : "solid",
+                  style: activeScreen.background?.style || { ...DEFAULT_BACKGROUND_STYLE },
+                },
+                backgroundColor: restoreColor,
+              });
             }
           }}
           className="flex items-center justify-between py-1.5 px-2 -mx-2 rounded hover:bg-muted cursor-pointer select-none transition-colors"
@@ -156,7 +171,19 @@ export const SceneSettingsCard: React.FC = () => {
                   onChange={(e) => {
                     const clean = e.target.value.replace(/[^0-9a-fA-F]/g, "").toUpperCase();
                     if (clean.length === 6 || clean.length === 3) {
-                      updateScreen(activeScreen.id, { backgroundColor: `#${clean}` });
+                      const newColor = `#${clean}`;
+                      updateScreen(activeScreen.id, {
+                        background: {
+                          id: activeScreen.background?.id || `bg_${activeScreen.id}`,
+                          name: "Background",
+                          type: "background",
+                          fill: newColor,
+                          fillType: "solid",
+                          style: activeScreen.background?.style || { ...DEFAULT_BACKGROUND_STYLE },
+                          animation: activeScreen.background?.animation,
+                        },
+                        backgroundColor: newColor,
+                      });
                     }
                   }}
                   className="h-7 w-20 bg-muted rounded px-2 text-center text-xs font-mono uppercase text-foreground outline-none border-border"
@@ -164,7 +191,18 @@ export const SceneSettingsCard: React.FC = () => {
                 <ColorPicker
                   value={currentBg || "#ffffff"}
                   onChange={(newColor) => {
-                    updateScreen(activeScreen.id, { backgroundColor: newColor });
+                    updateScreen(activeScreen.id, {
+                      background: {
+                        id: activeScreen.background?.id || `bg_${activeScreen.id}`,
+                        name: "Background",
+                        type: "background",
+                        fill: newColor,
+                        fillType: newColor.includes("gradient") ? "linear-gradient" : "solid",
+                        style: activeScreen.background?.style || { ...DEFAULT_BACKGROUND_STYLE },
+                        animation: activeScreen.background?.animation,
+                      },
+                      backgroundColor: newColor,
+                    });
                   }}
                 />
               </div>

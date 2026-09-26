@@ -1,4 +1,4 @@
-import { Layer } from './layers';
+import { Layer, BackgroundLayer } from './layers';
 import { EasingType } from './animation';
 
 // Re-export animation and layer types for 100% backward compatibility
@@ -90,6 +90,7 @@ export interface Screen {
   name: string;
   duration: number; // in seconds
   layers: Layer[];
+  background?: BackgroundLayer | null;
   x?: number;
   y?: number;
   width?: number;

@@ -18,7 +18,8 @@ export function evaluateAnimationConfig(
   filter?: string;
   clipPath?: string;
 } {
-  const { start, duration, preset, easing, bezierPoints, params = {} } = config;
+  const start = config.start ?? (config as any).delay ?? 0;
+  const { duration, preset, easing, bezierPoints, params = {} } = config;
   const springConfig =
     (config as any).springStiffness || (config as any).springDamping
       ? {
@@ -94,8 +95,28 @@ export function evaluateAnimationConfig(
         tState.scaleX = clipScale ?? 0.8;
         tState.scaleY = clipScale ?? 0.8;
         clipPath = "inset(50% 50% 50% 50%)";
-      } else if (preset === "circleIris") {
-        clipPath = "circle(0% at 50% 50%)";
+      } else if (preset === "circleIris" || preset === "radialExpand") {
+        clipPath = `circle(0% at ${params.origin || "50% 50%"})`;
+        initOpacity = 0;
+      } else if (preset === "radialCollapse") {
+        clipPath = `circle(150% at ${params.origin || "50% 50%"})`;
+        initOpacity = 1;
+      } else if (preset === "linearWipe") {
+        initOpacity = 1;
+        const maskDir = typeof config.direction === "string" && ["up", "down", "left", "right"].includes(config.direction) ? config.direction : (params.direction || "right");
+        clipPath = evalMaskInset(0, maskDir as any);
+      } else if (preset === "curtainSlide") {
+        const dist = clipDist ?? 1080;
+        const dir = config.direction || params.direction || "up";
+        if (dir === "up") tState.y = dist;
+        else if (dir === "down") tState.y = -dist;
+        else if (dir === "left") tState.x = dist;
+        else tState.x = -dist;
+        initOpacity = 1;
+      } else if (preset === "zoomWash") {
+        tState.scaleX = 1.08;
+        tState.scaleY = 1.08;
+        initOpacity = 0;
       } else if (preset === "jellySquash") {
         tState.scaleX = 0.5;
         tState.scaleY = 1.4;
@@ -580,6 +601,66 @@ export function evaluateAnimationConfig(
         const radiusPercent = (clampedP * 75).toFixed(1);
         clipPath = `circle(${radiusPercent}% at ${params.origin || "50% 50%"})`;
         opacity = 1;
+        break;
+      }
+
+      case "radialExpand": {
+        const clampedP = Math.max(0, Math.min(1.5, effectiveProgress));
+        const radiusPercent = (clampedP * 150).toFixed(1);
+        clipPath = `circle(${radiusPercent}% at ${params.origin || "50% 50%"})`;
+        opacity = allowFade ? Math.min(effectiveProgress * 2, 1) : 1;
+        break;
+      }
+
+      case "radialCollapse": {
+        const p = Math.max(0, Math.min(1, 1 - effectiveProgress));
+        const radiusPercent = (p * 150).toFixed(1);
+        clipPath = `circle(${radiusPercent}% at ${params.origin || "50% 50%"})`;
+        opacity = allowFade ? p : 1;
+        break;
+      }
+
+      case "linearWipe": {
+        const p = Math.max(0, Math.min(1, effectiveProgress));
+        const dir = typeof config.direction === "string" && ["up", "down", "left", "right"].includes(config.direction)
+          ? config.direction
+          : (params.direction || "right");
+        clipPath = evalMaskInset(p, dir as any);
+        opacity = 1;
+        break;
+      }
+
+      case "curtainSlide": {
+        const dist = clipDist ?? 1080;
+        const dir = config.direction || params.direction || "up";
+        if (dir === "up") {
+          tState.y = (1 - effectiveProgress) * dist;
+        } else if (dir === "down") {
+          tState.y = -(1 - effectiveProgress) * dist;
+        } else if (dir === "left") {
+          tState.x = (1 - effectiveProgress) * dist;
+        } else {
+          tState.x = -(1 - effectiveProgress) * dist;
+        }
+        opacity = 1;
+        break;
+      }
+
+      case "zoomWash": {
+        const s = 1.08 - 0.08 * effectiveProgress;
+        tState.scaleX = s;
+        tState.scaleY = s;
+        opacity = effectiveProgress;
+        break;
+      }
+
+      case "ambientFlash": {
+        const p = effectiveProgress;
+        const flash = Math.sin(p * Math.PI);
+        opacity = 1;
+        if (flash > 0.01) {
+          filter = `brightness(${(1 + flash * 0.4).toFixed(2)})`;
+        }
         break;
       }
 

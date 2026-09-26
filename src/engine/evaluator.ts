@@ -3,6 +3,8 @@ import {
   Layer,
   GroupLayer,
   CounterLayer,
+  BackgroundLayer,
+  Screen,
 } from "@/types/scene";
 import { compileTransform } from "./atomics";
 import { resolveSceneBindings } from "./bindings/dependencyEngine";
@@ -29,16 +31,28 @@ export interface ComputedFrameStyles {
  * Deterministically evaluates all layers at timestamp t.
  */
 export function evaluateSceneAtTime(
-  layers: Layer[],
+  layersOrScreen: Layer[] | Screen,
   currentTime: number,
   groupStartOffset = 0,
-  sceneStepFps?: "smooth" | number
+  sceneStepFps?: "smooth" | number,
+  background?: BackgroundLayer | null
 ): ComputedFrameStyles {
+  const isScreen = !Array.isArray(layersOrScreen);
+  const layers = isScreen ? (layersOrScreen.layers || []) : (layersOrScreen || []);
+  const effectiveBg = background !== undefined ? background : (isScreen ? layersOrScreen.background : null);
   const result: ComputedFrameStyles = {};
+  const targetLayers = effectiveBg && groupStartOffset === 0 ? [effectiveBg, ...layers] : layers;
 
-  for (let i = 0; i < layers.length; i++) {
-    const layer = layers[i];
+  for (let i = 0; i < targetLayers.length; i++) {
+    const layer = targetLayers[i];
     const css: React.CSSProperties = {};
+
+    if ((layer as any).type === "background") {
+      const bgLayer = layer as BackgroundLayer;
+      if (bgLayer.fill) {
+        css.background = bgLayer.fill;
+      }
+    }
 
     if (layer.animation) {
       // Modern Multi-Clip evaluation when clips array is populated or has trim animation presets
@@ -113,7 +127,7 @@ export function evaluateSceneAtTime(
             // Word-by-word or character-by-character animation is rendered on inner spans in TextRenderer
             css.opacity = 1;
           } else {
-            const adjustedStart = anim.start + groupStartOffset;
+            const adjustedStart = (anim.start ?? anim.delay ?? 0) + groupStartOffset;
             const evaluated = evaluateAnimationConfig(
               { ...anim, start: adjustedStart },
               currentTime,
@@ -179,7 +193,7 @@ export function evaluateSceneAtTime(
           ) {
             css.opacity = 1;
           } else {
-            const adjustedStart = anim.start + groupStartOffset;
+            const adjustedStart = (anim.start ?? anim.delay ?? 0) + groupStartOffset;
             if (currentTime >= adjustedStart) {
               const evaluated = evaluateAnimationConfig(
                 { ...anim, start: adjustedStart },

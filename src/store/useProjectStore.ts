@@ -32,9 +32,11 @@ export {
 // Re-export tree helpers for consumers
 export {
   findLayerInTree,
+  findLayerInScreen,
   findParentGroupInTree,
   findTopmostParentGroupInTree,
   mutateLayerInTree,
+  mutateLayerInScreen,
   insertLayerRelativeInTree,
   flattenLayers,
   isLayerOnArtboard,
